@@ -1,0 +1,181 @@
+# Direct Flow — Regras de Engenharia (canônicas)
+
+Este arquivo é a **única fonte de verdade** das regras transversais. Todo agente
+o lê antes de escrever código. Regras específicas de um domínio ficam no arquivo
+do agente dono daquele domínio, nunca aqui.
+
+---
+
+## 0. Antes de escrever qualquer código
+
+Este projeto usa **Next.js 16.3.5**. A API, as convenções e a estrutura de
+arquivos divergem do que você tem em memória. Leia o guia relevante em
+`node_modules/next/dist/docs/` antes de escrever código de rota, layout,
+Server Action, cache ou middleware. Respeite avisos de deprecação.
+
+O bloco `<!-- BEGIN:nextjs-agent-rules -->` em `AGENTS.md` é gerado pelo
+`next dev`. Não o remova; se ele reaparecer no diff, comite junto com o trabalho.
+
+## 1. Stack fixa
+
+Nenhum agente introduz alternativa a estas escolhas sem pedido explícito do
+usuário. Não existe "segunda biblioteca para a mesma coisa" neste projeto.
+
+| Necessidade       | Biblioteca única               | Agente dono    |
+| ----------------- | ------------------------------ | -------------- |
+| Framework         | Next.js 16 (App Router)        | —              |
+| ORM / banco       | Drizzle ORM + `pg` (Postgres)  | `df-data`      |
+| Schema do banco   | Drizzle (`db/schema.ts`)       | `df-architect` |
+| Validação         | Zod                            | `df-architect` |
+| Formulários       | React Hook Form + Zod          | `df-ui`        |
+| Componentes       | shadcn/ui + Tailwind v4        | `df-ui`        |
+| Ícones            | `lucide-react`                 | `df-ui`        |
+| Tabelas           | TanStack Table                 | `df-ui`        |
+| Notificações (UI) | Sonner (via shadcn)            | `df-ui`        |
+| Datas             | Day.js — **só** via `lib/date` | `df-architect` |
+| Autenticação      | Better Auth                    | `df-auth`      |
+| E-mail            | Resend                         | `df-email`     |
+| Estado assíncrono | Server Components (padrão)     | `df-ui`        |
+
+**Datas:** `dayjs` é importado em **um único arquivo**, `lib/date.ts`. Qualquer
+outro arquivo que precise formatar data importa de `@/lib/date`. Isso é o que
+garante formatação consistente em toda a aplicação — não é preferência de estilo.
+
+**TanStack Query:** desligado por padrão. Busca de dados é Server Component +
+recursos nativos do Next. Só entra quando houver necessidade real e comprovada
+de cache no cliente, sincronização entre abas, refetch, polling ou orquestração
+de estado assíncrono complexo. Quem introduzir registra o motivo em
+`docs/adr/` e cita o caso concreto. "Pode ser útil depois" não é motivo.
+
+## 2. Camadas e direção das dependências
+
+```
+app/ (UI)  →  lib/actions/  →  lib/data/  →  db/
+   │              │
+   │              ├→ lib/email/
+   │              └→ lib/auth/
+   └──────────────┴→ lib/validation/ · lib/domain/ · lib/types/ · lib/date
+```
+
+As setas são de mão única. Em particular:
+
+- **UI nunca toca banco.** Nenhum arquivo em `app/**` ou `components/**` importa
+  `drizzle-orm`, `@/db/*` ou `pg`. Sem exceção.
+- **Server Actions nunca escrevem query.** Uma action valida, autoriza, chama
+  `lib/data/`, revalida e devolve. O SQL vive em `lib/data/`.
+- **`lib/domain/` e `lib/validation/` não fazem I/O.** São funções puras e
+  schemas. Por serem puros, rodam no servidor e no cliente — é o que permite
+  a UI decidir se mostra um botão usando a _mesma_ regra que a action usa para
+  autorizar, sem duplicar lógica.
+
+## 3. Mutações e rotas de API
+
+Toda mutação iniciada pela interface é **Server Action**. Não se cria
+`app/api/**/route.ts` para conversar com o próprio backend.
+
+Exceções permitidas (as únicas, e cada uma tem dono):
+
+- `app/api/auth/[...all]/route.ts` — handler obrigatório do Better Auth (`df-auth`)
+- webhooks de terceiros, se e quando existirem (`df-email` para Resend)
+
+Qualquer outra rota de API precisa de justificativa escrita em `docs/adr/`.
+
+## 4. package.json
+
+Ninguém edita `package.json` ou `package-lock.json` à mão. Instalação é sempre
+`npm install <pacote>`. Cada agente instala **apenas** os pacotes listados no
+próprio arquivo. Se você precisa de um pacote que não está na sua lista, pare e
+reporte — provavelmente ele pertence a outro agente.
+
+## 5. Código
+
+### Princípios
+
+- **KISS** — a solução mais simples que resolve o caso de hoje. Sem camada de
+  abstração para requisito que ninguém pediu.
+- **DRY** — regra de negócio, schema Zod, tipo e formatação de data existem em
+  um lugar só. Se você está copiando, pare e importe.
+- **SOLID** — um arquivo, uma responsabilidade. Módulo depende de assinatura
+  documentada, não de detalhe interno de outro módulo.
+
+### TypeScript
+
+O `strict` está ligado. Erro de tipo é bloqueante: nenhuma implementação é
+considerada concluída com `npx tsc --noEmit` falhando.
+
+Quando o tipo não fecha, na maioria das vezes o desenho está errado e o
+compilador está certo. Resolva nesta ordem, parando no primeiro que funcionar:
+
+1. usar o tipo já existente no projeto (`lib/types/`, `$inferSelect` do Drizzle,
+   `z.infer` do schema Zod)
+2. refinar o tipo (_type narrowing_) — checagem de `null`, `in`, `typeof`,
+   discriminated union
+3. generalizar com genérico
+4. `unknown` seguido de narrowing
+
+Isso resolve praticamente todo caso em que o reflexo pede `any`.
+
+**Nunca**, sem exceção:
+
+- `@ts-ignore`
+- `!` (non-null assertion) para calar o compilador
+- afrouxar `tsconfig.json`
+- `@ts-expect-error` sem comentário explicando o que se espera e por quê
+
+**`any` e `as`** só quando os quatro caminhos acima falharem, com comentário na
+linha imediatamente acima dizendo qual deles foi tentado e por que não serviu:
+
+```ts
+// any: retorno do driver pg sem tipagem para linhas de EXPLAIN;
+// unknown + narrowing não compensa aqui, o valor é descartado após o log
+const plan = result.rows as any
+```
+
+Sem esse comentário, é violação. O `df-reviewer` trata cada ocorrência com
+justificativa como ATENÇÃO e cada uma sem justificativa como BLOQUEANTE.
+
+### Convenções
+
+- Alias de import: `@/*` aponta para a raiz (`@/lib/data/tickets`, `@/db/schema`).
+- Prettier: sem ponto e vírgula, 2 espaços. `simple-import-sort` ordena imports —
+  rode `npm run lint -- --fix` antes de commitar.
+
+## 6. Commits
+
+`husky` + `commitlint` (Conventional Commits). Use o escopo do seu domínio:
+
+`feat:` · `fix` · `refactor` · `chore` Não utilize "()" depois do prefixo.
+
+Um commit por unidade coerente de trabalho. Não comite `.next/` nem `.env`.
+
+Você não faz o commit, apenas sugere a mensagem.
+
+## 7. Ownership de arquivos (a regra que evita conflito entre agentes)
+
+Cada caminho tem **exatamente um** agente com permissão de escrita. Todos os
+agentes podem **ler** qualquer arquivo.
+
+| Caminho                                                                                 | Escreve        |
+| --------------------------------------------------------------------------------------- | -------------- |
+| `db/schema.ts`, `db/migrations/**`, `drizzle.config.ts`                                 | `df-architect` |
+| `lib/types/**`, `lib/validation/**`, `lib/domain/**`, `lib/date.ts`                     | `df-architect` |
+| `docs/**`                                                                               | `df-architect` |
+| `db/auth-schema.ts`, `lib/auth/**`, `middleware.ts`, `app/(auth)/**`, `app/api/auth/**` | `df-auth`      |
+| `db/index.ts`, `lib/data/**`                                                            | `df-data`      |
+| `lib/actions/**`                                                                        | `df-actions`   |
+| `lib/email/**`, `emails/**`                                                             | `df-email`     |
+| `app/**` (exceto `app/(auth)/**` e `app/api/**`), `components/**`, `app/globals.css`    | `df-ui`        |
+| nenhum — apenas leitura e execução                                                      | `df-reviewer`  |
+
+Precisa de mudança em arquivo que não é seu? **Não edite.** Descreva o que
+precisa e para quem, e encerre seu turno. O orquestrador aciona o dono.
+
+## 8. Definição de pronto
+
+Antes de declarar uma tarefa concluída:
+
+1. `npx tsc --noEmit` passa
+2. `npm run lint` passa
+3. `npm run build` passa
+4. Você não escreveu em caminho de outro agente
+5. Nenhuma das regras acima foi violada
