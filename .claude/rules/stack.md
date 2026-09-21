@@ -11,7 +11,7 @@ do agente dono daquele domínio, nunca aqui.
 Este projeto usa **Next.js 16.3.5**. A API, as convenções e a estrutura de
 arquivos divergem do que você tem em memória. Leia o guia relevante em
 `node_modules/next/dist/docs/` antes de escrever código de rota, layout,
-Server Action, cache ou middleware. Respeite avisos de deprecação.
+Server Action, cache ou proxy (o antigo middleware). Respeite avisos de deprecação.
 
 O bloco `<!-- BEGIN:nextjs-agent-rules -->` em `AGENTS.md` é gerado pelo
 `next dev`. Não o remova; se ele reaparecer no diff, comite junto com o trabalho.
@@ -155,17 +155,17 @@ Você não faz o commit, apenas sugere a mensagem.
 Cada caminho tem **exatamente um** agente com permissão de escrita. Todos os
 agentes podem **ler** qualquer arquivo.
 
-| Caminho                                                                                 | Escreve        |
-| --------------------------------------------------------------------------------------- | -------------- |
-| `db/schema.ts`, `db/migrations/**`, `drizzle.config.ts`                                 | `df-architect` |
-| `lib/types/**`, `lib/validation/**`, `lib/domain/**`, `lib/date.ts`                     | `df-architect` |
-| `docs/**`                                                                               | `df-architect` |
-| `db/auth-schema.ts`, `lib/auth/**`, `middleware.ts`, `app/(auth)/**`, `app/api/auth/**` | `df-auth`      |
-| `db/index.ts`, `lib/data/**`                                                            | `df-data`      |
-| `lib/actions/**`                                                                        | `df-actions`   |
-| `lib/email/**`, `emails/**`                                                             | `df-email`     |
-| `app/**` (exceto `app/(auth)/**` e `app/api/**`), `components/**`, `app/globals.css`    | `df-ui`        |
-| nenhum — apenas leitura e execução                                                      | `df-reviewer`  |
+| Caminho                                                                              | Escreve        |
+| ------------------------------------------------------------------------------------ | -------------- |
+| `db/schema.ts`, `drizzle/**` (migrations), `drizzle.config.ts`                       | `df-architect` |
+| `lib/types/**`, `lib/validation/**`, `lib/domain/**`, `lib/date.ts`                  | `df-architect` |
+| `docs/**`                                                                            | `df-architect` |
+| `db/auth-schema.ts`, `lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`   | `df-auth`      |
+| `db/index.ts`, `db/seed.ts`, `lib/data/**`                                           | `df-data`      |
+| `lib/actions/**`                                                                     | `df-actions`   |
+| `lib/email/**`, `emails/**`                                                          | `df-email`     |
+| `app/**` (exceto `app/(auth)/**` e `app/api/**`), `components/**`, `app/globals.css` | `df-ui`        |
+| nenhum — apenas leitura e execução                                                   | `df-reviewer`  |
 
 Precisa de mudança em arquivo que não é seu? **Não edite.** Descreva o que
 precisa e para quem, e encerre seu turno. O orquestrador aciona o dono.

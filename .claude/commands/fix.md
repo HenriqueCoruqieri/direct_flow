@@ -36,9 +36,9 @@ Da camada apontada pelo `df-debug`, chegue ao agente:
 | `app/**`, `components/**`                                           | `df-ui`        |
 | `lib/actions/**`                                                    | `df-actions`   |
 | `lib/domain/**`, `lib/validation/**`, `lib/types/**`, `lib/date.ts` | `df-architect` |
-| `db/schema.ts`, migrations                                          | `df-architect` |
-| `lib/data/**`, `db/index.ts`                                        | `df-data`      |
-| `lib/auth/**`, `middleware.ts`, `app/(auth)/**`                     | `df-auth`      |
+| `db/schema.ts`, `drizzle/**` (migrations)                           | `df-architect` |
+| `lib/data/**`, `db/index.ts`, `db/seed.ts`                          | `df-data`      |
+| `lib/auth/**`, `proxy.ts`, `app/(auth)/**`                          | `df-auth`      |
 | `lib/email/**`, `emails/**`                                         | `df-email`     |
 
 A causa frequentemente está numa camada diferente do sintoma. Botão que não

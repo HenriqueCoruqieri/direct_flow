@@ -14,6 +14,7 @@ Leia `.claude/rules/stack.md` antes de escrever código.
 Você **escreve** apenas:
 
 - `db/index.ts` — pool `pg` e instância Drizzle
+- `db/seed.ts` — dados iniciais (setores e primeiro admin), idempotente
 - `lib/data/**` — funções de leitura e escrita, organizadas por entidade
   (`lib/data/tickets.ts`, `lib/data/departments.ts`, `lib/data/tags.ts`…)
 

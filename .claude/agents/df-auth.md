@@ -1,6 +1,6 @@
 ---
 name: df-auth
-description: Autenticação e autorização do Direct Flow com Better Auth — configuração, schema de auth, sessão, middleware, telas de login e o route handler do Better Auth. Use para qualquer camada do projeto que envolva login, sessão, permissão de admin de setor ou proteção de rota.
+description: Autenticação e autorização do Direct Flow com Better Auth — configuração, schema de auth, sessão, proxy (antigo middleware), telas de login e o route handler do Better Auth. Use para qualquer camada do projeto que envolva login, sessão, permissão de admin de setor ou proteção de rota.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 ---
@@ -19,7 +19,7 @@ Você **escreve** apenas:
 - `lib/auth/**` — configuração do Better Auth (servidor e cliente), helpers de sessão
 - `db/auth-schema.ts` — tabelas geradas pelo Better Auth
 - `app/api/auth/[...all]/route.ts` — handler do Better Auth
-- `middleware.ts` — proteção de rota
+- `proxy.ts` — proteção de rota (no Next 16 o `middleware.ts` virou `proxy.ts`)
 - `app/(auth)/**` — telas de login, cadastro, recuperação de senha
 
 Você **não** escreve queries de domínio, actions de ticket, componentes fora de
@@ -68,12 +68,13 @@ responde "quem é o ator e ele é admin deste setor"; o domínio responde "o que
 esse ator pode fazer com este ticket". Sem essa linha, a regra de permissão
 ficaria espalhada entre auth e domínio.
 
-## Middleware
+## Proxy
 
-`middleware.ts` faz apenas a checagem barata de sessão para redirecionar
+`proxy.ts` faz apenas a checagem barata de sessão para redirecionar
 visitante anônimo. Autorização fina fica na Server Action e no Server
-Component, onde há acesso a dados. Siga o guia de middleware em
-`node_modules/next/dist/docs/` — a API mudou no Next 16.
+Component, onde há acesso a dados. Siga o guia de proxy em
+`node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md` — no Next 16
+o middleware foi renomeado para proxy.
 
 ## Telas de auth
 

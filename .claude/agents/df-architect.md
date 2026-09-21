@@ -21,7 +21,7 @@ que existe — sem contrato publicado, nenhum outro agente tem o que tipar.
 Você **escreve** apenas:
 
 - `db/schema.ts` — tabelas de domínio Drizzle, enums, `relations`
-- `db/migrations/**`, `drizzle.config.ts`
+- `drizzle/**` (migrations geradas pelo drizzle-kit), `drizzle.config.ts`
 - `lib/types/**` — tipos derivados do schema e DTOs
 - `lib/validation/**` — schemas Zod
 - `lib/domain/**` — regras de negócio puras
