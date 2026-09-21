@@ -1,4 +1,4 @@
-import { LogoMark } from "@/app/_components/brand/logo-mark"
+import LogoMark from "@/app/_components/brand/logo-mark"
 import { cn } from "@/app/_lib/utils"
 
 type OrbitHeroSize = "sm" | "md" | "lg"
@@ -21,7 +21,7 @@ const stageBySize: Record<OrbitHeroSize, string> = {
 
 const dot = "absolute rounded-full bg-current"
 
-export function OrbitHero({ size = "md", className }: OrbitHeroProps) {
+const OrbitHero = ({ size = "md", className }: OrbitHeroProps) => {
   return (
     <div
       aria-hidden="true"
@@ -88,3 +88,5 @@ export function OrbitHero({ size = "md", className }: OrbitHeroProps) {
     </div>
   )
 }
+
+export default OrbitHero

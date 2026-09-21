@@ -6,12 +6,12 @@ interface UnderlineInputProps extends React.ComponentProps<typeof Input> {
   containerClassName?: string
 }
 
-export function UnderlineInput({
+const UnderlineInput = ({
   trailing,
   containerClassName,
   className,
   ...props
-}: UnderlineInputProps) {
+}: UnderlineInputProps) => {
   return (
     <div
       data-slot="underline-input"
@@ -37,3 +37,5 @@ export function UnderlineInput({
     </div>
   )
 }
+
+export default UnderlineInput

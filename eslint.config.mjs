@@ -38,6 +38,22 @@ const eslintConfig = defineConfig([
     files: ["app/_lib/utils.ts"],
     rules: { "no-restricted-imports": "off" },
   },
+  // Componentes: arrow function + export default. Primitivos do shadcn ficam
+  // como o CLI gera (function + exportação nomeada).
+  {
+    files: ["app/**/*.tsx"],
+    ignores: ["app/_components/ui/**"],
+    rules: {
+      "react/function-component-definition": [
+        "error",
+        {
+          namedComponents: "arrow-function",
+          unnamedComponents: "arrow-function",
+        },
+      ],
+      "import/prefer-default-export": ["error", { target: "any" }],
+    },
+  },
   prettier,
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ])

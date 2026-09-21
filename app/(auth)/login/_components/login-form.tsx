@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
-import { PillButton } from "@/app/_components/form/pill-button"
-import { UnderlineInput } from "@/app/_components/form/underline-input"
+import PillButton from "@/app/_components/form/pill-button"
+import UnderlineInput from "@/app/_components/form/underline-input"
 import {
   Field,
   FieldError,
@@ -17,7 +17,7 @@ import { type LoginInput, loginSchema } from "@/app/_lib/validation/auth"
 const LABEL_CLASS =
   "text-xs font-bold uppercase tracking-widest text-muted-foreground"
 
-export function LoginForm() {
+const LoginForm = () => {
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -112,3 +112,5 @@ export function LoginForm() {
     </form>
   )
 }
+
+export default LoginForm

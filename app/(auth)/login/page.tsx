@@ -1,17 +1,19 @@
 import type { Metadata } from "next"
 
-import { AuthShell } from "@/app/_components/auth/auth-shell"
+import AuthShell from "@/app/_components/auth/auth-shell"
 
-import { LoginForm } from "./_components/login-form"
+import LoginForm from "./_components/login-form"
 
 export const metadata: Metadata = {
   title: "Entrar",
 }
 
-export default function LoginPage() {
+const LoginPage = () => {
   return (
     <AuthShell>
       <LoginForm />
     </AuthShell>
   )
 }
+
+export default LoginPage

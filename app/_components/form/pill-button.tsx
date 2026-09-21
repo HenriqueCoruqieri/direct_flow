@@ -11,14 +11,14 @@ interface PillButtonProps extends Omit<
   loading?: boolean
 }
 
-export function PillButton({
+const PillButton = ({
   children,
   loading = false,
   disabled,
   className,
   type = "button",
   ...props
-}: PillButtonProps) {
+}: PillButtonProps) => {
   return (
     <Button
       type={type}
@@ -46,3 +46,5 @@ export function PillButton({
     </Button>
   )
 }
+
+export default PillButton

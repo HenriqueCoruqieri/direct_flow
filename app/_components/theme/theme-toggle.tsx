@@ -24,7 +24,7 @@ const options = [
   { value: "system", label: "Sistema", Icon: MonitorIcon },
 ] as const
 
-export function ThemeToggle({ className }: ThemeToggleProps) {
+const ThemeToggle = ({ className }: ThemeToggleProps) => {
   const { theme, setTheme } = useTheme()
 
   return (
@@ -58,3 +58,5 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     </DropdownMenu>
   )
 }
+
+export default ThemeToggle

@@ -3,7 +3,7 @@ import "./globals.css"
 import type { Metadata, Viewport } from "next"
 import { JetBrains_Mono, Manrope, Sora } from "next/font/google"
 
-import { ThemeProvider } from "@/app/_components/theme/theme-provider"
+import ThemeProvider from "@/app/_components/theme/theme-provider"
 import { Toaster } from "@/app/_components/ui/sonner"
 
 const manrope = Manrope({
@@ -38,7 +38,7 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+const RootLayout = ({ children }: LayoutProps<"/">) => {
   return (
     <html
       lang="pt-BR"
@@ -59,3 +59,5 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     </html>
   )
 }
+
+export default RootLayout

@@ -1,5 +1,5 @@
-import { OrbitHero } from "@/app/_components/brand/orbit-hero"
-import { ThemeToggle } from "@/app/_components/theme/theme-toggle"
+import OrbitHero from "@/app/_components/brand/orbit-hero"
+import ThemeToggle from "@/app/_components/theme/theme-toggle"
 
 interface AuthShellProps {
   children: React.ReactNode
@@ -10,12 +10,12 @@ interface AuthShellProps {
 
 const DEFAULT_FOOTER = "Sem acesso? Fale com o admin do seu setor."
 
-export function AuthShell({
+const AuthShell = ({
   children,
   title = "Direct Flow",
   tagline = "Fluxo de trabalho completo e detalhado do início ao fim",
   footer = DEFAULT_FOOTER,
-}: AuthShellProps) {
+}: AuthShellProps) => {
   return (
     <div className="relative flex min-h-dvh flex-1 flex-col bg-background text-foreground lg:grid lg:grid-cols-2">
       <div className="absolute top-safe-3 right-safe-3 z-10 lg:top-safe-6 lg:right-safe-6">
@@ -60,3 +60,5 @@ export function AuthShell({
     </div>
   )
 }
+
+export default AuthShell

@@ -21,12 +21,12 @@ const iconBySize: Record<LogoMarkSize, string> = {
   lg: "size-9.5",
 }
 
-export function LogoMark({
+const LogoMark = ({
   size = "md",
   variant = "tile",
   label,
   className,
-}: LogoMarkProps) {
+}: LogoMarkProps) => {
   return (
     <span
       role={label ? "img" : undefined}
@@ -57,3 +57,5 @@ export function LogoMark({
     </span>
   )
 }
+
+export default LogoMark
