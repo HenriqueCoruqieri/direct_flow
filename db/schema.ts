@@ -14,8 +14,6 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core"
 
-// HELPERS
-
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .defaultNow()
@@ -27,8 +25,6 @@ const timestamps = {
 }
 
 const pk = () => integer("id").primaryKey().generatedAlwaysAsIdentity()
-
-// ENUMS
 
 export const roleEnum = pgEnum("role", ["admin", "member"])
 
@@ -82,8 +78,6 @@ export const messageVisibilityEnum = pgEnum("message_visibility", [
   "publica",
   "interna",
 ])
-
-// TABLES
 
 export const department = pgTable(
   "department",
@@ -343,8 +337,6 @@ export const attachment = pgTable(
   ],
 )
 
-// RELATIONS
-
 export const departmentRelations = relations(department, ({ many }) => ({
   users: many(user),
   tags: many(tag),
@@ -516,10 +508,6 @@ export const attachmentRelations = relations(attachment, ({ one }) => ({
     references: [user.id],
   }),
 }))
-
-// ---------------------------------------------------------------------------
-// TYPES
-// ---------------------------------------------------------------------------
 
 export type Department = typeof department.$inferSelect
 export type NewDepartment = typeof department.$inferInsert

@@ -10,8 +10,6 @@ import {
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
-// CSSProperties não tipa custom properties (`--*`); a interseção as aceita
-// sem precisar de `as`.
 type CSSVariables = React.CSSProperties & Record<`--${string}`, string>
 
 const toasterStyle: CSSVariables = {

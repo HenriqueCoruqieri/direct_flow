@@ -4,20 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Telas baixas abaixo de lg (ex.: iPhone SE 375x667): compacta o hero do login.
- * No lg+ o hero fica na coluna lateral, então a variante não se aplica.
- */
 @custom-variant short (@media (max-width: 64rem) and (max-height: 44rem));
 
-/*
- * Tokens do Direct Flow — canvas "Direct Flow — Telas" (Paleta-Light / Paleta-Dark).
- * :root = tema claro · .dark = tema escuro.
- * As vars do shadcn (--background, --primary...) são mapeadas a partir dos
- * tokens semânticos do canvas; os utilitários ficam em @theme inline.
- */
 :root {
-  /* Base e superfícies */
   --bg: #f4f6f9;
   --surface: #ffffff;
   --surface-bar: #ffffff;
@@ -27,7 +16,6 @@
   --border-default: #d6dde6;
   --border-strong: #cdd5df;
 
-  /* Texto e marca */
   --text: #121822;
   --text-secondary: #3a4556;
   --text-tertiary: #4b576a;
@@ -36,7 +24,6 @@
   --brand-hover: #065a4b;
   --on-brand: #ffffff;
 
-  /* Status do chamado */
   --status-aberto: #2563c9;
   --status-em-analise: #7047c9;
   --status-encaminhado: #0e6f8a;
@@ -46,13 +33,11 @@
   --status-fechado: #5b6778;
   --status-cancelado: #b53636;
 
-  /* Prioridade */
   --prioridade-baixa: #5b6778;
   --prioridade-media: #2563c9;
   --prioridade-alta: #8f5205;
   --prioridade-critica: #b53636;
 
-  /* Tipo (ocorrencia e solicitacao derivados da paleta, sem cor própria no canvas) */
   --tipo-duvida: #7047c9;
   --tipo-ocorrencia: #0e6f8a;
   --tipo-solicitacao: #2563c9;
@@ -60,7 +45,6 @@
   --tipo-incidente: #b53636;
   --tipo-bug: #b03f8a;
 
-  /* Superfícies especiais */
   --note-internal: #fff7ea;
   --note-internal-border: #e3c893;
   --note-internal-foreground: #4f3a16;
@@ -74,7 +58,6 @@
   --danger-border: #f0caca;
   --danger-foreground: #9a2e2e;
 
-  /* Mapeamento shadcn */
   --background: var(--bg);
   --foreground: var(--text);
   --card: var(--surface);
@@ -110,7 +93,6 @@
 }
 
 .dark {
-  /* Base e superfícies */
   --bg: #0b0f14;
   --surface: #121821;
   --surface-bar: #0e131a;
@@ -120,7 +102,6 @@
   --border-default: #232d3b;
   --border-strong: #2a3547;
 
-  /* Texto e marca */
   --text: #e7ecf3;
   --text-secondary: #c4ccd8;
   --text-tertiary: #a9b4c4;
@@ -129,7 +110,6 @@
   --brand-hover: #6be3c9;
   --on-brand: #0b0f14;
 
-  /* Status do chamado */
   --status-aberto: #6aa8ff;
   --status-em-analise: #b79cff;
   --status-encaminhado: #5cc8e8;
@@ -139,13 +119,11 @@
   --status-fechado: #8d9aae;
   --status-cancelado: #f07a7a;
 
-  /* Prioridade */
   --prioridade-baixa: #8d9aae;
   --prioridade-media: #6aa8ff;
   --prioridade-alta: #f2b45a;
   --prioridade-critica: #f07a7a;
 
-  /* Tipo */
   --tipo-duvida: #b79cff;
   --tipo-ocorrencia: #5cc8e8;
   --tipo-solicitacao: #6aa8ff;
@@ -153,7 +131,6 @@
   --tipo-incidente: #f07a7a;
   --tipo-bug: #e58fc8;
 
-  /* Superfícies especiais */
   --note-internal: #17140e;
   --note-internal-border: #4a3c22;
   --note-internal-foreground: #e4d6bc;
@@ -169,12 +146,10 @@
 }
 
 @theme inline {
-  /* Tipografia (variáveis definidas por next/font em app/layout.tsx) */
   --font-sans: var(--font-manrope);
   --font-heading: var(--font-sora);
   --font-mono: var(--font-jetbrains-mono);
 
-  /* shadcn */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -207,7 +182,6 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Direct Flow — superfícies e bordas */
   --color-surface: var(--surface);
   --color-surface-bar: var(--surface-bar);
   --color-surface-muted: var(--surface-muted);
@@ -215,13 +189,11 @@
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
 
-  /* Direct Flow — texto e marca */
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
   --color-text-muted: var(--text-muted);
   --color-primary-hover: var(--brand-hover);
 
-  /* Direct Flow — status do chamado (chip: bg-status-x/12 + text-status-x) */
   --color-status-aberto: var(--status-aberto);
   --color-status-em-analise: var(--status-em-analise);
   --color-status-encaminhado: var(--status-encaminhado);
@@ -231,13 +203,11 @@
   --color-status-fechado: var(--status-fechado);
   --color-status-cancelado: var(--status-cancelado);
 
-  /* Direct Flow — prioridade */
   --color-prioridade-baixa: var(--prioridade-baixa);
   --color-prioridade-media: var(--prioridade-media);
   --color-prioridade-alta: var(--prioridade-alta);
   --color-prioridade-critica: var(--prioridade-critica);
 
-  /* Direct Flow — tipo */
   --color-tipo-duvida: var(--tipo-duvida);
   --color-tipo-ocorrencia: var(--tipo-ocorrencia);
   --color-tipo-solicitacao: var(--tipo-solicitacao);
@@ -245,7 +215,6 @@
   --color-tipo-incidente: var(--tipo-incidente);
   --color-tipo-bug: var(--tipo-bug);
 
-  /* Direct Flow — superfícies especiais */
   --color-note-internal: var(--note-internal);
   --color-note-internal-border: var(--note-internal-border);
   --color-note-internal-foreground: var(--note-internal-foreground);
@@ -259,7 +228,6 @@
   --color-danger-border: var(--danger-border);
   --color-danger-foreground: var(--danger-foreground);
 
-  /* Raios */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -269,12 +237,10 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --radius-5xl: calc(var(--radius) * 3);
 
-  /* Sombras: brilho usa currentColor (combine com text-<cor>) */
   --shadow-glow-sm: 0 0 14px currentColor;
   --shadow-glow: 0 0 16px currentColor;
   --shadow-underline: 0 1px 0 0 currentColor;
 
-  /* Órbita (login) */
   --animate-orbit-slow: orbit-spin 42s linear infinite;
   --animate-orbit-medium: orbit-spin 26s linear infinite reverse;
   --animate-orbit-fast: orbit-spin 14s linear infinite;
@@ -299,7 +265,6 @@
   }
 }
 
-/* Safe-area: padding/posição somando o passo da escala ao inset do aparelho. */
 @utility pt-safe-* {
   padding-top: calc(--spacing(--value(number)) + env(safe-area-inset-top));
 }
@@ -323,11 +288,6 @@
   right: calc(--spacing(--value(number)) + env(safe-area-inset-right));
 }
 
-/*
- * Fora de @layer para vencer os utilitários: sem animação para quem pediu.
- * Cobre a órbita, os spinners (animate-spin) e as entradas/saídas do
- * tw-animate-css usadas pelos primitivos do shadcn (dropdown, toast...).
- */
 @media (prefers-reduced-motion: reduce) {
   .animate-orbit-slow,
   .animate-orbit-medium,

@@ -39,7 +39,6 @@ const ThemeToggle = ({ className }: ThemeToggleProps) => {
             className,
           )}
         >
-          {/* Ícone por CSS, não por estado: evita divergência de hidratação. */}
           <SunIcon aria-hidden="true" className="size-5 dark:hidden" />
           <MoonIcon aria-hidden="true" className="hidden size-5 dark:block" />
         </Button>

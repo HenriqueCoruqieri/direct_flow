@@ -4,6 +4,28 @@ import nextTs from "eslint-config-next/typescript"
 import prettier from "eslint-config-prettier"
 import simpleImportSort from "eslint-plugin-simple-import-sort"
 
+const noComments = {
+  meta: {
+    type: "suggestion",
+    messages: {
+      noComment:
+        "Sem comentários no código. A explicação vai na resposta, não no arquivo.",
+    },
+  },
+  create(context) {
+    const directive = /^\s*(eslint-|eslint\s|@ts-|global\s)/
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (!directive.test(comment.value)) {
+            context.report({ loc: comment.loc, messageId: "noComment" })
+          }
+        }
+      },
+    }
+  },
+}
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -38,8 +60,6 @@ const eslintConfig = defineConfig([
     files: ["app/_lib/utils.ts"],
     rules: { "no-restricted-imports": "off" },
   },
-  // Componentes: arrow function + export default. Primitivos do shadcn ficam
-  // como o CLI gera (function + exportação nomeada).
   {
     files: ["app/**/*.tsx"],
     ignores: ["app/_components/ui/**"],
@@ -53,6 +73,11 @@ const eslintConfig = defineConfig([
       ],
       "import/prefer-default-export": ["error", { target: "any" }],
     },
+  },
+  {
+    files: ["**/*.{ts,tsx,js,jsx,mjs}"],
+    plugins: { df: { rules: { "no-comments": noComments } } },
+    rules: { "df/no-comments": "error" },
   },
   prettier,
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
