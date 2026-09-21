@@ -154,7 +154,7 @@ isenção cai e a regra volta a valer para as linhas editadas.
   grupos `(grupo)`, dinâmicos `[id]` e paralelos `@slot`.
 - **Todo o código da aplicação vive dentro de `app/`.** Não existem
   `components/` nem `lib/` na raiz do projeto. Fora de `app/` ficam só `db/`,
-  `drizzle/`, `emails/`, `docs/`, `public/`, `proxy.ts` e arquivos de
+  `emails/`, `docs/`, `public/`, `proxy.ts` e arquivos de
   configuração. Onde colocar cada coisa:
   - usado por **uma rota só** → pasta privada dentro da rota:
     `app/(auth)/login/_components/login-form.tsx`
@@ -182,7 +182,7 @@ agentes podem **ler** qualquer arquivo.
 
 | Caminho                                                                                                                              | Escreve        |
 | ------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
-| `db/schema.ts`, `drizzle/**` (migrations), `drizzle.config.ts`                                                                       | `df-architect` |
+| `db/schema.ts`, `db/migrations/**`, `drizzle.config.ts`                                                                              | `df-architect` |
 | `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`                                                           | `df-architect` |
 | `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect` |
 | `docs/**`                                                                                                                            | `df-architect` |

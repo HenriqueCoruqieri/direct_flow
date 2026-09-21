@@ -36,7 +36,7 @@ Da camada apontada pelo `df-debug`, chegue ao agente:
 | `app/**` (fora de `app/_lib/**`, `app/(auth)/**`, `app/api/**`)                         | `df-ui`        |
 | `app/_lib/actions/**`                                                                   | `df-actions`   |
 | `app/_lib/domain/**`, `app/_lib/validation/**`, `app/_lib/types/**`, `app/_lib/date.ts` | `df-architect` |
-| `db/schema.ts`, `drizzle/**` (migrations)                                               | `df-architect` |
+| `db/schema.ts`, `db/migrations/**`                                                      | `df-architect` |
 | `app/_lib/data/**`, `db/index.ts`, `db/seed.ts`                                         | `df-data`      |
 | `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`                                         | `df-auth`      |
 | `app/_lib/email/**`, `emails/**`                                                        | `df-email`     |
