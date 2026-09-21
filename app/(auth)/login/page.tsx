@@ -1,7 +1,5 @@
 import type { Metadata } from "next"
 
-import AuthShell from "@/app/_components/auth/auth-shell"
-
 import LoginForm from "./_components/login-form"
 
 export const metadata: Metadata = {
@@ -9,11 +7,7 @@ export const metadata: Metadata = {
 }
 
 const LoginPage = () => {
-  return (
-    <AuthShell>
-      <LoginForm />
-    </AuthShell>
-  )
+  return <LoginForm />
 }
 
 export default LoginPage

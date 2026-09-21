@@ -1,4 +1,4 @@
-import LogoMark from "@/app/_components/brand/logo-mark"
+import LogoMark from "@/app/_components/logo-mark"
 import { cn } from "@/app/_lib/utils"
 
 type OrbitHeroSize = "sm" | "md" | "lg"

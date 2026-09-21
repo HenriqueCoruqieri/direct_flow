@@ -38,19 +38,23 @@ Nenhuma função nesta etapa.
 
 ## Rota
 
-`/login` em `app/(auth)/login/` — dono `df-auth` (seção 7 do stack.md). A página
-compõe os componentes publicados pelo `df-ui`.
+`/login` em `app/(auth)/login/` — dono `df-auth` (seção 7 do stack.md).
 
-## Componentes (`df-ui`, em `app/_components/**`)
+## Componentes
 
-O `df-ui` define e publica as assinaturas exatas:
+Moldura e peças exclusivas de auth (`df-auth`):
 
-- `OrbitHero` — painel visual do conceito "Órbita"
+- `app/(auth)/layout.tsx` — moldura das telas de autenticação (hero + área do
+  formulário + alternância de tema)
+- `app/(auth)/_components/orbit-hero.tsx` — painel visual do conceito "Órbita"
+- `app/(auth)/login/_components/login-form.tsx` — formulário de login
+
+Compartilhados, publicados pelo `df-ui` em `app/_components/`:
+
 - `LogoMark` — marca do Direct Flow
-- `AuthShell` — moldura da tela de autenticação (hero + área do formulário)
 - `UnderlineInput` — input com estilo sublinhado, compatível com React Hook Form
 - `PillButton` — botão em pílula (submit)
-- `ThemeToggle` — alternância claro/escuro
+- `ThemeToggle` (`theme/`) — alternância claro/escuro
 
 ## Submit (provisório)
 

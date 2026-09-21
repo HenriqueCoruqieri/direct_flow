@@ -1,21 +1,8 @@
-import OrbitHero from "@/app/_components/brand/orbit-hero"
 import ThemeToggle from "@/app/_components/theme/theme-toggle"
 
-interface AuthShellProps {
-  children: React.ReactNode
-  title?: string
-  tagline?: string
-  footer?: React.ReactNode
-}
+import OrbitHero from "./_components/orbit-hero"
 
-const DEFAULT_FOOTER = "Sem acesso? Fale com o admin do seu setor."
-
-const AuthShell = ({
-  children,
-  title = "Direct Flow",
-  tagline = "Fluxo de trabalho completo e detalhado do início ao fim",
-  footer = DEFAULT_FOOTER,
-}: AuthShellProps) => {
+const AuthLayout = ({ children }: LayoutProps<"/">) => {
   return (
     <div className="relative flex min-h-dvh flex-1 flex-col bg-background text-foreground lg:grid lg:grid-cols-2">
       <div className="absolute top-safe-3 right-safe-3 z-10 lg:top-safe-6 lg:right-safe-6">
@@ -26,9 +13,11 @@ const AuthShell = ({
         <OrbitHero size="lg" />
         <div className="flex flex-col items-center gap-3 text-center">
           <h1 className="font-heading text-4xl font-semibold tracking-tight">
-            {title}
+            Direct Flow
           </h1>
-          <p className="text-lg text-muted-foreground">{tagline}</p>
+          <p className="text-lg text-muted-foreground">
+            Fluxo de trabalho completo e detalhado do início ao fim
+          </p>
         </div>
       </aside>
 
@@ -40,9 +29,11 @@ const AuthShell = ({
             </div>
             <div className="-mt-3 flex flex-col items-center gap-1.5 text-center">
               <h1 className="font-heading text-3xl font-semibold tracking-tight short:text-2xl">
-                {title}
+                Direct Flow
               </h1>
-              <p className="text-base text-muted-foreground">{tagline}</p>
+              <p className="text-base text-muted-foreground">
+                Fluxo de trabalho completo e detalhado do início ao fim
+              </p>
             </div>
           </header>
 
@@ -50,15 +41,13 @@ const AuthShell = ({
             {children}
           </div>
 
-          {footer ? (
-            <p className="mt-4 text-center text-sm text-muted-foreground short:mt-3">
-              {footer}
-            </p>
-          ) : null}
+          <p className="mt-4 text-center text-sm text-muted-foreground short:mt-3">
+            Sem acesso? Fale com o admin do seu setor.
+          </p>
         </div>
       </main>
     </div>
   )
 }
 
-export default AuthShell
+export default AuthLayout
