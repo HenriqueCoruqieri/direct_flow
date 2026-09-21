@@ -73,7 +73,7 @@ df-architect
   - extrair canCloseTicket() de app/tickets/[id]/page.tsx:34 e
     app/_lib/actions/tickets.ts:112 para app/_lib/domain/ticket.ts
 df-ui
-  - extrair <TicketStatusBadge> de 4 telas para app/_components/ticket/
+  - extrair <TicketStatusBadge> de 4 telas para app/_components/ticket-status-badge.tsx
 ```
 
 Uma refatoração que atravessa donos vira **duas tarefas em ordem**: primeiro o
@@ -98,8 +98,12 @@ para comparar antes e depois.
 
 ## 6. Encerramento
 
-Commit `refactor(<escopo>): ...`, um por agrupamento coerente — não um commit
+Commit `refactor: ...`, um por agrupamento coerente — não um commit
 gigante.
 
 Reporte: o que foi unificado, quantas cópias sumiram, o que você decidiu **não**
 refatorar e por quê. Essa última parte importa tanto quanto o resto.
+
+Inclua no relatório as explicações que os agentes deram sobre o código —
+trechos provisórios, decisões não óbvias, justificativas de `as` — com arquivo
+e linha. Elas substituem os comentários, que são proibidos no código.

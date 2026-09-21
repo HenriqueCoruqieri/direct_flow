@@ -30,13 +30,13 @@ Falha em qualquer um é bloqueante.
 Cada busca abaixo deve voltar **vazia**. Qualquer resultado é bloqueante.
 
 ```bash
-# UI acessando banco (regra 12)
+# UI acessando banco (seção 2)
 grep -rnE "from \"(drizzle-orm|pg)\"|from \"@/db" app --include=*.tsx --include=*.ts | grep -v "^app/_lib/"
 
 # Server Action escrevendo SQL
 grep -rnE "from \"drizzle-orm\"|from \"@/db" app/_lib/actions
 
-# Day.js fora de app/_lib/date.ts (regra 3)
+# Day.js fora de app/_lib/date.ts (seção 1)
 grep -rn "from \"dayjs\"" app db | grep -v "app/_lib/date.ts"
 
 # Formatação de data artesanal
@@ -45,10 +45,10 @@ grep -rnE "toLocaleDateString|toLocaleString|Intl\.DateTimeFormat" app
 # Segunda biblioteca de data
 grep -rnE "\"(date-fns|moment|luxon|js-joda)\"" package.json
 
-# TanStack Query sem ADR (regra 7)
+# TanStack Query sem ADR (seção 1)
 grep -rn "@tanstack/react-query" app
 
-# Rota de API indevida (regra 15) — só api/auth é permitida
+# Rota de API indevida (seção 3) — só api/auth é permitida
 find app/api -name "route.ts" -not -path "*auth*"
 
 # Escape de tipo
@@ -56,10 +56,17 @@ grep -rnE ": any\b|as any|@ts-ignore|@ts-expect-error" app db
 
 # E-mail consultando banco
 grep -rnE "from \"@/app/_lib/data|from \"drizzle-orm\"" app/_lib/email
+
+# Comentário em CSS (TS/JS já é barrado pelo lint)
+grep -rn "/\*" app --include=*.css
 ```
 
 Se `@tanstack/react-query` aparecer, procure o ADR correspondente em `docs/adr/`.
 Existindo e justificando o caso concreto, não é violação.
+
+Cada `any` ou `as` que o grep de escape de tipo encontrar: confira a
+justificativa no relatório do agente que escreveu (arquivo e linha). Com
+justificativa, ATENÇÃO; sem, BLOQUEANTE.
 
 ## Revisão de julgamento
 
@@ -72,10 +79,14 @@ O que nenhum `grep` pega:
   por HTTP e não pode confiar na UI ter escondido o botão.
 - **Regra de negócio duplicada** — a mesma condição de permissão aparece em JSX
   e na action em vez de sair de `app/_lib/domain/`?
-- **Transação** — mudança de status e `ticket_event` gravam juntos? Duas chamadas
+- **Transação** — mudança de status e `ticket_history` gravam juntos? Duas chamadas
   de `app/_lib/data` em sequência não são transação.
-- **Histórico** — algum `update` ou `delete` em `ticket_event`? Deve ser
+- **Histórico** — algum `update` ou `delete` em `ticket_history`? Deve ser
   append-only.
+- **Colocation** — componente em `app/_components/` usado por uma rota só?
+  Subpasta nova em `app/_components/` sem aprovação do usuário?
+- **Import de `export default`** — algum componente importado com nome
+  diferente do próprio componente?
 - **Zod duplicado** — o formulário redefiniu um schema que já existe em
   `app/_lib/validation/`?
 - **Revalidação** — `revalidatePath("/")` genérico onde caberia caminho ou tag

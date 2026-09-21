@@ -57,7 +57,7 @@ recebe props tipadas, e a função de envio só monta o input e chama o Resend.
 
 Datas dentro de e-mail usam `@/app/_lib/date`, os mesmos helpers da interface. Um
 usuário que vê `18/09/2026` na tela precisa ver `18/09/2026` no e-mail — é a
-mesma regra de consistência da regra 3, e é por isso que você não formata data
+mesma regra de consistência da seção 1 do `stack.md`, e é por isso que você não formata data
 por conta.
 
 Assunto e corpo em português. Todo e-mail tem link para o ticket, construído a
@@ -81,4 +81,4 @@ logue o e-mail no console em vez de falhar.
 
 `npx tsc --noEmit` passa · nenhuma função sua consulta banco · nenhuma lança
 erro para cima · datas via `@/app/_lib/date` · você não escreveu fora dos seus
-caminhos · commit `feat(email): ...`
+caminhos · commit `feat: ...`

@@ -35,8 +35,8 @@ auth nem e-mail. Você define as formas; outros preenchem.
 
 ## Schema (`db/schema.ts`)
 
-Só tabelas de **domínio**: `ticket`, `department`, `category_tag`,
-`ticket_event`, `ticket_approval`, etc.
+Só tabelas de **domínio**: `department`, `tag`, `ticket`, `ticket_tag`,
+`ticket_transfer`, `ticket_history`, `message`, `attachment`.
 
 As tabelas de autenticação (`user`, `session`, `account`, `verification`) são
 geradas pelo Better Auth e vivem em `db/auth-schema.ts`, que pertence ao
@@ -46,12 +46,12 @@ se as duas coisas estivessem no mesmo arquivo, cada regeneração sobrescreveria
 o domínio.
 
 Estado atual a corrigir: `db/schema.ts` hoje contém um `user` artesanal com
-coluna `password`. Ao entrar o Better Auth, esse `user` sai do seu arquivo e
+coluna `password_hash`. Ao entrar o Better Auth, esse `user` sai do seu arquivo e
 você passa a importar o do `df-auth`. Trate isso como sua primeira migration.
 
 Convenções: `snake_case` nas colunas do banco, `camelCase` no TypeScript,
 `timestamp with timezone` para tudo que é data, `createdAt`/`updatedAt` em toda
-tabela mutável. Toda transição de ticket gera linha em `ticket_event` — o
+tabela mutável. Toda transição de ticket gera linha em `ticket_history` — o
 requisito do projeto é documentar o ciclo de vida inteiro, então o histórico é
 append-only, nunca `UPDATE` destrutivo.
 
@@ -96,8 +96,9 @@ saber se mostra o botão "Encaminhar", e a action precisa autorizar o
 encaminhamento. Sem `app/_lib/domain/`, essa regra seria escrita duas vezes e as
 duas versões divergiriam. Sendo pura, a mesma função roda nos dois lados.
 
-Classificação fixa do ticket — `Dúvidas`, `Ocorrência`, `Solicitação`,
-`Incidente`, `Bugs` — é enum no schema e constante tipada aqui. Tags de
+Classificação fixa do ticket — `duvida`, `ocorrencia`, `solicitacao`,
+`sugestao_de_melhoria`, `incidente`, `bug` (enum `ticket_type`) — é enum no
+schema e constante tipada aqui, com os rótulos de exibição em português. Tags de
 categoria são dados, cadastrados por admin de setor, e nunca viram enum.
 
 ## Datas (`app/_lib/date.ts`)
@@ -105,13 +106,11 @@ categoria são dados, cadastrados por admin de setor, e nunca viram enum.
 Você é o único que importa `dayjs`. Todo o resto do projeto importa de
 `@/app/_lib/date`. Exporte um conjunto pequeno e suficiente:
 
-```ts
-formatDate(value) // 18/09/2026
-formatDateTime(value) // 18/09/2026 14:32
-formatRelative(value) // há 3 horas
-toISO(value)
-parseISO(value)
-```
+- `formatDate(value)` → `18/09/2026`
+- `formatDateTime(value)` → `18/09/2026 14:32`
+- `formatRelative(value)` → `há 3 horas`
+- `toISO(value)`
+- `parseISO(value)`
 
 Locale `pt-br`, plugins `utc`, `timezone` e `relativeTime` registrados aqui e
 em nenhum outro lugar. Se alguém pedir um formato novo, adicione um helper aqui
@@ -141,4 +140,4 @@ consequência. Curto.
 ## Antes de encerrar
 
 `npx tsc --noEmit` passa · contrato escrito em `docs/contracts/` ·
-você não escreveu fora dos seus caminhos · commit `feat(db): ...`
+você não escreveu fora dos seus caminhos · commit `feat: ...`

@@ -27,7 +27,7 @@ em caminho de outro; quando precisa, reporta e encerra o turno.
 ## Comandos
 
 `/implement` feature nova · `/fix` bug · `/refactor` duplicação e limpeza ·
-`/document` documentação · `/plan` consultoria antes de codar
+`/document` documentação · `/consult` consultoria antes de codar
 
 Os comandos são os orquestradores. Eles acionam agentes, repassam contexto e
 verificam; não escrevem código de produção.
@@ -59,7 +59,7 @@ Rule of thumb: se você pode trabalhar contra o contrato publicado, trabalhe.
 1. **Todos → `df-architect`.** Sem tabela, tipo e schema Zod publicados não há o
    que importar nem tipar. É a razão de ele existir como onda separada.
 2. **`df-actions` → `df-data`** (por entidade). A action não pode tocar o banco
-   (regra 12), então a função de dados é a única via de escrita dela.
+   (seção 2 do `stack.md`), então a função de dados é a única via de escrita dela.
 3. **`df-ui` → `df-actions`** (só para mutação). Um formulário precisa da action
    à qual se ligar. A leitura não depende: a UI chama `app/_lib/data` direto no Server
    Component.

@@ -121,25 +121,28 @@ Isso resolve praticamente todo caso em que o reflexo pede `any`.
 - `@ts-ignore`
 - `!` (non-null assertion) para calar o compilador
 - afrouxar `tsconfig.json`
-- `@ts-expect-error` sem comentário explicando o que se espera e por quê
+- `@ts-expect-error` sem descrição na própria diretiva
+  (`// @ts-expect-error: <o que se espera e por quê>`)
 
-**`any` e `as`** só quando os quatro caminhos acima falharem, com comentário na
-linha imediatamente acima dizendo qual deles foi tentado e por que não serviu:
+**`any` e `as`** só quando os quatro caminhos acima falharem. A justificativa
+(qual caminho foi tentado e por que não serviu) vai na resposta do agente, com
+arquivo e linha, nunca em comentário no código:
 
-```ts
-// any: retorno do driver pg sem tipagem para linhas de EXPLAIN;
-// unknown + narrowing não compensa aqui, o valor é descartado após o log
-const plan = result.rows as any
-```
+> `app/_lib/data/explain.ts:12` — `as any`: retorno do driver `pg` sem tipagem
+> para linhas de EXPLAIN; `unknown` + narrowing não compensa, o valor é
+> descartado após o log.
 
-Sem esse comentário, é violação. O `df-reviewer` trata cada ocorrência com
-justificativa como ATENÇÃO e cada uma sem justificativa como BLOQUEANTE.
+Sem essa justificativa na resposta, é violação. O `df-reviewer` trata cada
+ocorrência como ATENÇÃO e confere a justificativa no relatório do agente; sem
+ela, BLOQUEANTE.
 
 **Exceção — primitivos gerados pelo shadcn.** Arquivos em `app/_components/ui/**`
 gerados pelo CLI (`npx shadcn@latest add`) e não alterados à mão estão isentos
-da exigência de comentário em `as`. Continuam proibidos neles: `any`,
+da exigência de justificativa para `as`. Continuam proibidos neles: `any`,
 `@ts-ignore` e `!`. Se o arquivo for editado à mão (ex.: ajuste de token), a
-isenção cai e a regra volta a valer para as linhas editadas.
+isenção cai e a regra volta a valer para as linhas editadas. Trocar o import do
+`cn` para `@/app/_lib/utils` e remover comentários gerados pelo CLI não contam
+como edição à mão.
 
 **`interface` e `type`.** Props e objetos usam `interface`; `type` fica para o
 que `interface` não expressa. Vale para todo componente, não só os que compõem
@@ -159,6 +162,24 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
 - Alias de import: `@/*` aponta para a raiz (`@/app/_lib/data/tickets`, `@/db/schema`).
 - Prettier: sem ponto e vírgula, 2 espaços. `simple-import-sort` ordena imports —
   rode `npm run lint -- --fix` antes de commitar.
+- **Sem comentários no código.** Nenhum `//`, `/* */`, `{/* */}` ou JSDoc em
+  `.ts`, `.tsx`, `.mjs` e `.css`, em nenhuma hipótese. Toda explicação (trecho
+  complexo, dado provisório, placeholder de feature futura, justificativa de
+  `as`) vai na resposta do agente, citando arquivo e linha; o orquestrador
+  repassa ao usuário no relatório final. Único texto permitido: diretivas de
+  ferramenta (`// eslint-disable-next-line <regra>`, `// @ts-expect-error: …`,
+  `// @ts-check`), com a justificativa também na resposta. Garantido pelo
+  ESLint (`df/no-comments`) em TypeScript/JavaScript; no CSS, pelo `df-reviewer`.
+- **Componentes: arrow function + `export default`.** Um componente por
+  arquivo, declarado como `const NomeComponente = (props: NomeComponenteProps) => {}`
+  e exportado no fim com `export default NomeComponente`. Quem importa usa o
+  mesmo nome do componente (`import PillButton from "@/app/_components/pill-button"`).
+  Vale também para os arquivos especiais do Next (`page`, `layout`, `loading`,
+  `error`, `not-found`); `metadata`, `viewport` e `generateMetadata` continuam
+  como exportação nomeada, como o Next exige. Com genérico, use `<T,>`
+  (`const DataTable = <TData,>(props: DataTableProps<TData>) => {}`). Primitivos
+  em `app/_components/ui/**` ficam como o CLI gera. Garantido pelo ESLint
+  (`react/function-component-definition` e `import/prefer-default-export`).
 - **Pastas privadas em `app/`.** Dentro de `app/`, toda pasta que não é segmento
   de rota leva `_` no início do nome (`_components`, `_lib`, `_hooks`…). O
   prefixo tira a pasta e as subpastas do roteamento do Next
@@ -167,22 +188,44 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
   grupos `(grupo)`, dinâmicos `[id]` e paralelos `@slot`.
 - **Todo o código da aplicação vive dentro de `app/`.** Não existem
   `components/` nem `lib/` na raiz do projeto. Fora de `app/` ficam só `db/`,
-  `emails/`, `docs/`, `public/`, `proxy.ts` e arquivos de
-  configuração. Onde colocar cada coisa:
-  - usado por **uma rota só** → pasta privada dentro da rota:
+  `emails/`, `docs/`, `public/`, `proxy.ts` e arquivos de configuração.
+- **Componente mora perto de quem usa (colocation).** Começa no nível mais
+  baixo e só sobe quando uma segunda área passa a usá-lo:
+  - usado por **uma rota só** → `_components/` da rota:
     `app/(auth)/login/_components/login-form.tsx`
-  - componente usado por **mais de uma rota** → `app/_components/`
-    (design system, primitivos shadcn em `app/_components/ui/`)
-  - camadas da aplicação e utilitários compartilhados → `app/_lib/`
-    (`data`, `actions`, `validation`, `domain`, `types`, `auth`, `email`,
-    `date.ts`, `utils.ts`)
-  - hooks compartilhados → `app/_hooks/`
+  - usado por **várias rotas do mesmo grupo** → `_components/` do grupo:
+    `app/(auth)/_components/orbit-hero.tsx`
+  - usado por **áreas diferentes** → `app/_components/`, solto na pasta:
+    `app/_components/pill-button.tsx`
+  - moldura comum a todas as telas de um grupo → `layout.tsx` do grupo, não
+    componente (`app/(auth)/layout.tsx`)
+- **Subpasta em `app/_components/`:** só `ui/` (primitivos do shadcn), `theme/`
+  e conjuntos de arquivos que formam uma peça só (`data-table/` com toolbar,
+  paginação e cabeçalho). Nunca por tipo de coisa (`form/`, `brand/`, `auth/`).
+  Qualquer subpasta nova exige aprovação do usuário: o agente não a cria; para,
+  reporta a pasta proposta, os arquivos que iriam para ela e por que formam uma
+  peça só, e encerra o turno. O orquestrador leva a pergunta ao usuário.
+- **Camadas e utilitários** → `app/_lib/` (`data`, `actions`, `validation`,
+  `domain`, `types`, `auth`, `email`, `date.ts`, `utils.ts`). Hooks
+  compartilhados → `app/_hooks/`.
+- **`cn` tem uma fonte só: `@/app/_lib/utils`.** Todo arquivo, primitivos do
+  shadcn inclusive, importa `cn` daí. Importar do pacote `cn` (ou `cn/*`) direto
+  é erro de lint (`no-restricted-imports`); a única exceção é o próprio
+  `utils.ts`. O CLI do shadcn gera `from "cn"`: depois de todo
+  `npx shadcn@latest add`, troque o import.
+- **Token novo no `@theme` → registrado no `cn`.** O `cn` resolve conflitos por
+  grupo de classe, mas não lê o `globals.css`. Um token com nome fora da escala
+  padrão do Tailwind (`--shadow-underline`, `--text-hero`) é classificado no
+  grupo errado e descartado em silêncio. Ao criar um, registre-o no `createCn`
+  de `app/_lib/utils.ts`, na chave de tema correspondente (`shadow`, `text`,
+  `radius`…).
 
 ## 6. Commits
 
-`husky` + `commitlint` (Conventional Commits). Use o escopo do seu domínio:
+`husky` + `commitlint` (Conventional Commits), **sem escopo**: o tipo vem
+direto seguido de dois-pontos, nunca `tipo(escopo):`.
 
-`feat:` · `fix` · `refactor` · `chore` Não utilize "()" depois do prefixo.
+Tipos usados: `feat:` · `fix:` · `refactor:` · `chore:` · `docs:`
 
 Um commit por unidade coerente de trabalho. Não comite `.next/` nem `.env`.
 
@@ -193,29 +236,30 @@ Você não faz o commit, apenas sugere a mensagem.
 Cada caminho tem **exatamente um** agente com permissão de escrita. Todos os
 agentes podem **ler** qualquer arquivo.
 
-| Caminho                                                                                                                              | Escreve        |
-| ------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
-| `db/schema.ts`, `db/migrations/**`, `drizzle.config.ts`                                                                              | `df-architect` |
-| `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`                                                           | `df-architect` |
-| `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect` |
-| `docs/**`                                                                                                                            | `df-architect` |
-| `db/auth-schema.ts`, `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`                                              | `df-auth`      |
-| `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`                                                                                      | `df-data`      |
-| `app/_lib/actions/**`                                                                                                                | `df-actions`   |
-| `app/_lib/email/**`, `emails/**`                                                                                                     | `df-email`     |
-| `app/**` (exceto `app/(auth)/**`, `app/api/**` e `app/_lib/**`), incluindo `app/_components/**`, `app/_hooks/**` e `app/globals.css` | `df-ui`        |
-| `app/_lib/utils.ts`, `components.json`                                                                                               | `df-ui`        |
+| Caminho                                                                                                                              | Escreve                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| `db/schema.ts`, `db/migrations/**`, `drizzle.config.ts`                                                                              | `df-architect`                            |
+| `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`                                                           | `df-architect`                            |
+| `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect`                            |
+| `docs/**`                                                                                                                            | `df-architect`                            |
+| `db/auth-schema.ts`, `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`                                              | `df-auth`                                 |
+| `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`                                                                                      | `df-data`                                 |
+| `app/_lib/actions/**`                                                                                                                | `df-actions`                              |
+| `app/_lib/email/**`, `emails/**`                                                                                                     | `df-email`                                |
+| `app/**` (exceto `app/(auth)/**`, `app/api/**` e `app/_lib/**`), incluindo `app/_components/**`, `app/_hooks/**` e `app/globals.css` | `df-ui`                                   |
+| `app/_lib/utils.ts`, `components.json`                                                                                               | `df-ui`                                   |
+| nenhum — apenas leitura e execução                                                                                                   | `df-reviewer`, `df-debug`                 |
+| `.claude/**`, `CLAUDE.md`                                                                                                            | orquestrador, só com aprovação do usuário |
 
 `app/_lib/**` não tem dono único: cada subpasta pertence ao agente da camada,
 conforme as linhas acima. Subpasta nova em `app/_lib/` só entra com dono
 definido nesta tabela.
-| nenhum — apenas leitura e execução | `df-reviewer` |
-| `.claude/**`, `CLAUDE.md` | orquestrador, só com aprovação do usuário |
 
-**Formulários em `app/(auth)/**`** são do `df-auth`: ele monta a tela e o
-formulário usando os componentes e o padrão de formulário do `df-ui`
-(React Hook Form + Zod + `field` do shadcn), sem criar componente próprio em
-`app/_components/`. Precisa de componente novo? Pede ao `df-ui`.
+**Telas em `app/(auth)/**`** são do `df-auth`: layout do grupo, formulários e
+componentes usados só por auth (`app/(auth)/_components/`). Ele usa os
+componentes compartilhados e o padrão de formulário do `df-ui` (React Hook
+Form, Zod e `field` do shadcn) e não cria nada em `app/_components/`. Precisa de
+componente compartilhado novo? Pede ao `df-ui`.
 
 Precisa de mudança em arquivo que não é seu? **Não edite.** Descreva o que
 precisa e para quem, e encerre seu turno. O orquestrador aciona o dono.

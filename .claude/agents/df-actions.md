@@ -68,7 +68,7 @@ Resolver pelo próprio autor, encaminhar dentro do setor, encaminhar para outro
 setor com aprovação de admin, admin assumir o ticket, admin atribuir a
 colaborador, encerrar. Cada transição:
 
-- grava `ticket_event` na **mesma transação** da mudança de status, para que o
+- grava `ticket_history` na **mesma transação** da mudança de status, para que o
   histórico nunca fique fora de sincronia com o estado
 - passa por `nextStatusFor()` de `app/_lib/domain/`, nunca por status literal
 - dispara o e-mail correspondente, se houver
@@ -89,7 +89,7 @@ mutação derruba o benefício dos Server Components. Consulte
 ## Dependências que você tem — e por quê
 
 Você depende de `app/_lib/data/` existir para a entidade em questão. Isso é
-inevitável: a regra 12 proíbe você de tocar o banco, então a função de dados é
+inevitável: a seção 2 do `stack.md` proíbe você de tocar o banco, então a função de dados é
 literalmente a sua única via de escrita. Por isso `df-data` roda antes de você
 para cada entidade.
 
@@ -106,4 +106,4 @@ Nenhum novo.
 
 `npx tsc --noEmit` passa · toda action tem os 8 passos (ou justificativa escrita
 para os ausentes) · nenhum import de `drizzle-orm` ou `@/db` · você não escreveu
-fora de `app/_lib/actions/**` · commit `feat(actions): ...`
+fora de `app/_lib/actions/**` · commit `feat: ...`

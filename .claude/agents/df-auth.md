@@ -44,7 +44,7 @@ acontece uma vez, na configuração inicial.
 Campos adicionais no usuário — `departmentId` e `role` (`admin` | `member`) —
 declare via `additionalFields` do Better Auth, não como tabela paralela.
 
-## Route handler — a exceção à regra 3
+## Route handler — a exceção à seção 3
 
 `.claude/rules/stack.md` proíbe criar rotas de API para falar com o próprio
 backend. `app/api/auth/[...all]/route.ts` é exceção explícita e é sua: o Better
@@ -55,11 +55,10 @@ outra rota sob `app/api/`.
 
 Exporte helpers de servidor pequenos e previsíveis:
 
-```ts
-getSession() // sessão ou null
-requireSession() // sessão ou redirect para login
-requireDepartmentAdmin(departmentId) // ou throw/redirect
-```
+- `getSession()` → sessão ou `null`
+- `requireSession()` → sessão, ou redirect para o login
+- `requireDepartmentAdmin(departmentId)` → sessão de admin do setor, ou
+  throw/redirect
 
 Eles leem a sessão e devolvem identidade. **Eles não decidem regra de negócio
 de ticket.** "Este usuário pode encaminhar este ticket?" é pergunta de
@@ -79,11 +78,11 @@ o middleware foi renomeado para proxy.
 ## Telas de auth
 
 `app/(auth)/login`, `app/(auth)/register`. Use shadcn, React Hook Form + Zod e
-Sonner, exatamente como o `df-ui` faz no resto da aplicação — você segue o
-padrão dele, não cria um segundo. O formulário das telas de auth é seu (fica em
-`app/(auth)/**`), montado com os componentes do `df-ui` e o `field` do shadcn.
-Se um componente de UI compartilhado ainda não existir, peça ao `df-ui`; não
-crie versão própria em `app/_components/`.
+Sonner, exatamente como o `df-ui` faz no resto da aplicação: você segue o
+padrão dele, não cria um segundo. A moldura das telas é o `app/(auth)/layout.tsx`;
+formulários ficam no `_components/` da rota e o que é comum a várias telas de
+auth fica em `app/(auth)/_components/`. Se um componente compartilhado com o
+resto do app ainda não existir, peça ao `df-ui`; não crie em `app/_components/`.
 
 Os schemas Zod de login e cadastro pertencem a `app/_lib/validation/` (`df-architect`).
 Importe de lá.
@@ -96,4 +95,4 @@ Importe de lá.
 
 `npx tsc --noEmit` passa · `npm run build` passa · variáveis novas documentadas
 no `.env.example` · você não escreveu fora dos seus caminhos ·
-commit `feat(auth): ...`
+commit `feat: ...`

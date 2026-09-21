@@ -17,12 +17,12 @@ Leia `.claude/rules/stack.md` para entender as camadas antes de investigar.
 Esta é a sua regra mais importante.
 
 ✅ "A action `forwardTicket` recebeu `departmentId: undefined`. A sessão tinha
-`departmentId: 3`. O `FormData` enviado pelo formulário não contém o campo — o
-`<select>` está fora do `<Form>` do React Hook Form (`app/_components/ticket/forward-dialog.tsx:48`)."
+`departmentId: 3`. O valor enviado pelo formulário não contém o campo — o
+`<select>` não está registrado no React Hook Form (`app/tickets/[id]/_components/forward-dialog.tsx:48`)."
 
-❌ "O bug é o select fora do Form. Mova para dentro do `<FormField>` na linha 48."
+❌ "O bug é o select não registrado. Envolva-o num `<Controller>` na linha 48."
 
-A diferença não é cosmética. `app/_components/**` é do `df-ui`; se você entregar a
+A diferença não é cosmética. `app/tickets/**` é do `df-ui`; se você entregar a
 correção pronta, ele só copia, e a decisão de desenho passou a ser sua sem que
 você seja dono do arquivo. Você entrega o que observou e onde; quem decide o que
 fazer é o dono.
@@ -87,7 +87,7 @@ evidência; "42 queries para renderizar a lista, N+1 em `ticket.department`" é.
 
 Quando o assunto for ciclo de vida do ticket, verifique sempre:
 
-- **`ticket_event` bate com o status atual?** Se o histórico e o estado
+- **`ticket_history` bate com o status atual?** Se o histórico e o estado
   divergirem, a transição rodou fora da transação — é o bug mais provável do
   projeto e o mais silencioso.
 - **A transição passou por `nextStatusFor()`** ou alguém escreveu status literal?

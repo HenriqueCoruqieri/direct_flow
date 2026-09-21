@@ -75,9 +75,14 @@ mensagem de erro. Desabilite o submit durante o envio.
 ## Componentes
 
 shadcn/ui via CLI (`npx shadcn@latest add ...`). Os primitivos gerados em
-`app/_components/ui/` não são editados à mão, exceto para ajustar token de tema —
-mudança de comportamento vira um componente novo em `app/_components/` que compõe o
-primitivo.
+`app/_components/ui/` não são editados à mão, exceto para ajustar token de tema
+ou trocar o import do `cn` para `@/app/_lib/utils` — mudança de comportamento
+vira um componente novo em `app/_components/` que compõe o primitivo.
+
+Componentes próprios seguem o padrão de `stack.md` › Convenções: arrow function
+e `export default`, importados com o mesmo nome do componente, e colocados no
+nível mais baixo que os usa. Os primitivos em `app/_components/ui/` mantêm o
+formato do CLI (`function` + exportação nomeada).
 
 Não instale outra biblioteca de componentes, e não escreva do zero um componente
 que o shadcn oferece.
@@ -107,6 +112,8 @@ Datas vindas do banco chegam em UTC; os helpers já convertem para o fuso local.
 Tailwind v4, tokens em `app/globals.css`. Sem valor mágico (`mt-[13px]`) quando
 houver passo na escala. Sem CSS-in-JS, sem módulos CSS, sem arquivo `.css`
 avulso. `prettier-plugin-tailwindcss` ordena as classes — não brigue com ele.
+Token novo com nome fora da escala do Tailwind é registrado no `createCn` de
+`app/_lib/utils.ts` no mesmo commit (regra em `stack.md` › Convenções).
 
 Acessibilidade: label em todo campo, foco visível, `aria-label` em botão só de
 ícone, contraste suficiente em tema claro e escuro.
@@ -127,9 +134,9 @@ a **mesma** função que ela usa, para que interface e servidor nunca discordem.
 
 Dependências instaladas automaticamente pelo CLI do shadcn (`shadcn`,
 `radix-ui`, `cn`, `class-variance-authority`, `tw-animate-css` e as que ele
-vier a trazer) são permitidas. Os primitivos em `app/_components/ui/` importam `cn`
-do pacote `cn`, como o CLI gera; componentes próprios importam de
-`@/app/_lib/utils`.
+vier a trazer) são permitidas. Todo arquivo, primitivos inclusive, importa `cn`
+de `@/app/_lib/utils`; depois de cada `npx shadcn@latest add`, troque o
+`from "cn"` gerado pelo CLI.
 
 ## Antes de encerrar
 

@@ -33,7 +33,7 @@ export async function listTicketsByDepartment(
   filters: TicketFilters,
 ): Promise<TicketListItem[]>
 export async function insertTicket(data: NewTicket): Promise<Ticket>
-export async function insertTicketEvent(data: NewTicketEvent): Promise<void>
+export async function insertTicketHistory(data: NewTicketHistory): Promise<void>
 ```
 
 Nomeie pela operação de banco: `find`, `list`, `count`, `insert`, `update`,
@@ -52,7 +52,7 @@ manter os vocabulários distintos deixa óbvio em qual camada você está lendo.
 - **Não enviam e-mail.**
 
 Sua função é substituível por outra implementação de banco sem que nada acima
-mude. É o que mantém a apresentação isolada da persistência (regra 12).
+mude. É o que mantém a apresentação isolada da persistência (seção 2 do `stack.md`).
 
 ## Tipos
 
@@ -79,11 +79,11 @@ Paginação sempre com `limit` e `offset` explícitos, e uma função `count`
 correspondente. A tela de chamados vai crescer.
 
 Escritas que precisam ser atômicas — criar ticket e o primeiro
-`ticket_event`, aprovar e atribuir — vão em `db.transaction()`, dentro de **uma**
+`ticket_history`, aprovar e atribuir — vão em `db.transaction()`, dentro de **uma**
 função sua. Não deixe a action orquestrar duas chamadas suas e chamar isso de
 transação.
 
-Histórico é append-only: `ticket_event` só recebe `insert`. Nunca atualize nem
+Histórico é append-only: `ticket_history` só recebe `insert`. Nunca atualize nem
 apague evento.
 
 ## Pacotes que você instala
@@ -94,4 +94,4 @@ Nenhum novo. `drizzle-orm` e `pg` já estão instalados.
 
 `npx tsc --noEmit` passa · nenhum import de React ou de `app/` fora de `app/_lib/` ·
 nenhuma função sua valida entrada ou decide permissão · você não escreveu fora
-dos seus caminhos · commit `feat(data): ...`
+dos seus caminhos · commit `feat: ...`

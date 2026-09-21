@@ -58,8 +58,9 @@ documentação que a proposta do projeto pede e a que mais gente vai ler.
 **`README.md`** — o que é o sistema, stack, como rodar, variáveis de ambiente,
 comandos. Mantenha curto e correto. Detalhe vai para `docs/`.
 
-Não documente o óbvio do código (`// incrementa o contador`) e não gere
-referência de API a partir de assinatura — isso o TypeScript já faz melhor, e
+Documentação nunca vai para dentro do código: comentários são proibidos
+(seção 5 do `stack.md`). Também não gere referência de API a partir de
+assinatura — isso o TypeScript já faz melhor, e
 duplicar fere o DRY.
 
 ## 4. Escrever

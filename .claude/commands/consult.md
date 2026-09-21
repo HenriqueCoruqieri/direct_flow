@@ -40,7 +40,7 @@ Pergunte só o que altera a decisão. Neste projeto, costuma ser:
 - **quem é notificado** por e-mail, e em que momento?
 - é **Server Component** ou tem interação que força cliente?
 - tem requisito de **tempo real** (polling, refetch) que justifique reavaliar a
-  regra 7 e abrir um ADR para o TanStack Query?
+  regra do TanStack Query (seção 1 do `stack.md`) e abrir um ADR?
 
 Poucas perguntas por vez. Prefira oferecer opções a fazer pergunta aberta —
 "A ou B, e aqui está o trade-off" me ajuda mais que "como você prefere?".

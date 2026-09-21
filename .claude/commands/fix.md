@@ -67,7 +67,11 @@ Se estiver **BLOQUEADO**, devolva ao dono indicado e revise de novo.
 
 ## 5. Encerramento
 
-Commit `fix(<escopo>): ...` descrevendo a causa, não o sintoma.
+Commit `fix: ...` descrevendo a causa, não o sintoma.
 
 Reporte ao usuário: causa raiz, o que foi alterado e por qual agente, como
 verificar. Se o `df-debug` deixou algo em aberto, diga.
+
+Inclua no relatório as explicações que os agentes deram sobre o código —
+trechos provisórios, decisões não óbvias, justificativas de `as` — com arquivo
+e linha. Elas substituem os comentários, que são proibidos no código.

@@ -52,7 +52,7 @@ resolva você na onda seguinte — nunca mande um escrever no lugar do outro.
 ## Onda 2 — em paralelo
 
 - **`df-actions`** — Server Actions. Depende de `app/_lib/data/` da Onda 1 existir,
-  porque a regra 12 o proíbe de tocar o banco.
+  porque a seção 2 do `stack.md` o proíbe de tocar o banco.
 - **`df-ui`** — telas, formulários e tabelas. Para mutação, liga-se às actions.
 
 Se `df-ui` precisar de uma action que ainda não existe, passe a assinatura do
@@ -74,7 +74,12 @@ dono junto com ela.
 
 ## Encerramento
 
-Commits por domínio, escopo Conventional Commits (`feat(db|auth|data|actions|email|ui)`).
+Commits por unidade coerente, sem escopo (`feat: ...`), conforme a seção 6 do
+`stack.md`.
 
 Reporte ao usuário: o que foi criado, por qual agente, o veredito da revisão e o
 que ficou de fora. Curto.
+
+Inclua no relatório as explicações que os agentes deram sobre o código —
+trechos provisórios, decisões não óbvias, justificativas de `as` — com arquivo
+e linha. Elas substituem os comentários, que são proibidos no código.
