@@ -4,13 +4,9 @@ import { cn } from "@/app/_lib/utils"
 type OrbitHeroSize = "sm" | "md" | "lg"
 
 interface OrbitHeroProps {
-  /** sm ≈ 260px · md = 344px (mobile, fiel ao canvas) · lg ≈ 464px (desktop) */
   size?: OrbitHeroSize
   className?: string
 }
-
-// O palco é desenhado em 344px (medida do canvas) e escalado como um todo,
-// para anéis, pontos e marca manterem a proporção em qualquer tamanho.
 const boxBySize: Record<OrbitHeroSize, string> = {
   sm: "size-65",
   md: "size-86",

@@ -15,7 +15,28 @@ const eslintConfig = defineConfig([
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
       "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "cn",
+              message: 'Importe cn de "@/app/_lib/utils".',
+            },
+          ],
+          patterns: [
+            {
+              group: ["cn/*"],
+              message: 'Importe cn de "@/app/_lib/utils".',
+            },
+          ],
+        },
+      ],
     },
+  },
+  {
+    files: ["app/_lib/utils.ts"],
+    rules: { "no-restricted-imports": "off" },
   },
   prettier,
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),

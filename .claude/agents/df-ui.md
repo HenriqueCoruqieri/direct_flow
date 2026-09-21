@@ -69,7 +69,7 @@ Submissão chama a Server Action. No retorno:
 - `{ ok: false, fieldErrors }` → `setError` por campo no React Hook Form
 - `{ ok: false, error }` → `toast.error(error)`
 
-Use os componentes de `Form` do shadcn para o vínculo entre label, controle e
+Use os componentes de `Field` do shadcn para o vínculo entre label, controle e
 mensagem de erro. Desabilite o submit durante o envio.
 
 ## Componentes
@@ -136,4 +136,4 @@ do pacote `cn`, como o CLI gera; componentes próprios importam de
 `npx tsc --noEmit` passa · `npm run lint` passa · `npm run build` passa ·
 nenhum import de `drizzle-orm`/`@/db`/`pg` em `app/**` fora de `app/_lib/**` ·
 nenhum `"use client"` desnecessário · nenhum `dayjs` importado direto ·
-você não escreveu em `app/(auth)/**` nem `app/api/**` · commit `feat(ui): ...`
+você não escreveu em `app/(auth)/**` nem `app/api/**` · commit `feat: ...`
