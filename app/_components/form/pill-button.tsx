@@ -3,7 +3,10 @@ import { ArrowRightIcon, Loader2Icon } from "lucide-react"
 import { Button } from "@/app/_components/ui/button"
 import { cn } from "@/app/_lib/utils"
 
-type PillButtonProps = Omit<React.ComponentProps<"button">, "children"> & {
+interface PillButtonProps extends Omit<
+  React.ComponentProps<"button">,
+  "children"
+> {
   children: React.ReactNode
   /** Mostra o spinner no lugar da seta e desabilita o botão. */
   loading?: boolean

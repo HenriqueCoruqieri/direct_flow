@@ -141,6 +141,19 @@ da exigência de comentário em `as`. Continuam proibidos neles: `any`,
 `@ts-ignore` e `!`. Se o arquivo for editado à mão (ex.: ajuste de token), a
 isenção cai e a regra volta a valer para as linhas editadas.
 
+**`interface` e `type`.** Props e objetos usam `interface`; `type` fica para o
+que `interface` não expressa. Vale para todo componente, não só os que compõem
+shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
+
+- Props: `interface NomeComponenteProps`, declarada logo acima do componente.
+- Herdar props de outro componente: `extends`, nunca `&`
+  (`interface PillButtonProps extends React.ComponentProps<typeof Button>`).
+- Mudar uma prop herdada: `extends Omit<..., "prop">` antes de redeclará-la.
+- `type` só para: uniões (`type Size = "sm" | "md"`), props "ou isto ou aquilo"
+  (cada formato é uma `interface`, a junção é `type`), `z.infer`, `$inferSelect`
+  e tipos utilitários. Estender uma união exige `type X = União & { ... }`.
+- Primitivos em `app/_components/ui/**` gerados pelo CLI ficam como vieram.
+
 ### Convenções
 
 - Alias de import: `@/*` aponta para a raiz (`@/app/_lib/data/tickets`, `@/db/schema`).

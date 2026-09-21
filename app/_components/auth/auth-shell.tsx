@@ -1,28 +1,19 @@
 import { OrbitHero } from "@/app/_components/brand/orbit-hero"
 import { ThemeToggle } from "@/app/_components/theme/theme-toggle"
 
-type AuthShellProps = {
-  /** O formulário. Renderizado uma única vez, em todos os tamanhos de tela. */
+interface AuthShellProps {
   children: React.ReactNode
   title?: string
   tagline?: string
-  /** Rodapé abaixo do formulário. Passe `null` para omitir. */
   footer?: React.ReactNode
 }
 
 const DEFAULT_FOOTER = "Sem acesso? Fale com o admin do seu setor."
 
-/**
- * Layout das telas de acesso (login, recuperação de senha...).
- * - mobile: órbita no topo, título centralizado, área do form cresce (flex-1)
- *   para o form poder empurrar o botão para a base com `mt-auto`;
- * - md: mesma coluna, centralizada em `max-w-md`;
- * - lg+: duas colunas — marca à esquerda, form à direita em `max-w-sm`.
- */
 export function AuthShell({
   children,
   title = "Direct Flow",
-  tagline = "Cada chamado, do início ao fim.",
+  tagline = "Fluxo de trabalho completo e detalhado do início ao fim",
   footer = DEFAULT_FOOTER,
 }: AuthShellProps) {
   return (

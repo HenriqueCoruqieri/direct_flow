@@ -3,7 +3,7 @@ import { cn } from "@/app/_lib/utils"
 
 type OrbitHeroSize = "sm" | "md" | "lg"
 
-type OrbitHeroProps = {
+interface OrbitHeroProps {
   /** sm ≈ 260px · md = 344px (mobile, fiel ao canvas) · lg ≈ 464px (desktop) */
   size?: OrbitHeroSize
   className?: string

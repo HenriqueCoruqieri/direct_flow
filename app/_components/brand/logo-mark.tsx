@@ -2,12 +2,9 @@ import { cn } from "@/app/_lib/utils"
 
 type LogoMarkSize = "sm" | "md" | "lg"
 
-type LogoMarkProps = {
-  /** sm = 32px (sidebar) · md = 48px · lg = 84px (centro da órbita) */
+interface LogoMarkProps {
   size?: LogoMarkSize
-  /** tile = superfície com borda · tint = fundo da marca a 12% (sidebar) */
   variant?: "tile" | "tint"
-  /** Rótulo acessível; sem ele o ícone é decorativo. */
   label?: string
   className?: string
 }

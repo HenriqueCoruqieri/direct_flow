@@ -14,7 +14,7 @@ import {
 } from "@/app/_components/ui/dropdown-menu"
 import { cn } from "@/app/_lib/utils"
 
-type ThemeToggleProps = {
+interface ThemeToggleProps {
   className?: string
 }
 
