@@ -1,26 +1,353 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Telas baixas abaixo de lg (ex.: iPhone SE 375x667): compacta o hero do login.
+ * No lg+ o hero fica na coluna lateral, então a variante não se aplica.
+ */
+@custom-variant short (@media (max-width: 64rem) and (max-height: 44rem));
+
+/*
+ * Tokens do Direct Flow — canvas "Direct Flow — Telas" (Paleta-Light / Paleta-Dark).
+ * :root = tema claro · .dark = tema escuro.
+ * As vars do shadcn (--background, --primary...) são mapeadas a partir dos
+ * tokens semânticos do canvas; os utilitários ficam em @theme inline.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base e superfícies */
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-bar: #ffffff;
+  --surface-muted: #edf1f5;
+  --surface-active: #e6ebf1;
+  --border-subtle: #e2e7ee;
+  --border-default: #d6dde6;
+  --border-strong: #cdd5df;
+
+  /* Texto e marca */
+  --text: #121822;
+  --text-secondary: #3a4556;
+  --text-tertiary: #4b576a;
+  --text-muted: #5b6778;
+  --brand: #087360;
+  --brand-hover: #065a4b;
+  --on-brand: #ffffff;
+
+  /* Status do chamado */
+  --status-aberto: #2563c9;
+  --status-em-analise: #7047c9;
+  --status-encaminhado: #0e6f8a;
+  --status-aguardando-aprovacao: #8f5205;
+  --status-em-andamento: #087360;
+  --status-resolvido: #217538;
+  --status-fechado: #5b6778;
+  --status-cancelado: #b53636;
+
+  /* Prioridade */
+  --prioridade-baixa: #5b6778;
+  --prioridade-media: #2563c9;
+  --prioridade-alta: #8f5205;
+  --prioridade-critica: #b53636;
+
+  /* Tipo (ocorrencia e solicitacao derivados da paleta, sem cor própria no canvas) */
+  --tipo-duvida: #7047c9;
+  --tipo-ocorrencia: #0e6f8a;
+  --tipo-solicitacao: #2563c9;
+  --tipo-sugestao-de-melhoria: #8f5205;
+  --tipo-incidente: #b53636;
+  --tipo-bug: #b03f8a;
+
+  /* Superfícies especiais */
+  --note-internal: #fff7ea;
+  --note-internal-border: #e3c893;
+  --note-internal-foreground: #4f3a16;
+  --reply-public: #e8f5f1;
+  --reply-public-border: #bfe0d6;
+  --reply-public-foreground: #173e35;
+  --warning: #fdf5e8;
+  --warning-border: #eed9b4;
+  --warning-foreground: #7a4a0a;
+  --danger: #fceeee;
+  --danger-border: #f0caca;
+  --danger-foreground: #9a2e2e;
+
+  /* Mapeamento shadcn */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--surface-muted);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-active);
+  --accent-foreground: var(--text);
+  --destructive: var(--status-cancelado);
+  --border: var(--border-default);
+  --input: var(--border-strong);
+  --ring: var(--brand);
+  --chart-1: var(--status-aberto);
+  --chart-2: var(--status-em-andamento);
+  --chart-3: var(--status-aguardando-aprovacao);
+  --chart-4: var(--status-em-analise);
+  --chart-5: var(--status-cancelado);
+  --radius: 0.625rem;
+  --sidebar: var(--surface-bar);
+  --sidebar-foreground: var(--text-tertiary);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent: var(--surface-active);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--brand);
+}
+
+.dark {
+  /* Base e superfícies */
+  --bg: #0b0f14;
+  --surface: #121821;
+  --surface-bar: #0e131a;
+  --surface-muted: #1a2330;
+  --surface-active: #1f2937;
+  --border-subtle: #1e2733;
+  --border-default: #232d3b;
+  --border-strong: #2a3547;
+
+  /* Texto e marca */
+  --text: #e7ecf3;
+  --text-secondary: #c4ccd8;
+  --text-tertiary: #a9b4c4;
+  --text-muted: #8d9aae;
+  --brand: #3dd6b5;
+  --brand-hover: #6be3c9;
+  --on-brand: #0b0f14;
+
+  /* Status do chamado */
+  --status-aberto: #6aa8ff;
+  --status-em-analise: #b79cff;
+  --status-encaminhado: #5cc8e8;
+  --status-aguardando-aprovacao: #f2b45a;
+  --status-em-andamento: #3dd6b5;
+  --status-resolvido: #86d993;
+  --status-fechado: #8d9aae;
+  --status-cancelado: #f07a7a;
+
+  /* Prioridade */
+  --prioridade-baixa: #8d9aae;
+  --prioridade-media: #6aa8ff;
+  --prioridade-alta: #f2b45a;
+  --prioridade-critica: #f07a7a;
+
+  /* Tipo */
+  --tipo-duvida: #b79cff;
+  --tipo-ocorrencia: #5cc8e8;
+  --tipo-solicitacao: #6aa8ff;
+  --tipo-sugestao-de-melhoria: #f2b45a;
+  --tipo-incidente: #f07a7a;
+  --tipo-bug: #e58fc8;
+
+  /* Superfícies especiais */
+  --note-internal: #17140e;
+  --note-internal-border: #4a3c22;
+  --note-internal-foreground: #e4d6bc;
+  --reply-public: #10231f;
+  --reply-public-border: #1c3a33;
+  --reply-public-foreground: #d5e9e3;
+  --warning: #1a1710;
+  --warning-border: #3a3020;
+  --warning-foreground: #d9c39a;
+  --danger: #1c1214;
+  --danger-border: #3d2226;
+  --danger-foreground: #e3a9a9;
 }
 
 @theme inline {
+  /* Tipografia (variáveis definidas por next/font em app/layout.tsx) */
+  --font-sans: var(--font-manrope);
+  --font-heading: var(--font-sora);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* shadcn */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Direct Flow — superfícies e bordas */
+  --color-surface: var(--surface);
+  --color-surface-bar: var(--surface-bar);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-active: var(--surface-active);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  /* Direct Flow — texto e marca */
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+  --color-primary-hover: var(--brand-hover);
+
+  /* Direct Flow — status do chamado (chip: bg-status-x/12 + text-status-x) */
+  --color-status-aberto: var(--status-aberto);
+  --color-status-em-analise: var(--status-em-analise);
+  --color-status-encaminhado: var(--status-encaminhado);
+  --color-status-aguardando-aprovacao: var(--status-aguardando-aprovacao);
+  --color-status-em-andamento: var(--status-em-andamento);
+  --color-status-resolvido: var(--status-resolvido);
+  --color-status-fechado: var(--status-fechado);
+  --color-status-cancelado: var(--status-cancelado);
+
+  /* Direct Flow — prioridade */
+  --color-prioridade-baixa: var(--prioridade-baixa);
+  --color-prioridade-media: var(--prioridade-media);
+  --color-prioridade-alta: var(--prioridade-alta);
+  --color-prioridade-critica: var(--prioridade-critica);
+
+  /* Direct Flow — tipo */
+  --color-tipo-duvida: var(--tipo-duvida);
+  --color-tipo-ocorrencia: var(--tipo-ocorrencia);
+  --color-tipo-solicitacao: var(--tipo-solicitacao);
+  --color-tipo-sugestao-de-melhoria: var(--tipo-sugestao-de-melhoria);
+  --color-tipo-incidente: var(--tipo-incidente);
+  --color-tipo-bug: var(--tipo-bug);
+
+  /* Direct Flow — superfícies especiais */
+  --color-note-internal: var(--note-internal);
+  --color-note-internal-border: var(--note-internal-border);
+  --color-note-internal-foreground: var(--note-internal-foreground);
+  --color-reply-public: var(--reply-public);
+  --color-reply-public-border: var(--reply-public-border);
+  --color-reply-public-foreground: var(--reply-public-foreground);
+  --color-warning: var(--warning);
+  --color-warning-border: var(--warning-border);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-border: var(--danger-border);
+  --color-danger-foreground: var(--danger-foreground);
+
+  /* Raios */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-5xl: calc(var(--radius) * 3);
+
+  /* Sombras: brilho usa currentColor (combine com text-<cor>) */
+  --shadow-glow-sm: 0 0 14px currentColor;
+  --shadow-glow: 0 0 16px currentColor;
+  --shadow-underline: 0 1px 0 0 currentColor;
+
+  /* Órbita (login) */
+  --animate-orbit-slow: orbit-spin 42s linear infinite;
+  --animate-orbit-medium: orbit-spin 26s linear infinite reverse;
+  --animate-orbit-fast: orbit-spin 14s linear infinite;
+  --animate-breathe: breathe 3.2s ease-in-out infinite;
+
+  @keyframes orbit-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes breathe {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    50% {
+      transform: scale(1.18);
+      opacity: 0.15;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Safe-area: padding/posição somando o passo da escala ao inset do aparelho. */
+@utility pt-safe-* {
+  padding-top: calc(--spacing(--value(number)) + env(safe-area-inset-top));
+}
+
+@utility pb-safe-* {
+  padding-bottom: calc(
+    --spacing(--value(number)) + env(safe-area-inset-bottom)
+  );
+}
+
+@utility px-safe-* {
+  padding-left: calc(--spacing(--value(number)) + env(safe-area-inset-left));
+  padding-right: calc(--spacing(--value(number)) + env(safe-area-inset-right));
+}
+
+@utility top-safe-* {
+  top: calc(--spacing(--value(number)) + env(safe-area-inset-top));
+}
+
+@utility right-safe-* {
+  right: calc(--spacing(--value(number)) + env(safe-area-inset-right));
+}
+
+/*
+ * Fora de @layer para vencer os utilitários: sem animação para quem pediu.
+ * Cobre a órbita, os spinners (animate-spin) e as entradas/saídas do
+ * tw-animate-css usadas pelos primitivos do shadcn (dropdown, toast...).
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-orbit-slow,
+  .animate-orbit-medium,
+  .animate-orbit-fast,
+  .animate-breathe,
+  .animate-spin,
+  .animate-in,
+  .animate-out {
+    animation: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

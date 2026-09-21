@@ -1,7 +1,6 @@
+import { redirect } from "next/navigation"
+
+// Temporário: enquanto não existe a tela inicial, a raiz leva ao login.
 export default function Home() {
-  return (
-    <div className="h-screen w-screen bg-black">
-      <h1 className="font-extrabold text-white">Olá mundo!</h1>
-    </div>
-  )
+  redirect("/login")
 }
