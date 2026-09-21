@@ -3,8 +3,8 @@ import "./globals.css"
 import type { Metadata, Viewport } from "next"
 import { JetBrains_Mono, Manrope, Sora } from "next/font/google"
 
-import { ThemeProvider } from "@/components/theme/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
+import { ThemeProvider } from "@/app/_components/theme/theme-provider"
+import { Toaster } from "@/app/_components/ui/sonner"
 
 const manrope = Manrope({
   variable: "--font-manrope",

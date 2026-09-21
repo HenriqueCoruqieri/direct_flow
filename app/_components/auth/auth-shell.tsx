@@ -1,5 +1,5 @@
-import { OrbitHero } from "@/components/brand/orbit-hero"
-import { ThemeToggle } from "@/components/theme/theme-toggle"
+import { OrbitHero } from "@/app/_components/brand/orbit-hero"
+import { ThemeToggle } from "@/app/_components/theme/theme-toggle"
 
 type AuthShellProps = {
   /** O formulário. Renderizado uma única vez, em todos os tamanhos de tela. */

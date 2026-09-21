@@ -66,7 +66,7 @@ estiver pedindo algo mais complexo do que o problema exige — é útil ouvir is
 Quando eu aprovar a direção, escreva o plano com:
 
 - **Escopo** — o que entra, o que fica de fora
-- **Impacto no contrato** — tabelas, enums, schemas Zod, regras de `lib/domain/`
+- **Impacto no contrato** — tabelas, enums, schemas Zod, regras de `app/_lib/domain/`
   que precisam nascer ou mudar
 - **Migration** — se houver, e se é destrutiva
 - **Ondas e agentes** — quem faz o quê, o que roda em paralelo, seguindo o

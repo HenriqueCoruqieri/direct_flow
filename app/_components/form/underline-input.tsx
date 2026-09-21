@@ -1,5 +1,5 @@
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { Input } from "@/app/_components/ui/input"
+import { cn } from "@/app/_lib/utils"
 
 type UnderlineInputProps = React.ComponentProps<typeof Input> & {
   /** Conteúdo à direita, na mesma linha sublinhada (ex.: link "Esqueci"). */

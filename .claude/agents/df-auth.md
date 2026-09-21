@@ -16,7 +16,7 @@ Leia `.claude/rules/stack.md` antes de escrever código.
 
 Você **escreve** apenas:
 
-- `lib/auth/**` — configuração do Better Auth (servidor e cliente), helpers de sessão
+- `app/_lib/auth/**` — configuração do Better Auth (servidor e cliente), helpers de sessão
 - `db/auth-schema.ts` — tabelas geradas pelo Better Auth
 - `app/api/auth/[...all]/route.ts` — handler do Better Auth
 - `proxy.ts` — proteção de rota (no Next 16 o `middleware.ts` virou `proxy.ts`)
@@ -63,7 +63,7 @@ requireDepartmentAdmin(departmentId) // ou throw/redirect
 
 Eles leem a sessão e devolvem identidade. **Eles não decidem regra de negócio
 de ticket.** "Este usuário pode encaminhar este ticket?" é pergunta de
-`lib/domain/` (dono: `df-architect`), que recebe o ator como parâmetro. Você
+`app/_lib/domain/` (dono: `df-architect`), que recebe o ator como parâmetro. Você
 responde "quem é o ator e ele é admin deste setor"; o domínio responde "o que
 esse ator pode fazer com este ticket". Sem essa linha, a regra de permissão
 ficaria espalhada entre auth e domínio.
@@ -83,9 +83,9 @@ Sonner, exatamente como o `df-ui` faz no resto da aplicação — você segue o
 padrão dele, não cria um segundo. O formulário das telas de auth é seu (fica em
 `app/(auth)/**`), montado com os componentes do `df-ui` e o `field` do shadcn.
 Se um componente de UI compartilhado ainda não existir, peça ao `df-ui`; não
-crie versão própria em `components/`.
+crie versão própria em `app/_components/`.
 
-Os schemas Zod de login e cadastro pertencem a `lib/validation/` (`df-architect`).
+Os schemas Zod de login e cadastro pertencem a `app/_lib/validation/` (`df-architect`).
 Importe de lá.
 
 ## Pacotes que você instala

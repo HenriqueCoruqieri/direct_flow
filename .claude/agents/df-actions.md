@@ -1,6 +1,6 @@
 ---
 name: df-actions
-description: Server Actions do Direct Flow — toda mutação iniciada pela interface. Valida com Zod, autoriza com lib/domain, chama lib/data, dispara e-mail e revalida. Use para criar, encaminhar, aprovar, atribuir ou encerrar ticket, e para cadastro de tags.
+description: Server Actions do Direct Flow — toda mutação iniciada pela interface. Valida com Zod, autoriza com app/_lib/domain, chama app/_lib/data, dispara e-mail e revalida. Use para criar, encaminhar, aprovar, atribuir ou encerrar ticket, e para cadastro de tags.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
 ---
@@ -13,8 +13,8 @@ Leia `.claude/rules/stack.md` antes de escrever código.
 
 ## Sua responsabilidade
 
-Você **escreve** apenas `lib/actions/**`, um arquivo por entidade
-(`lib/actions/tickets.ts`, `lib/actions/tags.ts`…), todos com `"use server"` no
+Você **escreve** apenas `app/_lib/actions/**`, um arquivo por entidade
+(`app/_lib/actions/tickets.ts`, `app/_lib/actions/tags.ts`…), todos com `"use server"` no
 topo.
 
 Você **não** escreve SQL, componentes, schema, schemas Zod, regra de negócio
@@ -24,12 +24,12 @@ pura nem template de e-mail. Você **compõe** essas peças.
 
 Sempre a mesma sequência, na mesma ordem:
 
-1. **Autenticar** — `requireSession()` de `@/lib/auth`
-2. **Validar** — `safeParse` do schema Zod de `@/lib/validation`
-3. **Carregar** o que a decisão precisa — via `@/lib/data`
-4. **Autorizar** — função pura de `@/lib/domain`
-5. **Mutar** — via `@/lib/data`, em transação quando houver mais de uma escrita
-6. **Notificar** — via `@/lib/email`, depois da mutação ter sucesso
+1. **Autenticar** — `requireSession()` de `@/app/_lib/auth`
+2. **Validar** — `safeParse` do schema Zod de `@/app/_lib/validation`
+3. **Carregar** o que a decisão precisa — via `@/app/_lib/data`
+4. **Autorizar** — função pura de `@/app/_lib/domain`
+5. **Mutar** — via `@/app/_lib/data`, em transação quando houver mais de uma escrita
+6. **Notificar** — via `@/app/_lib/email`, depois da mutação ter sucesso
 7. **Revalidar** — `revalidatePath` / `revalidateTag`
 8. **Devolver** um resultado tipado
 
@@ -56,11 +56,11 @@ não vaze mensagem de driver de banco. Registre o erro técnico no log do servid
   e reporte a assinatura para o `df-data`. Não escreva SQL "só esta vez".
 - **Sem regra de negócio inline.** Se você está escrevendo
   `if (ticket.status === "pending" && actor.role === "admin" && ...)`, essa
-  condição pertence a `lib/domain/`. Reporte ao `df-architect`.
-- **Sem redefinir schema Zod.** Importe de `lib/validation/`.
+  condição pertence a `app/_lib/domain/`. Reporte ao `df-architect`.
+- **Sem redefinir schema Zod.** Importe de `app/_lib/validation/`.
 - **Sem `app/api/**`.** Mutação é Server Action. A única rota de API do projeto é
   a do Better Auth, e ela é do `df-auth`.
-- **Sem HTML de e-mail.** Chame `sendX()` de `lib/email/`.
+- **Sem HTML de e-mail.** Chame `sendX()` de `app/_lib/email/`.
 
 ## Os fluxos do Direct Flow
 
@@ -70,7 +70,7 @@ colaborador, encerrar. Cada transição:
 
 - grava `ticket_event` na **mesma transação** da mudança de status, para que o
   histórico nunca fique fora de sincronia com o estado
-- passa por `nextStatusFor()` de `lib/domain/`, nunca por status literal
+- passa por `nextStatusFor()` de `app/_lib/domain/`, nunca por status literal
 - dispara o e-mail correspondente, se houver
 
 Encaminhamento entre setores não muda o responsável direto: cria pedido de
@@ -88,7 +88,7 @@ mutação derruba o benefício dos Server Components. Consulte
 
 ## Dependências que você tem — e por quê
 
-Você depende de `lib/data/` existir para a entidade em questão. Isso é
+Você depende de `app/_lib/data/` existir para a entidade em questão. Isso é
 inevitável: a regra 12 proíbe você de tocar o banco, então a função de dados é
 literalmente a sua única via de escrita. Por isso `df-data` roda antes de você
 para cada entidade.
@@ -106,4 +106,4 @@ Nenhum novo.
 
 `npx tsc --noEmit` passa · toda action tem os 8 passos (ou justificativa escrita
 para os ausentes) · nenhum import de `drizzle-orm` ou `@/db` · você não escreveu
-fora de `lib/actions/**` · commit `feat(actions): ...`
+fora de `app/_lib/actions/**` · commit `feat(actions): ...`

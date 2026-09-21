@@ -21,7 +21,7 @@ git diff --name-only main...HEAD    # o que mudou e pode ter desatualizado docs
 ls docs/ docs/adr/ docs/contracts/  # o que já existe
 ```
 
-Leia `db/schema.ts`, `lib/domain/`, `lib/validation/`, `lib/actions/` e as rotas
+Leia `db/schema.ts`, `app/_lib/domain/`, `app/_lib/validation/`, `app/_lib/actions/` e as rotas
 em `app/`. O schema e as regras puras são a fonte de verdade do domínio.
 
 Se algum comportamento não ficar claro só lendo, acione `df-debug` para
@@ -37,13 +37,13 @@ Compare o que você leu com o que os documentos afirmam. Procure especificamente
 - ADR decidindo algo que foi revertido depois
 - `README.md` com passo de setup que não funciona mais (variável de ambiente
   nova, comando renomeado)
-- fluxo do ticket documentado divergindo de `lib/domain/`
+- fluxo do ticket documentado divergindo de `app/_lib/domain/`
 
 Documento errado é pior que documento ausente, porque alguém confia nele.
 
 ## 3. O que documentar, e onde
 
-**`docs/contracts/<fluxo>.md`** — tabelas, schemas Zod, funções de `lib/domain/`,
+**`docs/contracts/<fluxo>.md`** — tabelas, schemas Zod, funções de `app/_lib/domain/`,
 funções de dados e Server Actions, com assinatura. É o que permite os agentes
 trabalharem em paralelo; mantê-lo vivo é a documentação mais valiosa do projeto.
 

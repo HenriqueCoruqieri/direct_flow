@@ -27,9 +27,9 @@ Se a feature mexe em comportamento existente que você não entende, acione
 Passe a descrição da feature e o que existe hoje. Ele entrega:
 
 - tabelas, enums e migration
-- schemas Zod em `lib/validation/`
-- regras puras em `lib/domain/`
-- tipos em `lib/types/`
+- schemas Zod em `app/_lib/validation/`
+- regras puras em `app/_lib/domain/`
+- tipos em `app/_lib/types/`
 - **`docs/contracts/<feature>.md`** com as assinaturas que os demais devem criar
 
 Não avance sem o contrato escrito. É ele que permite as ondas seguintes rodarem
@@ -42,7 +42,7 @@ em paralelo.
 
 Acione simultaneamente, cada um com o contrato como entrada:
 
-- **`df-data`** — funções de `lib/data/` listadas no contrato
+- **`df-data`** — funções de `app/_lib/data/` listadas no contrato
 - **`df-email`** — funções de envio, se a feature notifica alguém
 - **`df-ui`** — layout, rotas e componentes que não dependem de action
 
@@ -51,7 +51,7 @@ resolva você na onda seguinte — nunca mande um escrever no lugar do outro.
 
 ## Onda 2 — em paralelo
 
-- **`df-actions`** — Server Actions. Depende de `lib/data/` da Onda 1 existir,
+- **`df-actions`** — Server Actions. Depende de `app/_lib/data/` da Onda 1 existir,
   porque a regra 12 o proíbe de tocar o banco.
 - **`df-ui`** — telas, formulários e tabelas. Para mutação, liga-se às actions.
 

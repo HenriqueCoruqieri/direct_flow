@@ -18,11 +18,11 @@ Esta é a sua regra mais importante.
 
 ✅ "A action `forwardTicket` recebeu `departmentId: undefined`. A sessão tinha
 `departmentId: 3`. O `FormData` enviado pelo formulário não contém o campo — o
-`<select>` está fora do `<Form>` do React Hook Form (`components/ticket/forward-dialog.tsx:48`)."
+`<select>` está fora do `<Form>` do React Hook Form (`app/_components/ticket/forward-dialog.tsx:48`)."
 
 ❌ "O bug é o select fora do Form. Mova para dentro do `<FormField>` na linha 48."
 
-A diferença não é cosmética. `components/**` é do `df-ui`; se você entregar a
+A diferença não é cosmética. `app/_components/**` é do `df-ui`; se você entregar a
 correção pronta, ele só copia, e a decisão de desenho passou a ser sua sem que
 você seja dono do arquivo. Você entrega o que observou e onde; quem decide o que
 fazer é o dono.
@@ -68,9 +68,9 @@ git diff HEAD~1         # a mudança suspeita
 
 Depois siga o dado pela pilha, na direção das camadas:
 
-`app/**` (que props chegaram) → `lib/actions/**` (que entrada a action recebeu,
-o `safeParse` passou) → `lib/domain/**` (que decisão a regra pura tomou com
-aqueles dados) → `lib/data/**` (que SQL saiu, que linhas voltaram) → banco.
+`app/**` (que props chegaram) → `app/_lib/actions/**` (que entrada a action recebeu,
+o `safeParse` passou) → `app/_lib/domain/**` (que decisão a regra pura tomou com
+aqueles dados) → `app/_lib/data/**` (que SQL saiu, que linhas voltaram) → banco.
 
 Em cada fronteira, a pergunta é a mesma: **o dado que entrou era o esperado?**
 O bug quase sempre está na primeira fronteira onde a resposta é não.
@@ -94,7 +94,7 @@ Quando o assunto for ciclo de vida do ticket, verifique sempre:
 - **A aprovação cross-setor** criou pedido pendente e só atribuiu depois do
   aprovar, ou pulou etapa?
 - **A sessão tem `departmentId` e `role`** no ponto onde a autorização decidiu?
-- **A UI e a action usaram a mesma função de `lib/domain/`**, ou a condição foi
+- **A UI e a action usaram a mesma função de `app/_lib/domain/`**, ou a condição foi
   reescrita no JSX e divergiu?
 
 ## Formato do relatório

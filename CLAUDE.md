@@ -35,7 +35,7 @@ verificam; não escrevem código de produção.
 ## Ordem de execução por feature
 
 ```
-Onda 0  df-architect     schema · Zod · lib/domain · lib/date · contrato em docs/
+Onda 0  df-architect     schema · Zod · app/_lib/domain · app/_lib/date · contrato em docs/
            │
 Onda 1  df-data ─┬─ df-email ─┬─ df-ui (layout, design system)      ← em paralelo
                  │             │
@@ -61,7 +61,7 @@ Rule of thumb: se você pode trabalhar contra o contrato publicado, trabalhe.
 2. **`df-actions` → `df-data`** (por entidade). A action não pode tocar o banco
    (regra 12), então a função de dados é a única via de escrita dela.
 3. **`df-ui` → `df-actions`** (só para mutação). Um formulário precisa da action
-   à qual se ligar. A leitura não depende: a UI chama `lib/data` direto no Server
+   à qual se ligar. A leitura não depende: a UI chama `app/_lib/data` direto no Server
    Component.
 
 Fora dessas três, os agentes trabalham contra `docs/contracts/<fluxo>.md` e não

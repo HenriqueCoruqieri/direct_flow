@@ -12,7 +12,7 @@ conceito "Órbita". Accent teal: `#3DD6B5` (tema escuro) / `#087360` (tema claro
 
 Nenhum nesta etapa.
 
-## Validação — `lib/validation/auth.ts`
+## Validação — `app/_lib/validation/auth.ts`
 
 ```ts
 export const loginSchema: z.ZodObject<{ email; password }>
@@ -32,7 +32,7 @@ export type LoginInput = { email: string; password: string }
   `useForm<LoginInput>({ defaultValues: { email: "", password: "" } })`.
   No servidor (etapa futura): `loginSchema.safeParse(input)`.
 
-## Domínio — `lib/domain/`
+## Domínio — `app/_lib/domain/`
 
 Nenhuma função nesta etapa.
 
@@ -41,7 +41,7 @@ Nenhuma função nesta etapa.
 `/login` em `app/(auth)/login/` — dono `df-auth` (seção 7 do stack.md). A página
 compõe os componentes publicados pelo `df-ui`.
 
-## Componentes (`df-ui`, em `components/**`)
+## Componentes (`df-ui`, em `app/_components/**`)
 
 O `df-ui` define e publica as assinaturas exatas:
 

@@ -1,7 +1,7 @@
 import { ArrowRightIcon, Loader2Icon } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from "@/app/_components/ui/button"
+import { cn } from "@/app/_lib/utils"
 
 type PillButtonProps = Omit<React.ComponentProps<"button">, "children"> & {
   children: React.ReactNode

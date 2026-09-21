@@ -13,8 +13,8 @@ Leia `.claude/rules/stack.md` antes de escrever código.
 
 Você **escreve** apenas:
 
-- `lib/email/client.ts` — cliente Resend
-- `lib/email/send.ts` (ou um arquivo por evento) — funções de envio
+- `app/_lib/email/client.ts` — cliente Resend
+- `app/_lib/email/send.ts` (ou um arquivo por evento) — funções de envio
 - `emails/**` — templates
 
 Você **não** escreve actions, queries, componentes de interface nem schema.
@@ -36,9 +36,9 @@ sendTicketClosed(input: TicketClosedEmail): Promise<void>
 Elas **não consultam o banco**. Quem chama (a Server Action) já carregou o
 ticket, o destinatário e o setor, e passa tudo no input. Se você precisa de um
 dado que não veio, o input está incompleto — reporte a assinatura correta ao
-`df-actions` em vez de importar `lib/data/`.
+`df-actions` em vez de importar `app/_lib/data/`.
 
-Os tipos de input pertencem a `lib/types/` (`df-architect`). Importe de lá.
+Os tipos de input pertencem a `app/_lib/types/` (`df-architect`). Importe de lá.
 
 ## Falha de envio
 
@@ -55,7 +55,7 @@ ADR, não uma decisão sua no meio do caminho.
 Nada de HTML espalhado dentro das funções de envio. Template fica em `emails/`,
 recebe props tipadas, e a função de envio só monta o input e chama o Resend.
 
-Datas dentro de e-mail usam `@/lib/date`, os mesmos helpers da interface. Um
+Datas dentro de e-mail usam `@/app/_lib/date`, os mesmos helpers da interface. Um
 usuário que vê `18/09/2026` na tela precisa ver `18/09/2026` no e-mail — é a
 mesma regra de consistência da regra 3, e é por isso que você não formata data
 por conta.
@@ -80,5 +80,5 @@ logue o e-mail no console em vez de falhar.
 ## Antes de encerrar
 
 `npx tsc --noEmit` passa · nenhuma função sua consulta banco · nenhuma lança
-erro para cima · datas via `@/lib/date` · você não escreveu fora dos seus
+erro para cima · datas via `@/app/_lib/date` · você não escreveu fora dos seus
 caminhos · commit `feat(email): ...`

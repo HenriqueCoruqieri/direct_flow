@@ -31,31 +31,31 @@ Cada busca abaixo deve voltar **vazia**. Qualquer resultado é bloqueante.
 
 ```bash
 # UI acessando banco (regra 12)
-grep -rnE "from \"(drizzle-orm|pg)\"|from \"@/db" app components --include=*.tsx --include=*.ts
+grep -rnE "from \"(drizzle-orm|pg)\"|from \"@/db" app --include=*.tsx --include=*.ts | grep -v "^app/_lib/"
 
 # Server Action escrevendo SQL
-grep -rnE "from \"drizzle-orm\"|from \"@/db" lib/actions
+grep -rnE "from \"drizzle-orm\"|from \"@/db" app/_lib/actions
 
-# Day.js fora de lib/date.ts (regra 3)
-grep -rn "from \"dayjs\"" app components lib db | grep -v "lib/date.ts"
+# Day.js fora de app/_lib/date.ts (regra 3)
+grep -rn "from \"dayjs\"" app db | grep -v "app/_lib/date.ts"
 
 # Formatação de data artesanal
-grep -rnE "toLocaleDateString|toLocaleString|Intl\.DateTimeFormat" app components lib
+grep -rnE "toLocaleDateString|toLocaleString|Intl\.DateTimeFormat" app
 
 # Segunda biblioteca de data
 grep -rnE "\"(date-fns|moment|luxon|js-joda)\"" package.json
 
 # TanStack Query sem ADR (regra 7)
-grep -rn "@tanstack/react-query" app components lib
+grep -rn "@tanstack/react-query" app
 
 # Rota de API indevida (regra 15) — só api/auth é permitida
 find app/api -name "route.ts" -not -path "*auth*"
 
 # Escape de tipo
-grep -rnE ": any\b|as any|@ts-ignore|@ts-expect-error" app components lib db
+grep -rnE ": any\b|as any|@ts-ignore|@ts-expect-error" app db
 
 # E-mail consultando banco
-grep -rnE "from \"@/lib/data|from \"drizzle-orm\"" lib/email
+grep -rnE "from \"@/app/_lib/data|from \"drizzle-orm\"" app/_lib/email
 ```
 
 Se `@tanstack/react-query` aparecer, procure o ADR correspondente em `docs/adr/`.
@@ -71,13 +71,13 @@ O que nenhum `grep` pega:
   notifica, revalida, retorna. Faltou autorizar? Bloqueante: a action é chamável
   por HTTP e não pode confiar na UI ter escondido o botão.
 - **Regra de negócio duplicada** — a mesma condição de permissão aparece em JSX
-  e na action em vez de sair de `lib/domain/`?
+  e na action em vez de sair de `app/_lib/domain/`?
 - **Transação** — mudança de status e `ticket_event` gravam juntos? Duas chamadas
-  de `lib/data` em sequência não são transação.
+  de `app/_lib/data` em sequência não são transação.
 - **Histórico** — algum `update` ou `delete` em `ticket_event`? Deve ser
   append-only.
 - **Zod duplicado** — o formulário redefiniu um schema que já existe em
-  `lib/validation/`?
+  `app/_lib/validation/`?
 - **Revalidação** — `revalidatePath("/")` genérico onde caberia caminho ou tag
   específica?
 - **Ownership** — algum agente escreveu fora dos caminhos dele? Confira contra a

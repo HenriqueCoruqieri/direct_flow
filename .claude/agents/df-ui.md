@@ -17,19 +17,19 @@ siga esse padrão em vez de tipar `children` à mão.
 
 Você **escreve**:
 
-- `app/**` — exceto `app/(auth)/**` e `app/api/**`, que são do `df-auth`
-- `components/**`
+- `app/**` — exceto `app/(auth)/**` e `app/api/**` (do `df-auth`) e `app/_lib/**` (de cada agente de camada)
+- `app/_components/**` e `app/_hooks/**` — código compartilhado entre rotas
 - `app/globals.css` e os tokens de tema
-- `lib/utils.ts` e `components.json` — configuração do shadcn
+- `app/_lib/utils.ts` e `components.json` — configuração do shadcn
 
 Você **não** escreve queries, Server Actions, schema, schemas Zod, regra de
 negócio nem e-mail. Você consome tudo isso.
 
 ## A regra que você nunca quebra
 
-Nenhum arquivo em `app/**` ou `components/**` importa `drizzle-orm`, `@/db/*` ou
-`pg`. Leitura de dados vem de `@/lib/data` chamado **dentro de um Server
-Component**; mutação vem de `@/lib/actions`. Se a função de dados que você
+Nenhum arquivo de UI (`app/**` fora de `app/_lib/**`) importa `drizzle-orm`, `@/db/*` ou
+`pg`. Leitura de dados vem de `@/app/_lib/data` chamado **dentro de um Server
+Component**; mutação vem de `@/app/_lib/actions`. Se a função de dados que você
 precisa não existe, pare e reporte a assinatura ao `df-data` — não faça query.
 
 ## Server e Client Components
@@ -47,7 +47,7 @@ gerenciar estados de carregamento e erro à mão.
 
 ## Busca de dados — e por que não TanStack Query
 
-Padrão: `async` Server Component chamando `@/lib/data`, com `revalidatePath` /
+Padrão: `async` Server Component chamando `@/app/_lib/data`, com `revalidatePath` /
 `revalidateTag` disparado pelas actions cuidando da atualização.
 
 Não instale TanStack Query por hábito. Ela entra apenas quando houver
@@ -59,7 +59,7 @@ acontecer, registre em `docs/adr/` citando o caso concreto e peça ao
 
 ## Formulários
 
-React Hook Form + `zodResolver`, com o schema importado de `@/lib/validation`.
+React Hook Form + `zodResolver`, com o schema importado de `@/app/_lib/validation`.
 Você **não** redefine o schema — é o mesmo objeto que a action valida no
 servidor, e é isso que mantém cliente e servidor coerentes.
 
@@ -75,8 +75,8 @@ mensagem de erro. Desabilite o submit durante o envio.
 ## Componentes
 
 shadcn/ui via CLI (`npx shadcn@latest add ...`). Os primitivos gerados em
-`components/ui/` não são editados à mão, exceto para ajustar token de tema —
-mudança de comportamento vira um componente novo em `components/` que compõe o
+`app/_components/ui/` não são editados à mão, exceto para ajustar token de tema —
+mudança de comportamento vira um componente novo em `app/_components/` que compõe o
 primitivo.
 
 Não instale outra biblioteca de componentes, e não escreva do zero um componente
@@ -95,7 +95,7 @@ Notificações: apenas Sonner, com um único `<Toaster />` no layout raiz.
 
 ## Datas
 
-Importe de `@/lib/date`. Nunca importe `dayjs` direto, nunca use
+Importe de `@/app/_lib/date`. Nunca importe `dayjs` direto, nunca use
 `toLocaleDateString`, `Intl.DateTimeFormat` ou `new Date().toISOString().slice(...)`
 para exibir data. Precisa de um formato que não existe? Peça um helper novo ao
 `df-architect`.
@@ -114,7 +114,7 @@ Acessibilidade: label em todo campo, foco visível, `aria-label` em botão só d
 ## Regras de negócio na interface
 
 Para decidir se mostra "Encaminhar", "Aprovar" ou "Assumir", chame a função pura
-de `@/lib/domain` (`allowedTransitionsFor`, `canForwardToDepartment`). Não
+de `@/app/_lib/domain` (`allowedTransitionsFor`, `canForwardToDepartment`). Não
 reescreva a condição em JSX.
 
 Esconder um botão é conveniência, não segurança — a action revalida tudo. Mas use
@@ -127,13 +127,13 @@ a **mesma** função que ela usa, para que interface e servidor nunca discordem.
 
 Dependências instaladas automaticamente pelo CLI do shadcn (`shadcn`,
 `radix-ui`, `cn`, `class-variance-authority`, `tw-animate-css` e as que ele
-vier a trazer) são permitidas. Os primitivos em `components/ui/` importam `cn`
+vier a trazer) são permitidas. Os primitivos em `app/_components/ui/` importam `cn`
 do pacote `cn`, como o CLI gera; componentes próprios importam de
-`@/lib/utils`.
+`@/app/_lib/utils`.
 
 ## Antes de encerrar
 
 `npx tsc --noEmit` passa · `npm run lint` passa · `npm run build` passa ·
-nenhum import de `drizzle-orm`/`@/db`/`pg` em `app/**` ou `components/**` ·
+nenhum import de `drizzle-orm`/`@/db`/`pg` em `app/**` fora de `app/_lib/**` ·
 nenhum `"use client"` desnecessário · nenhum `dayjs` importado direto ·
 você não escreveu em `app/(auth)/**` nem `app/api/**` · commit `feat(ui): ...`

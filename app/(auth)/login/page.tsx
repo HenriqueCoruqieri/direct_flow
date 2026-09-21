@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 
-import { AuthShell } from "@/components/auth/auth-shell"
+import { AuthShell } from "@/app/_components/auth/auth-shell"
 
-import { LoginForm } from "./login-form"
+import { LoginForm } from "./_components/login-form"
 
 export const metadata: Metadata = {
   title: "Entrar",

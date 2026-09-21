@@ -4,15 +4,15 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
-import { PillButton } from "@/components/form/pill-button"
-import { UnderlineInput } from "@/components/form/underline-input"
+import { PillButton } from "@/app/_components/form/pill-button"
+import { UnderlineInput } from "@/app/_components/form/underline-input"
 import {
   Field,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { type LoginInput, loginSchema } from "@/lib/validation/auth"
+} from "@/app/_components/ui/field"
+import { type LoginInput, loginSchema } from "@/app/_lib/validation/auth"
 
 const LABEL_CLASS =
   "text-xs font-bold uppercase tracking-widest text-muted-foreground"

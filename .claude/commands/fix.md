@@ -31,18 +31,18 @@ patch pronto, ignore o patch e use só a evidência — a decisão é do dono.
 
 Da camada apontada pelo `df-debug`, chegue ao agente:
 
-| Camada / caminho                                                    | Dono           |
-| ------------------------------------------------------------------- | -------------- |
-| `app/**`, `components/**`                                           | `df-ui`        |
-| `lib/actions/**`                                                    | `df-actions`   |
-| `lib/domain/**`, `lib/validation/**`, `lib/types/**`, `lib/date.ts` | `df-architect` |
-| `db/schema.ts`, `drizzle/**` (migrations)                           | `df-architect` |
-| `lib/data/**`, `db/index.ts`, `db/seed.ts`                          | `df-data`      |
-| `lib/auth/**`, `proxy.ts`, `app/(auth)/**`                          | `df-auth`      |
-| `lib/email/**`, `emails/**`                                         | `df-email`     |
+| Camada / caminho                                                                        | Dono           |
+| --------------------------------------------------------------------------------------- | -------------- |
+| `app/**` (fora de `app/_lib/**`, `app/(auth)/**`, `app/api/**`)                         | `df-ui`        |
+| `app/_lib/actions/**`                                                                   | `df-actions`   |
+| `app/_lib/domain/**`, `app/_lib/validation/**`, `app/_lib/types/**`, `app/_lib/date.ts` | `df-architect` |
+| `db/schema.ts`, `drizzle/**` (migrations)                                               | `df-architect` |
+| `app/_lib/data/**`, `db/index.ts`, `db/seed.ts`                                         | `df-data`      |
+| `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`                                         | `df-auth`      |
+| `app/_lib/email/**`, `emails/**`                                                        | `df-email`     |
 
 A causa frequentemente está numa camada diferente do sintoma. Botão que não
-aparece pode ser regra em `lib/domain/`, não JSX. Corrija onde está a causa.
+aparece pode ser regra em `app/_lib/domain/`, não JSX. Corrija onde está a causa.
 
 Se a correção atravessar mais de um dono, acione cada um com o escopo dele,
 começando pela camada mais funda — corrigir o contrato primeiro às vezes dissolve
