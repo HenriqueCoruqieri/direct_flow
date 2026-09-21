@@ -134,11 +134,25 @@ const plan = result.rows as any
 Sem esse comentário, é violação. O `df-reviewer` trata cada ocorrência com
 justificativa como ATENÇÃO e cada uma sem justificativa como BLOQUEANTE.
 
+**Exceção — primitivos gerados pelo shadcn.** Arquivos em `components/ui/**`
+gerados pelo CLI (`npx shadcn@latest add`) e não alterados à mão estão isentos
+da exigência de comentário em `as`. Continuam proibidos neles: `any`,
+`@ts-ignore` e `!`. Se o arquivo for editado à mão (ex.: ajuste de token), a
+isenção cai e a regra volta a valer para as linhas editadas.
+
 ### Convenções
 
 - Alias de import: `@/*` aponta para a raiz (`@/lib/data/tickets`, `@/db/schema`).
 - Prettier: sem ponto e vírgula, 2 espaços. `simple-import-sort` ordena imports —
   rode `npm run lint -- --fix` antes de commitar.
+- **Pastas privadas em `app/`.** Dentro de `app/`, toda pasta que não é segmento
+  de rota leva `_` no início do nome (`_components`, `_lib`, `_hooks`…). O
+  prefixo tira a pasta e as subpastas do roteamento do Next
+  (`node_modules/next/dist/docs/01-app/01-getting-started/02-project-structure.md`,
+  seção "Private folders"). Exemplo: `app/(auth)/login/_components/login-form.tsx`.
+  Segmentos de rota continuam sem prefixo, assim como grupos `(grupo)`,
+  dinâmicos `[id]` e paralelos `@slot`. Código compartilhado entre rotas fica
+  na raiz, em `components/` e `lib/`, que estão fora de `app/` e não levam `_`.
 
 ## 6. Commits
 
@@ -155,17 +169,25 @@ Você não faz o commit, apenas sugere a mensagem.
 Cada caminho tem **exatamente um** agente com permissão de escrita. Todos os
 agentes podem **ler** qualquer arquivo.
 
-| Caminho                                                                              | Escreve        |
-| ------------------------------------------------------------------------------------ | -------------- |
-| `db/schema.ts`, `drizzle/**` (migrations), `drizzle.config.ts`                       | `df-architect` |
-| `lib/types/**`, `lib/validation/**`, `lib/domain/**`, `lib/date.ts`                  | `df-architect` |
-| `docs/**`                                                                            | `df-architect` |
-| `db/auth-schema.ts`, `lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`   | `df-auth`      |
-| `db/index.ts`, `db/seed.ts`, `lib/data/**`                                           | `df-data`      |
-| `lib/actions/**`                                                                     | `df-actions`   |
-| `lib/email/**`, `emails/**`                                                          | `df-email`     |
-| `app/**` (exceto `app/(auth)/**` e `app/api/**`), `components/**`, `app/globals.css` | `df-ui`        |
-| nenhum — apenas leitura e execução                                                   | `df-reviewer`  |
+| Caminho                                                                              | Escreve                                   |
+| ------------------------------------------------------------------------------------ | ----------------------------------------- |
+| `db/schema.ts`, `drizzle/**` (migrations), `drizzle.config.ts`                       | `df-architect`                            |
+| `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`           | `df-architect`                            |
+| `lib/types/**`, `lib/validation/**`, `lib/domain/**`, `lib/date.ts`                  | `df-architect`                            |
+| `docs/**`                                                                            | `df-architect`                            |
+| `db/auth-schema.ts`, `lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`   | `df-auth`                                 |
+| `db/index.ts`, `db/seed.ts`, `lib/data/**`                                           | `df-data`                                 |
+| `lib/actions/**`                                                                     | `df-actions`                              |
+| `lib/email/**`, `emails/**`                                                          | `df-email`                                |
+| `app/**` (exceto `app/(auth)/**` e `app/api/**`), `components/**`, `app/globals.css` | `df-ui`                                   |
+| `lib/utils.ts`, `components.json`                                                    | `df-ui`                                   |
+| nenhum — apenas leitura e execução                                                   | `df-reviewer`                             |
+| `.claude/**`, `CLAUDE.md`                                                            | orquestrador, só com aprovação do usuário |
+
+**Formulários em `app/(auth)/**`** são do `df-auth`: ele monta a tela e o
+formulário usando os componentes e o padrão de formulário do `df-ui`
+(React Hook Form + Zod + `field` do shadcn), sem criar componente próprio em
+`components/`. Precisa de componente novo? Pede ao `df-ui`.
 
 Precisa de mudança em arquivo que não é seu? **Não edite.** Descreva o que
 precisa e para quem, e encerre seu turno. O orquestrador aciona o dono.

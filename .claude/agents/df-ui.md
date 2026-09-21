@@ -20,6 +20,7 @@ Você **escreve**:
 - `app/**` — exceto `app/(auth)/**` e `app/api/**`, que são do `df-auth`
 - `components/**`
 - `app/globals.css` e os tokens de tema
+- `lib/utils.ts` e `components.json` — configuração do shadcn
 
 Você **não** escreve queries, Server Actions, schema, schemas Zod, regra de
 negócio nem e-mail. Você consome tudo isso.
@@ -121,8 +122,14 @@ a **mesma** função que ela usa, para que interface e servidor nunca discordem.
 
 ## Pacotes que você instala
 
-`npm install react-hook-form @hookform/resolvers @tanstack/react-table lucide-react sonner`
+`npm install react-hook-form @hookform/resolvers @tanstack/react-table lucide-react sonner next-themes`
 · primitivos do shadcn via `npx shadcn@latest add`
+
+Dependências instaladas automaticamente pelo CLI do shadcn (`shadcn`,
+`radix-ui`, `cn`, `class-variance-authority`, `tw-animate-css` e as que ele
+vier a trazer) são permitidas. Os primitivos em `components/ui/` importam `cn`
+do pacote `cn`, como o CLI gera; componentes próprios importam de
+`@/lib/utils`.
 
 ## Antes de encerrar
 

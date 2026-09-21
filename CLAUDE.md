@@ -6,7 +6,8 @@
 Sistema de gestão de chamados: ciclo de vida documentado do ticket, resolução
 pelo próprio autor, encaminhamento dentro do setor ou para outro setor com
 aprovação de admin, tags de categoria por setor e classificação fixa
-(`Dúvidas`, `Ocorrência`, `Solicitação`, `Incidente`, `Bugs`).
+(`Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`
+— enum `ticket_type` em `db/schema.ts`).
 
 Oito agentes em `.claude/agents/`, cada um dono exclusivo de um conjunto de
 caminhos (tabela na seção 7 de `.claude/rules/stack.md`). Nenhum agente escreve

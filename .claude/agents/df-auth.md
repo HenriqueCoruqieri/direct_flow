@@ -80,8 +80,10 @@ o middleware foi renomeado para proxy.
 
 `app/(auth)/login`, `app/(auth)/register`. Use shadcn, React Hook Form + Zod e
 Sonner, exatamente como o `df-ui` faz no resto da aplicação — você segue o
-padrão dele, não cria um segundo. Se um componente de UI compartilhado ainda não
-existir, peça ao `df-ui`; não crie versão própria em `components/`.
+padrão dele, não cria um segundo. O formulário das telas de auth é seu (fica em
+`app/(auth)/**`), montado com os componentes do `df-ui` e o `field` do shadcn.
+Se um componente de UI compartilhado ainda não existir, peça ao `df-ui`; não
+crie versão própria em `components/`.
 
 Os schemas Zod de login e cadastro pertencem a `lib/validation/` (`df-architect`).
 Importe de lá.
