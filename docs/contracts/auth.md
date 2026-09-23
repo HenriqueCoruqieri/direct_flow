@@ -1,5 +1,13 @@
 # Contrato — Autenticação (etapa 2: login funcionando)
 
+> A etapa 3 (redefinição de senha por e-mail) está em
+> `docs/contracts/password-reset.md`. Quase tudo neste documento continua valendo, e
+> o que muda lá é aditivo — `verification` passa a ser usada de fato e
+> `emailAndPassword` ganha opções. A exceção é `proxy.ts`: ele ganhou
+> `publicRoutes` e **perdeu** a regra de mandar quem tem cookie para `/dashboard`,
+> que passou para `app/(auth)/login/page.tsx`. Ver
+> `docs/adr/008-redirecionamento-de-sessao-fora-do-proxy.md`.
+
 Entrada das ondas 1 e 2. A etapa 1 (`docs/contracts/login.md`) entregou só o
 layout; esta etapa liga o formulário ao Better Auth, cria sessão e protege
 `/dashboard`.
@@ -196,6 +204,20 @@ desativação — precisa ser tomada **antes** de a gestão de usuários existir
 Até lá, `requireSession()` **não** é garantia de usuário ativo. Quem precisar dessa
 garantia carrega o registro e checa `is_active` explicitamente.
 
+### Ponto em aberto — login sem limite de tentativas
+
+`signInWithPassword` chama `auth.api.signInEmail` direto da camada de auth. O
+limite default do Better Auth para `/sign-in/email` (10s / máximo 3) é aplicado no
+`onRequest` do router do pacote, e a chamada direta não passa pelo router: **não há
+limite nenhum**. A mensagem genérica `E-mail ou senha inválidos.` não revela
+existência de conta, mas também não atrasa adivinhação automatizada de senha.
+
+Decidido registrar e resolver antes do deploy: a camada certa (borda do host,
+limitador do Better Auth com storage em banco, ou implementação nossa na action)
+depende da hospedagem. O mesmo furo existe em `requestPasswordResetEmail`
+(`docs/contracts/password-reset.md`), e os dois se resolvem na mesma passada. Ver
+`docs/adr/007-limite-de-tentativas-em-login-e-pedido-de-redefinicao.md`.
+
 ### Erros de login
 
 Códigos que a action devolve e a UI exibe:
@@ -320,7 +342,14 @@ signOut(): Promise<void>
 
 - Botão **Sair** ligado a `signOut` (`df-ui`), em Client Component mínimo ou
   `<form action={signOut}>`.
-- Proteção de rota em `proxy.ts` (`df-auth`), conforme o Next 16.
+- Proteção de rota em `proxy.ts` (`df-auth`), conforme o Next 16, com **uma** regra:
+  rota em `publicRoutes` passa; fora dela, cookie de sessão ausente vai para
+  `/login`. O proxy não decide "já está logado" — quem faz isso é
+  `app/(auth)/login/page.tsx`, com `getSession()`, porque presença de cookie não é
+  prova de sessão e as duas fontes de verdade em paralelo produziam ciclo de
+  redirecionamento. Toda rota protegida nova repete o padrão: guarda na `page` ou no
+  `layout` com `requireSession()`, proxy intocado. Ver
+  `docs/adr/008-redirecionamento-de-sessao-fora-do-proxy.md`.
 
 ## Variáveis de ambiente
 

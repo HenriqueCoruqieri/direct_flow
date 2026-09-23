@@ -50,11 +50,14 @@ de estado assíncrono complexo. Quem introduzir registra o motivo em
 ## 2. Camadas e direção das dependências
 
 ```
-app/ (UI)  →  app/_lib/actions/  →  app/_lib/data/  →  db/
-   │              │
-   │              ├→ app/_lib/email/
-   │              └→ app/_lib/auth/
-   └──────────────┴→ app/_lib/validation/ · app/_lib/domain/ · app/_lib/types/ · app/_lib/date
+app/ (UI) ─┬─→ app/_lib/actions/ ─┬─→ app/_lib/data/ ──→ db/
+           │                     ├─→ app/_lib/email/
+           │                     └─→ app/_lib/auth/ ──→ app/_lib/email/
+           │
+           ├─→ app/_lib/data/           (leitura, só em Server Component)
+           ├─→ app/_lib/auth/           (leitura de sessão e proteção de rota)
+           │
+           └─→ app/_lib/validation/ · app/_lib/domain/ · app/_lib/types/ · app/_lib/date
 ```
 
 As setas são de mão única. Em particular:
@@ -62,8 +65,22 @@ As setas são de mão única. Em particular:
 - **UI nunca toca banco.** Nenhum arquivo de UI — tudo em `app/**` fora de
   `app/_lib/**` e `app/api/**` — importa `drizzle-orm`, `@/db/*` ou `pg`. Sem
   exceção.
+- **A UI lê direto e escreve só por action.** Um Server Component pode importar
+  `app/_lib/data/` e `app/_lib/auth/` para **ler** — lista de tickets, sessão
+  atual, redirecionamento de rota protegida — e esse é o caminho padrão, não uma
+  concessão (`app/dashboard/page.tsx` faz as duas coisas). Mutação não: toda
+  escrita iniciada pela interface passa por Server Action. Componente marcado
+  `"use client"` não importa nenhuma das duas — são código de servidor, e o
+  cliente chega a elas pela action ou por props vindas do Server Component.
+  Ler direto não dispensa autorizar: a página decide o que mostrar aplicando
+  `app/_lib/domain/` sobre a sessão que carregou.
 - **Server Actions nunca escrevem query.** Uma action valida, autoriza, chama
   `app/_lib/data/`, revalida e devolve. O SQL vive em `app/_lib/data/`.
+- **`app/_lib/auth/` envia e-mail apenas pelos callbacks do Better Auth.** O
+  `sendResetPassword` é configurado dentro da instância do Better Auth, então
+  quem dispara o e-mail de redefinição é a camada de auth, não a action — a
+  action só pede o envio. Fora dos callbacks da biblioteca, e-mail continua
+  saindo da action. `app/_lib/email/` nunca importa `app/_lib/auth/`.
 - **`app/_lib/domain/` e `app/_lib/validation/` não fazem I/O.** São funções puras e
   schemas. Por serem puros, rodam no servidor e no cliente — é o que permite
   a UI decidir se mostra um botão usando a _mesma_ regra que a action usa para

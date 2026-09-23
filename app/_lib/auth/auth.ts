@@ -3,6 +3,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { APIError } from "better-auth/api"
 import { nextCookies } from "better-auth/next-js"
 
+import {
+  PASSWORD_RESET_TTL_MINUTES,
+  PASSWORD_RESET_TTL_SECONDS,
+} from "@/app/_lib/domain/password-reset"
+import { sendPasswordResetEmail } from "@/app/_lib/email/password-reset"
 import { db } from "@/db"
 import { roleEnum } from "@/db/schema"
 
@@ -18,6 +23,21 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
+    resetPasswordTokenExpiresIn: PASSWORD_RESET_TTL_SECONDS,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      if ("isActive" in user && user.isActive === false) return
+      try {
+        await sendPasswordResetEmail({
+          to: user.email,
+          userName: user.name,
+          resetUrl: url,
+          expiresInMinutes: PASSWORD_RESET_TTL_MINUTES,
+        })
+      } catch (error) {
+        console.error("[sendResetPassword]", error)
+      }
+    },
   },
   user: {
     additionalFields: {

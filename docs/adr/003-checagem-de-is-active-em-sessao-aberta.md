@@ -50,3 +50,6 @@ está ativo. Quem precisar dessa garantia carrega o registro e checa explicitame
   melhoria opcional, e atualiza este ADR com a opção escolhida.
 - Se a janela de exposição precisar ser reduzida antes disso, o ajuste mais barato
   é encurtar a expiração da sessão — mitigação, não solução.
+- A mesma feature herda o ponto em aberto do ADR 008: revogar a sessão no banco não
+  apaga o cookie do navegador. Hoje isso custa um salto `/dashboard` → `/login`,
+  porque nenhuma decisão autoritativa confia no cookie.
