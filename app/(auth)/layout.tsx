@@ -41,8 +41,8 @@ const AuthLayout = ({ children }: LayoutProps<"/">) => {
             {children}
           </div>
 
-          <p className="mt-4 text-center text-sm text-muted-foreground short:mt-3">
-            Sem acesso? Fale com o admin do seu setor.
+          <p className="mt-2 text-center text-sm text-muted-foreground short:mt-2">
+            Não conseguiu recuperar a conta? Procure seu administrador
           </p>
         </div>
       </main>

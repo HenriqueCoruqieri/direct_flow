@@ -1,6 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import Link from "next/link"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -12,6 +13,7 @@ import {
   FieldLabel,
 } from "@/app/_components/ui/field"
 import UnderlineInput from "@/app/_components/underline-input"
+import { signIn } from "@/app/_lib/actions/auth"
 import { type LoginInput, loginSchema } from "@/app/_lib/validation/auth"
 
 const LABEL_CLASS =
@@ -23,8 +25,10 @@ const LoginForm = () => {
     defaultValues: { email: "", password: "" },
   })
 
-  function onSubmit() {
-    toast.info("Autenticação em breve")
+  const onSubmit = async (values: LoginInput) => {
+    const result = await signIn(values)
+
+    if (result) toast.error(result.message)
   }
 
   return (
@@ -82,16 +86,6 @@ const LoginForm = () => {
                 aria-describedby={
                   fieldState.invalid ? "login-password-error" : undefined
                 }
-                trailing={
-                  <button
-                    type="button"
-                    aria-disabled="true"
-                    onClick={() => toast.info("Recuperação de senha em breve")}
-                    className="flex min-h-11 cursor-not-allowed items-center rounded-sm text-sm font-bold text-text-secondary opacity-60 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    Esqueci
-                  </button>
-                }
               />
               {fieldState.invalid ? (
                 <FieldError
@@ -108,6 +102,14 @@ const LoginForm = () => {
         <PillButton type="submit" loading={form.formState.isSubmitting}>
           Entrar
         </PillButton>
+        <div className="mt-4 flex items-center justify-center">
+          <Link
+            className="text-xs text-muted-foreground transition-colors hover:text-primary-hover"
+            href="/"
+          >
+            Esqueci minha senha
+          </Link>
+        </div>
       </div>
     </form>
   )

@@ -98,7 +98,8 @@ export const user = pgTable(
     id: pk(),
     name: text("name").notNull(),
     email: text("email").notNull(),
-    passwordHash: text("password_hash").notNull(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: text("image"),
     role: roleEnum("role").default("member").notNull(),
     departmentId: integer("department_id")
       .notNull()

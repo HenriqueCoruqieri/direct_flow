@@ -1,5 +1,11 @@
 # Contrato — Login (etapa 1: somente layout)
 
+> **Superado em parte.** A etapa 2 (autenticação de verdade) está em
+> `docs/contracts/auth.md`: Better Auth, sessão, `Actor`, seed, `signIn`/`signOut`
+> e `/dashboard`. Este documento continua válido para o layout e para o
+> `loginSchema`, que **não muda**. O que aqui aparece como "provisório" ou "fica
+> para depois" foi resolvido lá.
+
 ## Escopo desta etapa
 
 Apenas a tela de login, sem backend. Não há Better Auth, migration, Server
@@ -67,12 +73,18 @@ Nenhuma nesta etapa.
 
 ## Fica para depois
 
+Resolvido na etapa 2 (`docs/contracts/auth.md`):
+
 - Better Auth com `disableSignUp: true` (sem cadastro público); contas criadas
   pelo admin
-- Remoção do `user` artesanal (com `password`) de `db/schema.ts`, substituído
-  pelo `user` de `db/auth-schema.ts`, com FKs reapontadas na mesma migration
+- Saída de `password_hash` de `users`; a senha passa a morar em
+  `account.password`. `users` **continua** em `db/schema.ts` e as FKs `integer`
+  não mudam — ver `docs/adr/001-users-no-schema-de-dominio-com-id-serial.md`
 - `proxy.ts` para proteção de rota (Next 16)
 - Seed do primeiro admin
 - Server Action de login ligada ao formulário
+
+Ainda em aberto:
+
 - Redefinição de senha via Resend (`df-email`), com schema próprio contendo a
   regra de força de senha
