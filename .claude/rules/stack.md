@@ -239,7 +239,7 @@ agentes podem **ler** qualquer arquivo.
 | Caminho                                                                                                                              | Escreve                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
 | `db/schema.ts` (domínio **e** `users`), `db/migrations/**`, `drizzle.config.ts`                                                      | `df-architect`                            |
-| `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`                                                           | `df-architect`                            |
+| `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`, `.gitignore`, `.env.example`                             | `df-architect`                            |
 | `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect`                            |
 | `docs/**`                                                                                                                            | `df-architect`                            |
 | `db/auth-schema.ts` (só `session`, `account`, `verification`), `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`    | `df-auth`                                 |
@@ -254,6 +254,13 @@ agentes podem **ler** qualquer arquivo.
 `app/_lib/**` não tem dono único: cada subpasta pertence ao agente da camada,
 conforme as linhas acima. Subpasta nova em `app/_lib/` só entra com dono
 definido nesta tabela.
+
+**Variável de ambiente nova.** O `.env.example` é do `df-architect` porque as
+variáveis vêm de agentes diferentes — `df-auth` traz as de sessão, `df-email` as
+do Resend — e o arquivo não pode ter dois donos. Quem introduz a variável não
+edita o arquivo: reporta o nome e para que serve, e o orquestrador aciona o
+`df-architect`. O `.env` de verdade nunca é editado por agente nenhum: quem
+preenche valor é o usuário.
 
 **A tabela `users` é do `df-architect`**, em `db/schema.ts`, mesmo sendo a tabela
 de usuário do Better Auth. Ela carrega setor, papel e ativo/inativo e é alvo das

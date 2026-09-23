@@ -107,6 +107,7 @@ Importe de lá.
 
 ## Antes de encerrar
 
-`npx tsc --noEmit` passa · `npm run build` passa · variáveis novas documentadas
-no `.env.example` · você não escreveu fora dos seus caminhos ·
-commit `feat: ...`
+`npx tsc --noEmit` passa · `npm run build` passa · variáveis de ambiente novas
+reportadas na sua resposta, com nome e finalidade, para o `df-architect`
+registrar no `.env.example` (o arquivo não é seu) · você não escreveu fora dos
+seus caminhos · sugira a mensagem de commit `feat: ...`, sem comitar

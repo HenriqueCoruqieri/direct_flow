@@ -15,7 +15,7 @@ const SignOutButton = () => {
       size="lg"
       disabled={pending}
       aria-busy={pending || undefined}
-      className="w-full gap-2 text-text-secondary hover:text-foreground focus-visible:ring-ring"
+      className="w-[80] gap-2 text-text-secondary hover:text-foreground focus-visible:ring-ring"
     >
       {pending ? (
         <Loader2Icon
