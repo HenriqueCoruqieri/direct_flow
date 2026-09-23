@@ -69,9 +69,16 @@ e-mail, não de interface, e não conflita com o shadcn do `df-ui` porque nada e
 
 ## Configuração
 
-`RESEND_API_KEY`, `EMAIL_FROM` e `APP_URL` no `.env`, documentadas no
-`.env.example`. Nunca comite chave. Em desenvolvimento, sem chave configurada,
-logue o e-mail no console em vez de falhar.
+`RESEND_API_KEY` e `EMAIL_FROM` no `.env`. Você não edita o `.env.example` (é do
+`df-architect`, seção 7): reporte o nome e a finalidade de variável nova e o
+orquestrador aciona o dono. Nunca comite chave.
+
+Em **desenvolvimento**, sem chave configurada, logue o e-mail no console em vez
+de falhar — é o que permite testar o fluxo sem conta no Resend. **Fora de
+desenvolvimento, chave ausente é misconfiguração e precisa falhar**, senão um
+deploy sem a chave nunca envia nada e nunca acusa erro. E não registre em log,
+fora de desenvolvimento, conteúdo que sirva de credencial ou revele quem tem
+conta — link com token e endereço completo do destinatário, por exemplo.
 
 ## Pacotes que você instala
 
