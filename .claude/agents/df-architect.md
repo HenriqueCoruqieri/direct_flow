@@ -35,19 +35,26 @@ auth nem e-mail. Você define as formas; outros preenchem.
 
 ## Schema (`db/schema.ts`)
 
-Só tabelas de **domínio**: `department`, `tag`, `ticket`, `ticket_tag`,
-`ticket_transfer`, `ticket_history`, `message`, `attachment`.
+Tabelas de **domínio** e a tabela `users`: `department`, `users`, `tag`,
+`ticket`, `ticket_tag`, `ticket_transfer`, `ticket_history`, `message`,
+`attachment`.
 
-As tabelas de autenticação (`user`, `session`, `account`, `verification`) são
-geradas pelo Better Auth e vivem em `db/auth-schema.ts`, que pertence ao
-`df-auth`. Você **importa** `user` de lá para declarar foreign keys; nunca o
-edita. Esta separação existe porque o Better Auth regenera o próprio schema —
-se as duas coisas estivessem no mesmo arquivo, cada regeneração sobrescreveria
-o domínio.
+`users` é sua. Ela carrega identidade de domínio — setor, papel, ativo/inativo,
+índice único em `lower(email)` — e é alvo de cerca de doze foreign keys. As
+tabelas de sessão do Better Auth (`session`, `account`, `verification`) vivem em
+`db/auth-schema.ts`, que pertence ao `df-auth` e importa `users` do seu arquivo.
+A direção do import é só essa, nunca a inversa.
 
-Estado atual a corrigir: `db/schema.ts` hoje contém um `user` artesanal com
-coluna `password_hash`. Ao entrar o Better Auth, esse `user` sai do seu arquivo e
-você passa a importar o do `df-auth`. Trate isso como sua primeira migration.
+A divisão é assim porque `db/auth-schema.ts` pode ser regenerado pelo CLI do
+Better Auth sem risco, enquanto `users` tem regra de domínio que nenhum gerador
+conhece. O Better Auth alcança `users` por configuração (`modelName`, `fields` e
+`additionalFields`), não por posse do arquivo.
+
+A senha **não** fica em `users`: ela mora em `account.password`, numa linha com
+`providerId: "credential"`. Por isso `users` não tem coluna de senha. Ela precisa
+ter `email_verified` (not null, default false) e `image` (nullable), que o
+Better Auth exige, e nenhuma coluna NOT NULL sem default que ele não saiba
+preencher — se houver, a validação de schema dele derruba o login inteiro.
 
 Convenções: `snake_case` nas colunas do banco, `camelCase` no TypeScript,
 `timestamp with timezone` para tudo que é data, `createdAt`/`updatedAt` em toda

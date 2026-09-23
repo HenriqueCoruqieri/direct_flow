@@ -238,11 +238,11 @@ agentes podem **ler** qualquer arquivo.
 
 | Caminho                                                                                                                              | Escreve                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `db/schema.ts`, `db/migrations/**`, `drizzle.config.ts`                                                                              | `df-architect`                            |
+| `db/schema.ts` (domínio **e** `users`), `db/migrations/**`, `drizzle.config.ts`                                                      | `df-architect`                            |
 | `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`                                                           | `df-architect`                            |
 | `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect`                            |
 | `docs/**`                                                                                                                            | `df-architect`                            |
-| `db/auth-schema.ts`, `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`                                              | `df-auth`                                 |
+| `db/auth-schema.ts` (só `session`, `account`, `verification`), `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`    | `df-auth`                                 |
 | `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`                                                                                      | `df-data`                                 |
 | `app/_lib/actions/**`                                                                                                                | `df-actions`                              |
 | `app/_lib/email/**`, `emails/**`                                                                                                     | `df-email`                                |
@@ -254,6 +254,15 @@ agentes podem **ler** qualquer arquivo.
 `app/_lib/**` não tem dono único: cada subpasta pertence ao agente da camada,
 conforme as linhas acima. Subpasta nova em `app/_lib/` só entra com dono
 definido nesta tabela.
+
+**A tabela `users` é do `df-architect`**, em `db/schema.ts`, mesmo sendo a tabela
+de usuário do Better Auth. Ela carrega setor, papel e ativo/inativo e é alvo das
+foreign keys do domínio; o CLI do Better Auth não conhece nada disso e apagaria
+ao regenerar. O `df-auth` alcança essa tabela por configuração (`modelName`,
+`fields`, `additionalFields`) e guarda em `db/auth-schema.ts` só o que é seguro
+regenerar: `session`, `account` e `verification`. A senha mora em
+`account.password`, nunca em `users`. `db/auth-schema.ts` importa `users`; o
+contrário nunca acontece.
 
 **Telas em `app/(auth)/**`** são do `df-auth`: layout do grupo, formulários e
 componentes usados só por auth (`app/(auth)/_components/`). Ele usa os

@@ -17,7 +17,7 @@ Leia `.claude/rules/stack.md` antes de escrever código.
 Você **escreve** apenas:
 
 - `app/_lib/auth/**` — configuração do Better Auth (servidor e cliente), helpers de sessão
-- `db/auth-schema.ts` — tabelas geradas pelo Better Auth
+- `db/auth-schema.ts` — apenas `session`, `account` e `verification`
 - `app/api/auth/[...all]/route.ts` — handler do Better Auth
 - `proxy.ts` — proteção de rota (no Next 16 o `middleware.ts` virou `proxy.ts`)
 - `app/(auth)/**` — telas de login, cadastro, recuperação de senha
@@ -27,22 +27,36 @@ Você **não** escreve queries de domínio, actions de ticket, componentes fora 
 
 ## Better Auth
 
-`npm install better-auth`. Adapter Drizzle sobre o `pg` já configurado.
-Gere as tabelas com o CLI do Better Auth apontando para `db/auth-schema.ts`.
+`npm install better-auth`. Adapter Drizzle sobre o `db` de `db/index.ts`.
 
-`db/auth-schema.ts` é seu e só seu. O `df-architect` **importa** `user` de lá
-para declarar foreign keys, mas nunca edita o arquivo. Separamos assim porque o
-CLI do Better Auth regenera esse arquivo — se ele compartilhasse arquivo com o
-domínio, cada regeneração apagaria as tabelas de ticket.
+`db/auth-schema.ts` é seu e só seu, e guarda **apenas** `session`, `account` e
+`verification`. Ele importa `users` de `db/schema.ts` para declarar as foreign
+keys; a direção do import é só essa.
 
-Hoje `db/schema.ts` tem um `user` artesanal com coluna `password`. Ao entrar o
-Better Auth, esse `user` passa a ser o da sua tabela. Alinhe com o
-`df-architect` na migration: você entrega o schema de auth, ele remove o `user`
-antigo e reaponta as FKs. Essa é a única troca de ordem entre vocês dois e ela
-acontece uma vez, na configuração inicial.
+**A tabela `users` não é sua.** Ela pertence ao `df-architect`, porque carrega
+setor, papel, ativo/inativo e é alvo de cerca de doze foreign keys do domínio —
+coisas que o CLI do Better Auth não conhece e apagaria ao regenerar. Você
+alcança essa tabela por configuração, não por posse: `user.modelName`,
+`user.fields` e `user.additionalFields`. Precisa de coluna nova em `users`? Peça
+ao `df-architect`.
 
-Campos adicionais no usuário — `departmentId` e `role` (`admin` | `member`) —
-declare via `additionalFields` do Better Auth, não como tabela paralela.
+A senha mora em `account.password`, com `providerId: "credential"` — nunca em
+`users`.
+
+Campos de domínio no usuário — `departmentId`, `role`, `isActive`, `lastLoginAt`
+— declare via `additionalFields`, apontando para as colunas que já existem, com
+`input: false`. Campo não declarado em `additionalFields` é descartado em
+silêncio pelo adapter.
+
+O Better Auth valida o schema antes de autenticar
+(`advanced.database.validateSchema`). Coluna obrigatória que ele não sabe
+preencher, ou coluna que ele espera e não existe, derruba **todo** login, e o
+erro só aparece em execução — nunca no `tsc`.
+
+IDs são numéricos neste projeto (`advanced.database.generateId: "serial"`),
+porque as FKs do domínio são `integer`. O Better Auth expõe `session.user.id`
+como **string**: converta para número ao montar o `Actor`, e nunca entregue a
+sessão crua às camadas de baixo.
 
 ## Route handler — a exceção à seção 3
 
