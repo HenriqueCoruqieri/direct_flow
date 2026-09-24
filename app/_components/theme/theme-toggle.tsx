@@ -1,15 +1,13 @@
 "use client"
 
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
-import { useTheme } from "next-themes"
+import { MoonIcon, SunIcon } from "lucide-react"
 
+import ThemeRadioGroup from "@/app/_components/theme/theme-radio-group"
 import { Button } from "@/app/_components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/app/_components/ui/dropdown-menu"
 import { cn } from "@/app/_lib/utils"
@@ -18,15 +16,7 @@ interface ThemeToggleProps {
   className?: string
 }
 
-const options = [
-  { value: "light", label: "Claro", Icon: SunIcon },
-  { value: "dark", label: "Escuro", Icon: MoonIcon },
-  { value: "system", label: "Sistema", Icon: MonitorIcon },
-] as const
-
 const ThemeToggle = ({ className }: ThemeToggleProps) => {
-  const { theme, setTheme } = useTheme()
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -45,14 +35,7 @@ const ThemeToggle = ({ className }: ThemeToggleProps) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-40">
         <DropdownMenuLabel>Tema</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          {options.map(({ value, label, Icon }) => (
-            <DropdownMenuRadioItem key={value} value={value}>
-              <Icon aria-hidden="true" className="size-4" />
-              {label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        <ThemeRadioGroup />
       </DropdownMenuContent>
     </DropdownMenu>
   )
