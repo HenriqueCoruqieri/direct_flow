@@ -40,7 +40,7 @@ grep -rnE "from \"drizzle-orm\"|from \"@/db" app/_lib/actions
 grep -rn "from \"dayjs\"" app db | grep -v "app/_lib/date.ts"
 
 # Formatação de data artesanal
-grep -rnE "toLocaleDateString|toLocaleString|Intl\.DateTimeFormat" app
+grep -rnE "toLocaleDateString|toLocaleString|Intl\.DateTimeFormat" app --exclude-dir=ui
 
 # Segunda biblioteca de data
 grep -rnE "\"(date-fns|moment|luxon|js-joda)\"" package.json

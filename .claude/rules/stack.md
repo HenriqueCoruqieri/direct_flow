@@ -153,6 +153,30 @@ Sem essa justificativa na resposta, é violação. O `df-reviewer` trata cada
 ocorrência como ATENÇÃO e confere a justificativa no relatório do agente; sem
 ela, BLOQUEANTE.
 
+**`as const` e `satisfies` são permitidos e não precisam de justificativa.**
+Apesar da palavra `as`, `as const` não é cast: não força o compilador a aceitar
+um tipo que ele não consegue provar, só declara que o valor literal é imutável
+e mantém os literais em vez de alargá-los para `string`. `satisfies` é o oposto
+de um cast: confere o valor contra o tipo sem trocar o tipo inferido. Os dois
+aumentam a checagem, nunca a reduzem. Caso de uso típico — derivar a união de
+uma lista única, sem repetir os valores:
+
+```ts
+export const PERIODS = ["hoje", "semana", "mes", "personalizado"] as const
+export type Period = (typeof PERIODS)[number]
+
+export const PERIOD_LABELS = {
+  hoje: "Hoje",
+  semana: "Semana",
+  mes: "Mês",
+  personalizado: "Personalizado",
+} satisfies Record<Period, string>
+```
+
+Sem o `as const`, `Period` seria só `string`. Com o `satisfies`, esquecer um
+período ou digitar uma chave errada vira erro de compilação, e o tipo de
+`PERIOD_LABELS` continua com as chaves literais.
+
 **Exceção — primitivos gerados pelo shadcn.** Arquivos em `app/_components/ui/**`
 gerados pelo CLI (`npx shadcn@latest add`) e não alterados à mão estão isentos
 da exigência de justificativa para `as`. Continuam proibidos neles: `any`,
@@ -160,6 +184,13 @@ da exigência de justificativa para `as`. Continuam proibidos neles: `any`,
 isenção cai e a regra volta a valer para as linhas editadas. Trocar o import do
 `cn` para `@/app/_lib/utils` e remover comentários gerados pelo CLI não contam
 como edição à mão.
+
+Pelo mesmo motivo, formatação de data **interna** de um primitivo gerado
+(`toLocaleString`, `toLocaleDateString` etc.) que a aplicação não exibe — um
+atributo `data-*`, um modo do componente que não usamos — também está isenta
+da regra de datas da seção 1. Se um dia esse texto passar a ser exibido, o
+formato entra pela API do próprio componente (ex.: prop `formatters` do
+`Calendar`) a partir de `@/app/_lib/date`, nunca editando o primitivo.
 
 **`interface` e `type`.** Props e objetos usam `interface`; `type` fica para o
 que `interface` não expressa. Vale para todo componente, não só os que compõem

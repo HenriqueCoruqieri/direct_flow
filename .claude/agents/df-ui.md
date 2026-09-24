@@ -134,7 +134,11 @@ a **mesma** função que ela usa, para que interface e servidor nunca discordem.
 
 Dependências instaladas automaticamente pelo CLI do shadcn (`shadcn`,
 `radix-ui`, `cn`, `class-variance-authority`, `tw-animate-css` e as que ele
-vier a trazer) são permitidas. Todo arquivo, primitivos inclusive, importa `cn`
+vier a trazer) são permitidas, **exceto** pacote que duplique uma biblioteca
+da seção 1 do `stack.md` (ex.: `date-fns` ao lado do `dayjs`). Nesse caso,
+desinstale a declaração direta com `npm uninstall <pacote>`: se ele vier como
+dependência transitiva de outro pacote, continua instalado para quem precisa
+dele, mas nenhum arquivo do projeto o importa. Todo arquivo, primitivos inclusive, importa `cn`
 de `@/app/_lib/utils`; depois de cada `npx shadcn@latest add`, troque o
 `from "cn"` gerado pelo CLI.
 
