@@ -2,9 +2,10 @@
 
 > **Superado em parte.** A etapa 2 (autenticação de verdade) está em
 > `docs/contracts/auth.md`: Better Auth, sessão, `Actor`, seed, `signIn`/`signOut`
-> e `/dashboard`. Este documento continua válido para o layout e para o
-> `loginSchema`, que **não muda**. O que aqui aparece como "provisório" ou "fica
-> para depois" foi resolvido lá.
+> e `/dashboard`. A redefinição de senha está em
+> `docs/contracts/password-reset.md`. Este documento continua válido para o
+> layout e para o `loginSchema`, que **não muda**. O que aqui aparece como
+> "provisório" ou "fica para depois" foi resolvido nesses dois contratos.
 
 ## Escopo desta etapa
 
@@ -84,7 +85,7 @@ Resolvido na etapa 2 (`docs/contracts/auth.md`):
 - Seed do primeiro admin
 - Server Action de login ligada ao formulário
 
-Ainda em aberto:
+Resolvido em `docs/contracts/password-reset.md`:
 
 - Redefinição de senha via Resend (`df-email`), com schema próprio contendo a
   regra de força de senha
