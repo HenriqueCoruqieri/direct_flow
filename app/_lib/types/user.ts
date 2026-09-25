@@ -7,4 +7,8 @@ export interface UserProfile {
   role: Role
   departmentId: number
   departmentName: string
+  image: string | null
+  isActive: boolean
+  createdAt: Date
+  lastLoginAt: Date | null
 }

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 
 import { requireSession } from "@/app/_lib/auth/session"
-import { getUserProfile } from "@/app/_lib/data/users"
+import { findUserProfile } from "@/app/_lib/data/users"
 import {
   describeMembership,
   getFirstName,
@@ -14,7 +14,7 @@ import MobileHeader from "./_components/mobile-header"
 
 const AppLayout = async ({ children }: LayoutProps<"/">) => {
   const actor = await requireSession()
-  const profile = await getUserProfile(actor.id)
+  const profile = await findUserProfile(actor.id)
 
   if (!profile) notFound()
 
@@ -26,12 +26,14 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
       <AppSidebar
         name={profile.name}
         initials={initials}
+        image={profile.image}
         membership={membership}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader
           firstName={getFirstName(profile.name)}
           initials={initials}
+          image={profile.image}
           membership={membership}
         />
         <AppTopBar />

@@ -4,12 +4,14 @@ import UserMenu from "./user-menu"
 interface MobileHeaderProps {
   firstName: string
   initials: string
+  image: string | null
   membership: string
 }
 
 const MobileHeader = ({
   firstName,
   initials,
+  image,
   membership,
 }: MobileHeaderProps) => {
   return (
@@ -19,7 +21,7 @@ const MobileHeader = ({
         triggerClassName="rounded-full"
         contentClassName="w-auto min-w-48"
       >
-        <UserAvatar initials={initials} size="lg" />
+        <UserAvatar initials={initials} image={image} size="lg" />
       </UserMenu>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-xs font-bold text-muted-foreground">

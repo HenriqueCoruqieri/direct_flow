@@ -1,11 +1,13 @@
 "use client"
 
-import { SunMoonIcon } from "lucide-react"
+import { SunMoonIcon, UserRoundIcon } from "lucide-react"
+import Link from "next/link"
 
 import ThemeRadioGroup from "@/app/_components/theme/theme-radio-group"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -61,6 +63,12 @@ const UserMenu = ({
             <ThemeRadioGroup />
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        <DropdownMenuItem asChild>
+          <Link href="/perfil">
+            <UserRoundIcon aria-hidden="true" className="size-4" />
+            Perfil
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <form action={signOut}>
           <SignOutButton />

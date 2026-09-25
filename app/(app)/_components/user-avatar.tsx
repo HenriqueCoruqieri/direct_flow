@@ -1,10 +1,15 @@
-import { Avatar, AvatarFallback } from "@/app/_components/ui/avatar"
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/app/_components/ui/avatar"
 import { cn } from "@/app/_lib/utils"
 
-type UserAvatarSize = "sm" | "lg"
+type UserAvatarSize = "sm" | "lg" | "xl"
 
 interface UserAvatarProps {
   initials: string
+  image?: string | null
   size?: UserAvatarSize
   className?: string
 }
@@ -12,19 +17,27 @@ interface UserAvatarProps {
 const sizeClasses: Record<UserAvatarSize, string> = {
   sm: "size-8.5",
   lg: "size-11 border border-border-strong",
+  xl: "size-24 border border-border-strong",
 }
 
 const textClasses: Record<UserAvatarSize, string> = {
   sm: "text-xs",
   lg: "text-sm",
+  xl: "text-3xl",
 }
 
-const UserAvatar = ({ initials, size = "sm", className }: UserAvatarProps) => {
+const UserAvatar = ({
+  initials,
+  image,
+  size = "sm",
+  className,
+}: UserAvatarProps) => {
   return (
     <Avatar
       aria-hidden="true"
       className={cn("after:hidden", sizeClasses[size], className)}
     >
+      <AvatarImage src={image ?? undefined} alt="" />
       <AvatarFallback
         className={cn(
           "bg-surface-muted font-heading font-semibold text-primary",
