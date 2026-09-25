@@ -38,17 +38,40 @@ chamada por HTTP e precisa se defender sozinha.
 
 ## Retorno
 
-Devolva um resultado discriminado, nunca lance erro para a UI consumir:
+Devolva um resultado discriminado por `ok`, nunca lance erro para a UI consumir.
+É o formato de todas as actions do projeto (`app/_lib/actions/auth.ts`,
+`password-reset.ts`, `profile.ts`):
 
 ```ts
-type ActionResult<T = void> =
-  | { ok: true; data: T }
-  | { ok: false; error: string; fieldErrors?: Record<string, string[]> }
+export type SaveTagErrorCode = "INVALID_INPUT" | "TAG_NAME_TAKEN"
+
+export interface SaveTagSuccess {
+  ok: true
+  message: string
+  tagId: number
+}
+
+export interface SaveTagFailure {
+  ok: false
+  message: string
+  code?: SaveTagErrorCode
+}
+
+export type SaveTagResult = SaveTagSuccess | SaveTagFailure
 ```
 
-`fieldErrors` sai de `error.flatten().fieldErrors` do Zod, para o React Hook
-Form aplicar por campo. `error` é mensagem em português, exibível ao usuário —
-não vaze mensagem de driver de banco. Registre o erro técnico no log do servidor.
+- `message` é sempre português, pronta para o toast — a UI exibe como veio, sem
+  remapear. Nunca vaze mensagem de driver de banco; registre o erro técnico no
+  log do servidor.
+- `code` é opcional e só existe em falha que a UI trata de forma diferente
+  (erro num campo específico, redirecionamento). Falha genérica vai sem `code`.
+- Dado de sucesso que a UI precisa (id criado, URL nova) entra como campo
+  nomeado no formato de sucesso, não como `data` genérico.
+- Validação: falhou o `safeParse`, devolva `code: "INVALID_INPUT"` com a
+  primeira `issue.message` do Zod como `message`. O formulário já validou com o
+  mesmo schema no cliente; a checagem do servidor é defesa, não UX.
+- Cada formato é uma `interface` nomeada e a união é `type` (seção 5 do
+  `stack.md`). O contrato da feature fixa nomes e códigos; siga o contrato.
 
 ## Limites que você respeita
 

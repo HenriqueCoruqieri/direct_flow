@@ -21,21 +21,22 @@ O bloco `<!-- BEGIN:nextjs-agent-rules -->` em `AGENTS.md` é gerado pelo
 Nenhum agente introduz alternativa a estas escolhas sem pedido explícito do
 usuário. Não existe "segunda biblioteca para a mesma coisa" neste projeto.
 
-| Necessidade       | Biblioteca única                    | Agente dono    |
-| ----------------- | ----------------------------------- | -------------- |
-| Framework         | Next.js 16 (App Router)             | —              |
-| ORM / banco       | Drizzle ORM + `pg` (Postgres)       | `df-data`      |
-| Schema do banco   | Drizzle (`db/schema.ts`)            | `df-architect` |
-| Validação         | Zod                                 | `df-architect` |
-| Formulários       | React Hook Form + Zod               | `df-ui`        |
-| Componentes       | shadcn/ui + Tailwind v4             | `df-ui`        |
-| Ícones            | `lucide-react`                      | `df-ui`        |
-| Tabelas           | TanStack Table                      | `df-ui`        |
-| Notificações (UI) | Sonner (via shadcn)                 | `df-ui`        |
-| Datas             | Day.js — **só** via `app/_lib/date` | `df-architect` |
-| Autenticação      | Better Auth                         | `df-auth`      |
-| E-mail            | Resend                              | `df-email`     |
-| Estado assíncrono | Server Components (padrão)          | `df-ui`        |
+| Necessidade       | Biblioteca única                     | Agente dono    |
+| ----------------- | ------------------------------------ | -------------- |
+| Framework         | Next.js 16 (App Router)              | —              |
+| ORM / banco       | Drizzle ORM + `pg` (Postgres)        | `df-data`      |
+| Schema do banco   | Drizzle (`db/schema.ts`)             | `df-architect` |
+| Validação         | Zod                                  | `df-architect` |
+| Formulários       | React Hook Form + Zod                | `df-ui`        |
+| Componentes       | shadcn/ui + Tailwind v4              | `df-ui`        |
+| Ícones            | `lucide-react`                       | `df-ui`        |
+| Tabelas           | TanStack Table                       | `df-ui`        |
+| Notificações (UI) | Sonner (via shadcn)                  | `df-ui`        |
+| Datas             | Day.js — **só** via `app/_lib/date`  | `df-architect` |
+| Autenticação      | Better Auth                          | `df-auth`      |
+| E-mail            | Resend                               | `df-email`     |
+| Arquivos          | Cloudflare R2 (`@aws-sdk/client-s3`) | `df-data`      |
+| Estado assíncrono | Server Components (padrão)           | `df-ui`        |
 
 **Datas:** `dayjs` é importado em **um único arquivo**, `app/_lib/date.ts`. Qualquer
 outro arquivo que precise formatar data importa de `@/app/_lib/date`. Isso é o que
@@ -51,6 +52,7 @@ de estado assíncrono complexo. Quem introduzir registra o motivo em
 
 ```
 app/ (UI) ─┬─→ app/_lib/actions/ ─┬─→ app/_lib/data/ ──→ db/
+           │                     ├─→ app/_lib/storage/ ──→ Cloudflare R2
            │                     ├─→ app/_lib/email/
            │                     └─→ app/_lib/auth/ ──→ app/_lib/email/
            │
@@ -68,7 +70,7 @@ As setas são de mão única. Em particular:
 - **A UI lê direto e escreve só por action.** Um Server Component pode importar
   `app/_lib/data/` e `app/_lib/auth/` para **ler** — lista de tickets, sessão
   atual, redirecionamento de rota protegida — e esse é o caminho padrão, não uma
-  concessão (`app/dashboard/page.tsx` faz as duas coisas). Mutação não: toda
+  concessão (`app/(app)/dashboard/page.tsx` faz as duas coisas). Mutação não: toda
   escrita iniciada pela interface passa por Server Action. Componente marcado
   `"use client"` não importa nenhuma das duas — são código de servidor, e o
   cliente chega a elas pela action ou por props vindas do Server Component.
@@ -76,6 +78,12 @@ As setas são de mão única. Em particular:
   `app/_lib/domain/` sobre a sessão que carregou.
 - **Server Actions nunca escrevem query.** Uma action valida, autoriza, chama
   `app/_lib/data/`, revalida e devolve. O SQL vive em `app/_lib/data/`.
+- **Arquivo só entra e sai por `app/_lib/storage/`.** É o único lugar que
+  importa `@aws-sdk/client-s3` e conhece bucket, chave e credencial do R2 (ADR
+  010). Quem chama é a action; UI não importa storage, nem em Server Component.
+  `app/_lib/storage/` não importa `app/_lib/data/`, `app/_lib/auth/` nem
+  `app/_lib/email/`: grava e apaga arquivo, e a action decide o que fazer com a
+  URL devolvida.
 - **`app/_lib/auth/` envia e-mail apenas pelos callbacks do Better Auth.** O
   `sendResetPassword` é configurado dentro da instância do Better Auth, então
   quem dispara o e-mail de redefinição é a camada de auth, não a action — a
@@ -203,6 +211,11 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
 - `type` só para: uniões (`type Size = "sm" | "md"`), props "ou isto ou aquilo"
   (cada formato é uma `interface`, a junção é `type`), `z.infer`, `$inferSelect`
   e tipos utilitários. Estender uma união exige `type X = União & { ... }`.
+- **União de objetos, em qualquer lugar** — props, retorno de action, estado
+  interno de função, resultado de helper privado: cada formato é uma
+  `interface` nomeada e a união é `type`. Objeto literal inline dentro da união
+  (`type R = { ok: true } | { ok: false; code: C }`) não é permitido, nem em
+  tipo não exportado. O ESLint não pega esse caso; o `df-reviewer` pega.
 - Primitivos em `app/_components/ui/**` gerados pelo CLI ficam como vieram.
 
 ### Convenções
@@ -291,7 +304,7 @@ agentes podem **ler** qualquer arquivo.
 | `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect`                            |
 | `docs/**`                                                                                                                            | `df-architect`                            |
 | `db/auth-schema.ts` (só `session`, `account`, `verification`), `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`    | `df-auth`                                 |
-| `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`                                                                                      | `df-data`                                 |
+| `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`, `app/_lib/storage/**`                                                               | `df-data`                                 |
 | `app/_lib/actions/**`                                                                                                                | `df-actions`                              |
 | `app/_lib/email/**`, `emails/**`                                                                                                     | `df-email`                                |
 | `app/**` (exceto `app/(auth)/**`, `app/api/**` e `app/_lib/**`), incluindo `app/_components/**`, `app/_hooks/**` e `app/globals.css` | `df-ui`                                   |

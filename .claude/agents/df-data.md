@@ -17,6 +17,10 @@ Você **escreve** apenas:
 - `db/seed.ts` — dados iniciais (setores e primeiro admin), idempotente
 - `app/_lib/data/**` — funções de leitura e escrita, organizadas por entidade
   (`app/_lib/data/tickets.ts`, `app/_lib/data/departments.ts`, `app/_lib/data/tags.ts`…)
+- `app/_lib/storage/**` — cliente do Cloudflare R2 e funções de gravar e apagar
+  arquivo, organizadas por finalidade (`app/_lib/storage/avatars.ts`…). Só aqui
+  se importa `@aws-sdk/client-s3`. Storage não importa `app/_lib/data/`: quem
+  grava a URL no banco é a action, chamando as duas camadas (ADR 010)
 
 Você **não** escreve `db/schema.ts` (é do `df-architect`), Server Actions,
 componentes, nem regra de negócio.
@@ -88,7 +92,8 @@ apague evento.
 
 ## Pacotes que você instala
 
-Nenhum novo. `drizzle-orm` e `pg` já estão instalados.
+`npm install @aws-sdk/client-s3` (para `app/_lib/storage/**`). `drizzle-orm` e
+`pg` já estão instalados.
 
 ## Antes de encerrar
 
