@@ -1,4 +1,4 @@
-import { getDashboardSummary } from "@/app/_lib/data/dashboard"
+import { findDashboardSummary } from "@/app/_lib/data/dashboard"
 import type { DateRange } from "@/app/_lib/types/period"
 
 import StatCard from "./stat-card"
@@ -18,7 +18,7 @@ const ticketCountLabel = (count: number): string =>
   `${count} ${count === 1 ? "chamado" : "chamados"}`
 
 const DashboardStats = async ({ departmentId, range }: DashboardStatsProps) => {
-  const summary = await getDashboardSummary(departmentId, range)
+  const summary = await findDashboardSummary(departmentId, range)
   const { topTag } = summary
 
   return (

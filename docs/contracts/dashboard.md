@@ -14,7 +14,7 @@ Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 | Âncora do período   | `ticket.created_at`                                                                                                        |
 | Períodos            | Fuso `America/Sao_Paulo`: hoje; semana de segunda a domingo; mês corrente; personalizado com `de` e `ate` inclusivos       |
 | Intervalo           | Meio-aberto `[start, end)`                                                                                                 |
-| Período padrão      | `mes`                                                                                                                      |
+| Período padrão      | `hoje`                                                                                                                     |
 | Tag ofensora        | Tag do próprio setor (`tag.department_id`) mais aplicada nos chamados em escopo no período; empate por nome; nenhuma → `—` |
 | Estado do filtro    | URL. Parâmetro inválido cai no padrão, sem erro                                                                            |
 
@@ -167,7 +167,7 @@ export interface UserProfile {
 ```ts
 export const PERIODS = ["hoje", "semana", "mes", "personalizado"] as const
 export const PRESET_PERIODS = ["hoje", "semana", "mes"] as const
-export const DEFAULT_PERIOD: PresetPeriod = "mes"
+export const DEFAULT_PERIOD: PresetPeriod = "hoje"
 export const PERIOD_LABELS: Record<Period, string>
 ```
 
@@ -211,7 +211,7 @@ export const serializeDashboardParams: (selection: PeriodSelection) => string
 **`parseDashboardParams` nunca lança.** Pega o primeiro valor de cada chave
 repetida (`?periodo=hoje&periodo=mes` → `hoje`), roda `safeParse` e, se falhar
 por qualquer motivo — `periodo` ausente ou desconhecido, personalizado sem data,
-data inexistente, `ate < de` —, devolve `{ periodo: "mes" }`.
+data inexistente, `ate < de` —, devolve `{ periodo: "hoje" }`.
 
 **`serializeDashboardParams`** é o inverso: `periodo=hoje` ou
 `periodo=personalizado&de=2026-09-01&ate=2026-09-10`, sem `?`. É a única forma de
@@ -223,7 +223,7 @@ o schema continua utilizável no cliente.
 ## URL do filtro
 
 ```
-/dashboard                                         → mes (padrão)
+/dashboard                                         → hoje (padrão)
 /dashboard?periodo=hoje
 /dashboard?periodo=semana
 /dashboard?periodo=mes
@@ -234,8 +234,13 @@ o schema continua utilizável no cliente.
 
 ### `app/_lib/data/dashboard.ts`
 
+> Chamava-se `getDashboardSummary`. Renomeada para `findDashboardSummary` pela
+> convenção do `df-data` (`find`/`list`/`count`/`insert`/`update`/`delete`, nunca
+> `get`), sem alias; o `df-ui` troca o import em
+> `app/(app)/dashboard/_components/dashboard-stats.tsx`.
+
 ```ts
-export async function getDashboardSummary(
+export async function findDashboardSummary(
   departmentId: number,
   range: DateRange,
 ): Promise<DashboardSummary>
@@ -264,6 +269,9 @@ Detalhes que o contrato fixa:
 - Setor sem chamados: `{ ticketCount: 0, topTag: null }`, sem erro.
 
 ### `app/_lib/data/users.ts` — acrescentar
+
+> Renomeada para `findUserProfile` e ampliada (`image`, `isActive`, `createdAt`,
+> `lastLoginAt`) em `docs/contracts/profile.md`. O nome abaixo é o histórico.
 
 ```ts
 export async function getUserProfile(
@@ -400,7 +408,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   const actor = await requireSession()
   const selection = parseDashboardParams(await searchParams)
   const range = resolvePeriodRange(selection)
-  const summary = await getDashboardSummary(actor.departmentId, range)
+  const summary = await findDashboardSummary(actor.departmentId, range)
   ...
 }
 ```
@@ -441,8 +449,8 @@ Acrescentada em `.env.example` pelo `df-architect`:
 
 ## Checklist de encerramento da feature
 
-- [ ] `getDashboardSummary` e `getUserProfile` criados; `getUserById` removida (`df-data`)
-- [ ] seed demo com gabarito no log (`df-data`)
-- [ ] `app/(app)/` criado e `app/dashboard/` removido (`df-ui`)
-- [ ] nenhuma data formatada ou calculada fora de `@/app/_lib/date`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `findDashboardSummary` (ex-`getDashboardSummary`) e `findUserProfile` (ex-`getUserProfile`) criados; `getUserById` removida (`df-data`)
+- [x] seed demo com gabarito no log (`df-data`)
+- [x] `app/(app)/` criado e `app/dashboard/` removido (`df-ui`)
+- [x] nenhuma data formatada ou calculada fora de `@/app/_lib/date`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

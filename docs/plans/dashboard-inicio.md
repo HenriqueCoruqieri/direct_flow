@@ -1,5 +1,7 @@
 # Plano — Dashboard Início
 
+Implementado em 2026-09-24. Contrato: `docs/contracts/dashboard.md`.
+
 Aprovado em 2026-09-24 via `/consult`. Referência visual: canvas "Direct Flow — Telas" (https://claude.ai/artifact/QFARH48WWbuxmM1V8N1479), artboards "Fila do setor · desktop" (claro e escuro) para o shell desktop e "Início (dashboard)" (claro e escuro) para cards e cabeçalho mobile.
 
 ## Escopo
@@ -24,7 +26,7 @@ Aprovado em 2026-09-24 via `/consult`. Referência visual: canvas "Direct Flow �
 | Âncora do período   | `ticket.created_at`                                                                                                                                     |
 | Períodos            | Calendário no fuso `America/Sao_Paulo`: hoje; semana de segunda a domingo; mês corrente; personalizado com `de` e `ate`, ambos inclusivos               |
 | Intervalo           | Meio-aberto `[start, end)`                                                                                                                              |
-| Período padrão      | `mes`                                                                                                                                                   |
+| Período padrão      | `hoje`                                                                                                                                                  |
 | Tag ofensora        | Tag **do próprio setor** (`tag.department_id`) mais aplicada nos chamados em escopo no período; empate por nome (ordem alfabética); nenhuma → exibe "—" |
 | Estado do filtro    | URL: `?periodo=hoje\|semana\|mes\|personalizado`, `&de=YYYY-MM-DD&ate=YYYY-MM-DD`. Parâmetro inválido cai no padrão, sem erro                           |
 
@@ -41,7 +43,7 @@ Aprovado em 2026-09-24 via `/consult`. Referência visual: canvas "Direct Flow �
 
 - **Onda 0 — `df-architect`**: instala `dayjs`; `app/_lib/date.ts`, schema Zod, tipo, `docs/contracts/dashboard.md`, `SEED_DEMO` no `.env.example`.
 - **Onda 1 (paralelo)**
-  - **`df-data`**: `app/_lib/data/dashboard.ts` com `getDashboardSummary(departmentId, range)` (contagem + agregação `ticket_tag ⋈ tag ⋈ ticket`, `GROUP BY`, `LIMIT 1`); leitura do usuário com nome do setor para o card; `db/seed.ts` ganha bloco demo que roda só com `SEED_DEMO=true` e quando o setor não tem chamados — ~4 tags e ~30 chamados distribuídos entre hoje, esta semana, este mês e mês anterior, incluindo chamados entre 21h e 0h de Brasília para testar fuso.
+  - **`df-data`**: `app/_lib/data/dashboard.ts` com `findDashboardSummary(departmentId, range)` (contagem + agregação `ticket_tag ⋈ tag ⋈ ticket`, `GROUP BY`, `LIMIT 1`); leitura do usuário com nome do setor para o card; `db/seed.ts` ganha bloco demo que roda só com `SEED_DEMO=true` e quando o setor não tem chamados — ~4 tags e ~30 chamados distribuídos entre hoje, esta semana, este mês e mês anterior, incluindo chamados entre 21h e 0h de Brasília para testar fuso.
   - **`df-ui`** (shell): `npx shadcn@latest add calendar popover` (trocar import do `cn`); `app/(app)/layout.tsx`, sidebar, item de navegação ativo, menu do usuário (reusa `signOut` e tema existentes), cabeçalho mobile, barra superior; move `sign-out-button` e remove `app/dashboard/`.
 - **Onda 2 — `df-ui`** (tela): `app/(app)/dashboard/page.tsx` Server Component — valida `searchParams`, resolve período via `@/app/_lib/date`, chama `df-data`, renderiza cards. Pílulas são `Link`; só "Personalizado" é Client Component (popover + calendário + `router.push`).
 - **Onda 3 — `df-reviewer`**: `tsc`, lint, build, limites entre camadas, ausência de import de `date-fns`.

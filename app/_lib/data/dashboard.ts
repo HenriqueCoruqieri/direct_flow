@@ -5,7 +5,7 @@ import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { tag, ticket, ticketTag } from "@/db/schema"
 
-export async function getDashboardSummary(
+export async function findDashboardSummary(
   departmentId: number,
   range: DateRange,
 ): Promise<DashboardSummary> {
