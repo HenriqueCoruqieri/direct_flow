@@ -64,12 +64,39 @@ Até lá, nenhum ambiente exposto à internet pública roda sem limite na borda.
 
 ## Consequência
 
-- Os dois call sites ficam nomeados, para que a correção não conserte só metade do
-  problema: `signInWithPassword` (`app/_lib/auth/session.ts`) e
-  `requestPasswordResetEmail` (`app/_lib/auth/password-reset.ts`).
+- Os call sites ficam nomeados, para que a correção não conserte só parte do
+  problema: `signInWithPassword` (`app/_lib/auth/session.ts`),
+  `requestPasswordResetEmail` (`app/_lib/auth/password-reset.ts`) e
+  `changeUserPassword` (`app/_lib/auth/password-change.ts`, ver adendo abaixo).
 - Em desenvolvimento nada muda: o custo do abuso é a máquina do desenvolvedor.
 - Quem implementar respeita a resposta idêntica do ADR 004 e atualiza este ADR com
   a opção escolhida.
 - `verification` continua sem rotina de limpeza. Linha expirada não é apagada por
   tempo, só quando o token é consumido; com limite, o volume deixa de ser
   arbitrário, e sem ele a tabela cresce na mesma velocidade do abuso.
+
+## Adendo (2026-09-24) — terceiro ponto de chamada: troca de senha no perfil
+
+A feature "Perfil do usuário" (`docs/contracts/profile.md`) acrescenta
+`changeUserPassword` (`app/_lib/auth/password-change.ts`), que chama
+`auth.api.changePassword` direto da Server Action. O Better Auth tem regra para
+esse caminho — `/change-password` cai na mesma regra de `/sign-in`, 10s / máximo 3
+(`node_modules/better-auth/dist/api/rate-limiter/index.mjs:302-309`) —, e ela
+também só roda no `onRequest` do router. Pela chamada direta, **não há limite**.
+
+A exposição é menor que a dos outros dois: o endpoint exige sessão válida
+(`sensitiveSessionMiddleware`, que relê a sessão no banco —
+`node_modules/better-auth/dist/api/routes/session.mjs:284-311`), então só quem já
+está logado consegue tentar, e só contra a própria senha. O risco é quem pega uma
+sessão aberta (computador destravado, cookie roubado) adivinhar a senha atual em
+laço para então trocá-la e tomar a conta.
+
+A decisão acima não muda: a mesma passada que escolher a camada de limite cobre
+os **três** pontos. No caso da troca de senha, a contagem é por usuário da sessão,
+não por e-mail digitado, e a mensagem sob limite pode ser explícita — não há
+enumeração de conta a proteger, porque quem chama já está autenticado.
+
+A mesma passada cobre também `updateAvatar` (`app/_lib/actions/profile.ts`), que
+não é tentativa de senha mas grava e apaga objeto no R2 a cada chamada, sem
+limite. O risco está aceito até lá e descrito no ADR 010, seção "Consequência";
+a contagem também é por usuário da sessão.

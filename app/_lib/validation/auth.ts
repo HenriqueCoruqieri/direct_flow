@@ -1,5 +1,11 @@
 import { z } from "zod"
 
+import {
+  confirmPasswordField,
+  newPasswordField,
+  PASSWORD_MISMATCH_ERROR,
+} from "@/app/_lib/validation/password"
+
 const emailField = z
   .string({ error: "Informe seu e-mail." })
   .trim()
@@ -25,17 +31,11 @@ export type RequestPasswordResetInput = z.infer<
 
 export const resetPasswordSchema = z
   .object({
-    password: z
-      .string({ error: "Informe a nova senha." })
-      .min(1, { error: "Informe a nova senha." })
-      .min(8, { error: "A senha precisa ter no mínimo 8 caracteres." })
-      .max(128, { error: "A senha precisa ter no máximo 128 caracteres." }),
-    confirmPassword: z
-      .string({ error: "Confirme a nova senha." })
-      .min(1, { error: "Confirme a nova senha." }),
+    password: newPasswordField,
+    confirmPassword: confirmPasswordField,
   })
   .refine((data) => data.password === data.confirmPassword, {
-    error: "As senhas não conferem.",
+    error: PASSWORD_MISMATCH_ERROR,
     path: ["confirmPassword"],
   })
 

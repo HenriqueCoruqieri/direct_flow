@@ -4,3 +4,9 @@ export interface PasswordResetEmailInput {
   resetUrl: string
   expiresInMinutes: number
 }
+
+export interface PasswordChangedEmailInput {
+  to: string
+  userName: string
+  changedAt: Date
+}

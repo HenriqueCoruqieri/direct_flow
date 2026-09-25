@@ -21,3 +21,6 @@ export const describeMembership = (
   departmentName: string,
   role: Role,
 ): string => `${departmentName} · ${ROLE_LABELS[role]}`
+
+export const describeAccountStatus = (isActive: boolean): string =>
+  isActive ? "Ativo" : "Inativo"
