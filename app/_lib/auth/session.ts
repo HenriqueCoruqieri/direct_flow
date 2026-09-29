@@ -1,6 +1,7 @@
 import { APIError } from "better-auth/api"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
+import { cache } from "react"
 
 import { auth } from "@/app/_lib/auth/auth"
 import type { Actor } from "@/app/_lib/types/actor"
@@ -8,7 +9,7 @@ import type { LoginInput } from "@/app/_lib/validation/auth"
 
 export type SignInFailure = "INVALID_CREDENTIALS" | "USER_DEACTIVATED"
 
-export const getSession = async (): Promise<Actor | null> => {
+export const getSession = cache(async (): Promise<Actor | null> => {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) return null
   const { user } = session
@@ -19,7 +20,7 @@ export const getSession = async (): Promise<Actor | null> => {
     role: user.role,
     departmentId: user.departmentId,
   }
-}
+})
 
 export const requireSession = async (): Promise<Actor> => {
   const actor = await getSession()
