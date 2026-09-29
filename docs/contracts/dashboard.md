@@ -1,7 +1,7 @@
 # Contrato — Dashboard Início
 
-Entrada das ondas 1 e 2. Plano aprovado em `docs/plans/dashboard-inicio.md`.
-Decisão de fuso em `docs/adr/009-calendario-no-fuso-de-sao-paulo.md`.
+Entrada das ondas 1 e 2. Plano aprovado em `docs/plans/dashboard-home.md`.
+Decisão de fuso em `docs/adr/009-calendar-in-sao-paulo-timezone.md`.
 
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 `drizzle-orm@0.45.2`.

@@ -53,7 +53,7 @@ O único retorno diferente do pedido é **formato de e-mail inválido**
 (`INVALID_INPUT`), que não revela existência de conta — só diz que o texto
 digitado não é um e-mail. Ninguém "melhora" isso depois: alterar qualquer um dos
 quatro caminhos acima para uma mensagem própria reabre a enumeração. Ver
-`docs/adr/004-resposta-identica-no-pedido-de-redefinicao.md`.
+`docs/adr/004-identical-response-on-reset-request.md`.
 
 ## Tabelas, enums e migration
 
@@ -325,7 +325,7 @@ está aqui para que ninguém "melhore" o template depois de volta para JSX:
 Vale para todo template de e-mail do projeto, não só para este. Reverter exige
 aprovação para instalar `@react-email/render` **e** tirar o envio de dentro do
 callback do Better Auth. Ver
-`docs/adr/006-template-de-e-mail-como-funcao-que-devolve-html.md`.
+`docs/adr/006-email-template-as-html-returning-function.md`.
 
 ### `RESEND_API_KEY` ausente
 
@@ -492,7 +492,7 @@ return maskEmail(owner.email)
   trata os quatro do mesmo jeito.
 - `maskEmail` vem de `@/app/_lib/domain/email`. A função de auth é a **única**
   que vê o e-mail completo nesse caminho; a action e a UI só recebem o mascarado.
-- Ver `docs/adr/005-token-de-reset-resolvido-pelo-internal-adapter.md` para por
+- Ver `docs/adr/005-reset-token-resolved-by-internal-adapter.md` para por
   que isso não é uma query em `app/_lib/data/`.
 
 ### Ponto em aberto — pedido de redefinição sem limite de tentativas
@@ -508,7 +508,7 @@ Decidido registrar e resolver antes do deploy, porque a camada certa (limite na
 borda do host, limitador do próprio Better Auth com storage em banco, ou
 implementação nossa na action) depende de onde a aplicação for hospedada. O mesmo
 furo existe em `signInWithPassword`; os dois se resolvem na mesma passada. Ver
-`docs/adr/007-limite-de-tentativas-em-login-e-pedido-de-redefinicao.md`.
+`docs/adr/007-rate-limit-on-login-and-reset-request.md`.
 
 Restrição para quem implementar: sob limite, a resposta do pedido continua **byte a
 byte a mesma** das outras (seção "Por que a mensagem é sempre a mesma"). Um
@@ -540,7 +540,7 @@ no proxy a partir da presença do cookie, e presença de cookie não é sessão 
 (`better-auth/dist/cookies/index.mjs:261-270`). Depois do reset, que revoga as
 sessões e deixa o cookie no navegador, as duas camadas discordavam e o par
 proxy/`/dashboard` entrava em ciclo; o `df-debug` mediu 12 redirecionamentos sem
-convergir. Ver `docs/adr/008-redirecionamento-de-sessao-fora-do-proxy.md`.
+convergir. Ver `docs/adr/008-session-redirect-outside-proxy.md`.
 
 O `matcher` **não muda**: `/((?!api/auth|_next/static|_next/image|.*\..*).*)` já
 exclui `/api/auth/**`, então o GET do callback do Better Auth não passa pelo

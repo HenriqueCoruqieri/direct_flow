@@ -80,7 +80,7 @@ Resolvido na etapa 2 (`docs/contracts/auth.md`):
   pelo admin
 - Saída de `password_hash` de `users`; a senha passa a morar em
   `account.password`. `users` **continua** em `db/schema.ts` e as FKs `integer`
-  não mudam — ver `docs/adr/001-users-no-schema-de-dominio-com-id-serial.md`
+  não mudam — ver `docs/adr/001-users-in-domain-schema-with-serial-id.md`
 - `proxy.ts` para proteção de rota (Next 16)
 - Seed do primeiro admin
 - Server Action de login ligada ao formulário
