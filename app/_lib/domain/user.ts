@@ -1,6 +1,8 @@
 import { describeActiveStatus } from "@/app/_lib/domain/status"
 import type { Role } from "@/app/_lib/types/actor"
 
+export const ROLES = ["admin", "member"] as const satisfies readonly Role[]
+
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Administrador",
   member: "Membro",

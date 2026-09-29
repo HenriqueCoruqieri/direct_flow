@@ -17,6 +17,7 @@ import {
   canManageTagsOf,
   describeTagNameTaken,
   TAG_DEPARTMENT_INACTIVE_MESSAGE,
+  TAG_DEPARTMENT_UNASSIGNED_MESSAGE,
 } from "@/app/_lib/domain/tag"
 import type { GrantedRegistryAccess } from "@/app/_lib/types/registry"
 import type {
@@ -39,6 +40,7 @@ export type TagErrorCode =
   | "NAME_TAKEN"
   | "NOT_FOUND"
   | "DEPARTMENT_INACTIVE"
+  | "DEPARTMENT_UNASSIGNED"
 
 export interface TagActionSuccess {
   ok: true
@@ -91,6 +93,12 @@ const DEPARTMENT_INACTIVE_FAILURE: TagActionFailure = {
   ok: false,
   code: "DEPARTMENT_INACTIVE",
   message: TAG_DEPARTMENT_INACTIVE_MESSAGE,
+}
+
+const DEPARTMENT_UNASSIGNED_FAILURE: TagActionFailure = {
+  ok: false,
+  code: "DEPARTMENT_UNASSIGNED",
+  message: TAG_DEPARTMENT_UNASSIGNED_MESSAGE,
 }
 
 const invalidInput = (
@@ -146,6 +154,9 @@ export const createTag = async (
   }
   if (outcome.status === "department_inactive") {
     return DEPARTMENT_INACTIVE_FAILURE
+  }
+  if (outcome.status === "department_unassigned") {
+    return DEPARTMENT_UNASSIGNED_FAILURE
   }
 
   revalidatePath(TAGS_REGISTRY_PATH)
@@ -207,6 +218,9 @@ export const setTagActive = async (
   if (outcome.status === "not_found") return TAG_NOT_FOUND_FAILURE
   if (outcome.status === "department_inactive") {
     return DEPARTMENT_INACTIVE_FAILURE
+  }
+  if (outcome.status === "department_unassigned") {
+    return DEPARTMENT_UNASSIGNED_FAILURE
   }
 
   revalidatePath(TAGS_REGISTRY_PATH)

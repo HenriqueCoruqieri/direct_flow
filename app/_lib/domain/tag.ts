@@ -1,12 +1,29 @@
+import { assignableDepartments } from "@/app/_lib/domain/department"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type {
   GrantedRegistryAccess,
   RegistryAccess,
 } from "@/app/_lib/types/registry"
-import type { TagListScope } from "@/app/_lib/types/tag"
+import type {
+  TagDepartmentBlock,
+  TagDepartmentFacts,
+  TagListScope,
+} from "@/app/_lib/types/tag"
 
 export const TAG_DEPARTMENT_INACTIVE_MESSAGE =
   "Este setor está inativo. Não é possível criar nem reativar tags nele."
+
+export const TAG_DEPARTMENT_UNASSIGNED_MESSAGE =
+  "O setor de pessoas não alocadas não tem tags. Não é possível criar nem reativar tags nele."
+
+export const checkTagDepartment = ({
+  isActive,
+  isUnassigned,
+}: TagDepartmentFacts): TagDepartmentBlock | null => {
+  if (isUnassigned) return "department_unassigned"
+  if (!isActive) return "department_inactive"
+  return null
+}
 
 export const canManageTagsOf = (
   access: RegistryAccess,
@@ -26,7 +43,7 @@ export const tagScopeFor = (access: GrantedRegistryAccess): TagListScope =>
 
 export const tagCreationDepartments = (
   options: readonly DepartmentOption[],
-): DepartmentOption[] => options.filter((option) => option.isActive)
+): DepartmentOption[] => assignableDepartments(options)
 
 export const describeTagNameTaken = (existingIsActive: boolean): string =>
   existingIsActive

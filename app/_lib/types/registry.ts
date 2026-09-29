@@ -5,6 +5,8 @@ export interface RegistryAccessFacts {
   role: Role
   departmentId: number
   isBoard: boolean
+  isUnassigned: boolean
+  mustChangePassword: boolean
 }
 
 export interface DirectorAccess {
@@ -25,10 +27,10 @@ export type GrantedRegistryAccess = DirectorAccess | DepartmentAdminAccess
 
 export type RegistryAccess = GrantedRegistryAccess | NoRegistryAccess
 
-export type RegistrySection = "pessoas" | "setores" | "tags"
+export type RegistrySection = "people" | "departments" | "tags"
 
 export interface RegistryNavItem {
   section: RegistrySection
   label: string
-  href: string | null
+  href: string
 }

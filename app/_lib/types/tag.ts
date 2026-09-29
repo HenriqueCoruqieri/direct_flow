@@ -42,10 +42,25 @@ export interface TagDepartmentInactive {
   status: "department_inactive"
 }
 
+export interface TagDepartmentUnassigned {
+  status: "department_unassigned"
+}
+
+export interface TagDepartmentFacts {
+  isActive: boolean
+  isUnassigned: boolean
+}
+
+export type TagDepartmentBlock = "department_inactive" | "department_unassigned"
+
 export type InsertTagOutcome =
-  TagSaved | TagNameTaken | TagDepartmentNotFound | TagDepartmentInactive
+  | TagSaved
+  | TagNameTaken
+  | TagDepartmentNotFound
+  | TagDepartmentInactive
+  | TagDepartmentUnassigned
 
 export type UpdateTagNameOutcome = TagSaved | TagNameTaken | TagNotFound
 
 export type UpdateTagActiveOutcome =
-  TagSaved | TagNotFound | TagDepartmentInactive
+  TagSaved | TagNotFound | TagDepartmentInactive | TagDepartmentUnassigned

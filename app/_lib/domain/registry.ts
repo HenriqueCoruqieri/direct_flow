@@ -10,20 +10,24 @@ export const REGISTRY_NAME_MIN_LENGTH = 2
 
 export const REGISTRY_NAME_MAX_LENGTH = 80
 
-export const DEPARTMENTS_REGISTRY_PATH = "/cadastros/setores"
+export const PEOPLE_REGISTRY_PATH = "/registry/people"
 
-export const TAGS_REGISTRY_PATH = "/cadastros/tags"
+export const DEPARTMENTS_REGISTRY_PATH = "/registry/departments"
+
+export const TAGS_REGISTRY_PATH = "/registry/tags"
 
 const NO_REGISTRY_ACCESS: RegistryAccess = { kind: "none" }
 
 export const resolveRegistryAccess = (
   facts: RegistryAccessFacts | null,
 ): RegistryAccess => {
-  if (!facts || !facts.isActive) return NO_REGISTRY_ACCESS
+  if (!facts || !facts.isActive || facts.mustChangePassword) {
+    return NO_REGISTRY_ACCESS
+  }
   if (facts.isBoard) {
     return { kind: "director", departmentId: facts.departmentId }
   }
-  if (facts.role === "admin") {
+  if (facts.role === "admin" && !facts.isUnassigned) {
     return { kind: "department_admin", departmentId: facts.departmentId }
   }
   return NO_REGISTRY_ACCESS
@@ -38,13 +42,13 @@ export const isDirectorAccess = (
 ): access is DirectorAccess => access.kind === "director"
 
 const PEOPLE_ITEM: RegistryNavItem = {
-  section: "pessoas",
+  section: "people",
   label: "Pessoas",
-  href: null,
+  href: PEOPLE_REGISTRY_PATH,
 }
 
 const DEPARTMENTS_ITEM: RegistryNavItem = {
-  section: "setores",
+  section: "departments",
   label: "Setores",
   href: DEPARTMENTS_REGISTRY_PATH,
 }

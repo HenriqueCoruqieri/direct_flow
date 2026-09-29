@@ -53,3 +53,28 @@ está ativo. Quem precisar dessa garantia carrega o registro e checa explicitame
 - A mesma feature herda o ponto em aberto do ADR 008: revogar a sessão no banco não
   apaga o cookie do navegador. Hoje isso custa um salto `/dashboard` → `/login`,
   porque nenhuma decisão autoritativa confia no cookie.
+
+## Decisão tomada — Cadastros → Pessoas (2026-09-29)
+
+A feature que introduziu a desativação de usuário (`docs/contracts/registry-people.md`)
+escolheu a quarta opção: **revogar as sessões da pessoa no momento da desativação**.
+
+- `setPersonActive` (`app/_lib/actions/people.ts`), ao desativar, grava
+  `is_active = false` pela camada de dados e em seguida chama
+  `revokeUserSessions(userId)` (`app/_lib/auth/session.ts`), que apaga todas as
+  linhas de `session` da pessoa via `internalAdapter.deleteUserSessions`.
+- "Restaurar senha padrão" usa o mesmo caminho: troca a senha, liga
+  `must_change_password` e revoga as sessões.
+- `requireSession()` continua sem reler `is_active`: custo zero por requisição.
+  A garantia vem de que **toda** desativação do produto passa por
+  `setPersonActive`. SQL manual continua fora da garantia.
+- Falha ao revogar depois de a desativação estar gravada não é silenciosa: a
+  action devolve `SESSION_REVOKE_FAILED` e a desativação é idempotente, então
+  repetir o comando revoga de novo.
+- O login continua barrado pelo hook `session.create.before`, e o acesso a
+  Cadastros continua lendo `is_active` fresco (`getRegistryAccess`), então nem
+  uma sessão que escape da revogação ganha poder de gestão.
+
+O ponto em aberto do ADR 008 fica como está: o cookie velho continua no navegador
+da pessoa desativada e custa um salto `/dashboard` → `/login`, porque nenhuma
+decisão autoritativa confia nele.

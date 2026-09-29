@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm"
 
 import { isUniqueViolation } from "@/app/_lib/data/db-errors"
+import { checkTagDepartment } from "@/app/_lib/domain/tag"
 import type {
   InsertTagOutcome,
   TagListItem,
@@ -69,7 +70,10 @@ export async function insertTag(
   try {
     return await db.transaction(async (tx) => {
       const [departmentRow] = await tx
-        .select({ isActive: department.isActive })
+        .select({
+          isActive: department.isActive,
+          isUnassigned: department.isUnassigned,
+        })
         .from(department)
         .where(eq(department.id, departmentId))
         .for("share")
@@ -78,8 +82,9 @@ export async function insertTag(
         return { status: "department_not_found" }
       }
 
-      if (!departmentRow.isActive) {
-        return { status: "department_inactive" }
+      const block = checkTagDepartment(departmentRow)
+      if (block) {
+        return { status: block }
       }
 
       const [row] = await tx
@@ -163,7 +168,10 @@ export async function updateTagActive(
     }
 
     const [departmentRow] = await tx
-      .select({ isActive: department.isActive })
+      .select({
+        isActive: department.isActive,
+        isUnassigned: department.isUnassigned,
+      })
       .from(department)
       .where(eq(department.id, current.departmentId))
       .for("share")
@@ -174,8 +182,9 @@ export async function updateTagActive(
       )
     }
 
-    if (!departmentRow.isActive) {
-      return { status: "department_inactive" }
+    const block = checkTagDepartment(departmentRow)
+    if (block) {
+      return { status: block }
     }
 
     await tx

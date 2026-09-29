@@ -36,6 +36,20 @@
       "when": 1790649361993,
       "tag": "0004_tag_name_unique_including_inactive",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790699831190,
+      "tag": "0005_people_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790699840520,
+      "tag": "0006_unassigned_department",
+      "breakpoints": true
     }
   ]
 }

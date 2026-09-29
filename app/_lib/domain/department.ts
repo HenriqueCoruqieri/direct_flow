@@ -2,17 +2,43 @@ import type {
   DepartmentDeactivationBlocked,
   DepartmentDeactivationCheck,
   DepartmentDependencies,
+  DepartmentOption,
+  DepartmentStamps,
 } from "@/app/_lib/types/department"
 
 export const BOARD_DEPARTMENT_NAME = "Diretoria"
 
+export const UNASSIGNED_DEPARTMENT_NAME = "Não alocado"
+
+export const BOARD_DEPARTMENT_BADGE = "Diretoria"
+
+export const UNASSIGNED_DEPARTMENT_BADGE = "Não alocado"
+
+export const departmentBadgeFor = ({
+  isBoard,
+  isUnassigned,
+}: DepartmentStamps): string | null => {
+  if (isBoard) return BOARD_DEPARTMENT_BADGE
+  if (isUnassigned) return UNASSIGNED_DEPARTMENT_BADGE
+  return null
+}
+
+export const assignableDepartments = (
+  options: readonly DepartmentOption[],
+): DepartmentOption[] =>
+  options.filter((option) => option.isActive && !option.isUnassigned)
+
 export const checkDepartmentDeactivation = ({
   isBoard,
+  isUnassigned,
   activeUsers,
   openTickets,
 }: DepartmentDependencies): DepartmentDeactivationCheck => {
   if (isBoard) {
     return { ok: false, reason: "IS_BOARD", activeUsers, openTickets }
+  }
+  if (isUnassigned) {
+    return { ok: false, reason: "IS_UNASSIGNED", activeUsers, openTickets }
   }
   if (activeUsers > 0) {
     return { ok: false, reason: "HAS_ACTIVE_USERS", activeUsers, openTickets }
@@ -31,6 +57,9 @@ export const describeDepartmentDeactivationBlock = (
 ): string => {
   if (block.reason === "IS_BOARD") {
     return "A Diretoria não pode ser desativada."
+  }
+  if (block.reason === "IS_UNASSIGNED") {
+    return "O setor de pessoas não alocadas não pode ser desativado."
   }
 
   const pending = [

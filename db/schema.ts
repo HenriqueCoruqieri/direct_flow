@@ -86,6 +86,7 @@ export const department = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     isBoard: boolean("is_board").default(false).notNull(),
+    isUnassigned: boolean("is_unassigned").default(false).notNull(),
     ...timestamps,
   },
   (table) => [
@@ -94,6 +95,14 @@ export const department = pgTable(
       .on(table.isBoard)
       .where(sql`is_board`),
     check("department_board_active", sql`not is_board or is_active`),
+    uniqueIndex("department_single_unassigned_idx")
+      .on(table.isUnassigned)
+      .where(sql`is_unassigned`),
+    check("department_unassigned_active", sql`not is_unassigned or is_active`),
+    check(
+      "department_board_not_unassigned",
+      sql`not (is_board and is_unassigned)`,
+    ),
   ],
 )
 
@@ -110,6 +119,9 @@ export const user = pgTable(
       .notNull()
       .references(() => department.id, { onDelete: "restrict" }),
     isActive: boolean("is_active").default(true).notNull(),
+    mustChangePassword: boolean("must_change_password")
+      .default(false)
+      .notNull(),
     deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     ...timestamps,

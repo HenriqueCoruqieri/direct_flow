@@ -30,3 +30,18 @@ export const changePasswordSchema = z
   })
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+
+export const SAME_AS_DEFAULT_PASSWORD_ERROR =
+  "A nova senha precisa ser diferente da senha padrão."
+
+export const definePasswordSchema = z
+  .object({
+    newPassword: newPasswordField,
+    confirmPassword: confirmPasswordField,
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    error: PASSWORD_MISMATCH_ERROR,
+    path: ["confirmPassword"],
+  })
+
+export type DefinePasswordInput = z.infer<typeof definePasswordSchema>

@@ -30,6 +30,7 @@ export type DepartmentErrorCode =
   | "NAME_TAKEN"
   | "NOT_FOUND"
   | "IS_BOARD"
+  | "IS_UNASSIGNED"
   | "HAS_ACTIVE_USERS"
   | "HAS_OPEN_TICKETS"
 

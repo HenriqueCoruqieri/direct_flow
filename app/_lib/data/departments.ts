@@ -26,6 +26,7 @@ export async function listDepartments(): Promise<DepartmentListItem[]> {
       name: department.name,
       isActive: department.isActive,
       isBoard: department.isBoard,
+      isUnassigned: department.isUnassigned,
       activeUsers: db.$count(
         user,
         and(eq(user.departmentId, department.id), eq(user.isActive, true)),
@@ -42,6 +43,7 @@ export async function listDepartments(): Promise<DepartmentListItem[]> {
     .from(department)
     .orderBy(
       sql`${department.isBoard} desc`,
+      sql`${department.isUnassigned} asc`,
       sql`lower(${department.name})`,
       department.id,
     )
@@ -95,7 +97,11 @@ export async function updateDepartmentActive(
 ): Promise<UpdateDepartmentActiveOutcome> {
   return db.transaction(async (tx) => {
     const [current] = await tx
-      .select({ id: department.id, isBoard: department.isBoard })
+      .select({
+        id: department.id,
+        isBoard: department.isBoard,
+        isUnassigned: department.isUnassigned,
+      })
       .from(department)
       .where(eq(department.id, id))
       .for("update")
@@ -127,6 +133,7 @@ export async function updateDepartmentActive(
 
     const check = checkDepartmentDeactivation({
       isBoard: current.isBoard,
+      isUnassigned: current.isUnassigned,
       activeUsers,
       openTickets,
     })
@@ -150,11 +157,13 @@ export async function listDepartmentOptions(): Promise<DepartmentOption[]> {
       id: department.id,
       name: department.name,
       isBoard: department.isBoard,
+      isUnassigned: department.isUnassigned,
       isActive: department.isActive,
     })
     .from(department)
     .orderBy(
       sql`${department.isBoard} desc`,
+      sql`${department.isUnassigned} asc`,
       sql`lower(${department.name})`,
       department.id,
     )

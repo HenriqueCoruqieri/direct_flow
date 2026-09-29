@@ -3,19 +3,24 @@ export interface DepartmentListItem {
   name: string
   isActive: boolean
   isBoard: boolean
+  isUnassigned: boolean
   activeUsers: number
   openTickets: number
   createdAt: Date
 }
 
-export interface DepartmentDependencies {
+export interface DepartmentStamps {
   isBoard: boolean
+  isUnassigned: boolean
+}
+
+export interface DepartmentDependencies extends DepartmentStamps {
   activeUsers: number
   openTickets: number
 }
 
 export type DepartmentDeactivationBlockReason =
-  "IS_BOARD" | "HAS_ACTIVE_USERS" | "HAS_OPEN_TICKETS"
+  "IS_BOARD" | "IS_UNASSIGNED" | "HAS_ACTIVE_USERS" | "HAS_OPEN_TICKETS"
 
 export interface DepartmentDeactivationAllowed {
   ok: true
@@ -57,9 +62,8 @@ export type UpdateDepartmentNameOutcome =
 export type UpdateDepartmentActiveOutcome =
   DepartmentSaved | DepartmentNotFound | DepartmentDeactivationRefused
 
-export interface DepartmentOption {
+export interface DepartmentOption extends DepartmentStamps {
   id: number
   name: string
-  isBoard: boolean
   isActive: boolean
 }
