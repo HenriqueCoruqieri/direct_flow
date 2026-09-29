@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import { getIsDirector } from "@/app/_lib/auth/director"
 import { requireSession } from "@/app/_lib/auth/session"
 import { findUserProfile } from "@/app/_lib/data/users"
 import {
@@ -14,7 +15,10 @@ import MobileHeader from "./_components/mobile-header"
 
 const AppLayout = async ({ children }: LayoutProps<"/">) => {
   const actor = await requireSession()
-  const profile = await findUserProfile(actor.id)
+  const [profile, isDirector] = await Promise.all([
+    findUserProfile(actor.id),
+    getIsDirector(),
+  ])
 
   if (!profile) notFound()
 
@@ -28,6 +32,7 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
         initials={initials}
         image={profile.image}
         membership={membership}
+        isDirector={isDirector}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader
