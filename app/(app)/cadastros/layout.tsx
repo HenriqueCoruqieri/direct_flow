@@ -1,7 +1,7 @@
-import { requireDirector } from "@/app/_lib/auth/director"
+import { requireRegistryAccess } from "@/app/_lib/auth/registry-access"
 
 const CadastrosLayout = async ({ children }: LayoutProps<"/cadastros">) => {
-  await requireDirector()
+  await requireRegistryAccess()
 
   return children
 }

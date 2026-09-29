@@ -10,16 +10,15 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/app/_components/ui/collapsible"
+import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 const CADASTROS_PREFIX = "/cadastros/"
 
-const CADASTROS_ITEMS = [
-  { label: "Pessoas", href: null },
-  { label: "Setores", href: "/cadastros/setores" },
-  { label: "Tags", href: null },
-] as const
+interface CadastrosNavProps {
+  items: RegistryNavItem[]
+}
 
-const CadastrosNav = () => {
+const CadastrosNav = ({ items }: CadastrosNavProps) => {
   const pathname = usePathname()
   const inCadastros = pathname.startsWith(CADASTROS_PREFIX)
 
@@ -40,8 +39,8 @@ const CadastrosNav = () => {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <ul className="mt-1 ml-5 flex flex-col gap-1 border-l border-border-subtle pl-3">
-          {CADASTROS_ITEMS.map((item) => (
-            <li key={item.label}>
+          {items.map((item) => (
+            <li key={item.section}>
               {item.href ? (
                 <Link
                   href={item.href}

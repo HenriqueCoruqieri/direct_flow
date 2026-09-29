@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 
+import { requireDirector } from "@/app/_lib/auth/director"
 import { listDepartments } from "@/app/_lib/data/departments"
 
 import DepartmentFormDialog from "./_components/department-form-dialog"
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 }
 
 const DepartmentsPage = async () => {
+  await requireDirector()
   const departments = await listDepartments()
 
   return (

@@ -16,6 +16,9 @@ import {
   dataTableFeatures,
 } from "./data-table-features"
 import DataTableSearch from "./data-table-search"
+import DataTableSelectFilter, {
+  type DataTableSelectFilterOption,
+} from "./data-table-select-filter"
 
 interface DataTableSearchConfig {
   columnId: string
@@ -23,11 +26,19 @@ interface DataTableSearchConfig {
   placeholder?: string
 }
 
+interface DataTableSelectFilterConfig {
+  columnId: string
+  label: string
+  allLabel: string
+  options: ReadonlyArray<DataTableSelectFilterOption>
+}
+
 interface DataTableProps<TData extends RowData> {
   columns: ReadonlyArray<ColumnDef<DataTableFeatures, TData>>
   data: ReadonlyArray<TData>
   emptyMessage: string
   search?: DataTableSearchConfig
+  selectFilters?: ReadonlyArray<DataTableSelectFilterConfig>
 }
 
 const DataTable = <TData extends RowData>({
@@ -35,6 +46,7 @@ const DataTable = <TData extends RowData>({
   data,
   emptyMessage,
   search,
+  selectFilters = [],
 }: DataTableProps<TData>) => {
   const table = useTable({
     features: dataTableFeatures,
@@ -44,18 +56,41 @@ const DataTable = <TData extends RowData>({
 
   const searchColumn = search ? table.getColumn(search.columnId) : undefined
   const searchValue = searchColumn?.getFilterValue()
+  const activeSelectFilters = selectFilters.flatMap((filter) => {
+    const column = table.getColumn(filter.columnId)
+    return column ? [{ filter, column }] : []
+  })
+  const hasToolbar = Boolean(searchColumn) || activeSelectFilters.length > 0
   const rows = table.getRowModel().rows
   const isFiltered = table.state.columnFilters.length > 0
 
   return (
     <div className="flex flex-col gap-4">
-      {search && searchColumn ? (
-        <DataTableSearch
-          label={search.label}
-          placeholder={search.placeholder}
-          value={typeof searchValue === "string" ? searchValue : ""}
-          onValueChange={(value) => searchColumn.setFilterValue(value)}
-        />
+      {hasToolbar ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {search && searchColumn ? (
+            <DataTableSearch
+              label={search.label}
+              placeholder={search.placeholder}
+              value={typeof searchValue === "string" ? searchValue : ""}
+              onValueChange={(value) => searchColumn.setFilterValue(value)}
+            />
+          ) : null}
+          {activeSelectFilters.map(({ filter, column }) => {
+            const value = column.getFilterValue()
+
+            return (
+              <DataTableSelectFilter
+                key={filter.columnId}
+                label={filter.label}
+                allLabel={filter.allLabel}
+                options={filter.options}
+                value={typeof value === "string" ? value : ""}
+                onValueChange={(next) => column.setFilterValue(next)}
+              />
+            )
+          })}
+        </div>
       ) : null}
 
       <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
@@ -93,7 +128,9 @@ const DataTable = <TData extends RowData>({
                   colSpan={table.getAllLeafColumns().length}
                   className="h-24 px-4 text-center text-muted-foreground"
                 >
-                  {isFiltered ? "Nenhum resultado para a busca." : emptyMessage}
+                  {isFiltered
+                    ? "Nenhum resultado para os filtros aplicados."
+                    : emptyMessage}
                 </TableCell>
               </TableRow>
             )}

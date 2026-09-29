@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation"
 
-import { getIsDirector } from "@/app/_lib/auth/director"
+import { getRegistryAccess } from "@/app/_lib/auth/registry-access"
 import { requireSession } from "@/app/_lib/auth/session"
 import { findUserProfile } from "@/app/_lib/data/users"
+import { registryNavItemsFor } from "@/app/_lib/domain/registry"
 import {
   describeMembership,
   getFirstName,
@@ -15,9 +16,9 @@ import MobileHeader from "./_components/mobile-header"
 
 const AppLayout = async ({ children }: LayoutProps<"/">) => {
   const actor = await requireSession()
-  const [profile, isDirector] = await Promise.all([
+  const [profile, registryAccess] = await Promise.all([
     findUserProfile(actor.id),
-    getIsDirector(),
+    getRegistryAccess(),
   ])
 
   if (!profile) notFound()
@@ -32,7 +33,7 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
         initials={initials}
         image={profile.image}
         membership={membership}
-        isDirector={isDirector}
+        registryItems={registryNavItemsFor(registryAccess)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader

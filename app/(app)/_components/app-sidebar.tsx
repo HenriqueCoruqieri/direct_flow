@@ -1,6 +1,7 @@
 import { HouseIcon } from "lucide-react"
 
 import LogoMark from "@/app/_components/logo-mark"
+import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 import CadastrosNav from "./cadastros-nav"
 import NavItem from "./nav-item"
@@ -12,7 +13,7 @@ interface AppSidebarProps {
   initials: string
   image: string | null
   membership: string
-  isDirector: boolean
+  registryItems: RegistryNavItem[]
 }
 
 const AppSidebar = ({
@@ -20,7 +21,7 @@ const AppSidebar = ({
   initials,
   image,
   membership,
-  isDirector,
+  registryItems,
 }: AppSidebarProps) => {
   return (
     <aside className="sticky top-0 hidden h-dvh w-58 shrink-0 flex-col gap-1.5 border-r border-border-subtle bg-surface-bar px-3.5 py-5 lg:flex">
@@ -40,9 +41,9 @@ const AppSidebar = ({
               icon={<HouseIcon aria-hidden="true" />}
             />
           </li>
-          {isDirector ? (
+          {registryItems.length > 0 ? (
             <li>
-              <CadastrosNav />
+              <CadastrosNav items={registryItems} />
             </li>
           ) : null}
         </ul>
