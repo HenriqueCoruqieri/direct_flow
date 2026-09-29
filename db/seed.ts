@@ -3,6 +3,7 @@ import "dotenv/config"
 import { hashPassword } from "better-auth/crypto"
 import { and, eq, sql } from "drizzle-orm"
 
+import { isDepartmentNameTakenError } from "@/app/_lib/data/departments"
 import {
   addDaysToKey,
   addMonthsToKey,
@@ -11,6 +12,7 @@ import {
   todayKey,
   zonedDateTime,
 } from "@/app/_lib/date"
+import { BOARD_DEPARTMENT_NAME } from "@/app/_lib/domain/department"
 import type { DateKey, DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { account } from "@/db/auth-schema"
@@ -45,8 +47,42 @@ interface SeedAdminResult {
   departmentId: number
 }
 
+interface BoardDepartment {
+  id: number
+  name: string
+}
+
+async function ensureBoardDepartment(
+  tx: Transaction,
+): Promise<BoardDepartment> {
+  const [board] = await tx
+    .select({ id: department.id, name: department.name })
+    .from(department)
+    .where(eq(department.isBoard, true))
+    .limit(1)
+
+  if (board) {
+    return board
+  }
+
+  try {
+    const [created] = await tx
+      .insert(department)
+      .values({ name: BOARD_DEPARTMENT_NAME, isBoard: true })
+      .returning({ id: department.id, name: department.name })
+
+    return created
+  } catch (error) {
+    if (isDepartmentNameTakenError(error)) {
+      throw new Error(
+        `Seed abortado: já existe um setor "${BOARD_DEPARTMENT_NAME}" sem o carimbo de diretoria.`,
+      )
+    }
+    throw error
+  }
+}
+
 async function seedAdmin(): Promise<SeedAdminResult> {
-  const departmentName = requiredEnv("SEED_DEPARTMENT_NAME")
   const adminName = requiredEnv("SEED_ADMIN_NAME")
   const adminEmail = requiredEnv("SEED_ADMIN_EMAIL")
   const adminPassword = requiredEnv("SEED_ADMIN_PASSWORD")
@@ -68,20 +104,7 @@ async function seedAdmin(): Promise<SeedAdminResult> {
   }
 
   return db.transaction(async (tx) => {
-    const [existingDepartment] = await tx
-      .select({ id: department.id })
-      .from(department)
-      .where(sql`lower(${department.name}) = lower(${departmentName})`)
-      .limit(1)
-
-    const departmentId =
-      existingDepartment?.id ??
-      (
-        await tx
-          .insert(department)
-          .values({ name: departmentName })
-          .returning({ id: department.id })
-      )[0].id
+    const board = await ensureBoardDepartment(tx)
 
     const [createdAdmin] = await tx
       .insert(user)
@@ -89,7 +112,7 @@ async function seedAdmin(): Promise<SeedAdminResult> {
         name: adminName,
         email: adminEmail,
         role: "admin",
-        departmentId,
+        departmentId: board.id,
         isActive: true,
         emailVerified: true,
       })
@@ -108,10 +131,10 @@ async function seedAdmin(): Promise<SeedAdminResult> {
     })
 
     console.log(
-      `Seed concluído: setor "${departmentName}" (id ${departmentId}) e admin "${adminEmail}" (id ${createdAdmin.id}) criados.`,
+      `Seed concluído: setor "${board.name}" (id ${board.id}) e admin "${adminEmail}" (id ${createdAdmin.id}) criados.`,
     )
 
-    return { adminId: createdAdmin.id, departmentId }
+    return { adminId: createdAdmin.id, departmentId: board.id }
   })
 }
 
