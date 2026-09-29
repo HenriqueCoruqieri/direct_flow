@@ -3,8 +3,8 @@ import { HouseIcon } from "lucide-react"
 import LogoMark from "@/app/_components/logo-mark"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
-import CadastrosNav from "./cadastros-nav"
 import NavItem from "./nav-item"
+import RegistryNav from "./registry-nav"
 import UserAvatar from "./user-avatar"
 import UserMenu from "./user-menu"
 
@@ -43,7 +43,7 @@ const AppSidebar = ({
           </li>
           {registryItems.length > 0 ? (
             <li>
-              <CadastrosNav items={registryItems} />
+              <RegistryNav items={registryItems} />
             </li>
           ) : null}
         </ul>

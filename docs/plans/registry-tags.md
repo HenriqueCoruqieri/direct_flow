@@ -1,15 +1,15 @@
 # Plano — Cadastros → Tags
 
-Aprovado em 2026-09-28. Contrato em `docs/contracts/cadastros-tags.md`; entrada
+Aprovado em 2026-09-28. Contrato em `docs/contracts/registry-tags.md`; entrada
 do admin de setor em Cadastros registrada no ADR 011.
 
 ## Decisões fixadas pelo usuário
 
 | Tema          | Decisão                                                                                                                                        |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Permissão     | Diretor: tags de qualquer setor. Admin de setor ativo: só do próprio setor. Membro comum: 404 em `/cadastros/*`. Diretor tem precedência       |
+| Permissão     | Diretor: tags de qualquer setor. Admin de setor ativo: só do próprio setor. Membro comum: 404 em `/registry/*`. Diretor tem precedência        |
 | Menu          | Diretor: Pessoas (em breve), Setores, Tags. Admin: Pessoas (em breve), Tags                                                                    |
-| Guardas       | Layout de `/cadastros` → `requireRegistryAccess`; `/cadastros/setores` → `requireDirector` na página; `/cadastros/tags` aceita os dois         |
+| Guardas       | Layout de `/registry` → `requireRegistryAccess`; `/registry/departments` → `requireDirector` na página; `/registry/tags` aceita os dois        |
 | Acesso        | Uma consulta fresca por request (`is_active`, `role`, `department_id`, `is_board`), com `cache` do React. Nunca `role` do cookie               |
 | Tela          | Diretor: tabela única com coluna Setor, filtro por setor e busca. Admin: só o setor dele, sem coluna nem filtro. Diretoria primeiro nas opções |
 | Colunas       | Nome, Setor (só diretor), Status, nº de chamados que usam a tag, Criado em                                                                     |
@@ -24,7 +24,7 @@ do admin de setor em Cadastros registrada no ADR 011.
 
 **Entra**: índice único de nome de tag contando inativas; acesso a Cadastros por
 papel (`getRegistryAccess`); menu por acesso; guardas de layout e de Setores;
-`/cadastros/tags` com tabela, filtro, busca, criação, renomeação e
+`/registry/tags` com tabela, filtro, busca, criação, renomeação e
 ativação/desativação.
 
 **Fora**: Pessoas (só o item "em breve"); exclusão de tag; troca de setor da tag;
@@ -46,9 +46,11 @@ uso de tags ao abrir chamado (feature de chamados).
 - `df-data`: `app/_lib/data/tags.ts` (novo); `listDepartmentOptions` em
   `departments.ts`.
 - `df-actions`: `app/_lib/actions/tags.ts` (novo).
-- `df-ui`: primitivo `select`; layout `(app)`, `AppSidebar` e `CadastrosNav` por
-  acesso; layout de `/cadastros`; guarda na página de Setores;
-  `app/(app)/cadastros/tags/**`; extensão do `DataTable` para filtro.
+- `df-ui`: primitivo `select`; layout `(app)`, `AppSidebar` e `RegistryNav` por
+  acesso; layout de `/registry`; guarda na página de Setores;
+  `app/(app)/registry/tags/**`; extensão do `DataTable` para filtro. Na feature
+  Pessoas, o filtro virou a prop `filters` do `DataTable` (popover com
+  checkboxes, Setor e Status), descrita em `docs/contracts/registry-people.md`.
 
 ## Migration
 
@@ -69,7 +71,7 @@ inativas no mesmo setor. `npm run db:migrate` fica com o usuário.
 - **Pré-requisito (usuário)**: `npm run db:migrate`.
 - **Onda 1 (paralelo)**: `df-auth` (`registry-access.ts`, `director.ts`) ·
   `df-data` (`tags.ts`, `listDepartmentOptions`) · `df-ui` (primitivo `select`,
-  sidebar por acesso, guardas de `/cadastros` e de Setores, página de Tags em
+  sidebar por acesso, guardas de `/registry` e de Setores, página de Tags em
   leitura com tabela, filtro e busca).
 - **Onda 2 (paralelo)**: `df-actions` (`tags.ts`) · `df-ui` (formulário de
   criar/renomear, confirmação de desativação, toasts).
@@ -95,9 +97,9 @@ commit** em que o layout afrouxa; senão o admin de setor vê Setores.
 - Diretor vê Pessoas (em breve), Setores e Tags; tabela de tags de todos os
   setores com coluna Setor, filtro (Diretoria primeiro) e busca; cria escolhendo
   entre setores ativos.
-- Admin de setor vê Pessoas (em breve) e Tags; 404 em `/cadastros/setores`;
+- Admin de setor vê Pessoas (em breve) e Tags; 404 em `/registry/departments`;
   tabela só do setor dele, sem coluna nem filtro; cria no próprio setor.
-- Membro comum: sem "Cadastros"; 404 em `/cadastros/*`.
+- Membro comum: sem "Cadastros"; 404 em `/registry/*`.
 - Nome repetido no setor (qualquer caixa, inclusive inativa) → `NAME_TAKEN`; com
   inativa, a mensagem sugere reativar. Mesmo nome em outro setor é aceito.
 - Criar ou reativar em setor inativo → `DEPARTMENT_INACTIVE`. Desativar sempre

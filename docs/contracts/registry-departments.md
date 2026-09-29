@@ -1,34 +1,47 @@
 # Contrato — Cadastros → Setores
 
-Entrada das ondas 1 e 2. Plano em `docs/plans/cadastros-setores.md`, que manda
+Entrada das ondas 1 e 2. Plano em `docs/plans/registry-departments.md`, que manda
 nas decisões. Poder global da Diretoria em
-`docs/adr/011-diretoria-como-setor-com-poder-global.md`.
+`docs/adr/011-board-department-with-global-power.md`.
 
 Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 `zod@4.6.5`.
 
-> **Atualizado pela feature Tags** (`docs/contracts/cadastros-tags.md`):
+> **Atualizado pela feature Tags** (`docs/contracts/registry-tags.md`):
 > `listDepartments` ordena com a Diretoria primeiro; a guarda de diretor saiu do
-> layout de `/cadastros` e foi para `app/(app)/cadastros/setores/page.tsx`
+> layout de `/registry` e foi para `app/(app)/registry/departments/page.tsx`
 > (o layout agora aceita diretor **ou** admin de setor); o menu passou a ser
 > montado por `registryNavItemsFor`; `director.ts` deriva de
 > `getRegistryAccess`; os limites de nome viraram `REGISTRY_NAME_*` e os schemas
 > usam as fábricas de `app/_lib/validation/registry.ts`. As seções abaixo já
 > refletem isso.
 
+> **Atualizado pela feature Pessoas** (`docs/contracts/registry-people.md`):
+> novo carimbo `department.is_unassigned` (setor **Não alocado**: único, sempre
+> ativo, nunca Diretoria; criado pela migration `0006`). A regra de desativação
+> não muda para os demais setores; o Não alocado nunca desativa
+> (`checkDepartmentDeactivation` → `IS_UNASSIGNED`, precedência `IS_BOARD` →
+> `IS_UNASSIGNED` → `HAS_ACTIVE_USERS` → `HAS_OPEN_TICKETS`; `DepartmentErrorCode`
+> ganha `"IS_UNASSIGNED"`). Renomear é permitido. `DepartmentListItem`,
+> `DepartmentDependencies` e `DepartmentOption` ganham `isUnassigned`;
+> `listDepartments` e `listDepartmentOptions` ordenam `is_board desc`,
+> `is_unassigned asc`, `lower(name)`, `id`. A UI identifica os dois setores
+> especiais por `departmentBadgeFor` e esconde "Desativar" nos dois. Quem está na
+> Diretoria passa a ser sempre admin (ADR 011, nota de Pessoas).
+
 ## Decisões fixadas pelo usuário (resumo do plano)
 
-| Tema           | Decisão                                                                                                                                                      |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Quem é diretor | Quem está **ativo** num setor com `is_board = true`. O poder vem do setor, não da pessoa. Não existe role novo. Só pode existir uma Diretoria                |
-| Onde se checa  | Consulta ao banco a cada checagem. **Não** vai para cookie nem sessão: mover alguém de setor revoga o poder na próxima requisição. `Actor` não muda          |
-| Seed           | Cria sempre o setor `Diretoria` com `is_board = true` e o admin do seed nele. `SEED_DEPARTMENT_NAME` deixa de existir                                        |
-| Navegação      | Item "Cadastros" recolhível na sidebar; o subitem Setores só para diretor (itens por acesso em `docs/contracts/cadastros-tags.md`); aberto em `/cadastros/*` |
-| Rota           | `/cadastros/setores`, só diretor (guarda na página). Não-diretor recebe **404**, para a página não se revelar                                                |
-| Escopo         | Listar, criar, renomear, ativar/desativar. **Sem exclusão**                                                                                                  |
-| Desativar      | Só sem pessoas ativas e sem chamados em aberto no setor. A Diretoria nunca. Renomear a Diretoria é permitido                                                 |
-| Nome           | `trim`, 2 a 80 caracteres, único sem diferenciar maiúsculas (inclusive contra inativos)                                                                      |
-| E-mail         | Nenhum                                                                                                                                                       |
+| Tema           | Decisão                                                                                                                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Quem é diretor | Quem está **ativo** num setor com `is_board = true`. O poder vem do setor, não da pessoa. Não existe role novo. Só pode existir uma Diretoria              |
+| Onde se checa  | Consulta ao banco a cada checagem. **Não** vai para cookie nem sessão: mover alguém de setor revoga o poder na próxima requisição. `Actor` não muda        |
+| Seed           | Cria sempre o setor `Diretoria` com `is_board = true` e o admin do seed nele. `SEED_DEPARTMENT_NAME` deixa de existir                                      |
+| Navegação      | Item "Cadastros" recolhível na sidebar; o subitem Setores só para diretor (itens por acesso em `docs/contracts/registry-tags.md`); aberto em `/registry/*` |
+| Rota           | `/registry/departments`, só diretor (guarda na página). Não-diretor recebe **404**, para a página não se revelar                                           |
+| Escopo         | Listar, criar, renomear, ativar/desativar. **Sem exclusão**                                                                                                |
+| Desativar      | Só sem pessoas ativas e sem chamados em aberto no setor. A Diretoria nunca. Renomear a Diretoria é permitido                                               |
+| Nome           | `trim`, 2 a 80 caracteres, único sem diferenciar maiúsculas (inclusive contra inativos)                                                                    |
+| E-mail         | Nenhum                                                                                                                                                     |
 
 ## Tabelas, enums e migration
 
@@ -264,13 +277,13 @@ export const getIsDirector: () => Promise<boolean>
 
 | Função            | Sem sessão           | Com sessão, não diretor | Diretor         | Quem usa                                        |
 | ----------------- | -------------------- | ----------------------- | --------------- | ----------------------------------------------- |
-| `requireDirector` | `redirect("/login")` | `notFound()`            | devolve `Actor` | `app/(app)/cadastros/layout.tsx` e páginas      |
+| `requireDirector` | `redirect("/login")` | `notFound()`            | devolve `Actor` | `app/(app)/registry/layout.tsx` e páginas       |
 | `getDirector`     | `redirect("/login")` | `null`                  | devolve `Actor` | Server Actions (traduzem `null` em `FORBIDDEN`) |
 | `getIsDirector`   | `false`              | `false`                 | `true`          | `app/(app)/layout.tsx`, para a sidebar          |
 
 - Todas partem de `getSession()`/`requireSession()` de `app/_lib/auth/session.ts`
   e derivam de `getRegistryAccess()` (`app/_lib/auth/registry-access.ts`, ver
-  `docs/contracts/cadastros-tags.md`): diretor é `isDirectorAccess(access)`. A
+  `docs/contracts/registry-tags.md`): diretor é `isDirectorAccess(access)`. A
   consulta (`users` + join `department`) é uma só por request, compartilhada com
   a sidebar e a guarda de Tags.
 - `is_active` do usuário entra na consulta: diretor desativado perde o poder na
@@ -451,10 +464,10 @@ mesmos.
 
 Revalidação:
 
-- `createDepartment` e `setDepartmentActive` → `revalidatePath("/cadastros/setores")`.
+- `createDepartment` e `setDepartmentActive` → `revalidatePath("/registry/departments")`.
 - `renameDepartment` → `revalidatePath("/(app)", "layout")`: o nome do setor
   aparece na sidebar ("Setor · Papel") e no perfil de todos os membros, então o
-  layout do grupo inteiro é invalidado (inclui `/cadastros/setores`).
+  layout do grupo inteiro é invalidado (inclui `/registry/departments`).
 
 Nenhuma action recebe o id do ator nem decide permissão por conta própria: quem
 decide é `getDirector()`. Nenhuma escreve SQL.
@@ -469,30 +482,34 @@ decide é `getDirector()`. Nenhuma escreve SQL.
 
 ### `app/(app)/layout.tsx` (alterado)
 
-- Chama `getIsDirector()` de `@/app/_lib/auth/director` junto das leituras que já
-  faz (pode ser em `Promise.all` com `findUserProfile`).
-- Passa `isDirector` para `AppSidebar` (e para o que o cabeçalho mobile usar como
-  navegação, se houver).
+- Nesta feature chamava `getIsDirector()`. **Hoje** chama `getRegistryAccess()`
+  de `@/app/_lib/auth/registry-access` no mesmo `Promise.all` das outras
+  leituras e passa `registryItems={registryNavItemsFor(access)}` para
+  `AppSidebar`.
 
 ### Sidebar — `app/(app)/_components/`
 
-- `AppSidebar` ganha a prop `isDirector: boolean`.
-- Item "Cadastros" (ícone `lucide-react`) só quando `isDirector`, com
-  `Collapsible` do shadcn. Aberto por padrão quando `pathname` começa com
-  `/cadastros/`; o usuário pode recolher. Leitura de `pathname` exige Client
-  Component (como `nav-item.tsx`).
-- Subitens: **Pessoas** (desabilitado, rótulo "em breve", sem link), **Setores**
-  (`/cadastros/setores`), **Tags** (desabilitado, "em breve").
-- Esconder o item **não** é a proteção: a guarda é o layout de `/cadastros`.
+Como entregue nesta feature: `AppSidebar` com `isDirector: boolean`, Pessoas e
+Tags como "em breve". **Hoje** (Tags e Pessoas):
 
-### `app/(app)/cadastros/layout.tsx` (novo)
+- `AppSidebar` recebe `registryItems: RegistryNavItem[]` (de
+  `registryNavItemsFor`); "Cadastros" aparece quando a lista não é vazia.
+- `RegistryNav` (`registry-nav.tsx`), com `Collapsible` do shadcn e ícone
+  `FolderIcon`. Aberto por padrão quando `pathname` está numa das seções; o
+  usuário pode recolher. Leitura de `pathname` exige Client Component.
+- Subitens, todos com link: diretor vê **Pessoas**, **Setores**
+  (`/registry/departments`) e **Tags**; admin de setor vê Pessoas e Tags.
+- Esconder o item **não** é a proteção: a guarda é o layout de `/registry` e,
+  para Setores, `requireDirector` na página.
+
+### `app/(app)/registry/layout.tsx` (novo)
 
 - `await requireRegistryAccess()` e renderiza `children`: passa diretor **e**
   admin de setor (antes era `requireDirector()`). Sem acesso → 404.
-- Não existe `app/(app)/cadastros/page.tsx` nesta feature: `/cadastros` sem
+- Não existe `app/(app)/registry/page.tsx` nesta feature: `/registry` sem
   subrota é 404 para todos.
 
-### `app/(app)/cadastros/setores/page.tsx` (novo, Server Component)
+### `app/(app)/registry/departments/page.tsx` (novo, Server Component)
 
 - `await requireDirector()` **na página**, antes de ler: o layout deixa passar o
   admin de setor, e Setores continua só da Diretoria.
@@ -504,15 +521,23 @@ decide é `getDirector()`. Nenhuma escreve SQL.
 
 Tabela genérica sobre TanStack Table (`const DataTable = <TData,>(props: DataTableProps<TData>) => {}`),
 com toolbar de busca por texto, cabeçalho e corpo. Nasce aqui porque Pessoas e
-Tags vão reusar.
+Tags vão reusar. Ganhou depois a prop `filters` (popover com checkboxes,
+`filterFn: "inValues"`); API em "Peças compartilhadas" de
+`docs/contracts/registry-people.md`.
 
-### `app/(app)/cadastros/setores/_components/` (novo)
+### `app/(app)/registry/departments/_components/` (novo)
 
 - Colunas: **Nome** (com `Badge` "Diretoria" quando `isBoard`), **Status**
   (`describeActiveStatus(isActive)` em `Badge`), **Pessoas ativas**
   (`activeUsers`), **Chamados em aberto** (`openTickets`), **Criado em**
   (`formatDate(createdAt)` de `@/app/_lib/date`), **Ações**.
-- Busca por nome no cliente (filtro de coluna do TanStack).
+- Busca por nome no cliente (filtro de coluna do TanStack, `includesString`).
+- Filtro **Status** (`activeStatusFilter` de `app/(app)/registry/_components/`)
+  pela prop `filters` do `DataTable`: opções Ativo e Inativo, coluna `isActive`
+  com `filterFn: "inValues"`. Sem opção marcada, lista todos.
+- Ações por linha (`department-row-actions.tsx`) em `RegistryRowActions`, slots
+  `rename` (`fit`) e `status` (`md`); o slot `status` fica vazio para Diretoria
+  e Não alocado.
 - Formulário de criar e de renomear: React Hook Form + `zodResolver` com
   `createDepartmentSchema` nos dois modos, porque o único campo digitado é
   `name` (a regra é `departmentNameSchema`, a mesma dos dois schemas). No modo
@@ -534,7 +559,7 @@ Tags vão reusar.
 
 1. **Banco local precisa ser recriado.** A migration não marca setor existente
    como Diretoria, e o seed pula quando o admin já existe — então num banco já
-   populado ninguém vira diretor e `/cadastros` dá 404 para todos. Caminho em
+   populado ninguém vira diretor e `/registry` dá 404 para todos. Caminho em
    desenvolvimento: recriar o banco, `npm run db:migrate`, `npm run db:seed`.
    (Alternativa manual, só se o usuário preferir não recriar:
    `update department set is_board = true where id = <setor do admin>`. Não é
@@ -567,8 +592,8 @@ Quem tiver a variável no `.env` pode apagá-la; ela é ignorada.
 - [ ] `listDepartments`, `insertDepartment`, `updateDepartmentName`, `updateDepartmentActive` em `app/_lib/data/departments.ts` (`df-data`)
 - [ ] seed cria a Diretoria com `is_board` e o admin nela; nenhuma ocorrência de `SEED_DEPARTMENT_NAME` no projeto (`df-data`)
 - [ ] `createDepartment`, `renameDepartment`, `setDepartmentActive` em `app/_lib/actions/departments.ts` (`df-actions`)
-- [ ] item "Cadastros" na sidebar só para diretor; `/cadastros/setores` com tabela, criar, renomear, ativar/desativar (`df-ui`)
-- [ ] não-diretor em `/cadastros/setores` recebe 404; action chamada por não-diretor devolve `FORBIDDEN` (`df-debug`)
+- [ ] item "Cadastros" na sidebar só para diretor; `/registry/departments` com tabela, criar, renomear, ativar/desativar (`df-ui`)
+- [ ] não-diretor em `/registry/departments` recebe 404; action chamada por não-diretor devolve `FORBIDDEN` (`df-debug`)
 - [ ] mover o admin para outro setor tira o item "Cadastros" na próxima navegação, sem novo login (`df-debug`)
 - [ ] criar/renomear com nome existente (inclusive inativo, outra caixa) → `NAME_TAKEN` (`df-debug`)
 - [ ] desativar setor com pessoa ativa ou chamado em aberto é recusado com as contagens; Diretoria nunca desativa (`df-debug`)

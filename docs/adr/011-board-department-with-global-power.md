@@ -60,8 +60,24 @@ admin`, ativo, fora da Diretoria) entra em Cadastros com alcance limitado ao
   `users.department_id`, com a precedência em `resolveRegistryAccess`
   (`app/_lib/domain/registry.ts`). Nada disso vai para cookie. As funções de
   `director.ts` passam a derivar dela, mantendo uma consulta só por request.
-- A guarda do layout de `/cadastros` passou a ser "diretor ou admin de setor";
+- A guarda do layout de `/registry` passou a ser "diretor ou admin de setor";
   a de diretor foi para a página de Setores.
 - Consequência: rebaixar um admin a membro, desativá-lo ou movê-lo de setor muda
   o que ele vê em Cadastros na próxima requisição, como já acontecia com o
   diretor.
+
+## Nota — Pessoas e o setor Não alocado (feature Pessoas, 2026-09-29)
+
+- Quem está na Diretoria passa a ser **sempre** `role = admin`: criar ou mover
+  alguém para a Diretoria força o papel (`forcedRoleFor`). A regra "diretor =
+  ativo num setor `is_board`" não muda; o que muda é que um membro comum na
+  Diretoria deixa de ser produzível pela interface.
+- Só o diretor concede ou retira o papel admin.
+- Nunca fica sem diretor: desativar ou tirar da Diretoria o último diretor ativo
+  é recusado (`LAST_DIRECTOR`), com recontagem dentro da transação e a linha da
+  Diretoria travada com `FOR UPDATE`.
+- Novo carimbo irmão: `department.is_unassigned` marca o setor **Não alocado**
+  (único, sempre ativo, nunca Diretoria ao mesmo tempo). Admin que está nele
+  mantém o papel, mas `resolveRegistryAccess` devolve `none`: o poder volta
+  quando um diretor o realoca.
+- `must_change_password = true` também resulta em `none` (ADR 012).

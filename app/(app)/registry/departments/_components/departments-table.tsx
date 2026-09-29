@@ -6,9 +6,11 @@ import DataTable from "@/app/_components/data-table/data-table"
 import type { DataTableFeatures } from "@/app/_components/data-table/data-table-features"
 import { Badge } from "@/app/_components/ui/badge"
 import { formatDate } from "@/app/_lib/date"
+import { departmentBadgeFor } from "@/app/_lib/domain/department"
 import type { DepartmentListItem } from "@/app/_lib/types/department"
 
 import ActiveStatusBadge from "../../_components/active-status-badge"
+import activeStatusFilter from "../../_components/active-status-filter"
 import DepartmentRowActions from "./department-row-actions"
 
 const columnHelper = createColumnHelper<DataTableFeatures, DepartmentListItem>()
@@ -17,17 +19,19 @@ const columns = columnHelper.columns([
   columnHelper.accessor("name", {
     header: "Nome",
     filterFn: "includesString",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{row.original.name}</span>
-        {row.original.isBoard ? (
-          <Badge variant="secondary">Diretoria</Badge>
-        ) : null}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const badge = departmentBadgeFor(row.original)
+      return (
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{row.original.name}</span>
+          {badge ? <Badge variant="secondary">{badge}</Badge> : null}
+        </div>
+      )
+    },
   }),
   columnHelper.accessor("isActive", {
     header: "Status",
+    filterFn: "inValues",
     cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue()} />,
   }),
   columnHelper.accessor("activeUsers", {
@@ -53,6 +57,14 @@ const columns = columnHelper.columns([
   }),
 ])
 
+const SEARCH = {
+  columnId: "name",
+  label: "Buscar setor por nome",
+  placeholder: "Buscar por nome",
+}
+
+const FILTERS = [activeStatusFilter]
+
 interface DepartmentsTableProps {
   departments: DepartmentListItem[]
 }
@@ -62,11 +74,8 @@ const DepartmentsTable = ({ departments }: DepartmentsTableProps) => (
     columns={columns}
     data={departments}
     emptyMessage="Nenhum setor cadastrado."
-    search={{
-      columnId: "name",
-      label: "Buscar setor por nome",
-      placeholder: "Buscar por nome",
-    }}
+    search={SEARCH}
+    filters={FILTERS}
   />
 )
 

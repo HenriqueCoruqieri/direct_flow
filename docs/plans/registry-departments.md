@@ -1,6 +1,6 @@
 # Plano — Cadastros → Setores
 
-Aprovado em 2026-09-28. Contrato em `docs/contracts/cadastros-setores.md`;
+Aprovado em 2026-09-28. Contrato em `docs/contracts/registry-departments.md`;
 decisão de poder global no ADR 011.
 
 ## Decisões fixadas pelo usuário
@@ -10,8 +10,8 @@ decisão de poder global no ADR 011.
 | Poder global    | Vem do setor **Diretoria** (`department.is_board`). Quem pertence a ele tem poder total em Cadastros. Não é role novo. Uma Diretoria só                 |
 | Checagem        | Consulta ao banco a cada checagem (join `users` → `department.is_board`), fora do cookie. Revogação imediata ao mudar alguém de setor. `Actor` não muda |
 | Seed            | Cria sempre o setor "Diretoria" com o carimbo; o admin do seed fica nele. `SEED_DEPARTMENT_NAME` sai                                                    |
-| Navegação       | "Cadastros" recolhível na sidebar, só para diretor, aberto em `/cadastros/*`; subitens Pessoas (em breve), Setores, Tags (em breve)                     |
-| Acesso negado   | `/cadastros/setores` dá 404 a não-diretor                                                                                                               |
+| Navegação       | "Cadastros" recolhível na sidebar, só para diretor, aberto em `/registry/*`; subitens Pessoas (em breve), Setores, Tags (em breve)                      |
+| Acesso negado   | `/registry/departments` dá 404 a não-diretor                                                                                                            |
 | Escopo do setor | Listar, criar, renomear, ativar/desativar. Sem exclusão                                                                                                 |
 | Desativação     | Só sem pessoas ativas e sem chamados em aberto (status fora de resolvido/fechado/cancelado). Diretoria nunca. Renomear a Diretoria pode                 |
 | Nome            | `trim`, 2 a 80 caracteres, único sem diferenciar maiúsculas, inclusive contra inativos; conflito sugere reativar o existente                            |
@@ -21,7 +21,7 @@ decisão de poder global no ADR 011.
 ## Escopo
 
 **Entra**: carimbo `is_board` e migration; checagem de diretor; item "Cadastros"
-na sidebar; `/cadastros/setores` com tabela, criação, renomeação e
+na sidebar; `/registry/departments` com tabela, criação, renomeação e
 ativação/desativação; seed com Diretoria fixa; tabela compartilhada.
 
 **Fora**: Pessoas e Tags (só o item desabilitado); exclusão de setor; troca do
@@ -47,8 +47,8 @@ encaminhamento).
   transação e `FOR UPDATE`); `db/seed.ts` com a Diretoria.
 - `df-actions`: `app/_lib/actions/departments.ts` (`createDepartment`,
   `renameDepartment`, `setDepartmentActive`).
-- `df-ui`: sidebar com `isDirector`, `app/(app)/cadastros/layout.tsx`,
-  `app/(app)/cadastros/setores/**`, `app/_components/data-table/`; instala
+- `df-ui`: sidebar com `isDirector`, `app/(app)/registry/layout.tsx`,
+  `app/(app)/registry/departments/**`, `app/_components/data-table/`; instala
   `@tanstack/react-table` e os primitivos `table`, `collapsible`, `badge`,
   `alert-dialog`.
 - `.env.example`: sem `SEED_DEPARTMENT_NAME`. `docs/contracts/auth.md` ajustado.
@@ -61,7 +61,7 @@ encaminhamento).
   `npm run db:seed` — depois que o seed novo existir (fim da Onda 1).
 - **Onda 1 (paralelo)**: `df-auth` (`director.ts`) · `df-data`
   (`departments.ts`, seed) · `df-ui` (data-table, primitivos, sidebar com
-  "Cadastros", layout de `/cadastros`, página com a tabela em leitura).
+  "Cadastros", layout de `/registry`, página com a tabela em leitura).
 - **Onda 2 (paralelo)**: `df-actions` (`departments.ts`) · `df-ui`
   (formulários de criar e renomear, confirmação de desativação, toasts).
 - **Onda 3**: `df-reviewer` · `df-debug` (404 para não-diretor, `FORBIDDEN` na
@@ -81,7 +81,7 @@ encaminhamento).
 ## Critério de pronto
 
 - Após recriar o banco e rodar o seed, o admin vê "Cadastros" e acessa
-  `/cadastros/setores`; um membro de outro setor não vê o item e recebe 404 na URL.
+  `/registry/departments`; um membro de outro setor não vê o item e recebe 404 na URL.
 - Mover o admin para outro setor tira o acesso na próxima navegação, sem logout.
 - Tabela lista todos os setores com status, pessoas ativas, chamados em aberto e
   data de criação (via `@/app/_lib/date`); busca por nome filtra.

@@ -15,10 +15,11 @@ import {
   type DataTableFeatures,
   dataTableFeatures,
 } from "./data-table-features"
+import DataTableFilters, {
+  type DataTableFilter,
+  type DataTableFilterGroup,
+} from "./data-table-filters"
 import DataTableSearch from "./data-table-search"
-import DataTableSelectFilter, {
-  type DataTableSelectFilterOption,
-} from "./data-table-select-filter"
 
 interface DataTableSearchConfig {
   columnId: string
@@ -26,19 +27,17 @@ interface DataTableSearchConfig {
   placeholder?: string
 }
 
-interface DataTableSelectFilterConfig {
-  columnId: string
-  label: string
-  allLabel: string
-  options: ReadonlyArray<DataTableSelectFilterOption>
-}
+const selectedValuesOf = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : []
 
 interface DataTableProps<TData extends RowData> {
   columns: ReadonlyArray<ColumnDef<DataTableFeatures, TData>>
   data: ReadonlyArray<TData>
   emptyMessage: string
   search?: DataTableSearchConfig
-  selectFilters?: ReadonlyArray<DataTableSelectFilterConfig>
+  filters?: ReadonlyArray<DataTableFilter>
 }
 
 const DataTable = <TData extends RowData>({
@@ -46,7 +45,7 @@ const DataTable = <TData extends RowData>({
   data,
   emptyMessage,
   search,
-  selectFilters = [],
+  filters = [],
 }: DataTableProps<TData>) => {
   const table = useTable({
     features: dataTableFeatures,
@@ -56,18 +55,20 @@ const DataTable = <TData extends RowData>({
 
   const searchColumn = search ? table.getColumn(search.columnId) : undefined
   const searchValue = searchColumn?.getFilterValue()
-  const activeSelectFilters = selectFilters.flatMap((filter) => {
+  const filterGroups = filters.flatMap((filter): DataTableFilterGroup[] => {
     const column = table.getColumn(filter.columnId)
-    return column ? [{ filter, column }] : []
+    return column
+      ? [{ ...filter, selected: selectedValuesOf(column.getFilterValue()) }]
+      : []
   })
-  const hasToolbar = Boolean(searchColumn) || activeSelectFilters.length > 0
+  const hasToolbar = Boolean(searchColumn) || filterGroups.length > 0
   const rows = table.getRowModel().rows
   const isFiltered = table.state.columnFilters.length > 0
 
   return (
     <div className="flex flex-col gap-4">
       {hasToolbar ? (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           {search && searchColumn ? (
             <DataTableSearch
               label={search.label}
@@ -76,20 +77,21 @@ const DataTable = <TData extends RowData>({
               onValueChange={(value) => searchColumn.setFilterValue(value)}
             />
           ) : null}
-          {activeSelectFilters.map(({ filter, column }) => {
-            const value = column.getFilterValue()
-
-            return (
-              <DataTableSelectFilter
-                key={filter.columnId}
-                label={filter.label}
-                allLabel={filter.allLabel}
-                options={filter.options}
-                value={typeof value === "string" ? value : ""}
-                onValueChange={(next) => column.setFilterValue(next)}
+          {filterGroups.length > 0 ? (
+            <div className="ml-auto">
+              <DataTableFilters
+                groups={filterGroups}
+                onSelectedChange={(columnId, selected) =>
+                  table.getColumn(columnId)?.setFilterValue(selected)
+                }
+                onClear={() =>
+                  filterGroups.forEach((group) =>
+                    table.getColumn(group.columnId)?.setFilterValue(undefined),
+                  )
+                }
               />
-            )
-          })}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

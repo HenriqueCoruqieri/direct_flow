@@ -56,10 +56,6 @@ type TagFormDialogProps =
   | CreateTagInFixedDepartmentProps
   | RenameTagFormDialogProps
 
-const DEPARTMENT_ISSUE_MESSAGE =
-  createTagSchema.shape.departmentId.safeParse(undefined).error?.issues[0]
-    ?.message
-
 const initialValuesFor = (
   props: TagFormDialogProps,
 ): DefaultValues<CreateTagInput> => {
@@ -105,23 +101,7 @@ const TagFormDialog = (props: TagFormDialogProps) => {
       return
     }
 
-    if (
-      result.code === "INVALID_INPUT" &&
-      result.message === DEPARTMENT_ISSUE_MESSAGE
-    ) {
-      if (departmentChoices) {
-        form.setError(
-          "departmentId",
-          { message: result.message },
-          { shouldFocus: true },
-        )
-      } else {
-        toast.error(result.message)
-      }
-      return
-    }
-
-    if (result.code === "NAME_TAKEN" || result.code === "INVALID_INPUT") {
+    if (result.code === "NAME_TAKEN") {
       form.setError("name", { message: result.message }, { shouldFocus: true })
       return
     }

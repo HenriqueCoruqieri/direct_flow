@@ -1,12 +1,30 @@
 # Contrato — Cadastros → Tags
 
-Entrada das ondas 1 e 2. Plano em `docs/plans/cadastros-tags.md`, que manda nas
+Entrada das ondas 1 e 2. Plano em `docs/plans/registry-tags.md`, que manda nas
 decisões. Poder da Diretoria e entrada do admin de setor em
-`docs/adr/011-diretoria-como-setor-com-poder-global.md`. Padrões de tabela,
-formulário e resultado de action reusados de `docs/contracts/cadastros-setores.md`.
+`docs/adr/011-board-department-with-global-power.md`. Padrões de tabela,
+formulário e resultado de action reusados de `docs/contracts/registry-departments.md`.
 
 Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 `zod@4.6.5`, `@tanstack/react-table@9`.
+
+> **Atualizado pela feature Pessoas** (`docs/contracts/registry-people.md`):
+> o setor **Não alocado** (`department.is_unassigned`) não tem tags. Criar ou
+> reativar tag nele devolve `DEPARTMENT_UNASSIGNED`
+> (`TAG_DEPARTMENT_UNASSIGNED_MESSAGE`), decidido por `checkTagDepartment`
+> (`app/_lib/domain/tag.ts`) dentro da transação de `insertTag` e
+> `updateTagActive`; `InsertTagOutcome` e `UpdateTagActiveOutcome` ganham
+> `TagDepartmentUnassigned`; `TagErrorCode` ganha `"DEPARTMENT_UNASSIGNED"`.
+> `tagCreationDepartments` passou a ser `assignableDepartments` (ativos, sem o
+> Não alocado). `DepartmentOption` ganhou `isUnassigned` e
+> `listDepartmentOptions` ordena o Não alocado por último. O item Pessoas do menu
+> deixou de ser "em breve" (`PEOPLE_REGISTRY_PATH`). `resolveRegistryAccess`
+> devolve `none` também para admin no Não alocado e para quem tem
+> `must_change_password`. O filtro de setor em `Select` deu lugar à prop
+> `filters` do `DataTable` (popover com checkboxes, Setor e Status) e as ações por
+> linha passaram a usar `RegistryRowActions`; os dois estão descritos em
+> "Peças compartilhadas" do contrato de Pessoas. As seções abaixo descrevem a
+> feature Tags já com essas mudanças; onde divergirem, vale o contrato de Pessoas.
 
 ## Decisões fixadas pelo usuário (resumo do plano)
 
@@ -14,8 +32,8 @@ Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Quem gerencia | Diretor: tags de **qualquer** setor. Admin de setor (`role = admin`, ativo): só tags do **próprio** setor. Membro comum: nada (404). Diretor tem precedência |
 | Acesso        | Uma consulta fresca ao banco por request (`getRegistryAccess`), com `cache` do React. Nunca ler `role` do cookie                                             |
-| Menu          | Diretor: Pessoas (em breve), Setores, Tags. Admin de setor: Pessoas (em breve), Tags. Membro: sem "Cadastros"                                                |
-| Guardas       | `/cadastros/*` exige diretor **ou** admin de setor; `/cadastros/setores` exige diretor na própria página                                                     |
+| Menu          | Diretor: Pessoas, Setores, Tags. Admin de setor: Pessoas, Tags. Membro: sem "Cadastros"                                                                      |
+| Guardas       | `/registry/*` exige diretor **ou** admin de setor; `/registry/departments` exige diretor na própria página                                                   |
 | Escopo        | Listar, criar, renomear, ativar/desativar. Sem exclusão. Tag nunca muda de setor                                                                             |
 | Desativar     | Sempre permitido                                                                                                                                             |
 | Nome          | `trim`, 2–80 caracteres; único no setor **contando inativas**, sem diferenciar maiúsculas                                                                    |
@@ -60,6 +78,8 @@ export interface RegistryAccessFacts {
   role: Role
   departmentId: number
   isBoard: boolean
+  isUnassigned: boolean
+  mustChangePassword: boolean
 }
 
 export interface DirectorAccess {
@@ -80,12 +100,12 @@ export type GrantedRegistryAccess = DirectorAccess | DepartmentAdminAccess
 
 export type RegistryAccess = GrantedRegistryAccess | NoRegistryAccess
 
-export type RegistrySection = "pessoas" | "setores" | "tags"
+export type RegistrySection = "people" | "departments" | "tags"
 
 export interface RegistryNavItem {
   section: RegistrySection
   label: string
-  href: string | null
+  href: string
 }
 ```
 
@@ -93,7 +113,8 @@ export interface RegistryNavItem {
   sai dela por `resolveRegistryAccess` (domínio).
 - `departmentId` do acesso vem do **banco**, não do cookie. É esse valor, e não
   `actor.departmentId`, que decide o setor do admin.
-- `RegistryNavItem.href = null` é item "em breve" (sem link).
+- `RegistryNavItem.href` é sempre a rota da seção (`*_REGISTRY_PATH`): não
+  existe item de menu sem link.
 
 ### `app/_lib/types/tag.ts` (novo)
 
@@ -178,8 +199,9 @@ export interface DepartmentOption {
 ```ts
 export const REGISTRY_NAME_MIN_LENGTH = 2
 export const REGISTRY_NAME_MAX_LENGTH = 80
-export const DEPARTMENTS_REGISTRY_PATH = "/cadastros/setores"
-export const TAGS_REGISTRY_PATH = "/cadastros/tags"
+export const PEOPLE_REGISTRY_PATH = "/registry/people"
+export const DEPARTMENTS_REGISTRY_PATH = "/registry/departments"
+export const TAGS_REGISTRY_PATH = "/registry/tags"
 
 export const resolveRegistryAccess: (
   facts: RegistryAccessFacts | null,
@@ -193,14 +215,14 @@ export const isDirectorAccess: (
 export const registryNavItemsFor: (access: RegistryAccess) => RegistryNavItem[]
 ```
 
-| Nome                    | Semântica                                                                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `REGISTRY_NAME_*`       | Limites de nome de **todo** cadastro (setor e tag). Substituem `DEPARTMENT_NAME_MIN_LENGTH`/`MAX_LENGTH`, removidos                  |
-| `*_REGISTRY_PATH`       | Rotas dos cadastros; usadas pelo menu e pelo `revalidatePath` das actions                                                            |
-| `resolveRegistryAccess` | `null` ou usuário inativo → `none`; setor `is_board` → `director` (qualquer role); `role = admin` → `department_admin`; senão `none` |
-| `hasRegistryAccess`     | `kind !== "none"`. Type guard para chegar a `GrantedRegistryAccess`                                                                  |
-| `isDirectorAccess`      | `kind === "director"`. Decide coluna/filtro de setor na UI e o acesso a Setores                                                      |
-| `registryNavItemsFor`   | Diretor: Pessoas (`href: null`), Setores, Tags. Admin: Pessoas (`href: null`), Tags. `none`: `[]` (a sidebar não mostra "Cadastros") |
+| Nome                    | Semântica                                                                                                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REGISTRY_NAME_*`       | Limites de nome de **todo** cadastro (setor e tag). Substituem `DEPARTMENT_NAME_MIN_LENGTH`/`MAX_LENGTH`, removidos                                            |
+| `*_REGISTRY_PATH`       | Rotas dos cadastros; usadas pelo menu e pelo `revalidatePath` das actions                                                                                      |
+| `resolveRegistryAccess` | `null`, usuário inativo ou `mustChangePassword` → `none`; setor `is_board` → `director`; `role = admin` fora do Não alocado → `department_admin`; senão `none` |
+| `hasRegistryAccess`     | `kind !== "none"`. Type guard para chegar a `GrantedRegistryAccess`                                                                                            |
+| `isDirectorAccess`      | `kind === "director"`. Decide coluna/filtro de setor na UI e o acesso a Setores                                                                                |
+| `registryNavItemsFor`   | Diretor: Pessoas, Setores, Tags. Admin: Pessoas, Tags. Todos com `href`. `none`: `[]` (a sidebar não mostra "Cadastros")                                       |
 
 ### `app/_lib/domain/tag.ts` (novo)
 
@@ -298,7 +320,7 @@ export const requireRegistryAccess: () => Promise<GrantedRegistryAccess>
 | Função                  | Sem sessão           | Sem acesso (`none`) | Com acesso                       | Quem usa                                               |
 | ----------------------- | -------------------- | ------------------- | -------------------------------- | ------------------------------------------------------ |
 | `getRegistryAccess`     | `{ kind: "none" }`   | `{ kind: "none" }`  | `director` ou `department_admin` | `app/(app)/layout.tsx`, actions de tags, `director.ts` |
-| `requireRegistryAccess` | `redirect("/login")` | `notFound()`        | devolve o acesso                 | `app/(app)/cadastros/layout.tsx`, `/cadastros/tags`    |
+| `requireRegistryAccess` | `redirect("/login")` | `notFound()`        | devolve o acesso                 | `app/(app)/registry/layout.tsx`, `/registry/tags`      |
 
 - `getRegistryAccess` é embrulhada em `cache` do React (sem argumentos): no
   máximo **uma** consulta por request, compartilhada por layout, página e
@@ -502,20 +524,21 @@ Nenhuma action lê o `Actor` para decidir setor nem escreve SQL.
 
 - `AppSidebar`: prop `isDirector` sai; entra `registryItems: RegistryNavItem[]`.
   "Cadastros" aparece quando `registryItems.length > 0`.
-- `CadastrosNav`: recebe `items: RegistryNavItem[]` e remove a constante
-  `CADASTROS_ITEMS`. `href === null` → item desabilitado com "em breve"; senão
-  link. `key` = `item.section`.
+- `RegistryNav` (`registry-nav.tsx`): recebe `items: RegistryNavItem[]`; cada
+  item é um `Link` para `item.href`, com `aria-current="page"` na seção atual.
+  `key` = `item.section`. O grupo abre por padrão quando `pathname` está em
+  algum `item.href`.
 
-### `app/(app)/cadastros/layout.tsx` (alterado)
+### `app/(app)/registry/layout.tsx` (alterado)
 
 - `await requireRegistryAccess()` no lugar de `requireDirector()`.
 
-### `app/(app)/cadastros/setores/page.tsx` (alterado)
+### `app/(app)/registry/departments/page.tsx` (alterado)
 
 - Passa a chamar `await requireDirector()` antes de `listDepartments()`. Admin de
   setor agora passa pelo layout; sem isso, ele veria Setores.
 
-### `app/(app)/cadastros/tags/page.tsx` (novo, Server Component)
+### `app/(app)/registry/tags/page.tsx` (novo, Server Component)
 
 ```ts
 const access = await requireRegistryAccess()
@@ -532,20 +555,25 @@ const [tags, departmentOptions] = await Promise.all([
 - Nome do setor do admin no subtítulo, se desejado: `findUserProfile` já dá
   `departmentName`; não é obrigatório.
 
-### `app/(app)/cadastros/tags/_components/` (novo)
+### `app/(app)/registry/tags/_components/` (novo)
 
 - Tabela com `DataTable` de `app/_components/data-table/`. Colunas: **Nome**,
-  **Setor** (só diretor; `departmentName`, com `Badge` "inativo" se
-  `!departmentIsActive` é opcional), **Status** (`describeActiveStatus`),
+  **Setor** (só diretor; `DepartmentName` com badge "Setor inativo" quando
+  `!departmentIsActive`), **Status** (`ActiveStatusBadge`),
   **Chamados** (`ticketCount`), **Criado em** (`formatDate` de
   `@/app/_lib/date`), **Ações**.
 - Busca por nome (filtro de coluna `includesString`, como Setores).
-- Filtro por setor, só para diretor, no topo: `Select` com "Todos os setores" +
-  `departmentOptions` na ordem recebida (Diretoria primeiro). Filtra no cliente a
-  coluna `departmentId`. O `DataTable` hoje só tem `search`; estendê-lo com um
-  slot de toolbar ou config de filtro é decisão do `df-ui` (pasta já aprovada,
-  sem subpasta nova). Um filtro por igualdade exige registrar o `filterFn`
-  correspondente em `data-table-features.ts`.
+- Filtros pela prop `filters` do `DataTable` (botão "Filtros" com popover de
+  checkboxes; API em "Peças compartilhadas" de
+  `docs/contracts/registry-people.md`). As colunas `departmentId` e `isActive`
+  usam `filterFn: "inValues"`.
+  - Diretor: grupo **Setor** (`columnId: "departmentId"`, opções de
+    `departmentOptions` na ordem recebida, Diretoria primeiro e Não alocado por
+    último, `value: String(option.id)`, rótulo de `departmentOptionLabel`) e
+    grupo **Status** (`activeStatusFilter`).
+  - Admin de setor: só **Status**.
+  - Nenhuma opção marcada no grupo = grupo sem filtro. Dentro do grupo as opções
+    somam (OU); entre grupos, todas precisam bater (E).
 - Formulário criar/renomear: React Hook Form + `zodResolver`.
   - Criar, diretor: `createTagSchema`, campo `departmentId` em `Select` com
     `tagCreationDepartments(departmentOptions)`, convertendo com `Number(value)`.
@@ -559,6 +587,9 @@ const [tags, departmentOptions] = await Promise.all([
   ser oferecida em chamados novos; chamados existentes não mudam"). "Ativar"
   desabilitado quando `!departmentIsActive`, explicando com
   `TAG_DEPARTMENT_INACTIVE_MESSAGE`. A action continua sendo a autoridade.
+- Ações por linha (`tag-row-actions.tsx`) em `RegistryRowActions`, com os slots
+  `rename` (`fit`, `TagFormDialog mode="rename"`) e `status` (`md`,
+  `DeactivateRegistryDialog` ou `ReactivateRegistryButton`).
 - Client Components não importam `@/db/*`, `drizzle-orm`, `app/_lib/data` nem
   `app/_lib/auth`.
 
@@ -583,9 +614,9 @@ const [tags, departmentOptions] = await Promise.all([
 - [ ] `getRegistryAccess`, `requireRegistryAccess` em `app/_lib/auth/registry-access.ts`; `director.ts` derivado deles (`df-auth`)
 - [ ] `listTags`, `insertTag`, `updateTagName`, `updateTagActive`, `findTagDepartment` em `app/_lib/data/tags.ts`; `listDepartmentOptions` em `app/_lib/data/departments.ts` (`df-data`)
 - [ ] `createTag`, `renameTag`, `setTagActive` em `app/_lib/actions/tags.ts` (`df-actions`)
-- [ ] sidebar por acesso; `/cadastros` com `requireRegistryAccess`; `/cadastros/setores` com `requireDirector`; `/cadastros/tags` completa (`df-ui`)
-- [ ] membro comum: sem "Cadastros" e 404 em `/cadastros/tags` e `/cadastros/setores` (`df-debug`)
-- [ ] admin de setor: vê Pessoas (em breve) e Tags; 404 em `/cadastros/setores`; tabela só do setor dele, sem coluna nem filtro de setor (`df-debug`)
+- [ ] sidebar por acesso; `/registry` com `requireRegistryAccess`; `/registry/departments` com `requireDirector`; `/registry/tags` completa (`df-ui`)
+- [ ] membro comum: sem "Cadastros" e 404 em `/registry/tags` e `/registry/departments` (`df-debug`)
+- [ ] admin de setor: vê Pessoas e Tags; 404 em `/registry/departments`; tabela só do setor dele, sem coluna nem filtro de setor (`df-debug`)
 - [ ] admin forjando `departmentId` na criação ou `id` de tag alheia → `FORBIDDEN` (`df-debug`)
 - [ ] nome repetido no setor (outra caixa, inclusive inativa) → `NAME_TAKEN` com a mensagem certa; mesmo nome em outro setor é aceito (`df-debug`)
 - [ ] criar ou reativar em setor inativo → `DEPARTMENT_INACTIVE` (`df-debug`)

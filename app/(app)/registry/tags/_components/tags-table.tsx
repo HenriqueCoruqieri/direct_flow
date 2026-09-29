@@ -1,15 +1,19 @@
 "use client"
 
 import { createColumnHelper } from "@tanstack/react-table"
+import { useMemo } from "react"
 
 import DataTable from "@/app/_components/data-table/data-table"
 import type { DataTableFeatures } from "@/app/_components/data-table/data-table-features"
-import { Badge } from "@/app/_components/ui/badge"
+import type { DataTableFilter } from "@/app/_components/data-table/data-table-filters"
 import { formatDate } from "@/app/_lib/date"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type { TagListItem } from "@/app/_lib/types/tag"
 
 import ActiveStatusBadge from "../../_components/active-status-badge"
+import activeStatusFilter from "../../_components/active-status-filter"
+import DepartmentName from "../../_components/department-name"
+import departmentOptionLabel from "../../_components/department-option-label"
 import TagRowActions from "./tag-row-actions"
 
 const columnHelper = createColumnHelper<DataTableFeatures, TagListItem>()
@@ -22,21 +26,18 @@ const nameColumn = columnHelper.accessor("name", {
 
 const departmentColumn = columnHelper.accessor("departmentId", {
   header: "Setor",
-  filterFn: "equalsString",
+  filterFn: "inValues",
   cell: ({ row }) => (
-    <div className="flex items-center gap-2">
-      <span>{row.original.departmentName}</span>
-      {row.original.departmentIsActive ? null : (
-        <Badge variant="outline" className="text-muted-foreground">
-          Setor inativo
-        </Badge>
-      )}
-    </div>
+    <DepartmentName
+      name={row.original.departmentName}
+      isActive={row.original.departmentIsActive}
+    />
   ),
 })
 
 const statusColumn = columnHelper.accessor("isActive", {
   header: "Status",
+  filterFn: "inValues",
   cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue()} />,
 })
 
@@ -89,30 +90,36 @@ interface TagsTableProps {
   departmentOptions: DepartmentOption[]
 }
 
-const TagsTable = ({ tags, isDirector, departmentOptions }: TagsTableProps) => (
-  <DataTable
-    columns={isDirector ? directorColumns : departmentAdminColumns}
-    data={tags}
-    emptyMessage="Nenhuma tag cadastrada."
-    search={SEARCH}
-    selectFilters={
+const DEPARTMENT_ADMIN_FILTERS = [activeStatusFilter]
+
+const TagsTable = ({ tags, isDirector, departmentOptions }: TagsTableProps) => {
+  const filters = useMemo<DataTableFilter[]>(
+    () =>
       isDirector
         ? [
             {
               columnId: "departmentId",
-              label: "Filtrar por setor",
-              allLabel: "Todos os setores",
+              label: "Setor",
               options: departmentOptions.map((option) => ({
                 value: String(option.id),
-                label: option.isActive
-                  ? option.name
-                  : `${option.name} (inativo)`,
+                label: departmentOptionLabel(option),
               })),
             },
+            activeStatusFilter,
           ]
-        : undefined
-    }
-  />
-)
+        : DEPARTMENT_ADMIN_FILTERS,
+    [isDirector, departmentOptions],
+  )
+
+  return (
+    <DataTable
+      columns={isDirector ? directorColumns : departmentAdminColumns}
+      data={tags}
+      emptyMessage="Nenhuma tag cadastrada."
+      search={SEARCH}
+      filters={filters}
+    />
+  )
+}
 
 export default TagsTable
