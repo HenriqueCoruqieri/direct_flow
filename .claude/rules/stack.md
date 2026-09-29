@@ -224,7 +224,10 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
   interno de função, resultado de helper privado: cada formato é uma
   `interface` nomeada e a união é `type`. Objeto literal inline dentro da união
   (`type R = { ok: true } | { ok: false; code: C }`) não é permitido, nem em
-  tipo não exportado. O ESLint não pega esse caso; o `df-reviewer` pega.
+  tipo não exportado. Vale também para objeto que pode faltar: `X | null` e
+  `X | undefined` exigem `X` como `interface` nomeada
+  (`Promise<ExistingTag | null>`, nunca `Promise<{ isActive: boolean } | null>`).
+  O ESLint não pega esse caso; o `df-reviewer` pega.
 - Primitivos em `app/_components/ui/**` gerados pelo CLI ficam como vieram.
 
 ### Convenções
