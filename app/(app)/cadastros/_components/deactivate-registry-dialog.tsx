@@ -15,26 +15,26 @@ import {
   AlertDialogTrigger,
 } from "@/app/_components/ui/alert-dialog"
 import { Button } from "@/app/_components/ui/button"
-import { setDepartmentActive } from "@/app/_lib/actions/departments"
-import {
-  checkDepartmentDeactivation,
-  describeDepartmentDeactivationBlock,
-} from "@/app/_lib/domain/department"
-import type { DepartmentListItem } from "@/app/_lib/types/department"
 
-interface DeactivateDepartmentDialogProps {
-  department: DepartmentListItem
+import type { RegistryMutationResult } from "./registry-mutation-result"
+
+interface DeactivateRegistryDialogProps {
+  name: string
+  description: string
+  blockedReason?: string | null
+  onDeactivate: () => Promise<RegistryMutationResult>
 }
 
-const DeactivateDepartmentDialog = ({
-  department,
-}: DeactivateDepartmentDialogProps) => {
+const DeactivateRegistryDialog = ({
+  name,
+  description,
+  blockedReason = null,
+  onDeactivate,
+}: DeactivateRegistryDialogProps) => {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  const check = checkDepartmentDeactivation(department)
-
-  if (!check.ok && check.reason === "IS_BOARD") return null
+  const isBlocked = blockedReason !== null
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isPending) return
@@ -43,10 +43,7 @@ const DeactivateDepartmentDialog = ({
 
   const handleConfirm = () => {
     startTransition(async () => {
-      const result = await setDepartmentActive({
-        id: department.id,
-        isActive: false,
-      })
+      const result = await onDeactivate()
 
       if (result.ok) {
         toast.success(result.message)
@@ -67,7 +64,7 @@ const DeactivateDepartmentDialog = ({
           type="button"
           variant="ghost"
           size="sm"
-          aria-label={`Desativar ${department.name}`}
+          aria-label={`Desativar ${name}`}
           className="text-destructive hover:text-destructive"
         >
           <PowerOffIcon aria-hidden="true" className="size-3.5" />
@@ -78,22 +75,18 @@ const DeactivateDepartmentDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {check.ok
-              ? `Desativar ${department.name}?`
-              : "Não é possível desativar"}
+            {isBlocked ? "Não é possível desativar" : `Desativar ${name}?`}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {check.ok
-              ? "O setor deixa de receber pessoas e chamados. Você pode reativá-lo depois."
-              : describeDepartmentDeactivationBlock(check)}
+            {isBlocked ? blockedReason : description}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>
-            {check.ok ? "Cancelar" : "Entendi"}
+            {isBlocked ? "Entendi" : "Cancelar"}
           </AlertDialogCancel>
-          {check.ok ? (
+          {isBlocked ? null : (
             <Button
               type="button"
               variant="destructive"
@@ -109,11 +102,11 @@ const DeactivateDepartmentDialog = ({
               ) : null}
               {isPending ? "Desativando…" : "Desativar"}
             </Button>
-          ) : null}
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   )
 }
 
-export default DeactivateDepartmentDialog
+export default DeactivateRegistryDialog

@@ -5,6 +5,7 @@ import { JetBrains_Mono, Manrope, Sora } from "next/font/google"
 
 import ThemeProvider from "@/app/_components/theme/theme-provider"
 import { Toaster } from "@/app/_components/ui/sonner"
+import { TooltipProvider } from "@/app/_components/ui/tooltip"
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -52,7 +53,7 @@ const RootLayout = ({ children }: LayoutProps<"/">) => {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
           <Toaster position="top-center" />
         </ThemeProvider>
       </body>

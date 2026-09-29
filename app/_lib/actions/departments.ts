@@ -9,6 +9,7 @@ import {
   updateDepartmentName,
 } from "@/app/_lib/data/departments"
 import { describeDepartmentDeactivationBlock } from "@/app/_lib/domain/department"
+import { DEPARTMENTS_REGISTRY_PATH } from "@/app/_lib/domain/registry"
 import type {
   InsertDepartmentOutcome,
   UpdateDepartmentActiveOutcome,
@@ -45,8 +46,6 @@ export interface DepartmentActionFailure {
 
 export type DepartmentActionResult =
   DepartmentActionSuccess | DepartmentActionFailure
-
-const DEPARTMENTS_PATH = "/cadastros/setores"
 
 const DEPARTMENT_CREATED_MESSAGE = "Setor criado."
 const DEPARTMENT_RENAMED_MESSAGE = "Setor renomeado."
@@ -110,7 +109,7 @@ export const createDepartment = async (
 
   if (outcome.status === "name_taken") return NAME_TAKEN_FAILURE
 
-  revalidatePath(DEPARTMENTS_PATH)
+  revalidatePath(DEPARTMENTS_REGISTRY_PATH)
 
   return { ok: true, message: DEPARTMENT_CREATED_MESSAGE }
 }
@@ -169,7 +168,7 @@ export const setDepartmentActive = async (
     }
   }
 
-  revalidatePath(DEPARTMENTS_PATH)
+  revalidatePath(DEPARTMENTS_REGISTRY_PATH)
 
   return {
     ok: true,

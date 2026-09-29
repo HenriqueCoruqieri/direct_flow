@@ -6,9 +6,9 @@ import DataTable from "@/app/_components/data-table/data-table"
 import type { DataTableFeatures } from "@/app/_components/data-table/data-table-features"
 import { Badge } from "@/app/_components/ui/badge"
 import { formatDate } from "@/app/_lib/date"
-import { describeActiveStatus } from "@/app/_lib/domain/status"
 import type { DepartmentListItem } from "@/app/_lib/types/department"
 
+import ActiveStatusBadge from "../../_components/active-status-badge"
 import DepartmentRowActions from "./department-row-actions"
 
 const columnHelper = createColumnHelper<DataTableFeatures, DepartmentListItem>()
@@ -28,18 +28,7 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("isActive", {
     header: "Status",
-    cell: ({ getValue }) => {
-      const isActive = getValue()
-
-      return (
-        <Badge
-          variant={isActive ? "default" : "outline"}
-          className={isActive ? undefined : "text-muted-foreground"}
-        >
-          {describeActiveStatus(isActive)}
-        </Badge>
-      )
-    },
+    cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue()} />,
   }),
   columnHelper.accessor("activeUsers", {
     header: "Pessoas ativas",
