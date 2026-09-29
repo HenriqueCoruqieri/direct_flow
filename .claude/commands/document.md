@@ -47,7 +47,7 @@ Documento errado é pior que documento ausente, porque alguém confia nele.
 funções de dados e Server Actions, com assinatura. É o que permite os agentes
 trabalharem em paralelo; mantê-lo vivo é a documentação mais valiosa do projeto.
 
-**`docs/adr/NNN-titulo.md`** — decisão técnica: contexto, decisão, consequência.
+**`docs/adr/NNN-english-title.md`** — decisão técnica: contexto, decisão, consequência.
 Curto. Uma por arquivo. Não reescreva ADR antiga que foi superada — escreva uma
 nova marcando que substitui a anterior. O histórico da decisão tem valor.
 

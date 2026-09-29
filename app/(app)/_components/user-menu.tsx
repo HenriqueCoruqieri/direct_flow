@@ -64,7 +64,7 @@ const UserMenu = ({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuItem asChild>
-          <Link href="/perfil">
+          <Link href="/profile">
             <UserRoundIcon aria-hidden="true" className="size-4" />
             Perfil
           </Link>

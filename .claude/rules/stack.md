@@ -97,7 +97,10 @@ As setas são de mão única. Em particular:
   `app/_lib/data/`, e auth nunca importa `app/_lib/data/`. A exceção não se
   estende: auth não grava dado de domínio nem consulta ticket, tag ou
   qualquer coisa que não seja "quem é o usuário e o que ele pode". Dentro de
-  `app/`, só `app/_lib/data/` e `app/_lib/auth/` importam `@/db`.
+  `app/`, só `app/_lib/data/` e `app/_lib/auth/` importam `@/db` em tempo de
+  execução. `import type` de `@/db/schema` é permitido em `app/_lib/types/` —
+  é assim que `$inferSelect` e os enums chegam aos tipos, e não leva código de
+  banco ao bundle.
 - **`app/_lib/domain/` e `app/_lib/validation/` não fazem I/O.** São funções puras e
   schemas. Por serem puros, rodam no servidor e no cliente — é o que permite
   a UI decidir se mostra um botão usando a _mesma_ regra que a action usa para
@@ -253,6 +256,13 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
   (`const DataTable = <TData,>(props: DataTableProps<TData>) => {}`). Primitivos
   em `app/_components/ui/**` ficam como o CLI gera. Garantido pelo ESLint
   (`react/function-component-definition` e `import/prefer-default-export`).
+- **Nomes em inglês, conteúdo em português.** Pastas, arquivos, segmentos de
+  rota (e portanto URLs), identificadores e nomes de documento em `docs/` são
+  sempre em inglês, em kebab-case para pastas e arquivos
+  (`app/(app)/registry/departments/`, `docs/adr/013-some-decision.md`). O que
+  o usuário lê — rótulos, títulos, mensagens, e-mails, texto de documento —
+  continua em português. O menu diz "Cadastros → Setores"; a pasta é
+  `registry/departments`.
 - **Pastas privadas em `app/`.** Dentro de `app/`, toda pasta que não é segmento
   de rota leva `_` no início do nome (`_components`, `_lib`, `_hooks`…). O
   prefixo tira a pasta e as subpastas do roteamento do Next

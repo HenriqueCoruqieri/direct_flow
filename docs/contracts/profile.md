@@ -1,10 +1,10 @@
 # Contrato — Perfil do usuário
 
-Entrada das ondas 1 e 2. Plano aprovado em `docs/plans/perfil-do-usuario.md`, que
+Entrada das ondas 1 e 2. Plano aprovado em `docs/plans/user-profile.md`, que
 manda nas decisões. Armazenamento em
-`docs/adr/010-armazenamento-de-arquivos-no-cloudflare-r2.md`. Limite de
+`docs/adr/010-file-storage-on-cloudflare-r2.md`. Limite de
 tentativas da troca de senha no adendo do
-`docs/adr/007-limite-de-tentativas-em-login-e-pedido-de-redefinicao.md`.
+`docs/adr/007-rate-limit-on-login-and-reset-request.md`.
 
 Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `zod@4.6.5`, Node 24.
 
@@ -13,7 +13,7 @@ Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `zod@4.6.5`, Node 24.
 | Tema            | Decisão                                                                                                        |
 | --------------- | -------------------------------------------------------------------------------------------------------------- |
 | Acesso          | "Meu perfil" no menu do card do usuário, entre "Tema" e "Sair"; o mesmo menu no mobile                         |
-| URL             | `/perfil`, grupo `(app)`, com sidebar; nenhum item da sidebar ativo                                            |
+| URL             | `/profile`, grupo `(app)`, com sidebar; nenhum item da sidebar ativo                                           |
 | O que se altera | Só a própria senha e a própria foto. O resto é somente leitura                                                 |
 | Troca de senha  | Exige senha atual; revoga as **outras** sessões e mantém a atual; envia e-mail "Sua senha foi alterada"        |
 | Foto            | R2, bucket público `avatars`; redução a 256×256 no navegador; envio por Server Action; chave nova a cada envio |
@@ -588,7 +588,7 @@ Mensagens (constantes no arquivo):
    `try/catch`, exceção só vira log (risco 4 do plano). **Sempre depois** do
    passo 5.
 7. `revalidatePath("/(app)", "layout")` — invalida o layout do grupo `(app)`
-   (sidebar e cabeçalho) e as páginas abaixo dele, `/perfil` inclusive, sem tocar
+   (sidebar e cabeçalho) e as páginas abaixo dele, `/profile` inclusive, sem tocar
    `(auth)`. Grupo de rota no caminho é aceito pelo Next 16
    (`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/revalidatePath.md:160-162`).
 8. `{ ok: true, message: "Foto atualizada.", image: url }`.
@@ -614,7 +614,7 @@ Mensagens (constantes no arquivo):
 ### `app/(app)/_components/user-menu.tsx`
 
 Item **"Meu perfil"** entre o submenu "Tema" e o separador de "Sair":
-`DropdownMenuItem asChild` com `<Link href="/perfil">`, ícone `UserRoundIcon` do
+`DropdownMenuItem asChild` com `<Link href="/profile">`, ícone `UserRoundIcon` do
 `lucide-react`. Vale para desktop e mobile, que já usam o mesmo `UserMenu`.
 
 ### `app/(app)/_components/user-avatar.tsx`
@@ -637,7 +637,7 @@ interface UserAvatarProps {
   cabeçalho mobile, como hoje.
 - `<img>` do primitivo, não `next/image`: `next.config.ts` não muda (ADR 010).
 
-### `app/(app)/perfil/page.tsx` (Server Component)
+### `app/(app)/profile/page.tsx` (Server Component)
 
 ```tsx
 export const metadata: Metadata = { title: "Meu perfil" }
@@ -652,7 +652,7 @@ const ProfilePage = async () => {
 
 `requireSession()` na página e não só no layout (ADR 008 e contrato do
 dashboard: o layout não é guarda da página). Nenhum item da sidebar fica ativo,
-porque `/perfil` não está na navegação.
+porque `/profile` não está na navegação.
 
 Seções, na linguagem visual do Início (cards com raio 18px, `surface`, borda
 `border-subtle`):
@@ -681,7 +681,7 @@ Seções, na linguagem visual do Início (cards com raio 18px, `surface`, borda
 
 Datas só por `@/app/_lib/date`.
 
-### `app/(app)/perfil/_components/avatar-uploader.tsx` (Client Component)
+### `app/(app)/profile/_components/avatar-uploader.tsx` (Client Component)
 
 Props: `image: string | null`, `initials: string`. Fluxo:
 
@@ -707,7 +707,7 @@ Props: `image: string | null`, `initials: string`. Fluxo:
 Nenhum número mágico no componente: tamanho, qualidade, tipos, extensão e nome do
 campo vêm de `app/_lib/domain/avatar.ts`.
 
-### `app/(app)/perfil/_components/change-password-form.tsx` (Client Component)
+### `app/(app)/profile/_components/change-password-form.tsx` (Client Component)
 
 - React Hook Form + `zodResolver(changePasswordSchema)` + `field` do shadcn, no
   padrão dos formulários de `app/(auth)/`.
@@ -742,7 +742,7 @@ usuário no `.env` (feito em 2026-09-24).
 - [ ] `changeUserPassword` em `app/_lib/auth/password-change.ts` (`df-auth`)
 - [ ] `sendPasswordChangedEmail` e `emails/password-changed.ts` (`df-email`)
 - [ ] `changePassword`, `updateAvatar`, `removeAvatar` (`df-actions`)
-- [ ] item "Meu perfil", `UserAvatar` com foto, `/perfil` completo (`df-ui`)
+- [ ] item "Meu perfil", `UserAvatar` com foto, `/profile` completo (`df-ui`)
 - [ ] nenhuma ocorrência de `getUserProfile` no projeto
 - [ ] nenhum import de `@aws-sdk/client-s3` fora de `app/_lib/storage/`
 - [ ] senha atual errada não muda nada; certa mantém esta sessão e derruba as outras; e-mail chega (`df-debug`)

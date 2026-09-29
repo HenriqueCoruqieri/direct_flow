@@ -137,7 +137,7 @@ Ao terminar um fluxo, escreva em `docs/contracts/<fluxo>.md`:
 trabalharem em paralelo sem se esperarem. Ele é seu principal entregável junto
 com o código.
 
-Decisão técnica relevante vai para `docs/adr/NNN-titulo.md`: contexto, decisão,
+Decisão técnica relevante vai para `docs/adr/NNN-english-title.md` (nome em inglês, texto em português): contexto, decisão,
 consequência. Curto.
 
 ## Pacotes que você instala

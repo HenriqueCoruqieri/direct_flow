@@ -7,7 +7,7 @@ Aprovado em 2026-09-24 via `/consult`. Não há artboard de perfil no Figma; o v
 | Tema                          | Decisão                                                                                                                                                                                                                                        |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Acesso                        | Item "Perfil" no menu do card do usuário (`app/(app)/_components/user-menu.tsx`), entre "Tema" e "Sair"; vale também no mobile (avatar do cabeçalho abre o mesmo menu)                                                                         |
-| URL                           | `/perfil`, no grupo `(app)`, com sidebar; nenhum item da sidebar ativo                                                                                                                                                                         |
+| URL                           | `/profile`, no grupo `(app)`, com sidebar; nenhum item da sidebar ativo                                                                                                                                                                        |
 | Layout                        | Página única em seções: topo (avatar 96px, nome, "Setor · Papel", botões "Alterar foto" e "Remover"); "Dados da conta" somente leitura com aviso "Para alterar, fale com o administrador do setor"; "Segurança" com formulário de senha inline |
 | Campos exibidos               | Nome, e-mail, setor, papel, situação (ativo), membro desde (`created_at`), último acesso (`last_login_at`). Fora: `email_verified`                                                                                                             |
 | O que o usuário altera        | Só a própria senha e o avatar. Demais dados: admin do setor, na futura gestão de usuários (fora deste plano)                                                                                                                                   |
@@ -20,7 +20,7 @@ Aprovado em 2026-09-24 via `/consult`. Não há artboard de perfil no Figma; o v
 
 ## Escopo
 
-**Entra**: item de menu, tela `/perfil`, avatar com upload/remoção no R2 e exibição (`AvatarImage` com fallback para iniciais) na sidebar, no cabeçalho mobile e no perfil; troca de senha com e-mail de aviso.
+**Entra**: item de menu, tela `/profile`, avatar com upload/remoção no R2 e exibição (`AvatarImage` com fallback para iniciais) na sidebar, no cabeçalho mobile e no perfil; troca de senha com e-mail de aviso.
 
 **Fora**: edição de dados por admin (gestão de usuários, que herda ADRs 003 e 008); bucket `attachments` e anexos; editor de recorte.
 
@@ -42,7 +42,7 @@ Aprovado em 2026-09-24 via `/consult`. Não há artboard de perfil no Figma; o v
 
 - **Pré-requisito (usuário)**: buckets e token no R2 e `.env` preenchido — feito em 2026-09-24.
 - **Onda 0**: orquestrador (regras em `.claude/**`) · `df-architect` (contrato, ADR 010, ADR 007, tipos, validação, domínio, `.env.example`).
-- **Onda 1 (paralelo)**: `df-data` (instala `@aws-sdk/client-s3`; storage, `getUserProfile`, `updateUserImage`) · `df-auth` (`changeUserPassword`) · `df-email` (template e envio) · `df-ui` (item "Meu perfil", `UserAvatar` com `image` e `AvatarImage`, sidebar e cabeçalho passando a foto, `/perfil` com topo e "Dados da conta").
+- **Onda 1 (paralelo)**: `df-data` (instala `@aws-sdk/client-s3`; storage, `getUserProfile`, `updateUserImage`) · `df-auth` (`changeUserPassword`) · `df-email` (template e envio) · `df-ui` (item "Meu perfil", `UserAvatar` com `image` e `AvatarImage`, sidebar e cabeçalho passando a foto, `/profile` com topo e "Dados da conta").
 - **Onda 2 (paralelo)**: `df-actions` (`changePassword`: valida, chama auth, e-mail após sucesso, falha de e-mail só loga; `updateAvatar`/`removeAvatar`: valida, storage, `df-data`, apaga o antigo, revalida o layout) · `df-ui` (upload com redução no navegador, "Alterar foto"/"Remover", formulário de senha com React Hook Form + Zod, toast, limpa campos).
 - **Onda 3**: `df-reviewer` · `df-debug` (sessão atual sobrevive à troca e as outras caem; upload e remoção reais no R2).
 
@@ -56,7 +56,7 @@ Aprovado em 2026-09-24 via `/consult`. Não há artboard de perfil no Figma; o v
 
 ## Critério de pronto
 
-- "Meu perfil" entre "Tema" e "Sair" (desktop e mobile) leva a `/perfil` com sidebar.
+- "Meu perfil" entre "Tema" e "Sair" (desktop e mobile) leva a `/profile` com sidebar.
 - Os 7 campos com valores reais; datas via `@/app/_lib/date`.
 - Trocar foto grava no R2 e atualiza perfil, sidebar e cabeçalho sem recarregar; o arquivo antigo some do bucket. "Remover" volta às iniciais e apaga o arquivo.
 - Senha atual errada: erro no campo, nada muda. Certa: senha muda, sessão atual continua, outras caem, e-mail chega.
