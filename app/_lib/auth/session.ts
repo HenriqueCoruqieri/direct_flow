@@ -63,3 +63,8 @@ export const signInWithPassword = async (
 export const signOutSession = async (): Promise<void> => {
   await auth.api.signOut({ headers: await headers() })
 }
+
+export const revokeUserSessions = async (userId: number): Promise<void> => {
+  const ctx = await auth.$context
+  await ctx.internalAdapter.deleteUserSessions(String(userId))
+}

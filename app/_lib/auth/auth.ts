@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { APIError } from "better-auth/api"
 import { nextCookies } from "better-auth/next-js"
+import { eq } from "drizzle-orm"
 
 import {
   PASSWORD_RESET_TTL_MINUTES,
@@ -9,7 +10,7 @@ import {
 } from "@/app/_lib/domain/password-reset"
 import { sendPasswordResetEmail } from "@/app/_lib/email/password-reset"
 import { db } from "@/db"
-import { roleEnum } from "@/db/schema"
+import { roleEnum, user as userTable } from "@/db/schema"
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -25,6 +26,12 @@ export const auth = betterAuth({
     disableSignUp: true,
     resetPasswordTokenExpiresIn: PASSWORD_RESET_TTL_SECONDS,
     revokeSessionsOnPasswordReset: true,
+    onPasswordReset: async ({ user }) => {
+      await db
+        .update(userTable)
+        .set({ mustChangePassword: false, updatedAt: new Date() })
+        .where(eq(userTable.id, Number(user.id)))
+    },
     sendResetPassword: async ({ user, url }) => {
       if ("isActive" in user && user.isActive === false) return
       try {

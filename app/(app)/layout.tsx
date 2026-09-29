@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
+import { getAccountState } from "@/app/_lib/auth/account-state"
 import { getRegistryAccess } from "@/app/_lib/auth/registry-access"
 import { requireSession } from "@/app/_lib/auth/session"
 import { findUserProfile } from "@/app/_lib/data/users"
@@ -16,11 +17,13 @@ import MobileHeader from "./_components/mobile-header"
 
 const AppLayout = async ({ children }: LayoutProps<"/">) => {
   const actor = await requireSession()
-  const [profile, registryAccess] = await Promise.all([
+  const [profile, registryAccess, accountState] = await Promise.all([
     findUserProfile(actor.id),
     getRegistryAccess(),
+    getAccountState(),
   ])
 
+  if (accountState?.mustChangePassword) redirect("/set-password")
   if (!profile) notFound()
 
   const initials = getInitials(profile.name)

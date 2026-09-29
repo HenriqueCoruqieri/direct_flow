@@ -6,7 +6,16 @@
 > `emailAndPassword` ganha opções. A exceção é `proxy.ts`: ele ganhou
 > `publicRoutes` e **perdeu** a regra de mandar quem tem cookie para `/dashboard`,
 > que passou para `app/(auth)/login/page.tsx`. Ver
-> `docs/adr/008-redirecionamento-de-sessao-fora-do-proxy.md`.
+> `docs/adr/008-session-redirect-outside-proxy.md`.
+
+> **Atualizado pela feature Pessoas** (`docs/contracts/registry-people.md`):
+> contas também nascem em Cadastros → Pessoas, com a senha de
+> `DEFAULT_USER_PASSWORD` e `users.must_change_password = true` (ADR 012). O
+> ponto em aberto sobre `isActive` em sessão já aberta foi **fechado**: desativar
+> revoga as sessões da pessoa (`revokeUserSessions`, ADR 003). `users` ganhou
+> `must_change_password` (`boolean not null default false`), tolerada pela
+> validação do Better Auth por ter default. `app/_lib/data/people.ts` passa a
+> gravar `account` (criação e restauração), como o seed.
 
 Entrada das ondas 1 e 2. A etapa 1 (`docs/contracts/login.md`) entregou só o
 layout; esta etapa liga o formulário ao Better Auth, cria sessão e protege
@@ -175,7 +184,7 @@ requireDepartmentAdmin(departmentId: number): Promise<Actor>
 Poder global (Cadastros) não é papel: vem do setor com `department.is_board`.
 Os helpers `requireDirector`, `getDirector` e `getIsDirector` ficam em
 `app/_lib/auth/director.ts` e estão especificados em
-`docs/contracts/cadastros-setores.md` (ADR 011). `Actor` não ganha campo para
+`docs/contracts/registry-departments.md` (ADR 011). `Actor` não ganha campo para
 isso: ser diretor é consultado no banco a cada checagem.
 
 Todos são `async` e só rodam no servidor.
@@ -205,7 +214,7 @@ caminho para `is_active = false` é alteração manual no banco. A decisão de o
 essa checagem passa a morar — dentro de `requireSession`, num hook de request do
 Better Auth, ou como revogação explícita das sessões do usuário no momento da
 desativação — precisa ser tomada **antes** de a gestão de usuários existir. Ver
-`docs/adr/003-checagem-de-is-active-em-sessao-aberta.md`.
+`docs/adr/003-is-active-check-on-open-session.md`.
 
 Até lá, `requireSession()` **não** é garantia de usuário ativo. Quem precisar dessa
 garantia carrega o registro e checa `is_active` explicitamente.
@@ -222,7 +231,7 @@ Decidido registrar e resolver antes do deploy: a camada certa (borda do host,
 limitador do Better Auth com storage em banco, ou implementação nossa na action)
 depende da hospedagem. O mesmo furo existe em `requestPasswordResetEmail`
 (`docs/contracts/password-reset.md`), e os dois se resolvem na mesma passada. Ver
-`docs/adr/007-limite-de-tentativas-em-login-e-pedido-de-redefinicao.md`.
+`docs/adr/007-rate-limit-on-login-and-reset-request.md`.
 
 ### Erros de login
 
@@ -270,7 +279,7 @@ existe; não filtra por `is_active` (quem decide é a action ou a UI).
    `name = "Diretoria"` (`BOARD_DEPARTMENT_NAME`, `app/_lib/domain/department.ts`)
    e `is_board = true`; se existir, é usado como está, mesmo renomeado. Não há
    variável de ambiente para o nome do setor (`SEED_DEPARTMENT_NAME` foi removida
-   — ver `docs/contracts/cadastros-setores.md`).
+   — ver `docs/contracts/registry-departments.md`).
 2. `users` com `email = SEED_ADMIN_EMAIL`, `name = SEED_ADMIN_NAME`,
    `role = "admin"`, `departmentId` da Diretoria, `emailVerified: true`.
 3. `account` com `userId` do user criado, `accountId: String(user.id)`,
@@ -359,7 +368,7 @@ signOut(): Promise<void>
   prova de sessão e as duas fontes de verdade em paralelo produziam ciclo de
   redirecionamento. Toda rota protegida nova repete o padrão: guarda na `page` ou no
   `layout` com `requireSession()`, proxy intocado. Ver
-  `docs/adr/008-redirecionamento-de-sessao-fora-do-proxy.md`.
+  `docs/adr/008-session-redirect-outside-proxy.md`.
 
 ## Variáveis de ambiente
 
@@ -391,7 +400,7 @@ usuário, nesta ordem:
 A divisão em duas existe porque, num passo só, o `drizzle-kit` vê uma coluna
 saindo e outra entrando na mesma tabela e abre prompt interativo perguntando se é
 rename (`password_hash` → `email_verified`). Separando, cada passo é gerado sem
-prompt e sem SQL escrito à mão. Ver `docs/adr/002-migration-de-auth-em-dois-passos.md`.
+prompt e sem SQL escrito à mão. Ver `docs/adr/002-two-step-auth-migration.md`.
 
 Ordem importa: `0002` remove a coluna de senha antiga, então só deve ser aplicada
 quando as senhas existirem em `account.password`. Em base de desenvolvimento o
