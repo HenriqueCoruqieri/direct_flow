@@ -1,0 +1,557 @@
+# Contrato — Cadastros → Setores
+
+Entrada das ondas 1 e 2. Plano em `docs/plans/cadastros-setores.md`, que manda
+nas decisões. Poder global da Diretoria em
+`docs/adr/011-diretoria-como-setor-com-poder-global.md`.
+
+Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
+`zod@4.6.5`.
+
+## Decisões fixadas pelo usuário (resumo do plano)
+
+| Tema           | Decisão                                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Quem é diretor | Quem está **ativo** num setor com `is_board = true`. O poder vem do setor, não da pessoa. Não existe role novo. Só pode existir uma Diretoria         |
+| Onde se checa  | Consulta ao banco a cada checagem. **Não** vai para cookie nem sessão: mover alguém de setor revoga o poder na próxima requisição. `Actor` não muda   |
+| Seed           | Cria sempre o setor `Diretoria` com `is_board = true` e o admin do seed nele. `SEED_DEPARTMENT_NAME` deixa de existir                                 |
+| Navegação      | Item "Cadastros" recolhível na sidebar, só para diretor; subitens Pessoas (em breve), Setores, Tags (em breve); aberto quando a rota é `/cadastros/*` |
+| Rota           | `/cadastros/setores`, só diretor. Não-diretor recebe **404**, para a página não se revelar                                                            |
+| Escopo         | Listar, criar, renomear, ativar/desativar. **Sem exclusão**                                                                                           |
+| Desativar      | Só sem pessoas ativas e sem chamados em aberto no setor. A Diretoria nunca. Renomear a Diretoria é permitido                                          |
+| Nome           | `trim`, 2 a 80 caracteres, único sem diferenciar maiúsculas (inclusive contra inativos)                                                               |
+| E-mail         | Nenhum                                                                                                                                                |
+
+## Tabelas, enums e migration
+
+### `department` (`db/schema.ts`, alterado)
+
+| Coluna / restrição            | Definição                                                            |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `is_board`                    | `boolean not null default false` — o carimbo da Diretoria            |
+| `department_single_board_idx` | `unique index on (is_board) where is_board` — no máximo uma          |
+| `department_board_active`     | `check (not is_board or is_active)` — a Diretoria nunca fica inativa |
+| `department_name_lower_idx`   | já existia: `unique index on lower(name)`, vale para inativos        |
+
+A regra "Diretoria não desativa" existe em dois níveis de propósito: o domínio
+(`checkDepartmentDeactivation`) dá a mensagem certa ao usuário; o `check` no
+banco garante que nenhum caminho fora da action (seed, SQL manual) quebre a
+regra. Não é duplicação de regra de negócio, é a mesma regra com a trava física.
+
+Tipo Drizzle: `Department` (`$inferSelect`) ganha `isBoard: boolean`.
+
+### Migration `db/migrations/0003_department_board.sql`
+
+```sql
+ALTER TABLE "department" ADD COLUMN "is_board" boolean DEFAULT false NOT NULL;
+CREATE UNIQUE INDEX "department_single_board_idx" ON "department" USING btree ("is_board") WHERE is_board;
+ALTER TABLE "department" ADD CONSTRAINT "department_board_active" CHECK (not is_board or is_active);
+```
+
+Aditiva. Nenhum setor existente é marcado. Quem aplica (`npm run db:migrate`) é o
+usuário. Ver "Riscos" sobre o banco local.
+
+### Lidas pelo fluxo
+
+- `users` — `department_id`, `is_active` (contagem de pessoas ativas; checagem de diretor)
+- `ticket` — `current_department_id`, `status` (contagem de chamados em aberto)
+
+## Tipos — `app/_lib/types/`
+
+### `app/_lib/types/department.ts` (novo)
+
+```ts
+export interface DepartmentListItem {
+  id: number
+  name: string
+  isActive: boolean
+  isBoard: boolean
+  activeUsers: number
+  openTickets: number
+  createdAt: Date
+}
+
+export interface DepartmentDependencies {
+  isBoard: boolean
+  activeUsers: number
+  openTickets: number
+}
+
+export type DepartmentDeactivationBlockReason =
+  "IS_BOARD" | "HAS_ACTIVE_USERS" | "HAS_OPEN_TICKETS"
+
+export interface DepartmentDeactivationAllowed {
+  ok: true
+}
+
+export interface DepartmentDeactivationBlocked {
+  ok: false
+  reason: DepartmentDeactivationBlockReason
+  activeUsers: number
+  openTickets: number
+}
+
+export type DepartmentDeactivationCheck =
+  DepartmentDeactivationAllowed | DepartmentDeactivationBlocked
+
+export interface DepartmentSaved {
+  status: "saved"
+  id: number
+}
+
+export interface DepartmentNameTaken {
+  status: "name_taken"
+}
+
+export interface DepartmentNotFound {
+  status: "not_found"
+}
+
+export interface DepartmentDeactivationRefused {
+  status: "blocked"
+  block: DepartmentDeactivationBlocked
+}
+
+export type InsertDepartmentOutcome = DepartmentSaved | DepartmentNameTaken
+
+export type UpdateDepartmentNameOutcome =
+  DepartmentSaved | DepartmentNameTaken | DepartmentNotFound
+
+export type UpdateDepartmentActiveOutcome =
+  DepartmentSaved | DepartmentNotFound | DepartmentDeactivationRefused
+```
+
+- `activeUsers` — `count(users)` com `department_id = id` e `is_active`.
+- `openTickets` — `count(ticket)` com `current_department_id = id` e
+  `status` em `OPEN_TICKET_STATUSES`.
+- Os três `*Outcome` são o retorno das funções de dados de escrita. Violação de
+  unicidade e setor inexistente são **resultado**, não exceção. Exceção fica para
+  falha inesperada (banco fora).
+- `DepartmentDeactivationBlocked` carrega **as duas** contagens mesmo quando o
+  motivo é um só: a mensagem cita tudo o que falta resolver de uma vez.
+
+### `app/_lib/types/ticket.ts` (novo)
+
+```ts
+export type { TicketStatus }
+```
+
+Reexporta `TicketStatus` de `@/db/schema` (só tipo), para domínio e UI tiparem
+status sem importar `@/db/*` — mesmo padrão de `Role` em `actor.ts`.
+
+### `app/_lib/types/actor.ts` — **sem mudança**
+
+`Actor` não ganha `isDirector`. Ser diretor é consultado, não carregado.
+
+## Domínio — `app/_lib/domain/`
+
+### `app/_lib/domain/ticket.ts` (novo)
+
+```ts
+export type OpenTicketStatus =
+  | "aberto"
+  | "em_analise"
+  | "encaminhado"
+  | "aguardando_aprovacao"
+  | "em_andamento"
+export const isOpenTicketStatus: (
+  status: TicketStatus,
+) => status is OpenTicketStatus
+export const OPEN_TICKET_STATUSES: readonly OpenTicketStatus[]
+```
+
+A classificação vive num mapa `satisfies Record<TicketStatus, boolean>`: se o
+enum `ticket_status` ganhar valor novo, o `tsc` quebra aqui até alguém dizer se o
+status novo é "em aberto". `OpenTicketStatus` e `OPEN_TICKET_STATUSES` são
+derivados desse mapa. Fechados: `resolvido`, `fechado`, `cancelado`.
+
+O domínio não importa o valor de runtime do enum (`ticketStatusEnum`) para não
+arrastar `drizzle-orm` ao bundle do cliente.
+
+Uso no Drizzle: `inArray(ticket.status, [...OPEN_TICKET_STATUSES])` — o spread
+existe porque o array é `readonly` e `inArray` pede array mutável.
+
+### `app/_lib/domain/department.ts` (novo)
+
+```ts
+export const BOARD_DEPARTMENT_NAME = "Diretoria"
+export const DEPARTMENT_NAME_MIN_LENGTH = 2
+export const DEPARTMENT_NAME_MAX_LENGTH = 80
+
+export const checkDepartmentDeactivation: (
+  dependencies: DepartmentDependencies,
+) => DepartmentDeactivationCheck
+
+export const describeDepartmentDeactivationBlock: (
+  block: DepartmentDeactivationBlocked,
+) => string
+```
+
+| Nome                                  | Semântica                                                                                                                                                             |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BOARD_DEPARTMENT_NAME`               | Nome com que o **seed** cria a Diretoria. Só isso: o poder vem de `is_board`, nunca do nome. Ninguém compara nome com esta constante para decidir permissão           |
+| `checkDepartmentDeactivation`         | Precedência: `IS_BOARD` → `HAS_ACTIVE_USERS` → `HAS_OPEN_TICKETS` → `{ ok: true }`. Só responde sobre **desativar**; ativar não tem pré-condição                      |
+| `describeDepartmentDeactivationBlock` | Mensagem PT-BR do bloqueio, com as contagens e plural correto. Única fonte do texto: a action devolve, a UI pode usar a mesma função para explicar botão desabilitado |
+
+Mensagens produzidas:
+
+| Caso                 | Texto                                                                                                                                                             |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IS_BOARD`           | `A Diretoria não pode ser desativada.`                                                                                                                            |
+| só pessoas (ex.: 3)  | `Não é possível desativar este setor: ele tem 3 pessoas ativas. Mova as pessoas para outro setor e conclua ou encaminhe os chamados antes.`                       |
+| só chamados (ex.: 1) | `Não é possível desativar este setor: ele tem 1 chamado em aberto. Mova as pessoas para outro setor e conclua ou encaminhe os chamados antes.`                    |
+| ambos                | `Não é possível desativar este setor: ele tem 3 pessoas ativas e 1 chamado em aberto. Mova as pessoas para outro setor e conclua ou encaminhe os chamados antes.` |
+
+### `app/_lib/domain/status.ts` (novo)
+
+```ts
+export const describeActiveStatus: (isActive: boolean) => string
+```
+
+`true` → `Ativo`, `false` → `Inativo`. Coluna "Status" da tabela de setores.
+`describeAccountStatus` (`app/_lib/domain/user.ts`) passou a ser alias desta
+função — o perfil continua funcionando sem mudança e o texto existe num lugar só.
+
+## Validação — `app/_lib/validation/department.ts` (novo)
+
+```ts
+export const departmentNameSchema // z.string().trim().min(1).min(2).max(80)
+
+export const createDepartmentSchema // z.object({ name })
+export type CreateDepartmentInput = { name: string }
+
+export const renameDepartmentSchema // z.object({ id, name })
+export type RenameDepartmentInput = { id: number; name: string }
+
+export const setDepartmentActiveSchema // z.object({ id, isActive })
+export type SetDepartmentActiveInput = { id: number; isActive: boolean }
+```
+
+| Campo      | Regra                        | Mensagem                                      |
+| ---------- | ---------------------------- | --------------------------------------------- |
+| `name`     | ausente ou vazio após `trim` | `Informe o nome do setor.`                    |
+| `name`     | < 2 após `trim`              | `O nome precisa ter no mínimo 2 caracteres.`  |
+| `name`     | > 80 após `trim`             | `O nome precisa ter no máximo 80 caracteres.` |
+| `id`       | inteiro positivo             | `Setor inválido.`                             |
+| `isActive` | boolean                      | `Situação inválida.`                          |
+
+Unicidade **não** é checada no schema (não há banco no cliente). Quem descobre é
+`df-data`, pela violação de `department_name_lower_idx`.
+
+O `name` que sai do `safeParse` já vem com `trim`. É esse valor, e não o input
+cru, que segue para `app/_lib/data/`.
+
+## `df-auth` — o que criar
+
+### `app/_lib/auth/director.ts` (novo)
+
+```ts
+export const requireDirector: () => Promise<Actor>
+export const getDirector: () => Promise<Actor | null>
+export const getIsDirector: () => Promise<boolean>
+```
+
+| Função            | Sem sessão           | Com sessão, não diretor | Diretor         | Quem usa                                        |
+| ----------------- | -------------------- | ----------------------- | --------------- | ----------------------------------------------- |
+| `requireDirector` | `redirect("/login")` | `notFound()`            | devolve `Actor` | `app/(app)/cadastros/layout.tsx` e páginas      |
+| `getDirector`     | `redirect("/login")` | `null`                  | devolve `Actor` | Server Actions (traduzem `null` em `FORBIDDEN`) |
+| `getIsDirector`   | `false`              | `false`                 | `true`          | `app/(app)/layout.tsx`, para a sidebar          |
+
+- Todas partem de `getSession()`/`requireSession()` de `app/_lib/auth/session.ts`
+  e fazem **uma** consulta: existe `users` com `id = actor.id`, `is_active` e
+  `department.is_board`, pelo join `users.department_id = department.id`. Um
+  helper privado no arquivo concentra essa consulta; as três funções o reusam.
+- `is_active` do usuário entra na consulta: diretor desativado perde o poder na
+  hora, independentemente do ADR 003.
+- **Por que a action não usa `requireDirector`:** `notFound()` dentro de Server
+  Action não produz resposta útil ao formulário. A action precisa de um "não"
+  que ela transforma em `{ ok: false, code: "FORBIDDEN" }`; por isso existe
+  `getDirector`.
+- **Onde mora o SQL:** a consulta é feita em `app/_lib/auth/director.ts`
+  importando `@/db` e `@/db/schema` diretamente, como a instância do Better Auth
+  já faz em `app/_lib/auth/auth.ts`. **Não** passa por `app/_lib/data/`: a seção 2
+  do `stack.md` não tem a seta `auth → data`, e criá-la para uma consulta de
+  identidade abriria dependência nova entre camadas. `auth → db` já existe. Ver
+  ADR 011.
+- `Actor` e `session.ts` não mudam.
+
+## `df-data` — o que criar
+
+### `app/_lib/data/departments.ts` (novo)
+
+```ts
+export async function listDepartments(): Promise<DepartmentListItem[]>
+export async function insertDepartment(
+  name: string,
+): Promise<InsertDepartmentOutcome>
+export async function updateDepartmentName(
+  id: number,
+  name: string,
+): Promise<UpdateDepartmentNameOutcome>
+export async function updateDepartmentActive(
+  id: number,
+  isActive: boolean,
+): Promise<UpdateDepartmentActiveOutcome>
+```
+
+Os nomes das funções de dados não repetem os das actions (`createDepartment`
+etc.) para a action poder importar os dois lados sem alias.
+
+**`listDepartments()`**
+
+- Todos os setores, ativos e inativos, ordenados por `lower(name)` ascendente.
+- `activeUsers` e `openTickets` pela definição em "Tipos" — subconsultas
+  correlacionadas ou `left join` com `count` agrupado; `count` do Postgres volta
+  como `bigint`, então converter para `number` (ex.: `count()` do Drizzle, que já
+  devolve `number`). Setor sem pessoas nem chamados vem com `0`, nunca `null`.
+- Não filtra por permissão: quem chama já passou por `requireDirector`.
+
+**`insertDepartment(name)`**
+
+- `insert ... returning id`. `is_active` e `is_board` ficam no default (`true`,
+  `false`). **Nunca** cria setor com `is_board = true` — só o seed faz isso.
+- Violação de unicidade em `department_name_lower_idx` → `{ status: "name_taken" }`.
+- Como detectar: o Drizzle 0.45 embrulha o erro do `pg` em `DrizzleQueryError`
+  (`drizzle-orm/errors`); o erro do driver está em `error.cause`. Checar
+  `code === "23505"` **e** `constraint === "department_name_lower_idx"` com
+  narrowing (`instanceof`, `in`, `typeof`), sem `as`. Qualquer outro erro é
+  relançado.
+
+**`updateDepartmentName(id, name)`**
+
+- `update ... set name, updated_at where id returning id`. Zero linhas →
+  `not_found`. Unicidade como em `insertDepartment` → `name_taken`.
+- Renomear para o mesmo nome com outra caixa (`ti` → `TI`) é permitido: o índice
+  compara com a própria linha.
+- Vale para a Diretoria. `is_board` nunca é tocado aqui.
+
+**`updateDepartmentActive(id, isActive)`**
+
+Tudo numa transação:
+
+1. `select id, is_board from department where id = $1 for update`. Nenhuma linha
+   → `not_found`.
+2. Se `isActive === true` → `update` e `saved`. Ativar não tem pré-condição.
+3. Se `isActive === false`: conta `activeUsers` e `openTickets` **dentro da
+   transação**, chama `checkDepartmentDeactivation({ isBoard, activeUsers, openTickets })`
+   de `@/app/_lib/domain/department`; bloqueado →
+   `{ status: "blocked", block }` sem `update`; liberado → `update` e `saved`.
+4. Mesmo valor que já está gravado não é erro: faz o `update` (só `updated_at`
+   muda) e devolve `saved`.
+
+Por que `for update`: toda inserção ou troca de `users.department_id` e
+`ticket.current_department_id` que aponte para este setor precisa de
+`FOR KEY SHARE` na linha de `department` (checagem da FK), e isso espera o
+`FOR UPDATE`. Enquanto a desativação decide, ninguém entra no setor. Ver risco 3.
+
+A contagem de "dependências" não vira função pública separada: a UI já recebe as
+contagens de `listDepartments()`, e a action não precisa delas fora da transação.
+
+### `db/seed.ts` (alterado)
+
+- Remove `requiredEnv("SEED_DEPARTMENT_NAME")` e todo uso da variável.
+- Garante a Diretoria: procura `department where is_board`; se não existir, cria
+  com `name = BOARD_DEPARTMENT_NAME` (de `@/app/_lib/domain/department`),
+  `is_board = true`, `is_active = true`. Se já existir, usa a existente **como
+  está** (pode ter sido renomeada — é permitido).
+- Colisão de nome: se já existir um setor comum chamado "Diretoria" sem carimbo,
+  o `insert` viola `department_name_lower_idx`. O seed **aborta** com mensagem
+  clara (`Seed abortado: já existe um setor "Diretoria" sem o carimbo de diretoria.`)
+  em vez de carimbar setor alheio. Não acontece em banco novo.
+- O admin (`SEED_ADMIN_*`, `role: "admin"`) é criado nesse setor, na mesma
+  transação, como hoje.
+- Admin já existente continua sendo pulado (idempotência). O seed **não** move
+  admin antigo para a Diretoria — ver risco 1.
+- O seed demo continua usando `departmentId` do admin, que agora é a Diretoria.
+
+## `df-actions` — o que criar
+
+### `app/_lib/actions/departments.ts` (novo, `"use server"`)
+
+Mesma convenção de `app/_lib/actions/profile.ts`: `ok` literal, `message` em
+PT-BR pronta para o toast, `code` opcional só em falha de negócio.
+
+```ts
+export type DepartmentErrorCode =
+  | "INVALID_INPUT"
+  | "FORBIDDEN"
+  | "NAME_TAKEN"
+  | "NOT_FOUND"
+  | "IS_BOARD"
+  | "HAS_ACTIVE_USERS"
+  | "HAS_OPEN_TICKETS"
+
+export interface DepartmentActionSuccess {
+  ok: true
+  message: string
+}
+
+export interface DepartmentActionFailure {
+  ok: false
+  message: string
+  code?: DepartmentErrorCode
+}
+
+export type DepartmentActionResult =
+  DepartmentActionSuccess | DepartmentActionFailure
+
+export const createDepartment: (
+  input: CreateDepartmentInput,
+) => Promise<DepartmentActionResult>
+export const renameDepartment: (
+  input: RenameDepartmentInput,
+) => Promise<DepartmentActionResult>
+export const setDepartmentActive: (
+  input: SetDepartmentActiveInput,
+) => Promise<DepartmentActionResult>
+```
+
+Sequência comum às três:
+
+1. `const actor = await getDirector()`; `null` → `FORBIDDEN`. **Antes** do parse:
+   não-diretor não recebe nem erro de validação.
+2. `<schema>.safeParse(input)`; inválido → `INVALID_INPUT` com a primeira
+   `issue.message`.
+3. Função de dados em `try/catch`; exceção → `console.error("[<action>]", error)`
+   e falha inesperada, sem `code`.
+4. Traduz o `Outcome` (tabela abaixo).
+5. Sucesso → `revalidatePath` e `{ ok: true, message }`.
+
+| Situação                             | `code`             | Mensagem                                                                                     |
+| ------------------------------------ | ------------------ | -------------------------------------------------------------------------------------------- |
+| setor criado                         | —                  | `Setor criado.`                                                                              |
+| setor renomeado                      | —                  | `Setor renomeado.`                                                                           |
+| setor ativado                        | —                  | `Setor ativado.`                                                                             |
+| setor desativado                     | —                  | `Setor desativado.`                                                                          |
+| não é diretor                        | `FORBIDDEN`        | `Você não tem permissão para gerenciar setores.`                                             |
+| schema falhou                        | `INVALID_INPUT`    | primeira `issue.message` do Zod                                                              |
+| `name_taken`                         | `NAME_TAKEN`       | `Já existe um setor com esse nome. Se ele estiver inativo, reative-o em vez de criar outro.` |
+| `not_found`                          | `NOT_FOUND`        | `Setor não encontrado.`                                                                      |
+| `blocked`, motivo `IS_BOARD`         | `IS_BOARD`         | `describeDepartmentDeactivationBlock(block)`                                                 |
+| `blocked`, motivo `HAS_ACTIVE_USERS` | `HAS_ACTIVE_USERS` | `describeDepartmentDeactivationBlock(block)` (cita pessoas e, se houver, chamados)           |
+| `blocked`, motivo `HAS_OPEN_TICKETS` | `HAS_OPEN_TICKETS` | `describeDepartmentDeactivationBlock(block)`                                                 |
+| falha inesperada                     | —                  | `Não foi possível salvar o setor agora. Tente novamente.`                                    |
+
+`code` do bloqueio é `block.reason`, sem mapa intermediário: os literais são os
+mesmos.
+
+Revalidação:
+
+- `createDepartment` e `setDepartmentActive` → `revalidatePath("/cadastros/setores")`.
+- `renameDepartment` → `revalidatePath("/(app)", "layout")`: o nome do setor
+  aparece na sidebar ("Setor · Papel") e no perfil de todos os membros, então o
+  layout do grupo inteiro é invalidado (inclui `/cadastros/setores`).
+
+Nenhuma action recebe o id do ator nem decide permissão por conta própria: quem
+decide é `getDirector()`. Nenhuma escreve SQL.
+
+## `df-ui` — o que criar
+
+### Pacotes e primitivos
+
+- `npm install @tanstack/react-table`
+- `npx shadcn@latest add table collapsible badge alert-dialog` — depois, trocar o
+  import do `cn` para `@/app/_lib/utils` (seção 5 do `stack.md`).
+
+### `app/(app)/layout.tsx` (alterado)
+
+- Chama `getIsDirector()` de `@/app/_lib/auth/director` junto das leituras que já
+  faz (pode ser em `Promise.all` com `findUserProfile`).
+- Passa `isDirector` para `AppSidebar` (e para o que o cabeçalho mobile usar como
+  navegação, se houver).
+
+### Sidebar — `app/(app)/_components/`
+
+- `AppSidebar` ganha a prop `isDirector: boolean`.
+- Item "Cadastros" (ícone `lucide-react`) só quando `isDirector`, com
+  `Collapsible` do shadcn. Aberto por padrão quando `pathname` começa com
+  `/cadastros/`; o usuário pode recolher. Leitura de `pathname` exige Client
+  Component (como `nav-item.tsx`).
+- Subitens: **Pessoas** (desabilitado, rótulo "em breve", sem link), **Setores**
+  (`/cadastros/setores`), **Tags** (desabilitado, "em breve").
+- Esconder o item **não** é a proteção: a guarda é o layout de `/cadastros`.
+
+### `app/(app)/cadastros/layout.tsx` (novo)
+
+- `await requireDirector()` e renderiza `children`. Não-diretor → 404.
+- Não existe `app/(app)/cadastros/page.tsx` nesta feature: `/cadastros` sem
+  subrota é 404 para todos.
+
+### `app/(app)/cadastros/setores/page.tsx` (novo, Server Component)
+
+- `listDepartments()` de `@/app/_lib/data/departments` e passa a lista ao
+  componente de tabela.
+- Botão "Novo setor" abre o formulário de criação.
+
+### `app/_components/data-table/` (novo — pasta aprovada pelo usuário)
+
+Tabela genérica sobre TanStack Table (`const DataTable = <TData,>(props: DataTableProps<TData>) => {}`),
+com toolbar de busca por texto, cabeçalho e corpo. Nasce aqui porque Pessoas e
+Tags vão reusar.
+
+### `app/(app)/cadastros/setores/_components/` (novo)
+
+- Colunas: **Nome** (com `Badge` "Diretoria" quando `isBoard`), **Status**
+  (`describeActiveStatus(isActive)` em `Badge`), **Pessoas ativas**
+  (`activeUsers`), **Chamados em aberto** (`openTickets`), **Criado em**
+  (`formatDate(createdAt)` de `@/app/_lib/date`), **Ações**.
+- Busca por nome no cliente (filtro de coluna do TanStack).
+- Formulário de criar e de renomear: React Hook Form + `zodResolver` com
+  `createDepartmentSchema` nos dois modos, porque o único campo digitado é
+  `name` (a regra é `departmentNameSchema`, a mesma dos dois schemas). No modo
+  renomear, o `id` vem da linha da tabela, não do formulário; o input completo
+  (`{ id, name }`) é validado pela action com `renameDepartmentSchema`.
+  `NAME_TAKEN` vira erro no campo `name` com `result.message`; o resto vira
+  toast (Sonner).
+- Ativar/desativar: `AlertDialog` de confirmação na desativação; chama
+  `setDepartmentActive`. Falha exibe `result.message`.
+- Botão "Desativar" da Diretoria não aparece (ou aparece desabilitado). Para os
+  demais, a UI **pode** desabilitar quando `activeUsers > 0 || openTickets > 0`,
+  mostrando o motivo com
+  `describeDepartmentDeactivationBlock(checkDepartmentDeactivation(...))` quando
+  `ok === false`. É a mesma regra da action, não uma cópia. A action continua
+  sendo a autoridade (contagem pode ter mudado desde o render).
+- Nenhum import de `@/db/*`, `drizzle-orm` ou `app/_lib/auth` em Client Component.
+
+## Riscos
+
+1. **Banco local precisa ser recriado.** A migration não marca setor existente
+   como Diretoria, e o seed pula quando o admin já existe — então num banco já
+   populado ninguém vira diretor e `/cadastros` dá 404 para todos. Caminho em
+   desenvolvimento: recriar o banco, `npm run db:migrate`, `npm run db:seed`.
+   (Alternativa manual, só se o usuário preferir não recriar:
+   `update department set is_board = true where id = <setor do admin>`. Não é
+   automatizada: carimbar setor por palpite é pior que não carimbar.)
+2. **Encaminhamento pendente para setor desativado.** Um `ticket_transfer`
+   `pendente` com `to_department_id` de um setor que acaba de ser desativado não
+   conta como "chamado em aberto" do destino (o chamado ainda está na origem).
+   Fica para a feature de encaminhamento: recusar destino inativo ao solicitar e
+   ao aprovar.
+3. **Corrida na desativação.** Recontagem e `update` na mesma transação, com
+   `FOR UPDATE` no setor, bloqueiam entrada de pessoa ou chamado **por troca de
+   FK**. Continua aberta uma janela pequena para mudanças que não tocam a FK:
+   reativar uma pessoa que já é do setor, ou reabrir um chamado que já está nele.
+   Aceito: hoje nenhuma das duas telas existe, e quando existirem podem travar o
+   setor com `FOR SHARE` se precisarem.
+4. **Custo da checagem de diretor.** Uma consulta indexada (PK de `users` + PK de
+   `department`) por request em `(app)`. Aceito em troca da revogação imediata.
+
+## Variáveis de ambiente
+
+| Variável               | Mudança                                              |
+| ---------------------- | ---------------------------------------------------- |
+| `SEED_DEPARTMENT_NAME` | **removida** de `.env.example`; o seed não a lê mais |
+
+Quem tiver a variável no `.env` pode apagá-la; ela é ignorada.
+
+## Checklist de encerramento da feature
+
+- [ ] `requireDirector`, `getDirector`, `getIsDirector` em `app/_lib/auth/director.ts` (`df-auth`)
+- [ ] `listDepartments`, `insertDepartment`, `updateDepartmentName`, `updateDepartmentActive` em `app/_lib/data/departments.ts` (`df-data`)
+- [ ] seed cria a Diretoria com `is_board` e o admin nela; nenhuma ocorrência de `SEED_DEPARTMENT_NAME` no projeto (`df-data`)
+- [ ] `createDepartment`, `renameDepartment`, `setDepartmentActive` em `app/_lib/actions/departments.ts` (`df-actions`)
+- [ ] item "Cadastros" na sidebar só para diretor; `/cadastros/setores` com tabela, criar, renomear, ativar/desativar (`df-ui`)
+- [ ] não-diretor em `/cadastros/setores` recebe 404; action chamada por não-diretor devolve `FORBIDDEN` (`df-debug`)
+- [ ] mover o admin para outro setor tira o item "Cadastros" na próxima navegação, sem novo login (`df-debug`)
+- [ ] criar/renomear com nome existente (inclusive inativo, outra caixa) → `NAME_TAKEN` (`df-debug`)
+- [ ] desativar setor com pessoa ativa ou chamado em aberto é recusado com as contagens; Diretoria nunca desativa (`df-debug`)
+- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`

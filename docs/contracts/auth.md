@@ -172,6 +172,12 @@ requireDepartmentAdmin(departmentId: number): Promise<Actor>
   para que as ondas seguintes já tipem contra ela; o primeiro uso real é no
   fluxo de tickets.
 
+Poder global (Cadastros) não é papel: vem do setor com `department.is_board`.
+Os helpers `requireDirector`, `getDirector` e `getIsDirector` ficam em
+`app/_lib/auth/director.ts` e estão especificados em
+`docs/contracts/cadastros-setores.md` (ADR 011). `Actor` não ganha campo para
+isso: ser diretor é consultado no banco a cada checagem.
+
 Todos são `async` e só rodam no servidor.
 
 Além desses, `app/_lib/auth/session.ts` publica os dois wrappers que a action
@@ -260,9 +266,13 @@ existe; não filtra por `is_active` (quem decide é a action ou a UI).
 
 `db/seed.ts` — idempotente, roda com `dotenv`:
 
-1. `department` com `name = SEED_DEPARTMENT_NAME`, se ainda não existir.
+1. A Diretoria: o setor com `is_board = true`. Se não existir, é criado com
+   `name = "Diretoria"` (`BOARD_DEPARTMENT_NAME`, `app/_lib/domain/department.ts`)
+   e `is_board = true`; se existir, é usado como está, mesmo renomeado. Não há
+   variável de ambiente para o nome do setor (`SEED_DEPARTMENT_NAME` foi removida
+   — ver `docs/contracts/cadastros-setores.md`).
 2. `users` com `email = SEED_ADMIN_EMAIL`, `name = SEED_ADMIN_NAME`,
-   `role = "admin"`, `departmentId` do setor acima, `emailVerified: true`.
+   `role = "admin"`, `departmentId` da Diretoria, `emailVerified: true`.
 3. `account` com `userId` do user criado, `accountId: String(user.id)`,
    `providerId: "credential"`,
    `password: await hashPassword(SEED_ADMIN_PASSWORD)` — `hashPassword` vem de
@@ -353,14 +363,16 @@ signOut(): Promise<void>
 
 ## Variáveis de ambiente
 
-| Variável               | Para quê                                  |
-| ---------------------- | ----------------------------------------- |
-| `BETTER_AUTH_SECRET`   | assinatura de sessão/cookies              |
-| `BETTER_AUTH_URL`      | URL base da aplicação                     |
-| `SEED_ADMIN_NAME`      | nome do admin criado pelo seed            |
-| `SEED_ADMIN_EMAIL`     | e-mail do admin criado pelo seed          |
-| `SEED_ADMIN_PASSWORD`  | senha em texto do admin, hasheada no seed |
-| `SEED_DEPARTMENT_NAME` | setor do admin criado pelo seed           |
+| Variável              | Para quê                                  |
+| --------------------- | ----------------------------------------- |
+| `BETTER_AUTH_SECRET`  | assinatura de sessão/cookies              |
+| `BETTER_AUTH_URL`     | URL base da aplicação                     |
+| `SEED_ADMIN_NAME`     | nome do admin criado pelo seed            |
+| `SEED_ADMIN_EMAIL`    | e-mail do admin criado pelo seed          |
+| `SEED_ADMIN_PASSWORD` | senha em texto do admin, hasheada no seed |
+
+O admin do seed fica sempre na Diretoria. `SEED_DEPARTMENT_NAME` existiu até a
+feature Cadastros → Setores e foi removida.
 
 `DATABASE_URL` continua como está.
 

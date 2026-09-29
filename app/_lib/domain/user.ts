@@ -1,3 +1,4 @@
+import { describeActiveStatus } from "@/app/_lib/domain/status"
 import type { Role } from "@/app/_lib/types/actor"
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -22,5 +23,4 @@ export const describeMembership = (
   role: Role,
 ): string => `${departmentName} · ${ROLE_LABELS[role]}`
 
-export const describeAccountStatus = (isActive: boolean): string =>
-  isActive ? "Ativo" : "Inativo"
+export const describeAccountStatus = describeActiveStatus

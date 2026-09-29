@@ -85,10 +85,15 @@ export const department = pgTable(
     id: pk(),
     name: text("name").notNull(),
     isActive: boolean("is_active").default(true).notNull(),
+    isBoard: boolean("is_board").default(false).notNull(),
     ...timestamps,
   },
   (table) => [
     uniqueIndex("department_name_lower_idx").on(sql`lower(${table.name})`),
+    uniqueIndex("department_single_board_idx")
+      .on(table.isBoard)
+      .where(sql`is_board`),
+    check("department_board_active", sql`not is_board or is_active`),
   ],
 )
 
