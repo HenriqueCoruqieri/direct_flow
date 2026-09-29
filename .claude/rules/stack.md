@@ -54,7 +54,8 @@ de estado assíncrono complexo. Quem introduzir registra o motivo em
 app/ (UI) ─┬─→ app/_lib/actions/ ─┬─→ app/_lib/data/ ──→ db/
            │                     ├─→ app/_lib/storage/ ──→ Cloudflare R2
            │                     ├─→ app/_lib/email/
-           │                     └─→ app/_lib/auth/ ──→ app/_lib/email/
+           │                     └─→ app/_lib/auth/ ─┬─→ app/_lib/email/
+           │                                         └─→ db/   (só identidade e permissão)
            │
            ├─→ app/_lib/data/           (leitura, só em Server Component)
            ├─→ app/_lib/auth/           (leitura de sessão e proteção de rota)
@@ -89,6 +90,14 @@ As setas são de mão única. Em particular:
   quem dispara o e-mail de redefinição é a camada de auth, não a action — a
   action só pede o envio. Fora dos callbacks da biblioteca, e-mail continua
   saindo da action. `app/_lib/email/` nunca importa `app/_lib/auth/`.
+- **`app/_lib/auth/` consulta `db/` direto, só para identidade e permissão.**
+  A instância do Better Auth já fala com o banco pelo adapter, e as guardas
+  de permissão (`requireDirector`, ADR 011) leem `users` e `department` para
+  decidir quem é quem. Essa leitura vive em `app/_lib/auth/`, não em
+  `app/_lib/data/`, e auth nunca importa `app/_lib/data/`. A exceção não se
+  estende: auth não grava dado de domínio nem consulta ticket, tag ou
+  qualquer coisa que não seja "quem é o usuário e o que ele pode". Dentro de
+  `app/`, só `app/_lib/data/` e `app/_lib/auth/` importam `@/db`.
 - **`app/_lib/domain/` e `app/_lib/validation/` não fazem I/O.** São funções puras e
   schemas. Por serem puros, rodam no servidor e no cliente — é o que permite
   a UI decidir se mostra um botão usando a _mesma_ regra que a action usa para
