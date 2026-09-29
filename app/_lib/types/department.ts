@@ -56,3 +56,10 @@ export type UpdateDepartmentNameOutcome =
 
 export type UpdateDepartmentActiveOutcome =
   DepartmentSaved | DepartmentNotFound | DepartmentDeactivationRefused
+
+export interface DepartmentOption {
+  id: number
+  name: string
+  isBoard: boolean
+  isActive: boolean
+}

@@ -135,9 +135,10 @@ export const tag = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("tag_name_per_department_idx")
-      .on(table.departmentId, sql`lower(${table.name})`)
-      .where(sql`is_active`),
+    uniqueIndex("tag_name_per_department_idx").on(
+      table.departmentId,
+      sql`lower(${table.name})`,
+    ),
     index("tag_department_idx").on(table.departmentId),
   ],
 )

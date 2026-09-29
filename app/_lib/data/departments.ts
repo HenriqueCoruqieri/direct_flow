@@ -1,11 +1,11 @@
 import { and, eq, inArray, sql } from "drizzle-orm"
-import { DrizzleQueryError } from "drizzle-orm/errors"
-import { DatabaseError } from "pg"
 
+import { isUniqueViolation } from "@/app/_lib/data/db-errors"
 import { checkDepartmentDeactivation } from "@/app/_lib/domain/department"
 import { OPEN_TICKET_STATUSES } from "@/app/_lib/domain/ticket"
 import type {
   DepartmentListItem,
+  DepartmentOption,
   InsertDepartmentOutcome,
   UpdateDepartmentActiveOutcome,
   UpdateDepartmentNameOutcome,
@@ -16,13 +16,7 @@ import { department, ticket, user } from "@/db/schema"
 const DEPARTMENT_NAME_LOWER_CONSTRAINT = "department_name_lower_idx"
 
 export function isDepartmentNameTakenError(error: unknown): boolean {
-  if (!(error instanceof DrizzleQueryError)) return false
-  const cause = error.cause
-  if (!(cause instanceof DatabaseError)) return false
-  return (
-    cause.code === "23505" &&
-    cause.constraint === DEPARTMENT_NAME_LOWER_CONSTRAINT
-  )
+  return isUniqueViolation(error, DEPARTMENT_NAME_LOWER_CONSTRAINT)
 }
 
 export async function listDepartments(): Promise<DepartmentListItem[]> {
@@ -46,7 +40,11 @@ export async function listDepartments(): Promise<DepartmentListItem[]> {
       createdAt: department.createdAt,
     })
     .from(department)
-    .orderBy(sql`lower(${department.name})`)
+    .orderBy(
+      sql`${department.isBoard} desc`,
+      sql`lower(${department.name})`,
+      department.id,
+    )
 }
 
 export async function insertDepartment(
@@ -144,4 +142,20 @@ export async function updateDepartmentActive(
 
     return { status: "saved", id }
   })
+}
+
+export async function listDepartmentOptions(): Promise<DepartmentOption[]> {
+  return db
+    .select({
+      id: department.id,
+      name: department.name,
+      isBoard: department.isBoard,
+      isActive: department.isActive,
+    })
+    .from(department)
+    .orderBy(
+      sql`${department.isBoard} desc`,
+      sql`lower(${department.name})`,
+      department.id,
+    )
 }

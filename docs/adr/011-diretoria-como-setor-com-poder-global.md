@@ -47,3 +47,21 @@ consideradas:
   Diretoria também é diretor. Se isso precisar mudar, a regra muda num lugar só
   (a consulta de `director.ts`).
 - `SEED_DEPARTMENT_NAME` deixa de existir.
+
+## Nota — admin de setor em Cadastros (feature Tags, 2026-09-28)
+
+- Cadastros deixa de ser exclusivo da Diretoria. O **admin de setor** (`role =
+admin`, ativo, fora da Diretoria) entra em Cadastros com alcance limitado ao
+  próprio setor: gerencia as tags dele e, na feature de Pessoas, terá regra
+  própria (ainda a definir). **Setores continua só do diretor.**
+- Diretor tem precedência: admin da Diretoria é diretor.
+- O acesso é resolvido por `getRegistryAccess()` (`app/_lib/auth/registry-access.ts`):
+  a mesma consulta fresca desta decisão, agora lendo também `users.role` e
+  `users.department_id`, com a precedência em `resolveRegistryAccess`
+  (`app/_lib/domain/registry.ts`). Nada disso vai para cookie. As funções de
+  `director.ts` passam a derivar dela, mantendo uma consulta só por request.
+- A guarda do layout de `/cadastros` passou a ser "diretor ou admin de setor";
+  a de diretor foi para a página de Setores.
+- Consequência: rebaixar um admin a membro, desativá-lo ou movê-lo de setor muda
+  o que ele vê em Cadastros na próxima requisição, como já acontecia com o
+  diretor.

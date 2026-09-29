@@ -7,19 +7,28 @@ nas decisões. Poder global da Diretoria em
 Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 `zod@4.6.5`.
 
+> **Atualizado pela feature Tags** (`docs/contracts/cadastros-tags.md`):
+> `listDepartments` ordena com a Diretoria primeiro; a guarda de diretor saiu do
+> layout de `/cadastros` e foi para `app/(app)/cadastros/setores/page.tsx`
+> (o layout agora aceita diretor **ou** admin de setor); o menu passou a ser
+> montado por `registryNavItemsFor`; `director.ts` deriva de
+> `getRegistryAccess`; os limites de nome viraram `REGISTRY_NAME_*` e os schemas
+> usam as fábricas de `app/_lib/validation/registry.ts`. As seções abaixo já
+> refletem isso.
+
 ## Decisões fixadas pelo usuário (resumo do plano)
 
-| Tema           | Decisão                                                                                                                                               |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Quem é diretor | Quem está **ativo** num setor com `is_board = true`. O poder vem do setor, não da pessoa. Não existe role novo. Só pode existir uma Diretoria         |
-| Onde se checa  | Consulta ao banco a cada checagem. **Não** vai para cookie nem sessão: mover alguém de setor revoga o poder na próxima requisição. `Actor` não muda   |
-| Seed           | Cria sempre o setor `Diretoria` com `is_board = true` e o admin do seed nele. `SEED_DEPARTMENT_NAME` deixa de existir                                 |
-| Navegação      | Item "Cadastros" recolhível na sidebar, só para diretor; subitens Pessoas (em breve), Setores, Tags (em breve); aberto quando a rota é `/cadastros/*` |
-| Rota           | `/cadastros/setores`, só diretor. Não-diretor recebe **404**, para a página não se revelar                                                            |
-| Escopo         | Listar, criar, renomear, ativar/desativar. **Sem exclusão**                                                                                           |
-| Desativar      | Só sem pessoas ativas e sem chamados em aberto no setor. A Diretoria nunca. Renomear a Diretoria é permitido                                          |
-| Nome           | `trim`, 2 a 80 caracteres, único sem diferenciar maiúsculas (inclusive contra inativos)                                                               |
-| E-mail         | Nenhum                                                                                                                                                |
+| Tema           | Decisão                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Quem é diretor | Quem está **ativo** num setor com `is_board = true`. O poder vem do setor, não da pessoa. Não existe role novo. Só pode existir uma Diretoria                |
+| Onde se checa  | Consulta ao banco a cada checagem. **Não** vai para cookie nem sessão: mover alguém de setor revoga o poder na próxima requisição. `Actor` não muda          |
+| Seed           | Cria sempre o setor `Diretoria` com `is_board = true` e o admin do seed nele. `SEED_DEPARTMENT_NAME` deixa de existir                                        |
+| Navegação      | Item "Cadastros" recolhível na sidebar; o subitem Setores só para diretor (itens por acesso em `docs/contracts/cadastros-tags.md`); aberto em `/cadastros/*` |
+| Rota           | `/cadastros/setores`, só diretor (guarda na página). Não-diretor recebe **404**, para a página não se revelar                                                |
+| Escopo         | Listar, criar, renomear, ativar/desativar. **Sem exclusão**                                                                                                  |
+| Desativar      | Só sem pessoas ativas e sem chamados em aberto no setor. A Diretoria nunca. Renomear a Diretoria é permitido                                                 |
+| Nome           | `trim`, 2 a 80 caracteres, único sem diferenciar maiúsculas (inclusive contra inativos)                                                                      |
+| E-mail         | Nenhum                                                                                                                                                       |
 
 ## Tabelas, enums e migration
 
@@ -174,8 +183,6 @@ existe porque o array é `readonly` e `inArray` pede array mutável.
 
 ```ts
 export const BOARD_DEPARTMENT_NAME = "Diretoria"
-export const DEPARTMENT_NAME_MIN_LENGTH = 2
-export const DEPARTMENT_NAME_MAX_LENGTH = 80
 
 export const checkDepartmentDeactivation: (
   dependencies: DepartmentDependencies,
@@ -191,6 +198,10 @@ export const describeDepartmentDeactivationBlock: (
 | `BOARD_DEPARTMENT_NAME`               | Nome com que o **seed** cria a Diretoria. Só isso: o poder vem de `is_board`, nunca do nome. Ninguém compara nome com esta constante para decidir permissão           |
 | `checkDepartmentDeactivation`         | Precedência: `IS_BOARD` → `HAS_ACTIVE_USERS` → `HAS_OPEN_TICKETS` → `{ ok: true }`. Só responde sobre **desativar**; ativar não tem pré-condição                      |
 | `describeDepartmentDeactivationBlock` | Mensagem PT-BR do bloqueio, com as contagens e plural correto. Única fonte do texto: a action devolve, a UI pode usar a mesma função para explicar botão desabilitado |
+
+Os limites de nome (2 e 80) moram em `app/_lib/domain/registry.ts`
+(`REGISTRY_NAME_MIN_LENGTH`, `REGISTRY_NAME_MAX_LENGTH`), compartilhados com tags.
+`DEPARTMENT_NAME_MIN_LENGTH`/`MAX_LENGTH` foram removidos.
 
 Mensagens produzidas:
 
@@ -214,7 +225,8 @@ função — o perfil continua funcionando sem mudança e o texto existe num lug
 ## Validação — `app/_lib/validation/department.ts` (novo)
 
 ```ts
-export const departmentNameSchema // z.string().trim().min(1).min(2).max(80)
+export const departmentNameSchema // registryNameSchema("Informe o nome do setor.")
+export const departmentIdSchema // registryIdSchema("Setor inválido.")
 
 export const createDepartmentSchema // z.object({ name })
 export type CreateDepartmentInput = { name: string }
@@ -257,9 +269,10 @@ export const getIsDirector: () => Promise<boolean>
 | `getIsDirector`   | `false`              | `false`                 | `true`          | `app/(app)/layout.tsx`, para a sidebar          |
 
 - Todas partem de `getSession()`/`requireSession()` de `app/_lib/auth/session.ts`
-  e fazem **uma** consulta: existe `users` com `id = actor.id`, `is_active` e
-  `department.is_board`, pelo join `users.department_id = department.id`. Um
-  helper privado no arquivo concentra essa consulta; as três funções o reusam.
+  e derivam de `getRegistryAccess()` (`app/_lib/auth/registry-access.ts`, ver
+  `docs/contracts/cadastros-tags.md`): diretor é `isDirectorAccess(access)`. A
+  consulta (`users` + join `department`) é uma só por request, compartilhada com
+  a sidebar e a guarda de Tags.
 - `is_active` do usuário entra na consulta: diretor desativado perde o poder na
   hora, independentemente do ADR 003.
 - **Por que a action não usa `requireDirector`:** `notFound()` dentro de Server
@@ -298,7 +311,9 @@ etc.) para a action poder importar os dois lados sem alias.
 
 **`listDepartments()`**
 
-- Todos os setores, ativos e inativos, ordenados por `lower(name)` ascendente.
+- Todos os setores, ativos e inativos, com a Diretoria primeiro: ordem
+  `is_board desc`, `lower(name)` ascendente, `id`. Mesma ordem de
+  `listDepartmentOptions()`.
 - `activeUsers` e `openTickets` pela definição em "Tipos" — subconsultas
   correlacionadas ou `left join` com `count` agrupado; `count` do Postgres volta
   como `bigint`, então converter para `number` (ex.: `count()` do Drizzle, que já
@@ -472,12 +487,15 @@ decide é `getDirector()`. Nenhuma escreve SQL.
 
 ### `app/(app)/cadastros/layout.tsx` (novo)
 
-- `await requireDirector()` e renderiza `children`. Não-diretor → 404.
+- `await requireRegistryAccess()` e renderiza `children`: passa diretor **e**
+  admin de setor (antes era `requireDirector()`). Sem acesso → 404.
 - Não existe `app/(app)/cadastros/page.tsx` nesta feature: `/cadastros` sem
   subrota é 404 para todos.
 
 ### `app/(app)/cadastros/setores/page.tsx` (novo, Server Component)
 
+- `await requireDirector()` **na página**, antes de ler: o layout deixa passar o
+  admin de setor, e Setores continua só da Diretoria.
 - `listDepartments()` de `@/app/_lib/data/departments` e passa a lista ao
   componente de tabela.
 - Botão "Novo setor" abre o formulário de criação.
