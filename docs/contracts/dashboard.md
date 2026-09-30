@@ -362,8 +362,9 @@ incoerente quando a tela de Aprovações existir. Os status permitidos são
 ### Estrutura
 
 ```
-app/(app)/layout.tsx                    Server  — shell: sidebar, barra superior, cabeçalho mobile
-app/(app)/dashboard/page.tsx            Server  — Início
+app/(app)/layout.tsx                    Server  — shell: sidebar, cabeçalho mobile
+app/(app)/dashboard/page.tsx            Server  — Início (renderiza a barra superior)
+app/(app)/_components/app-top-bar.tsx   barra superior: busca e "Novo chamado"
 app/(app)/_components/*                 componentes usados só pelo grupo (app)
 app/dashboard/                          REMOVER inteiro (page.tsx e _components/)
 ```
@@ -392,8 +393,8 @@ if (!profile) notFound()
   o "Sair" é `<form action={signOut}>`.
 - O item ativo depende do pathname: se virar Client Component por
   `usePathname`, isole só o item.
-- Barra superior no layout: busca (placeholder "Buscar por #, título ou tag") e
-  "Novo chamado", ambos sem ação. Busca sem `onChange` e sem estado.
+- A barra superior **não** fica no layout: é renderizada por página (ver
+  `app/(app)/dashboard/page.tsx`). As telas de `/registry` não a têm.
 - Abaixo de `lg`: sidebar oculta; cabeçalho mobile com avatar,
   `Olá, ${getFirstName(profile.name)}` e `describeMembership(...)`.
 
@@ -418,6 +419,11 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
 A página chama `requireSession()` de novo: layout não re-renderiza em toda
 navegação e não é guarda da página.
 
+- Barra superior `AppTopBar` (`app/(app)/_components/app-top-bar.tsx`) no topo
+  da página: busca (placeholder "Buscar por #, título ou tag") e "Novo chamado",
+  ambos sem ação. Busca sem `onChange` e sem estado. Hoje só o Início a
+  renderiza; o componente fica no `_components/` do grupo para ser reusado por
+  Fila de chamados, Meus chamados e Aprovações quando essas telas existirem.
 - Título "Início" e subtítulo `formatRangeLabel(range)`.
 - Cards: **Chamados no período** → `summary.ticketCount`; **Principal tag
   ofensora** → `summary.topTag?.name` e `summary.topTag.count`, ou `—` quando

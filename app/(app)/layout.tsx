@@ -12,7 +12,6 @@ import {
 } from "@/app/_lib/domain/user"
 
 import AppSidebar from "./_components/app-sidebar"
-import AppTopBar from "./_components/app-top-bar"
 import MobileHeader from "./_components/mobile-header"
 
 const AppLayout = async ({ children }: LayoutProps<"/">) => {
@@ -45,7 +44,6 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
           image={profile.image}
           membership={membership}
         />
-        <AppTopBar />
         <main className="flex flex-1 flex-col">{children}</main>
       </div>
     </div>
