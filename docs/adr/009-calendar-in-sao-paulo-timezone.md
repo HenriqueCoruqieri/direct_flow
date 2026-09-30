@@ -29,8 +29,13 @@ diferentes conforme quem faz a conta.
   `import { ptBR } from "react-day-picker/locale"` em
   `app/(app)/dashboard/_components/custom-period-picker.tsx`. Esse módulo só
   repassa `date-fns/locale`, e o import serve apenas para configurar o locale do
-  `Calendar` (nomes de mês e de dia, início da semana). Ele não formata nem
-  calcula data; isso continua sendo feito só por `app/_lib/date.ts`.
+  `Calendar` (nomes de mês e de dia). Ele não formata nem calcula data; isso
+  continua sendo feito só por `app/_lib/date.ts`.
+- A semana começa na **segunda-feira**, declarada uma vez como `WEEK_STARTS_ON`
+  em `app/_lib/date.ts` (escala do `react-day-picker`, domingo = `0`). O
+  `ptBR` do `date-fns` começa no domingo, então o `Calendar` recebe a constante
+  pela prop `weekStartsOn`, e `resolvePeriodRange` deriva o período `semana`
+  dela. Calendário e filtro não podem divergir.
 
 ## Consequência
 

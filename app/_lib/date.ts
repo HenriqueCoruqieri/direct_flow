@@ -18,6 +18,8 @@ dayjs.locale("pt-br")
 
 export const APP_TIME_ZONE = "America/Sao_Paulo"
 
+export const WEEK_STARTS_ON = 1
+
 export type DateInput = Date | string | number
 
 const DATE_KEY_FORMAT = "YYYY-MM-DD"
@@ -70,7 +72,7 @@ const dayRange = (firstKey: DateKey, lastKey: DateKey): DateRange => ({
 })
 
 const weekStartKey = (key: DateKey): DateKey =>
-  addDaysToKey(key, -((dayjs.utc(key).day() + 6) % 7))
+  addDaysToKey(key, -((dayjs.utc(key).day() - WEEK_STARTS_ON + 7) % 7))
 
 const monthStartKey = (key: DateKey): DateKey =>
   dayjs.utc(key).startOf("month").format(DATE_KEY_FORMAT)

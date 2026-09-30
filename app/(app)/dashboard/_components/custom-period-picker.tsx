@@ -13,7 +13,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/app/_components/ui/popover"
-import { calendarDateToKey, dateKeyToCalendarDate } from "@/app/_lib/date"
+import {
+  calendarDateToKey,
+  dateKeyToCalendarDate,
+  WEEK_STARTS_ON,
+} from "@/app/_lib/date"
 import { PERIOD_LABELS } from "@/app/_lib/domain/period"
 import type { PeriodSelection } from "@/app/_lib/types/period"
 import { serializeDashboardParams } from "@/app/_lib/validation/dashboard"
@@ -75,6 +79,7 @@ const CustomPeriodPicker = ({ selection }: CustomPeriodPickerProps) => {
         <Calendar
           mode="range"
           locale={ptBR}
+          weekStartsOn={WEEK_STARTS_ON}
           selected={range}
           onSelect={setRange}
           defaultMonth={range?.from}

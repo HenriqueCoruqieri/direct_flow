@@ -44,13 +44,18 @@ O seed demo escreve em `tag`, `ticket`, `ticket_tag` e `ticket_history`.
 `date-fns` é `import { ptBR } from "react-day-picker/locale"`, e só em
 `app/(app)/dashboard/_components/custom-period-picker.tsx`. Esse módulo só
 repassa `date-fns/locale`. O `ptBR` serve apenas para a prop `locale` do
-`Calendar` (nomes de mês e dia, início da semana na segunda). Ele não formata nem
+`Calendar` e dá só os nomes de mês e dia: o locale do `date-fns` começa a semana
+no domingo (`weekStartsOn: 0`). O início da semana vem de `WEEK_STARTS_ON` de
+`@/app/_lib/date` (segunda-feira), passado ao `Calendar` pela prop
+`weekStartsOn`, e é a mesma constante que define o período `semana` em
+`resolvePeriodRange`. Ele não formata nem
 calcula data: o subtítulo, a URL e as conversões continuam saindo de
 `@/app/_lib/date`. Import direto de `date-fns` (`date-fns`, `date-fns/*`)
 continua proibido em qualquer arquivo. Registrado no ADR 009.
 
 ```ts
 export const APP_TIME_ZONE = "America/Sao_Paulo"
+export const WEEK_STARTS_ON: 1
 export type DateInput = Date | string | number
 
 export const formatDate: (value: DateInput) => string
@@ -82,6 +87,7 @@ export const dateKeyToCalendarDate: (key: DateKey) => Date
 
 | Função                            | Semântica                                                                                                                                                                 |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WEEK_STARTS_ON`                  | Início da semana do app: `1` (segunda). Mesma escala do `react-day-picker` (domingo = `0`). Define o `semana` e a prop `weekStartsOn` do `Calendar`                       |
 | `formatDate` / `formatDateTime`   | `24/09/2026` / `24/09/2026 22:30`, sempre no fuso de São Paulo                                                                                                            |
 | `formatRelative`                  | `há 3 horas`. `now` só para teste                                                                                                                                         |
 | `toISO` / `parseISO`              | ISO 8601 em UTC. `parseISO` devolve `null` para entrada inválida, nunca `Invalid Date`                                                                                    |
@@ -441,6 +447,9 @@ navegação e não é guarda da página.
   `calendarDateToKey` e faz
   `router.push(`/dashboard?${serializeDashboardParams({ periodo: "personalizado", de, ate })}`)`.
   Um clique só (sem `to`) vale como `de = ate`.
+- O `Calendar` recebe `locale={ptBR}` e `weekStartsOn={WEEK_STARTS_ON}`, com a
+  constante importada de `@/app/_lib/date`. Sem a segunda prop o calendário
+  começa no domingo, divergindo do período `semana`.
 - Nenhum import de `dayjs` nem de `date-fns` na UI. A única exceção é
   `import { ptBR } from "react-day-picker/locale"` neste componente, só para a
   prop `locale` do `Calendar` (ver "Datas").
