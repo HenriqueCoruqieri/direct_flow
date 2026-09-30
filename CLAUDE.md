@@ -9,25 +9,30 @@ aprovação de admin, tags de categoria por setor e classificação fixa
 (`Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`
 — enum `ticket_type` em `db/schema.ts`).
 
-Oito agentes em `.claude/agents/`, cada um dono exclusivo de um conjunto de
+Nove agentes em `.claude/agents/`, cada um dono exclusivo de um conjunto de
 caminhos (tabela na seção 7 de `.claude/rules/stack.md`). Nenhum agente escreve
 em caminho de outro; quando precisa, reporta e encerra o turno.
 
-| Agente         | Papel                                         | Escreve |
-| -------------- | --------------------------------------------- | ------- |
-| `df-architect` | contratos: schema, Zod, domínio, datas, docs  | sim     |
-| `df-auth`      | Better Auth, sessão, proteção de rota         | sim     |
-| `df-data`      | queries e mutações Drizzle                    | sim     |
-| `df-actions`   | Server Actions                                | sim     |
-| `df-email`     | Resend, templates                             | sim     |
-| `df-ui`        | App Router, componentes, formulários, tabelas | sim     |
-| `df-reviewer`  | conformidade do código parado                 | não     |
-| `df-debug`     | comportamento em execução, evidência          | não     |
+| Agente         | Papel                                         | Escreve   |
+| -------------- | --------------------------------------------- | --------- |
+| `df-architect` | contratos: schema, Zod, domínio, datas, docs  | sim       |
+| `df-auth`      | Better Auth, sessão, proteção de rota         | sim       |
+| `df-data`      | queries e mutações Drizzle                    | sim       |
+| `df-actions`   | Server Actions                                | sim       |
+| `df-email`     | Resend, templates                             | sim       |
+| `df-ui`        | App Router, componentes, formulários, tabelas | sim       |
+| `df-reviewer`  | conformidade do código parado                 | não       |
+| `df-debug`     | comportamento em execução, evidência          | não       |
+| `df-qa`        | teste no navegador contra o contrato          | relatório |
 
 ## Comandos
 
 `/implement` feature nova · `/fix` bug · `/refactor` duplicação e limpeza ·
-`/document` documentação · `/consult` consultoria antes de codar
+`/document` documentação · `/consult` consultoria antes de codar ·
+`/test` teste da feature no navegador, com relatório
+
+Os servidores MCP de teste (`playwright` e `next-devtools`) ficam em
+`.mcp.json` e são usados só pelo `df-qa`.
 
 Os comandos são os orquestradores. Eles acionam agentes, repassam contexto e
 verificam; não escrevem código de produção.
@@ -42,6 +47,8 @@ Onda 1  df-data ─┬─ df-email ─┬─ df-ui (layout, design system)      
 Onda 2  df-actions           df-ui (telas e formulários)            ← em paralelo
            │
 Onda 3  df-reviewer      lint · tsc · build · limites entre camadas
+           │
+Onda 4  df-qa            navegador · erros do dev server · banco → docs/test-reports/
 ```
 
 `df-auth` roda uma vez, na configuração inicial, junto com a Onda 0 — ele
@@ -68,13 +75,16 @@ Fora dessas três, os agentes trabalham contra `docs/contracts/<fluxo>.md` e nã
 esperam uns pelos outros. Se um descobrir que precisa de algo de outro, reporta a
 assinatura necessária e encerra — nunca escreve no lugar do colega.
 
-## Por que `df-reviewer` e `df-debug` não são dependências
+## Por que `df-reviewer`, `df-debug` e `df-qa` não são dependências
 
-Nenhum dos dois escreve arquivo e nenhum é invocado por outro agente — quem os
-aciona é o comando. Todo fluxo funciona sem eles; eles só o deixam mais
-informado. E ambos reportam constatação, nunca correção pronta: um patch vindo
+Nenhum dos três escreve código e nenhum é invocado por outro agente — quem os
+aciona é o comando. O `df-qa` escreve só o próprio relatório, em
+`docs/test-reports/`. Todo fluxo funciona sem eles; eles só o deixam mais
+informado. E os três reportam constatação, nunca correção pronta: um patch vindo
 deles seria decisão de desenho tomada fora do ownership, que é justamente o que
 o modelo evita.
 
-A fronteira entre os dois: o `df-reviewer` lê **código parado** contra as regras;
-o `df-debug` observa **comportamento em execução**.
+A fronteira entre eles: o `df-reviewer` lê **código parado** contra as regras;
+o `df-debug` investiga **uma pergunta** sobre comportamento em execução; o
+`df-qa` roda **uma bateria de cenários** derivada do contrato e diz o que passou
+e o que não passou.

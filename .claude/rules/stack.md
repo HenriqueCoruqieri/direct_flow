@@ -324,7 +324,8 @@ agentes podem **ler** qualquer arquivo.
 | `db/schema.ts` (domínio **e** `users`), `db/migrations/**`, `drizzle.config.ts`                                                      | `df-architect`                            |
 | `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`, `.gitignore`, `.env.example`                             | `df-architect`                            |
 | `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect`                            |
-| `docs/**`                                                                                                                            | `df-architect`                            |
+| `docs/**` (exceto `docs/test-reports/**`)                                                                                            | `df-architect`                            |
+| `docs/test-reports/**`                                                                                                               | `df-qa`                                   |
 | `db/auth-schema.ts` (só `session`, `account`, `verification`), `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`    | `df-auth`                                 |
 | `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`, `app/_lib/storage/**`                                                               | `df-data`                                 |
 | `app/_lib/actions/**`                                                                                                                | `df-actions`                              |
@@ -332,7 +333,7 @@ agentes podem **ler** qualquer arquivo.
 | `app/**` (exceto `app/(auth)/**`, `app/api/**` e `app/_lib/**`), incluindo `app/_components/**`, `app/_hooks/**` e `app/globals.css` | `df-ui`                                   |
 | `app/_lib/utils.ts`, `components.json`                                                                                               | `df-ui`                                   |
 | nenhum — apenas leitura e execução                                                                                                   | `df-reviewer`, `df-debug`                 |
-| `.claude/**`, `CLAUDE.md`                                                                                                            | orquestrador, só com aprovação do usuário |
+| `.claude/**`, `CLAUDE.md`, `.mcp.json`                                                                                               | orquestrador, só com aprovação do usuário |
 
 `app/_lib/**` não tem dono único: cada subpasta pertence ao agente da camada,
 conforme as linhas acima. Subpasta nova em `app/_lib/` só entra com dono

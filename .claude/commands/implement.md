@@ -72,13 +72,33 @@ Se um achado for sobre comportamento e não sobre código (algo funciona diferen
 do esperado em execução), acione `df-debug` para levantar evidência e devolva ao
 dono junto com ela.
 
+## Onda 4 — teste em execução (`df-qa`)
+
+Roda só depois de a Onda 3 sair **APROVADO** ou **APROVADO COM ATENÇÕES**.
+Siga os passos 1 a 4 de `.claude/commands/test.md`, com o contrato desta
+feature e os arquivos que as ondas anteriores alteraram.
+
+- **Tudo passou** → encerramento.
+- **Falhou** → para cada falha, acione o **dono** indicado no relatório com a
+  evidência e o esperado, como correção pontual (passo 3 do `/fix`). Se a
+  camada ficou incerta, acione o `df-debug` antes. Depois rode o `df-reviewer`
+  de novo e o `df-qa` em modo reteste, só com os cenários que falharam.
+- **No máximo duas rodadas de correção.** Se ainda houver falha, pare e leve
+  ao usuário o relatório e o que foi tentado. Falha persistente costuma ser
+  contrato ambíguo, não código.
+- **Pré-requisito faltando** (seed QA, MCP não aprovado) → não bloqueia a
+  entrega. Reporte ao usuário o que falta e siga para o encerramento, deixando
+  claro que a feature **não foi testada em execução**.
+
 ## Encerramento
 
 Commits por unidade coerente, sem escopo (`feat: ...`), conforme a seção 6 do
 `stack.md`.
 
-Reporte ao usuário: o que foi criado, por qual agente, o veredito da revisão e o
-que ficou de fora. Curto.
+O relatório de `docs/test-reports/` entra no commit da feature.
+
+Reporte ao usuário: o que foi criado, por qual agente, o veredito da revisão, o
+resultado dos testes com o caminho do relatório e o que ficou de fora. Curto.
 
 Inclua no relatório as explicações que os agentes deram sobre o código —
 trechos provisórios, decisões não óbvias, justificativas de `as` — com arquivo

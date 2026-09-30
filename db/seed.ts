@@ -19,6 +19,8 @@ import { account } from "@/db/auth-schema"
 import type {
   NewTicket,
   NewTicketHistory,
+  NewUser,
+  Role,
   TicketPriority,
   TicketStatus,
   TicketType,
@@ -106,35 +108,162 @@ async function seedAdmin(): Promise<SeedAdminResult> {
   return db.transaction(async (tx) => {
     const board = await ensureBoardDepartment(tx)
 
-    const [createdAdmin] = await tx
-      .insert(user)
-      .values({
+    const adminId = await insertCredentialUser(
+      tx,
+      {
         name: adminName,
         email: adminEmail,
         role: "admin",
         departmentId: board.id,
         isActive: true,
         emailVerified: true,
-      })
-      .returning({ id: user.id })
-
-    const passwordHash = await hashPassword(adminPassword)
-    const now = new Date()
-
-    await tx.insert(account).values({
-      accountId: String(createdAdmin.id),
-      providerId: "credential",
-      userId: createdAdmin.id,
-      password: passwordHash,
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    console.log(
-      `Seed concluído: setor "${board.name}" (id ${board.id}) e admin "${adminEmail}" (id ${createdAdmin.id}) criados.`,
+      },
+      await hashPassword(adminPassword),
     )
 
-    return { adminId: createdAdmin.id, departmentId: board.id }
+    console.log(
+      `Seed concluído: setor "${board.name}" (id ${board.id}) e admin "${adminEmail}" (id ${adminId}) criados.`,
+    )
+
+    return { adminId, departmentId: board.id }
+  })
+}
+
+async function insertCredentialUser(
+  tx: Transaction,
+  values: NewUser,
+  passwordHash: string,
+): Promise<number> {
+  const [created] = await tx
+    .insert(user)
+    .values(values)
+    .returning({ id: user.id })
+
+  const now = new Date()
+
+  await tx.insert(account).values({
+    accountId: String(created.id),
+    providerId: "credential",
+    userId: created.id,
+    password: passwordHash,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  return created.id
+}
+
+const QA_MIN_PASSWORD_LENGTH = 8
+
+const QA_DEPARTMENT_NAMES = ["QA Suporte", "QA Infra"] as const
+type QaDepartmentName = (typeof QA_DEPARTMENT_NAMES)[number]
+
+interface QaUserBlueprint {
+  email: string
+  name: string
+  role: Role
+  departmentName: QaDepartmentName
+}
+
+const QA_USERS: QaUserBlueprint[] = [
+  {
+    email: "qa.admin.suporte@directflow.test",
+    name: "QA Admin Suporte",
+    role: "admin",
+    departmentName: "QA Suporte",
+  },
+  {
+    email: "qa.member.suporte@directflow.test",
+    name: "QA Membro Suporte",
+    role: "member",
+    departmentName: "QA Suporte",
+  },
+  {
+    email: "qa.admin.infra@directflow.test",
+    name: "QA Admin Infra",
+    role: "admin",
+    departmentName: "QA Infra",
+  },
+]
+
+async function seedQa(): Promise<void> {
+  if (process.env.SEED_QA !== "true") return
+
+  const password = requiredEnv("SEED_QA_PASSWORD")
+  if (password.length < QA_MIN_PASSWORD_LENGTH) {
+    throw new Error(
+      `Seed abortado: SEED_QA_PASSWORD deve ter no mínimo ${QA_MIN_PASSWORD_LENGTH} caracteres.`,
+    )
+  }
+
+  const passwordHash = await hashPassword(password)
+
+  await db.transaction(async (tx) => {
+    const departmentIds = new Map<QaDepartmentName, number>()
+
+    for (const name of QA_DEPARTMENT_NAMES) {
+      const [existing] = await tx
+        .select({ id: department.id })
+        .from(department)
+        .where(sql`lower(${department.name}) = lower(${name})`)
+        .limit(1)
+
+      if (existing) {
+        departmentIds.set(name, existing.id)
+        console.log(
+          `Seed QA: setor "${name}" já existe (id ${existing.id}), reaproveitado.`,
+        )
+        continue
+      }
+
+      const [created] = await tx
+        .insert(department)
+        .values({ name, isBoard: false, isUnassigned: false })
+        .returning({ id: department.id })
+
+      departmentIds.set(name, created.id)
+      console.log(`Seed QA: setor "${name}" (id ${created.id}) criado.`)
+    }
+
+    for (const blueprint of QA_USERS) {
+      const [existing] = await tx
+        .select({ id: user.id })
+        .from(user)
+        .where(sql`lower(${user.email}) = lower(${blueprint.email})`)
+        .limit(1)
+
+      if (existing) {
+        console.log(
+          `Seed QA ignorado: já existe um usuário com o e-mail ${blueprint.email}.`,
+        )
+        continue
+      }
+
+      const departmentId = departmentIds.get(blueprint.departmentName)
+      if (departmentId === undefined) {
+        throw new Error(
+          `Seed QA: setor "${blueprint.departmentName}" não foi criado nem encontrado.`,
+        )
+      }
+
+      const userId = await insertCredentialUser(
+        tx,
+        {
+          name: blueprint.name,
+          email: blueprint.email,
+          role: blueprint.role,
+          departmentId,
+          isActive: true,
+          emailVerified: true,
+          mustChangePassword: false,
+        },
+        passwordHash,
+      )
+
+      console.log(
+        `Seed QA: usuário "${blueprint.email}" (id ${userId}) criado como ${blueprint.role} em "${blueprint.departmentName}".`,
+      )
+    }
   })
 }
 
@@ -584,6 +713,7 @@ async function seed() {
   try {
     const admin = await seedAdmin()
     await seedDemo(admin)
+    await seedQa()
   } finally {
     await db.$client.end()
   }
