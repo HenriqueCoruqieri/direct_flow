@@ -4,7 +4,8 @@ import { RotateCwIcon } from "lucide-react"
 
 import { Button } from "@/app/_components/ui/button"
 
-import AppTopBar from "../_components/app-top-bar"
+import AppTopBarFrame from "../_components/app-top-bar-frame"
+import NewTicketBlockedButton from "../_components/new-ticket-blocked-button"
 
 interface DashboardErrorProps {
   error: Error & { digest?: string }
@@ -14,7 +15,11 @@ interface DashboardErrorProps {
 const DashboardError = ({ retry }: DashboardErrorProps) => {
   return (
     <>
-      <AppTopBar />
+      <AppTopBarFrame
+        action={
+          <NewTicketBlockedButton message="Não foi possível carregar o formulário de chamado agora. Use “Tentar novamente”." />
+        }
+      />
       <div className="flex flex-col items-start gap-3 px-5 pt-5 lg:px-6">
         <h1 className="font-heading text-title font-semibold">Início</h1>
         <p className="text-sm text-muted-foreground">
