@@ -282,6 +282,12 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
     `app/_components/pill-button.tsx`
   - moldura comum a todas as telas de um grupo → `layout.tsx` do grupo, não
     componente (`app/(auth)/layout.tsx`)
+  - **exceção — peça genérica de interface** (sem regra de negócio, sem
+    conhecer entidade do domínio, reaproveitável em qualquer tela: combobox,
+    tabela de dados) → `app/_components/` desde o primeiro uso, mesmo que hoje
+    só um grupo a use (`app/_components/combobox.tsx`,
+    `app/_components/data-table/`). Componente que conhece chamado, setor,
+    pessoa ou tag segue a colocation acima.
 - **Subpasta em `app/_components/`:** só `ui/` (primitivos do shadcn), `theme/`
   e conjuntos de arquivos que formam uma peça só (`data-table/` com toolbar,
   paginação e cabeçalho). Nunca por tipo de coisa (`form/`, `brand/`, `auth/`).
