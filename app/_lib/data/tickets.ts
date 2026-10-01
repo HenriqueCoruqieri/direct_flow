@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 
 import {
   canReceiveTickets,
@@ -10,6 +11,7 @@ import {
 import type {
   InsertTicketOutcome,
   InsertTicketValues,
+  TicketDetail,
 } from "@/app/_lib/types/ticket"
 import { db } from "@/db"
 import {
@@ -19,7 +21,130 @@ import {
   ticketHistory,
   ticketTag,
   ticketTransfer,
+  user,
 } from "@/db/schema"
+
+export async function findTicketDetail(
+  id: number,
+): Promise<TicketDetail | null> {
+  const author = alias(user, "author")
+  const assignee = alias(user, "assignee")
+  const originDepartment = alias(department, "origin_department")
+  const currentDepartment = alias(department, "current_department")
+
+  const transferFrom = alias(department, "transfer_from")
+  const transferTo = alias(department, "transfer_to")
+  const requester = alias(user, "requester")
+
+  const changer = alias(user, "changer")
+  const fromDepartment = alias(department, "history_from_department")
+  const toDepartment = alias(department, "history_to_department")
+  const fromAssignee = alias(user, "history_from_assignee")
+  const toAssignee = alias(user, "history_to_assignee")
+  const fromTag = alias(tag, "history_from_tag")
+  const toTag = alias(tag, "history_to_tag")
+
+  const [ticketRows, transferRows, historyRows] = await Promise.all([
+    db
+      .select({
+        id: ticket.id,
+        title: ticket.title,
+        description: ticket.description,
+        type: ticket.type,
+        status: ticket.status,
+        priority: ticket.priority,
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        authorName: author.name,
+        assigneeName: assignee.name,
+        originDepartmentId: ticket.originDepartmentId,
+        originDepartmentName: originDepartment.name,
+        currentDepartmentId: ticket.currentDepartmentId,
+        currentDepartmentName: currentDepartment.name,
+        tagName: tag.name,
+        createdAt: ticket.createdAt,
+      })
+      .from(ticket)
+      .innerJoin(author, eq(author.id, ticket.createdBy))
+      .leftJoin(assignee, eq(assignee.id, ticket.assignedTo))
+      .innerJoin(
+        originDepartment,
+        eq(originDepartment.id, ticket.originDepartmentId),
+      )
+      .innerJoin(
+        currentDepartment,
+        eq(currentDepartment.id, ticket.currentDepartmentId),
+      )
+      .leftJoin(ticketTag, eq(ticketTag.ticketId, ticket.id))
+      .leftJoin(tag, eq(tag.id, ticketTag.tagId))
+      .where(eq(ticket.id, id))
+      .limit(1),
+    db
+      .select({
+        id: ticketTransfer.id,
+        fromDepartmentName: transferFrom.name,
+        toDepartmentId: ticketTransfer.toDepartmentId,
+        toDepartmentName: transferTo.name,
+        requestedByName: requester.name,
+        requestedAt: ticketTransfer.createdAt,
+        requestReason: ticketTransfer.requestReason,
+      })
+      .from(ticketTransfer)
+      .innerJoin(
+        transferFrom,
+        eq(transferFrom.id, ticketTransfer.fromDepartmentId),
+      )
+      .innerJoin(transferTo, eq(transferTo.id, ticketTransfer.toDepartmentId))
+      .innerJoin(requester, eq(requester.id, ticketTransfer.requestedBy))
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, id),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1),
+    db
+      .select({
+        id: ticketHistory.id,
+        event: ticketHistory.event,
+        changedAt: ticketHistory.changedAt,
+        changedByName: changer.name,
+        fromStatus: ticketHistory.fromStatus,
+        toStatus: ticketHistory.toStatus,
+        fromPriority: ticketHistory.fromPriority,
+        toPriority: ticketHistory.toPriority,
+        fromDepartmentName: fromDepartment.name,
+        toDepartmentName: toDepartment.name,
+        fromAssigneeName: fromAssignee.name,
+        toAssigneeName: toAssignee.name,
+        fromTagName: fromTag.name,
+        toTagName: toTag.name,
+        note: ticketHistory.note,
+      })
+      .from(ticketHistory)
+      .innerJoin(changer, eq(changer.id, ticketHistory.changedBy))
+      .leftJoin(
+        fromDepartment,
+        eq(fromDepartment.id, ticketHistory.fromDepartmentId),
+      )
+      .leftJoin(toDepartment, eq(toDepartment.id, ticketHistory.toDepartmentId))
+      .leftJoin(fromAssignee, eq(fromAssignee.id, ticketHistory.fromAssigneeId))
+      .leftJoin(toAssignee, eq(toAssignee.id, ticketHistory.toAssigneeId))
+      .leftJoin(fromTag, eq(fromTag.id, ticketHistory.fromTagId))
+      .leftJoin(toTag, eq(toTag.id, ticketHistory.toTagId))
+      .where(eq(ticketHistory.ticketId, id))
+      .orderBy(asc(ticketHistory.changedAt), asc(ticketHistory.id)),
+  ])
+
+  const ticketRow = ticketRows[0]
+  if (!ticketRow) return null
+
+  return {
+    ...ticketRow,
+    pendingTransfer: transferRows[0] ?? null,
+    history: historyRows,
+  }
+}
 
 export async function insertTicket(
   values: InsertTicketValues,
