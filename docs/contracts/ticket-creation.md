@@ -1,0 +1,731 @@
+# Contrato — Criação de chamado
+
+Entrada das ondas 1 e 2. As decisões estão no plano aprovado,
+`docs/plans/ticket-creation.md`, e não são repetidas aqui. Este documento é a
+referência técnica: assinaturas, sequências e textos. Padrões de outcome, de
+resultado de action e de formulário vêm de `docs/contracts/registry-tags.md` e
+`docs/contracts/registry-people.md`.
+
+Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
+`zod@4.6.5`.
+
+## Tabelas, enums e migration
+
+### `db/schema.ts` (alterado)
+
+| Objeto                             | Mudança                                                                                      |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| `history_event` (enum)             | novo valor `mudanca_tag`, no fim da lista                                                    |
+| `ticket_history.from_tag_id`       | `integer`, nullable, FK `tag.id` `on delete restrict`                                        |
+| `ticket_history.to_tag_id`         | `integer`, nullable, FK `tag.id` `on delete restrict`                                        |
+| `history_to_tag_idx`               | `index on ticket_history (to_tag_id)`, mesmo padrão de `to_department_id` e `to_assignee_id` |
+| `ticket_tag_single_per_ticket_idx` | `unique index on ticket_tag (ticket_id)`: no máximo uma tag por chamado                      |
+
+A PK `(ticket_id, tag_id)` de `ticket_tag` continua. Ficou redundante com o
+índice único, mas trocá-la seria mudança destrutiva sem ganho.
+
+Relações Drizzle: `ticketHistoryRelations` ganha `fromTag` e `toTag`
+(`relationName` `history_from_tag` e `history_to_tag`); `tagRelations` ganha
+`historyFrom` e `historyTo`. O tipo `TicketHistory` ganha `fromTagId` e
+`toTagId` (`number | null`); `HistoryEvent` ganha `"mudanca_tag"`.
+
+Nesta feature ninguém grava `mudanca_tag`, `from_tag_id` nem `to_tag_id`. Ficam
+prontos para Aprovações.
+
+### Migration `db/migrations/0007_ticket_creation.sql`
+
+Gerada por `npm run db:generate -- --name ticket_creation`, sem edição:
+
+```sql
+ALTER TYPE "public"."history_event" ADD VALUE 'mudanca_tag';
+ALTER TABLE "ticket_history" ADD COLUMN "from_tag_id" integer;
+ALTER TABLE "ticket_history" ADD COLUMN "to_tag_id" integer;
+ALTER TABLE "ticket_history" ADD CONSTRAINT "ticket_history_from_tag_id_tag_id_fk" FOREIGN KEY ("from_tag_id") REFERENCES "public"."tag"("id") ON DELETE restrict ON UPDATE no action;
+ALTER TABLE "ticket_history" ADD CONSTRAINT "ticket_history_to_tag_id_tag_id_fk" FOREIGN KEY ("to_tag_id") REFERENCES "public"."tag"("id") ON DELETE restrict ON UPDATE no action;
+CREATE INDEX "history_to_tag_idx" ON "ticket_history" USING btree ("to_tag_id");
+CREATE UNIQUE INDEX "ticket_tag_single_per_ticket_idx" ON "ticket_tag" USING btree ("ticket_id");
+```
+
+**Por que é aplicável.** O migrador do Drizzle roda **todas** as migrations
+pendentes numa única transação (`node_modules/drizzle-orm/pg-core/dialect.js`,
+`migrate`). Desde o Postgres 12, `ALTER TYPE ... ADD VALUE` é aceito dentro de
+transação; o que o Postgres proíbe é **usar** o valor novo antes do commit
+(`unsafe use of new value`). Nenhuma instrução da `0007` usa `mudanca_tag`, então
+ela aplica. Consequência para o futuro: migration que use o valor (default,
+`CHECK`, `INSERT`) não pode ser aplicada no mesmo `db:migrate` que a `0007`. Como
+a `0007` é aplicada antes da feature de Aprovações começar, isso não acontece.
+
+O `CREATE UNIQUE INDEX` não falha: o `df-debug` confirmou que nenhum chamado tem
+duas tags. Os 3 chamados antigos sem tag ficam como estão.
+
+Quem aplica (`npm run db:migrate`) é o usuário.
+
+### Lidas e gravadas pelo fluxo
+
+- `ticket` — grava
+- `ticket_tag` — grava (uma linha)
+- `ticket_history` — grava (`criacao` e, se outro setor, `transferencia_solicitada`)
+- `ticket_transfer` — grava (só outro setor)
+- `tag` — lê `id`, `name`, `department_id`, `is_active`
+- `department` — lê `id`, `name`, `is_active`, `is_board`, `is_unassigned`
+- `users` + `department` — lidos por `getAccountFacts` (`app/_lib/auth/`)
+
+## Tipos — `app/_lib/types/`
+
+### `app/_lib/types/ticket.ts` (acrescido)
+
+```ts
+export type { HistoryEvent, TicketPriority, TicketStatus, TicketType }
+
+export type InitialTicketStatus = Extract<
+  TicketStatus,
+  "aberto" | "aguardando_aprovacao"
+>
+
+export interface TicketAuthorFacts {
+  isActive: boolean
+  mustChangePassword: boolean
+  isUnassigned: boolean
+  departmentId: number
+}
+
+export type TicketCreationBlockReason =
+  | "USER_INACTIVE"
+  | "PASSWORD_CHANGE_REQUIRED"
+  | "DEPARTMENT_UNASSIGNED"
+  | "DEPARTMENT_WITHOUT_TAGS"
+
+export interface TicketCreationAllowed {
+  ok: true
+}
+
+export interface TicketCreationBlocked {
+  ok: false
+  reason: TicketCreationBlockReason
+}
+
+export type TicketCreationCheck = TicketCreationAllowed | TicketCreationBlocked
+
+export interface TicketTagFacts {
+  departmentId: number
+  isActive: boolean
+}
+
+export interface InsertTicketValues {
+  title: string
+  description: string
+  type: TicketType
+  tagId: number
+  destinationDepartmentId: number
+  createdBy: number
+  originDepartmentId: number
+}
+
+export interface TicketSaved {
+  status: "saved"
+  ticketId: number
+  ticketStatus: InitialTicketStatus
+  destinationDepartmentName: string
+}
+
+export interface TicketInvalidTag {
+  status: "invalid_tag"
+}
+
+export interface TicketInvalidDestination {
+  status: "invalid_destination"
+}
+
+export type InsertTicketOutcome =
+  TicketSaved | TicketInvalidTag | TicketInvalidDestination
+
+export interface NewTicketFormAvailable {
+  canCreate: true
+  authorDepartmentId: number
+  defaultDestinationId: number | null
+  tags: TagOption[]
+  destinations: DepartmentOption[]
+}
+
+export interface NewTicketFormBlocked {
+  canCreate: false
+  reason: TicketCreationBlockReason
+  message: string
+}
+
+export type NewTicketFormOptions = NewTicketFormAvailable | NewTicketFormBlocked
+```
+
+- `TicketAuthorFacts` é um subconjunto de `RegistryAccessFacts`: o retorno de
+  `getAccountFacts()` entra direto, sem conversão.
+- `TicketSaved.status` é o discriminante do outcome (padrão do projeto); o status
+  do chamado vai em `ticketStatus`. `destinationDepartmentName` sai da própria
+  transação, para a mensagem do toast sem consulta extra.
+- `NewTicketFormOptions` é serializável (só primitivos e arrays): pode ir de
+  Server Component para Client Component por props.
+- `defaultDestinationId` é o setor do autor; `null` só se ele não estiver entre os
+  destinos (setor inativo por corrida).
+
+### `app/_lib/types/tag.ts` (acrescido)
+
+```ts
+export interface TagOption {
+  id: number
+  name: string
+}
+```
+
+### `app/_lib/types/department.ts` (acrescido)
+
+```ts
+export interface DepartmentAvailability {
+  isActive: boolean
+  isUnassigned: boolean
+}
+```
+
+## Domínio — `app/_lib/domain/`
+
+### `app/_lib/domain/ticket.ts` (acrescido)
+
+```ts
+export const TICKET_TYPE_LABELS: Record<TicketType, string>
+export const TICKET_TYPES: readonly TicketType[]
+export const TICKET_TITLE_MIN_LENGTH = 3
+export const TICKET_TITLE_MAX_LENGTH = 200
+export const TICKET_DESCRIPTION_MIN_LENGTH = 10
+export const TICKET_DESCRIPTION_MAX_LENGTH = 5000
+export const INITIAL_TICKET_PRIORITY: TicketPriority // "media"
+export const TICKET_CREATION_BLOCK_MESSAGES: Record<
+  TicketCreationBlockReason,
+  string
+>
+
+export const formatTicketNumber: (ticketId: number) => string
+export const checkTicketCreation: (
+  author: TicketAuthorFacts,
+  activeTagCount: number,
+) => TicketCreationCheck
+export const canReceiveTickets: (department: DepartmentAvailability) => boolean
+export const ticketDestinationDepartments: (
+  options: readonly DepartmentOption[],
+) => DepartmentOption[]
+export const isUsableTicketTag: (
+  tag: TicketTagFacts,
+  authorDepartmentId: number,
+) => boolean
+export const requiresApproval: (
+  originDepartmentId: number,
+  destinationDepartmentId: number,
+) => boolean
+export const initialTicketStatusFor: (
+  originDepartmentId: number,
+  destinationDepartmentId: number,
+) => InitialTicketStatus
+export const buildNewTicketFormOptions: (
+  author: TicketAuthorFacts,
+  tags: readonly TagOption[],
+  departmentOptions: readonly DepartmentOption[],
+) => NewTicketFormOptions
+export const describeApprovalNotice: (destinationName: string) => string
+export const describeTicketCreated: (saved: TicketSaved) => string
+```
+
+| Nome                           | Semântica                                                                                                                                                                                                |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TICKET_TYPES`                 | Os 6 valores de `ticket_type`, na ordem de exibição. Derivado das chaves de `TICKET_TYPE_LABELS`: o `satisfies Record` garante cobertura total do enum. Alimenta `z.enum` e o `Select`                   |
+| `TICKET_TYPE_LABELS`           | `Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`. Única fonte dos rótulos em todo o projeto                                                                             |
+| `TICKET_*_LENGTH`              | Limites de título e descrição, para o schema e para contador de caracteres na UI                                                                                                                         |
+| `INITIAL_TICKET_PRIORITY`      | `media`. O autor não escolhe prioridade                                                                                                                                                                  |
+| `formatTicketNumber`           | `42` → `#42`. Número visível do chamado é o `ticket.id`                                                                                                                                                  |
+| `checkTicketCreation`          | Nesta ordem: inativo → `USER_INACTIVE`; `mustChangePassword` → `PASSWORD_CHANGE_REQUIRED`; Não alocado → `DEPARTMENT_UNASSIGNED`; `activeTagCount < 1` → `DEPARTMENT_WITHOUT_TAGS`; senão `{ ok: true }` |
+| `canReceiveTickets`            | Ativo e não Não alocado (`isAssignableDepartment`). **A** regra de destino válido, usada pela data layer na transação                                                                                    |
+| `ticketDestinationDepartments` | Filtra com a mesma regra (`assignableDepartments`) e põe a Diretoria primeiro, preservando a ordem recebida no resto                                                                                     |
+| `isUsableTicketTag`            | Tag ativa **e** do setor do autor                                                                                                                                                                        |
+| `requiresApproval`             | Destino diferente da origem                                                                                                                                                                              |
+| `initialTicketStatusFor`       | Mesmo setor → `aberto`; outro → `aguardando_aprovacao`                                                                                                                                                   |
+| `buildNewTicketFormOptions`    | Bloqueado → `{ canCreate: false, reason, message }`. Liberado → tags recebidas, destinos de `ticketDestinationDepartments`, `defaultDestinationId` = setor do autor quando listado                       |
+| `describeApprovalNotice`       | Aviso do formulário quando o destino é outro setor (texto abaixo)                                                                                                                                        |
+| `describeTicketCreated`        | Mensagem de sucesso da action (texto abaixo)                                                                                                                                                             |
+
+Textos:
+
+| Caso                                | Texto                                                                                                             |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `USER_INACTIVE`                     | `Sua conta está desativada. Não é possível abrir chamados.`                                                       |
+| `PASSWORD_CHANGE_REQUIRED`          | `Defina a sua senha antes de abrir chamados.`                                                                     |
+| `DEPARTMENT_UNASSIGNED`             | `Sua conta ainda não está em um setor. Peça a um administrador que coloque você em um setor para abrir chamados.` |
+| `DEPARTMENT_WITHOUT_TAGS`           | `Seu setor ainda não tem tags ativas. Peça ao administrador do setor que cadastre uma tag para abrir chamados.`   |
+| `describeApprovalNotice("RH")`      | `O chamado vai aguardar a aprovação do administrador de RH. Depois de enviado, você não poderá mais alterá-lo.`   |
+| `describeTicketCreated`, `aberto`   | `Chamado #42 criado.`                                                                                             |
+| `describeTicketCreated`, aguardando | `Chamado #42 enviado para aprovação de RH.`                                                                       |
+
+`PASSWORD_CHANGE_REQUIRED` não está no plano; entra como defesa, igual a
+`resolveRegistryAccess`. A tela nunca o mostra (o layout manda para
+`/set-password`), mas a action recusa quem chamá-la direto com a senha padrão.
+
+### `app/_lib/domain/department.ts` (acrescido, mesma API)
+
+```ts
+export const isAssignableDepartment: (
+  department: DepartmentAvailability,
+) => boolean
+```
+
+`assignableDepartments` passou a filtrar com ela. Comportamento idêntico.
+
+## Validação — `app/_lib/validation/ticket.ts` (novo)
+
+```ts
+export const ticketTitleSchema
+export const ticketDescriptionSchema
+export const ticketTypeSchema
+
+export const createTicketSchema // z.object({ title, description, type, departmentId, tagId })
+export type CreateTicketInput = {
+  title: string
+  description: string
+  type: TicketType
+  departmentId: number
+  tagId: number
+}
+```
+
+| Campo          | Regra                        | Mensagem                                             |
+| -------------- | ---------------------------- | ---------------------------------------------------- |
+| `title`        | ausente ou vazio após `trim` | `Informe o título.`                                  |
+| `title`        | < 3 após `trim`              | `O título precisa ter no mínimo 3 caracteres.`       |
+| `title`        | > 200 após `trim`            | `O título precisa ter no máximo 200 caracteres.`     |
+| `description`  | ausente ou vazia após `trim` | `Descreva o chamado.`                                |
+| `description`  | < 10 após `trim`             | `A descrição precisa ter no mínimo 10 caracteres.`   |
+| `description`  | > 5000 após `trim`           | `A descrição precisa ter no máximo 5000 caracteres.` |
+| `type`         | fora de `TICKET_TYPES`       | `Selecione o tipo do chamado.`                       |
+| `departmentId` | inteiro positivo (destino)   | `Selecione o setor de destino.`                      |
+| `tagId`        | inteiro positivo             | `Selecione a tag.`                                   |
+
+- `departmentId` é o **destino**. Origem e autor não estão no schema e nunca vêm
+  do cliente.
+- Ids são `number` sem `coerce` (mesmo motivo de `createTagSchema`). Setor de
+  destino e tag usam o `Combobox` (`app/_components/combobox.tsx`), que devolve
+  o próprio `id` numérico no `onChange`: não há conversão na UI.
+- Se a tag pertence ao setor do autor e se o destino aceita chamados não é
+  formato: é checado na transação.
+
+## `df-auth` — nada novo
+
+`getAccountFacts()` (`app/_lib/auth/account-facts.ts`) já traz `isActive`,
+`mustChangePassword`, `departmentId` e `isUnassigned`, lidos do banco por
+request com `cache`. `getSession()` dá o `id` do autor.
+
+## `df-data` — o que criar
+
+### `app/_lib/data/tags.ts` (acrescido)
+
+```ts
+export async function listActiveDepartmentTags(
+  departmentId: number,
+): Promise<TagOption[]>
+```
+
+- `select id, name from tag where department_id = $1 and is_active order by
+lower(name), id`.
+- Serve ao formulário (opções de tag) e à contagem de `checkTicketCreation`
+  (`tags.length`). Não filtra pelo `is_active` do setor: o setor do autor ativo é
+  garantido por quem chama.
+
+### Destinos — sem função nova
+
+`listDepartmentOptions()` (`app/_lib/data/departments.ts`) já devolve todos os
+setores com `isActive`, `isBoard` e `isUnassigned`. O filtro e a ordem saem de
+`ticketDestinationDepartments` (domínio).
+
+### `app/_lib/data/tickets.ts` (novo)
+
+```ts
+export async function insertTicket(
+  values: InsertTicketValues,
+): Promise<InsertTicketOutcome>
+```
+
+Uma transação (`db.transaction`). Sequência, nesta ordem:
+
+1. **Tag** — `select department_id, is_active from tag where id = $tagId for
+share`. Sem linha ou `!isUsableTicketTag(row, values.originDepartmentId)` →
+   `{ status: "invalid_tag" }`, sem gravar nada.
+2. **Destino** — `select name, is_active, is_unassigned from department where id
+= $destinationDepartmentId for share`. Sem linha ou `!canReceiveTickets(row)` →
+   `{ status: "invalid_destination" }`, sem gravar nada.
+3. `const ticketStatus = initialTicketStatusFor(values.originDepartmentId,
+values.destinationDepartmentId)`.
+4. `insert into ticket` com `title`, `description`, `type`, `status:
+ticketStatus`, `priority: INITIAL_TICKET_PRIORITY`, `createdBy`,
+   `originDepartmentId` e `currentDepartmentId` **ambos** =
+   `values.originDepartmentId`; `returning id, created_at`. `assignedTo`,
+   `dueAt`, `firstResponseAt` ficam nulos.
+5. `insert into ticket_tag (ticket_id, tag_id, created_at)` com `created_at =
+ticket.created_at`.
+6. `insert into ticket_history`, evento `criacao`: `changedBy = createdBy`,
+   `toStatus = ticketStatus`, `toPriority = INITIAL_TICKET_PRIORITY`,
+   `toDepartmentId = originDepartmentId`, `changedAt = ticket.created_at`. Demais
+   colunas nulas.
+7. Só se `requiresApproval(origin, destination)`:
+   - `insert into ticket_transfer`: `ticketId`, `fromDepartmentId = origin`,
+     `toDepartmentId = destination`, `requestedBy = createdBy`, `status`
+     no default (`pendente`), `requestReason` nulo, `createdAt =
+ticket.created_at`;
+   - `insert into ticket_history`, evento `transferencia_solicitada`:
+     `changedBy = createdBy`, `fromDepartmentId = origin`, `toDepartmentId =
+destination`, `changedAt = ticket.created_at`. Colunas de status nulas: o
+     status inicial já está na linha `criacao`.
+8. `{ status: "saved", ticketId, ticketStatus, destinationDepartmentName:
+departmentRow.name }`.
+
+Detalhes que o contrato fixa:
+
+- **Travas.** Tag antes do setor, a mesma ordem de `updateTagActive` (tag `for
+update`, setor `for share`). O `for share` na tag impede desativá-la entre a
+  checagem e o insert; o do setor impede desativá-lo (`updateDepartmentActive`
+  pega `for update`). Os dois `for share` não conflitam entre si nem com outra
+  criação.
+- **Regra fora da data layer.** Validade de tag e destino, status inicial e
+  necessidade de transferência vêm do domínio; a função não repete as
+  condições em SQL.
+- **Precedência.** Tag e destino inválidos ao mesmo tempo → `invalid_tag`.
+- **Mesmo instante.** Todas as linhas usam o `created_at` do ticket. Quem ler o
+  histórico ordena por `changed_at, id`.
+- Exceção (violação de `CHECK`, FK, índice único) sobe para a action, que a
+  trata como falha inesperada. Nada é gravado: a transação é desfeita.
+- A função não decide quem pode criar: `checkTicketCreation` já rodou na action.
+
+## `df-actions` — o que criar
+
+### `app/_lib/actions/tickets.ts` (novo, `"use server"`)
+
+```ts
+export type TicketErrorCode =
+  "INVALID_INPUT" | "FORBIDDEN" | "INVALID_TAG" | "INVALID_DESTINATION"
+
+export interface CreateTicketSuccess {
+  ok: true
+  message: string
+  ticketId: number
+}
+
+export interface TicketActionFailure {
+  ok: false
+  message: string
+  code?: TicketErrorCode
+}
+
+export type CreateTicketResult = CreateTicketSuccess | TicketActionFailure
+
+export const createTicket: (
+  input: CreateTicketInput,
+) => Promise<CreateTicketResult>
+```
+
+Sequência:
+
+1. `const actor = await getSession()`; `null` → `FORBIDDEN` genérico.
+2. `try`: `const facts = await getAccountFacts()`; `null` → `FORBIDDEN`
+   genérico. Depois `const tags = await listActiveDepartmentTags(facts.departmentId)`.
+3. `checkTicketCreation(facts, tags.length)`; bloqueado → `FORBIDDEN` com
+   `TICKET_CREATION_BLOCK_MESSAGES[reason]`. Tudo isso antes do parse, como nas
+   outras actions.
+4. `createTicketSchema.safeParse(input)`; inválido → `INVALID_INPUT` com a
+   primeira `issue.message`.
+5. `insertTicket({ title, description, type, tagId, destinationDepartmentId:
+data.departmentId, createdBy: actor.id, originDepartmentId:
+facts.departmentId })` dentro do `try`.
+6. `catch` → `console.error("[createTicket]", error)` e falha inesperada, sem
+   `code`.
+7. Traduz o outcome (tabela). `saved` → `revalidatePath("/dashboard")` e
+   `{ ok: true, message: describeTicketCreated(outcome), ticketId:
+outcome.ticketId }`.
+
+**Autor e origem vêm do banco.** `createdBy` é `actor.id` (sessão);
+`originDepartmentId` é `facts.departmentId` (consulta fresca). Nunca
+`actor.departmentId` (pode vir do cookie de sessão) e nunca o formulário.
+
+| Situação                               | `code`                | Mensagem                                                                |
+| -------------------------------------- | --------------------- | ----------------------------------------------------------------------- |
+| criado no próprio setor                | —                     | `describeTicketCreated` → `Chamado #42 criado.`                         |
+| criado para outro setor                | —                     | `describeTicketCreated` → `Chamado #42 enviado para aprovação de RH.`   |
+| sem sessão ou `getAccountFacts()` nulo | `FORBIDDEN`           | `Você não tem permissão para abrir chamados.`                           |
+| `checkTicketCreation` bloqueou         | `FORBIDDEN`           | `TICKET_CREATION_BLOCK_MESSAGES[reason]`                                |
+| schema falhou                          | `INVALID_INPUT`       | primeira `issue.message` do Zod                                         |
+| `invalid_tag`                          | `INVALID_TAG`         | `Esta tag não está disponível. Escolha uma tag ativa do seu setor.`     |
+| `invalid_destination`                  | `INVALID_DESTINATION` | `Este setor não pode receber chamados. Escolha outro setor de destino.` |
+| falha inesperada                       | —                     | `Não foi possível abrir o chamado agora. Tente novamente.`              |
+
+Sem e-mail. Nenhum SQL na action.
+
+## `df-ui` — o que criar e mudar
+
+### O problema do `error.tsx`
+
+Hoje `AppTopBar` é um componente sem dado, importado por
+`app/(app)/dashboard/page.tsx` (Server) **e** por
+`app/(app)/dashboard/error.tsx` (`"use client"`, obrigatório em error boundary).
+Se `AppTopBar` virar async Server Component que lê `app/_lib/auth` e
+`app/_lib/data`:
+
+- o import pelo `error.tsx` puxa o componente para o grafo do cliente: componente
+  async não é suportado em Client Component, e o build tenta empacotar
+  `next/headers`, `@/db` e `pg` para o navegador e falha;
+- além disso viola a seção 2 do `stack.md` (Client Component não importa
+  `app/_lib/data` nem `app/_lib/auth`);
+- e não faria sentido: o boundary aparece justamente quando a página falhou, e a
+  leitura de dados da barra pode ter sido a causa.
+
+Server Component não pode ser importado por Client Component; só pode chegar a ele
+como prop (`node_modules/next/dist/docs/01-app/01-getting-started/05-server-and-client-components.md`,
+"Interleaving Server and Client Components"). E o `error.tsx` não recebe nada da
+página.
+
+### Solução: separar moldura e dado
+
+| Arquivo (`app/(app)/_components/`) | Tipo                             | Papel                                                                                                                                 |
+| ---------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `app-top-bar-frame.tsx`            | sem diretiva, sem hook, sem dado | Moldura atual (busca + espaço do botão). Prop `action: React.ReactNode`. Importável pelo servidor e pelo `error.tsx`                  |
+| `app-top-bar.tsx`                  | async Server Component           | Carrega o dado, monta `NewTicketFormOptions`, renderiza `AppTopBarFrame` com o botão certo. Mesmo nome e import de hoje para a página |
+| `new-ticket-dialog.tsx`            | `"use client"`                   | Botão "Novo chamado" + `Dialog` + formulário. Recebe `options: NewTicketFormAvailable`                                                |
+| `new-ticket-blocked-button.tsx`    | `"use client"`                   | Botão "Novo chamado" desabilitado com explicação. Recebe `message: string`. Usado pelo `AppTopBar` (bloqueio) e pelo `error.tsx`      |
+
+O formulário pode ficar num arquivo próprio (`new-ticket-form.tsx`) se o dialog
+crescer; decisão do `df-ui`.
+
+`app/(app)/dashboard/error.tsx` passa a renderizar
+`<AppTopBarFrame action={<NewTicketBlockedButton message="Não foi possível carregar o formulário de chamado agora. Use “Tentar novamente”." />} />`.
+A barra mantém a mesma altura e a busca continua visível.
+
+### `app/(app)/_components/app-top-bar.tsx` (async Server Component)
+
+```ts
+const facts = await getAccountFacts()
+if (!facts) notFound()
+const [tags, departmentOptions] = await Promise.all([
+  listActiveDepartmentTags(facts.departmentId),
+  listDepartmentOptions(),
+])
+const options = buildNewTicketFormOptions(facts, tags, departmentOptions)
+```
+
+- `options.canCreate` → `<NewTicketDialog options={options} />`; senão
+  `<NewTicketBlockedButton message={options.message} />`.
+- A página continua só com `<AppTopBar />`. Não recebe props: segue reutilizável
+  por Fila, Meus chamados e Aprovações.
+- `getAccountFacts` é `cache`: a consulta é a mesma do layout no mesmo request.
+
+### `NewTicketBlockedButton`
+
+- O botão tem o mesmo visual do botão ativo, desabilitado.
+- A explicação precisa funcionar com toque e teclado. Botão com `disabled`
+  nativo não recebe foco nem evento, então o gatilho do `Popover` é um
+  `<button aria-disabled="true">`: continua focável, é anunciado como
+  desabilitado e não dispara ação nenhuma além de mostrar a explicação.
+- O `Popover` abre no clique, no toque e no foco por teclado. `Tooltip`
+  sozinho não abre no celular.
+- A mensagem também fica num `span` `sr-only` permanente, apontado pelo
+  `aria-describedby` do botão, para o leitor de tela anunciá-la sem depender do
+  `Popover` estar aberto.
+- No teclado, o primeiro `Enter`/`Espaço` fecha o `Popover` que o foco abriu
+  (o Radix trata a tecla como alternância do gatilho). É aceito: a mensagem
+  segue disponível pelo `aria-describedby`, e uma nova tecla reabre.
+
+### `NewTicketDialog` (React Hook Form + `zodResolver(createTicketSchema)`)
+
+Campos, nesta ordem, todos obrigatórios, com `field` do shadcn:
+
+| Campo            | Componente | Opções / padrão                                                                                                                                    |
+| ---------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Título           | `Input`    | contador opcional com `TICKET_TITLE_MAX_LENGTH`                                                                                                    |
+| Descrição        | `Textarea` | `npx shadcn@latest add textarea` (trocar o import do `cn`); contador opcional com `TICKET_DESCRIPTION_MAX_LENGTH`                                  |
+| Tipo             | `Select`   | `TICKET_TYPES` com `TICKET_TYPE_LABELS`; sem padrão                                                                                                |
+| Setor de destino | `Combobox` | `options.destinations` na ordem recebida, rótulo `name`; padrão `options.defaultDestinationId`; busca `Buscar setor…`                              |
+| Tag do seu setor | `Combobox` | `options.tags`, rótulo `name`; sem padrão (mesmo com uma só, o autor escolhe); busca `Buscar tag…`. Rótulo deixa claro que é tag do setor do autor |
+
+- **Por que `Combobox` em setor e tag.** As duas listas crescem com o cadastro
+  e podem ficar grandes; o `Tipo` é fixo em 6 valores e continua `Select`. O
+  `Combobox` (API em "Peças compartilhadas" de
+  `docs/contracts/registry-people.md`) filtra pelo rótulo enquanto se digita,
+  sem diferenciar maiúsculas nem acentos (`configuracao` acha `Configuração`,
+  `infrá` acha `Infra`); navega por teclado (setas com volta ao início,
+  `Enter` escolhe, `Esc` fecha só a lista); e a lista rola dentro do dialog,
+  inclusive pela roda do mouse, com altura máxima fixa.
+- Destino diferente de `options.authorDepartmentId` (use `requiresApproval`) →
+  mostrar `describeApprovalNotice(nome do destino)` abaixo do campo.
+- Rótulo do destino: `option.name`. Se quiser o selo da Diretoria, mova
+  `departmentOptionLabel` de `app/(app)/registry/_components/` para
+  `app/(app)/_components/` (passa a ter dois usuários) em vez de copiar.
+- Submit chama `createTicket(values)`:
+  - `ok` → `toast.success(result.message)`, `form.reset()`, fecha o dialog.
+    Sem `router.refresh()`: o card do Início atualiza pelo `revalidatePath` da
+    action.
+  - `INVALID_TAG` → erro no campo `tagId` com `result.message` e
+    `router.refresh()` (a lista de tags pode estar velha).
+  - `INVALID_DESTINATION` → erro no campo `departmentId` e `router.refresh()`.
+  - Nos dois casos, `setError(..., { shouldFocus: true })`: o `field.ref`
+    chega ao gatilho do `Combobox`, que recebe o foco, fica com
+    `aria-invalid` e aponta o erro pelo `aria-describedby`.
+  - `INVALID_INPUT` → `toast.error(result.message)` (o `zodResolver` já pega no
+    cliente; aqui só chega envio forjado ou divergência).
+  - `FORBIDDEN` → `toast.error(result.message)`, fecha o dialog e
+    `router.refresh()`: a barra volta com o botão bloqueado.
+  - sem `code` → `toast.error(result.message)`, dialog aberto, valores mantidos.
+- Botão de envio desabilitado enquanto `isSubmitting`.
+- Fechar o dialog descarta o rascunho (`form.reset()` no `onOpenChange(false)`).
+- Client Components não importam `@/db/*`, `drizzle-orm`, `app/_lib/data` nem
+  `app/_lib/auth`. Importam só `app/_lib/domain`, `app/_lib/validation`,
+  `app/_lib/types` e a action.
+
+## Regras das próximas features (sem código nesta)
+
+Registradas para que o desenho de agora não as impeça. Cada feature terá plano e
+contrato próprios; o que está aqui é o ponto de partida, não a especificação.
+
+### Aprovações
+
+- Quem decide: o admin do setor de **destino** (`ticket_transfer.to_department_id`),
+  com o mesmo alcance de `canManageTagsOf` (diretor decide por qualquer setor,
+  regra do ADR 011).
+- **Aprovar**: escolhe uma tag ativa do **próprio** setor, obrigatória, que
+  **substitui** a do autor (`update ticket_tag set tag_id`, a linha continua
+  única pelo `ticket_tag_single_per_ticket_idx`). Na mesma transação:
+  `ticket_transfer.status = aprovado`, `reviewed_by`, `reviewed_at`;
+  `ticket.current_department_id = destino`, `status = aberto`;
+  `ticket_history` `transferencia_aprovada` (from/to department, from/to status)
+  e `mudanca_tag` com `from_tag_id`/`to_tag_id`.
+- **Recusar**: `ticket_transfer.status = rejeitado` com `review_note`; o chamado
+  continua no setor do autor (nunca saiu: `current = origin`) e volta a
+  `aberto`; histórico `transferencia_rejeitada` (from/to status). A tag do autor
+  fica.
+- A migration da Aprovações não pode ser aplicada no mesmo `db:migrate` que a
+  `0007` se usar `mudanca_tag` (ver "Por que é aplicável").
+
+### Detalhe e edição pelo autor
+
+- O autor só age sobre o chamado quando: `current_department_id` = setor dele,
+  **sem** `ticket_transfer` pendente e `status <> fechado`. Enquanto
+  `aguardando_aprovacao` para outro setor, não age (o plano: "o autor perde o
+  controle").
+- Toda movimentação gera linha em `ticket_history`; nada é `UPDATE` destrutivo
+  sobre o histórico.
+
+### Conclusão
+
+- `resolvido` abre uma janela de **7 dias** em que o chamado ainda é editável
+  (correções, complementos, evidências).
+- Depois disso vira `fechado` automaticamente e fica imutável; é a partir daí que
+  o backoffice analisa.
+- O mecanismo da troca (job agendado ou cálculo na leitura) é decidido nessa
+  feature, com ADR próprio. Nada nesta feature presume um ou outro.
+
+## Riscos
+
+1. **Envio forjado** (tag de outro setor ou inativa, destino Não alocado,
+   inativo ou inexistente): recusado na transação com `INVALID_TAG` /
+   `INVALID_DESTINATION`; nada gravado.
+2. **Chamado parado** em `aguardando_aprovacao` até a tela de Aprovações existir.
+   Aceito para teste.
+3. **Tag do autor** em chamado de outro setor até a Aprovações substituí-la.
+4. **Início mais caro**: duas leituras pequenas por abertura (tags do setor e
+   setores). A de conta é compartilhada com o layout pelo `cache`.
+5. **Autor movido no meio do envio.** `getAccountFacts` lê o setor antes da
+   transação; se um admin mover o autor de setor nesses milissegundos, a origem
+   é o setor anterior e a tag precisa ser desse setor. Aceito, como o risco 3 de
+   Pessoas.
+6. **Título com emoji no limite.** O Zod conta unidades UTF-16 e o `CHECK
+ticket_title_length` conta caracteres: um título como `a😀` passa no schema
+   (3) e falha no banco (2) como falha inesperada. Raro; aceito.
+7. **Nome do enum em português** (`mudanca_tag`): segue o padrão atual; tradução
+   dos valores é decisão separada, com migration própria.
+
+## Critério de pronto
+
+Os do plano, com os nomes técnicos:
+
+1. Próprio setor: membro cria com tag do próprio setor → `ticket.status =
+aberto`, `origin = current` = setor do autor, `priority = media`, 1 linha em
+   `ticket_tag`, 1 linha em `ticket_history` (`criacao`, `to_status = aberto`),
+   nenhum `ticket_transfer`; toast `Chamado #N criado.`; card "Chamados no
+   período" do Início +1.
+2. Outro setor: `status = aguardando_aprovacao`, `current = origin` = setor do
+   autor, `ticket_transfer` `pendente` origem → destino com `requested_by` =
+   autor, `ticket_history` `criacao` + `transferencia_solicitada` (from/to
+   department), tag do setor do autor; toast `Chamado #N enviado para aprovação
+de <setor>.`; card do Início +1 (o chamado ainda está no setor do autor).
+3. Validação no campo: sem tag, sem tipo, título < 3 ou > 200, descrição < 10 ou
+   > 5000 (após `trim`).
+4. Forjado: tag de outro setor → `INVALID_TAG`; destino Não alocado ou inativo →
+   `INVALID_DESTINATION`; nenhuma linha nova em nenhuma das quatro tabelas.
+5. Banco, só leitura: `ticket_tag_single_per_ticket_idx` existe como índice
+   único em `ticket_tag (ticket_id)` e nenhum chamado tem mais de uma tag;
+   `enum_range(null::history_event)` contém `mudanca_tag`; `ticket_history` tem
+   `from_tag_id` e `to_tag_id`.
+6. Bloqueios: pessoa no Não alocado e pessoa de setor sem tag ativa veem o botão
+   desabilitado com a mensagem de `TICKET_CREATION_BLOCK_MESSAGES`; a action
+   chamada direto devolve `FORBIDDEN`.
+7. `npx tsc --noEmit`, `npm run lint` e `npm run build` passam; `df-reviewer`
+   sem bloqueante; `df-qa` aprova os cenários abaixo.
+
+## Cenários para o `df-qa`
+
+Usuários e setores de `docs/contracts/qa-seed.md`. Todo título criado começa com
+`[QA]`. Tags criadas pelo teste começam com `[QA]`.
+
+| #   | Quem              | Preparação                                                                          | Ação                                                                               | Esperado                                                                                                                                                                                                                                                                          |
+| --- | ----------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | QA Membro Suporte | QA Suporte sem tag ativa (desativar as existentes como QA Admin Suporte, se houver) | abrir o Início                                                                     | botão "Novo chamado" desabilitado; explicação `DEPARTMENT_WITHOUT_TAGS` no toque/clique e no foco                                                                                                                                                                                 |
+| 2   | QA Admin Suporte  | —                                                                                   | criar tag `[QA] Acesso` em QA Suporte; QA Admin Infra cria `[QA] Rede` em QA Infra | tags ativas                                                                                                                                                                                                                                                                       |
+| 3   | QA Membro Suporte | cenário 2                                                                           | abrir o dialog                                                                     | destino pré-selecionado QA Suporte; Diretoria primeiro na lista; Não alocado e setores inativos ausentes; tag lista só `[QA] Acesso` (sem `[QA] Rede`)                                                                                                                            |
+| 4   | QA Membro Suporte | dialog aberto                                                                       | enviar vazio; título `ab`; descrição `curta`                                       | erros no campo com os textos da tabela de validação; nenhum request de action                                                                                                                                                                                                     |
+| 5   | QA Membro Suporte | anotar o número do card do Início                                                   | criar `[QA] Próprio setor`, tipo Dúvida, destino QA Suporte, tag `[QA] Acesso`     | toast `Chamado #N criado.`; dialog fecha; card +1; no banco os itens do critério 1                                                                                                                                                                                                |
+| 6   | QA Membro Suporte | —                                                                                   | criar `[QA] Outro setor`, destino QA Infra, tag `[QA] Acesso`                      | aviso `describeApprovalNotice("QA Infra")` antes de enviar; toast `Chamado #N enviado para aprovação de QA Infra.`; card +1; banco conforme critério 2                                                                                                                            |
+| 7   | QA Membro Suporte | dialog aberto                                                                       | forjar `tagId` = id de `[QA] Rede` (alterar o payload da action)                   | `INVALID_TAG`, erro no campo Tag; nenhuma linha nova em `ticket`, `ticket_tag`, `ticket_history`, `ticket_transfer`                                                                                                                                                               |
+| 8   | QA Membro Suporte | dialog aberto                                                                       | forjar `departmentId` = id do Não alocado; depois id de um setor inativo           | `INVALID_DESTINATION`, erro no campo Destino; nada gravado                                                                                                                                                                                                                        |
+| 9   | QA Admin Suporte  | dialog aberto pelo membro                                                           | desativar `[QA] Acesso`; o membro envia                                            | `FORBIDDEN` com `DEPARTMENT_WITHOUT_TAGS` (era a única tag); dialog fecha; barra volta bloqueada                                                                                                                                                                                  |
+| 10  | Diretor           | —                                                                                   | mover QA Membro Suporte para o Não alocado; o membro abre o Início                 | botão desabilitado com `DEPARTMENT_UNASSIGNED`. Ao fim, mover de volta para QA Suporte e reativar `[QA] Acesso`                                                                                                                                                                   |
+| 11  | banco, só leitura | —                                                                                   | consultar `pg_indexes`, `ticket_tag`, `enum_range` e `information_schema.columns`  | `indexdef` de `ticket_tag_single_per_ticket_idx` é `CREATE UNIQUE INDEX ... (ticket_id)`; `select ticket_id from ticket_tag group by ticket_id having count(*) > 1` sem linhas; `enum_range(null::history_event)` contém `mudanca_tag`; colunas `from_tag_id`/`to_tag_id` existem |
+| 12  | qualquer          | forçar erro na página do Início (ex.: banco indisponível)                           | abrir o Início                                                                     | `error.tsx` mostra a barra com busca e "Novo chamado" desabilitado com a mensagem de indisponibilidade; "Tentar novamente" funciona                                                                                                                                               |
+
+O cenário 11 é só leitura porque o `df-qa` não escreve no banco à mão. A prova
+pelo erro (um `insert into ticket_tag` de segunda tag recusado pelo índice) fica
+com o usuário, se ele quiser.
+
+O cenário 12 é opcional se não houver como provocar a falha sem mexer no
+ambiente; nesse caso, registrar como não executado.
+
+### Cenário 13 — `Combobox` de setor e tag
+
+Quem: QA Membro Suporte, com o dialog "Novo chamado" aberto, depois do cenário
+10 (com `[QA] Acesso` reativada).
+
+Preparação, como QA Admin Suporte: criar `[QA] Configuração` em QA Suporte e,
+para a lista de tags passar da altura máxima (`max-h-72`, cabem cerca de 8
+itens), completar QA Suporte com pelo menos 10 tags ativas criando
+`[QA] Lista 01`, `[QA] Lista 02`… (ou reativando as de execução anterior, já que
+tag não é excluída). Ao fim do cenário, desativar `[QA] Configuração` e as
+`[QA] Lista NN`: o cenário 9 depende de `[QA] Acesso` ser a única tag ativa.
+
+| #   | Ação                                                                                      | Esperado                                                                                                                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13a | abrir o campo Setor de destino                                                            | lista abre com o foco no campo `Buscar setor…`; QA Suporte (o padrão) destacada e com o ícone de marcado                                                                                                         |
+| 13b | digitar `infra`, depois `INFRA`, depois `infrá`                                           | nos três, só QA Infra (e setores reais com "infra" no nome, se houver) fica na lista                                                                                                                             |
+| 13c | digitar `xyz`                                                                             | lista vazia com `Nenhum resultado.`                                                                                                                                                                              |
+| 13d | abrir o campo Tag do seu setor; digitar `configuracao`, depois `CONFIGURAÇÃO`             | nos dois, `[QA] Configuração` aparece                                                                                                                                                                            |
+| 13e | só teclado: `Tab` até o gatilho da tag, `Enter`, setas até passar do último item, `Enter` | `Enter` abre a lista; as setas descem e voltam ao primeiro item depois do último; `Enter` escolhe, fecha a lista e devolve o foco ao gatilho, que mostra o nome escolhido                                        |
+| 13f | com a lista aberta, `Esc`                                                                 | fecha só a lista; o dialog continua aberto e o valor não muda; foco no gatilho                                                                                                                                   |
+| 13g | lista de tags aberta, sem busca; rolar com a roda do mouse sobre a lista                  | a lista rola até a última tag; o dialog atrás não rola nem fecha                                                                                                                                                 |
+| 13h | forjar `tagId` = id de `[QA] Rede` (como no cenário 7) e enviar                           | `Esta tag não está disponível. Escolha uma tag ativa do seu setor.` abaixo do campo Tag; foco no gatilho do campo Tag (elemento ativo é o `button[role=combobox]` dele), com `aria-invalid="true"`; nada gravado |
+| 13i | forjar `departmentId` = id do Não alocado (como no cenário 8) e enviar                    | `Este setor não pode receber chamados. Escolha outro setor de destino.` abaixo do campo Setor de destino; foco no gatilho desse campo, com `aria-invalid="true"`; nada gravado                                   |
+
+## Checklist de encerramento da feature
+
+- [x] schema, migration `0007`, tipos, domínio e `createTicketSchema` (`df-architect`)
+- [ ] `listActiveDepartmentTags` em `app/_lib/data/tags.ts`; `insertTicket` em `app/_lib/data/tickets.ts` (`df-data`)
+- [ ] `createTicket` em `app/_lib/actions/tickets.ts` (`df-actions`)
+- [ ] `AppTopBarFrame`, `AppTopBar` async, `NewTicketDialog`, `NewTicketBlockedButton`; `error.tsx` sem import de `AppTopBar` (`df-ui`)
+- [ ] `npm run db:migrate` aplicado pelo usuário
+- [ ] cenários do `df-qa`
+- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`

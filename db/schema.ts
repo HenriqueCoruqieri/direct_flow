@@ -72,6 +72,7 @@ export const historyEventEnum = pgEnum("history_event", [
   "transferencia_rejeitada",
   "reabertura",
   "encerramento",
+  "mudanca_tag",
 ])
 
 export const messageVisibilityEnum = pgEnum("message_visibility", [
@@ -211,6 +212,7 @@ export const ticketTag = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.ticketId, table.tagId] }),
+    uniqueIndex("ticket_tag_single_per_ticket_idx").on(table.ticketId),
     index("ticket_tag_tag_idx").on(table.tagId),
   ],
 )
@@ -289,6 +291,12 @@ export const ticketHistory = pgTable(
     toAssigneeId: integer("to_assignee_id").references(() => user.id, {
       onDelete: "restrict",
     }),
+    fromTagId: integer("from_tag_id").references(() => tag.id, {
+      onDelete: "restrict",
+    }),
+    toTagId: integer("to_tag_id").references(() => tag.id, {
+      onDelete: "restrict",
+    }),
     note: text("note"),
     changedAt: timestamp("changed_at", { withTimezone: true })
       .defaultNow()
@@ -299,6 +307,7 @@ export const ticketHistory = pgTable(
     index("history_changed_by_idx").on(table.changedBy),
     index("history_to_department_idx").on(table.toDepartmentId),
     index("history_to_assignee_idx").on(table.toAssigneeId),
+    index("history_to_tag_idx").on(table.toTagId),
   ],
 )
 
@@ -401,6 +410,8 @@ export const tagRelations = relations(tag, ({ one, many }) => ({
     references: [department.id],
   }),
   ticketTags: many(ticketTag),
+  historyFrom: many(ticketHistory, { relationName: "history_from_tag" }),
+  historyTo: many(ticketHistory, { relationName: "history_to_tag" }),
 }))
 
 export const ticketRelations = relations(ticket, ({ one, many }) => ({
@@ -498,6 +509,16 @@ export const ticketHistoryRelations = relations(ticketHistory, ({ one }) => ({
     fields: [ticketHistory.toAssigneeId],
     references: [user.id],
     relationName: "history_to_assignee",
+  }),
+  fromTag: one(tag, {
+    fields: [ticketHistory.fromTagId],
+    references: [tag.id],
+    relationName: "history_from_tag",
+  }),
+  toTag: one(tag, {
+    fields: [ticketHistory.toTagId],
+    references: [tag.id],
+    relationName: "history_to_tag",
   }),
 }))
 

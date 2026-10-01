@@ -62,6 +62,11 @@ export type UpdateDepartmentNameOutcome =
 export type UpdateDepartmentActiveOutcome =
   DepartmentSaved | DepartmentNotFound | DepartmentDeactivationRefused
 
+export interface DepartmentAvailability {
+  isActive: boolean
+  isUnassigned: boolean
+}
+
 export interface DepartmentOption extends DepartmentStamps {
   id: number
   name: string

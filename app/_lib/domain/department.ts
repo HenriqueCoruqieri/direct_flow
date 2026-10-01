@@ -1,4 +1,5 @@
 import type {
+  DepartmentAvailability,
   DepartmentDeactivationBlocked,
   DepartmentDeactivationCheck,
   DepartmentDependencies,
@@ -23,10 +24,14 @@ export const departmentBadgeFor = ({
   return null
 }
 
+export const isAssignableDepartment = ({
+  isActive,
+  isUnassigned,
+}: DepartmentAvailability): boolean => isActive && !isUnassigned
+
 export const assignableDepartments = (
   options: readonly DepartmentOption[],
-): DepartmentOption[] =>
-  options.filter((option) => option.isActive && !option.isUnassigned)
+): DepartmentOption[] => options.filter(isAssignableDepartment)
 
 export const checkDepartmentDeactivation = ({
   isBoard,

@@ -1,4 +1,24 @@
-import type { TicketStatus } from "@/app/_lib/types/ticket"
+import {
+  assignableDepartments,
+  isAssignableDepartment,
+} from "@/app/_lib/domain/department"
+import type {
+  DepartmentAvailability,
+  DepartmentOption,
+} from "@/app/_lib/types/department"
+import type { TagOption } from "@/app/_lib/types/tag"
+import type {
+  InitialTicketStatus,
+  NewTicketFormOptions,
+  TicketAuthorFacts,
+  TicketCreationBlockReason,
+  TicketCreationCheck,
+  TicketPriority,
+  TicketSaved,
+  TicketStatus,
+  TicketTagFacts,
+  TicketType,
+} from "@/app/_lib/types/ticket"
 
 const TICKET_STATUS_IS_OPEN = {
   aberto: true,
@@ -29,3 +49,123 @@ export const OPEN_TICKET_STATUSES: readonly OpenTicketStatus[] = Object.keys(
 )
   .filter(isTicketStatus)
   .filter(isOpenTicketStatus)
+
+export const TICKET_TYPE_LABELS = {
+  duvida: "Dúvida",
+  ocorrencia: "Ocorrência",
+  solicitacao: "Solicitação",
+  sugestao_de_melhoria: "Sugestão de melhoria",
+  incidente: "Incidente",
+  bug: "Bug",
+} satisfies Record<TicketType, string>
+
+const isTicketType = (value: string): value is TicketType =>
+  Object.hasOwn(TICKET_TYPE_LABELS, value)
+
+export const TICKET_TYPES: readonly TicketType[] =
+  Object.keys(TICKET_TYPE_LABELS).filter(isTicketType)
+
+export const TICKET_TITLE_MIN_LENGTH = 3
+
+export const TICKET_TITLE_MAX_LENGTH = 200
+
+export const TICKET_DESCRIPTION_MIN_LENGTH = 10
+
+export const TICKET_DESCRIPTION_MAX_LENGTH = 5000
+
+export const INITIAL_TICKET_PRIORITY: TicketPriority = "media"
+
+export const formatTicketNumber = (ticketId: number): string => `#${ticketId}`
+
+export const TICKET_CREATION_BLOCK_MESSAGES = {
+  USER_INACTIVE: "Sua conta está desativada. Não é possível abrir chamados.",
+  PASSWORD_CHANGE_REQUIRED: "Defina a sua senha antes de abrir chamados.",
+  DEPARTMENT_UNASSIGNED:
+    "Sua conta ainda não está em um setor. Peça a um administrador que coloque você em um setor para abrir chamados.",
+  DEPARTMENT_WITHOUT_TAGS:
+    "Seu setor ainda não tem tags ativas. Peça ao administrador do setor que cadastre uma tag para abrir chamados.",
+} satisfies Record<TicketCreationBlockReason, string>
+
+export const checkTicketCreation = (
+  author: TicketAuthorFacts,
+  activeTagCount: number,
+): TicketCreationCheck => {
+  if (!author.isActive) return { ok: false, reason: "USER_INACTIVE" }
+  if (author.mustChangePassword) {
+    return { ok: false, reason: "PASSWORD_CHANGE_REQUIRED" }
+  }
+  if (author.isUnassigned) return { ok: false, reason: "DEPARTMENT_UNASSIGNED" }
+  if (activeTagCount < 1) {
+    return { ok: false, reason: "DEPARTMENT_WITHOUT_TAGS" }
+  }
+  return { ok: true }
+}
+
+export const canReceiveTickets = (
+  department: DepartmentAvailability,
+): boolean => isAssignableDepartment(department)
+
+export const ticketDestinationDepartments = (
+  options: readonly DepartmentOption[],
+): DepartmentOption[] =>
+  assignableDepartments(options).sort(
+    (a, b) => Number(b.isBoard) - Number(a.isBoard),
+  )
+
+export const isUsableTicketTag = (
+  tag: TicketTagFacts,
+  authorDepartmentId: number,
+): boolean => tag.isActive && tag.departmentId === authorDepartmentId
+
+export const requiresApproval = (
+  originDepartmentId: number,
+  destinationDepartmentId: number,
+): boolean => originDepartmentId !== destinationDepartmentId
+
+export const initialTicketStatusFor = (
+  originDepartmentId: number,
+  destinationDepartmentId: number,
+): InitialTicketStatus =>
+  requiresApproval(originDepartmentId, destinationDepartmentId)
+    ? "aguardando_aprovacao"
+    : "aberto"
+
+export const buildNewTicketFormOptions = (
+  author: TicketAuthorFacts,
+  tags: readonly TagOption[],
+  departmentOptions: readonly DepartmentOption[],
+): NewTicketFormOptions => {
+  const check = checkTicketCreation(author, tags.length)
+  if (!check.ok) {
+    return {
+      canCreate: false,
+      reason: check.reason,
+      message: TICKET_CREATION_BLOCK_MESSAGES[check.reason],
+    }
+  }
+
+  const destinations = ticketDestinationDepartments(departmentOptions)
+  const ownDepartmentListed = destinations.some(
+    (option) => option.id === author.departmentId,
+  )
+
+  return {
+    canCreate: true,
+    authorDepartmentId: author.departmentId,
+    defaultDestinationId: ownDepartmentListed ? author.departmentId : null,
+    tags: [...tags],
+    destinations,
+  }
+}
+
+export const describeApprovalNotice = (destinationName: string): string =>
+  `O chamado vai aguardar a aprovação do administrador de ${destinationName}. Depois de enviado, você não poderá mais alterá-lo.`
+
+export const describeTicketCreated = ({
+  ticketId,
+  ticketStatus,
+  destinationDepartmentName,
+}: TicketSaved): string =>
+  ticketStatus === "aguardando_aprovacao"
+    ? `Chamado ${formatTicketNumber(ticketId)} enviado para aprovação de ${destinationDepartmentName}.`
+    : `Chamado ${formatTicketNumber(ticketId)} criado.`

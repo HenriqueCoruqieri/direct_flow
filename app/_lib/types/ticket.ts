@@ -1,3 +1,88 @@
-import type { TicketStatus } from "@/db/schema"
+import type { DepartmentOption } from "@/app/_lib/types/department"
+import type { TagOption } from "@/app/_lib/types/tag"
+import type {
+  HistoryEvent,
+  TicketPriority,
+  TicketStatus,
+  TicketType,
+} from "@/db/schema"
 
-export type { TicketStatus }
+export type { HistoryEvent, TicketPriority, TicketStatus, TicketType }
+
+export type InitialTicketStatus = Extract<
+  TicketStatus,
+  "aberto" | "aguardando_aprovacao"
+>
+
+export interface TicketAuthorFacts {
+  isActive: boolean
+  mustChangePassword: boolean
+  isUnassigned: boolean
+  departmentId: number
+}
+
+export type TicketCreationBlockReason =
+  | "USER_INACTIVE"
+  | "PASSWORD_CHANGE_REQUIRED"
+  | "DEPARTMENT_UNASSIGNED"
+  | "DEPARTMENT_WITHOUT_TAGS"
+
+export interface TicketCreationAllowed {
+  ok: true
+}
+
+export interface TicketCreationBlocked {
+  ok: false
+  reason: TicketCreationBlockReason
+}
+
+export type TicketCreationCheck = TicketCreationAllowed | TicketCreationBlocked
+
+export interface TicketTagFacts {
+  departmentId: number
+  isActive: boolean
+}
+
+export interface InsertTicketValues {
+  title: string
+  description: string
+  type: TicketType
+  tagId: number
+  destinationDepartmentId: number
+  createdBy: number
+  originDepartmentId: number
+}
+
+export interface TicketSaved {
+  status: "saved"
+  ticketId: number
+  ticketStatus: InitialTicketStatus
+  destinationDepartmentName: string
+}
+
+export interface TicketInvalidTag {
+  status: "invalid_tag"
+}
+
+export interface TicketInvalidDestination {
+  status: "invalid_destination"
+}
+
+export type InsertTicketOutcome =
+  TicketSaved | TicketInvalidTag | TicketInvalidDestination
+
+export interface NewTicketFormAvailable {
+  canCreate: true
+  authorDepartmentId: number
+  defaultDestinationId: number | null
+  tags: TagOption[]
+  destinations: DepartmentOption[]
+}
+
+export interface NewTicketFormBlocked {
+  canCreate: false
+  reason: TicketCreationBlockReason
+  message: string
+}
+
+export type NewTicketFormOptions = NewTicketFormAvailable | NewTicketFormBlocked

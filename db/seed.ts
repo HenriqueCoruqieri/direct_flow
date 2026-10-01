@@ -13,6 +13,7 @@ import {
   zonedDateTime,
 } from "@/app/_lib/date"
 import { BOARD_DEPARTMENT_NAME } from "@/app/_lib/domain/department"
+import { TICKET_TYPES } from "@/app/_lib/domain/ticket"
 import type { DateKey, DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { account } from "@/db/auth-schema"
@@ -23,7 +24,6 @@ import type {
   Role,
   TicketPriority,
   TicketStatus,
-  TicketType,
 } from "@/db/schema"
 import {
   department,
@@ -277,15 +277,6 @@ const TAG_TITLES: Record<DemoTagName | "geral", string> = {
   Sistema: "Erro ao salvar registro no sistema",
   geral: "Chamado de demonstração",
 }
-
-const TICKET_TYPES: TicketType[] = [
-  "duvida",
-  "ocorrencia",
-  "solicitacao",
-  "sugestao_de_melhoria",
-  "incidente",
-  "bug",
-]
 
 const PRIORITIES: TicketPriority[] = ["baixa", "media", "alta", "critica"]
 

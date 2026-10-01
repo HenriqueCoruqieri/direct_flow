@@ -9,6 +9,11 @@ export interface TagListItem {
   createdAt: Date
 }
 
+export interface TagOption {
+  id: number
+  name: string
+}
+
 export interface AllDepartmentsTagScope {
   kind: "all"
 }
