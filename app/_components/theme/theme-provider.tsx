@@ -1,11 +1,20 @@
 "use client"
 
-import { ThemeProvider as NextThemesProvider } from "next-themes"
+import {
+  ThemeProvider as NextThemesProvider,
+  type ThemeProviderProps,
+} from "next-themes"
 
-const ThemeProvider = (
-  props: React.ComponentProps<typeof NextThemesProvider>,
-) => {
-  return <NextThemesProvider {...props} />
+const ThemeProvider = ({ scriptProps, ...props }: ThemeProviderProps) => {
+  return (
+    <NextThemesProvider
+      {...props}
+      scriptProps={{
+        ...scriptProps,
+        type: typeof window === "undefined" ? "text/javascript" : "text/plain",
+      }}
+    />
+  )
 }
 
 export default ThemeProvider
