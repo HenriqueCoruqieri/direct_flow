@@ -6,6 +6,7 @@ import { useId, useState } from "react"
 import { Controller, type DefaultValues, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
+import Combobox from "@/app/_components/combobox"
 import { Button } from "@/app/_components/ui/button"
 import {
   Dialog,
@@ -24,13 +25,6 @@ import {
   FieldLabel,
 } from "@/app/_components/ui/field"
 import { Input } from "@/app/_components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/app/_components/ui/select"
 import { createTag, renameTag } from "@/app/_lib/actions/tags"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type { TagListItem } from "@/app/_lib/types/tag"
@@ -157,36 +151,24 @@ const TagFormDialog = (props: TagFormDialogProps) => {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="gap-1.5">
                     <FieldLabel htmlFor={departmentId}>Setor</FieldLabel>
-                    <Select
-                      name={field.name}
-                      value={
-                        typeof field.value === "number"
-                          ? String(field.value)
-                          : ""
-                      }
-                      onValueChange={(value) => field.onChange(Number(value))}
+                    <Combobox
+                      id={departmentId}
+                      ref={field.ref}
+                      options={departmentChoices.map((option) => ({
+                        value: option.id,
+                        label: option.name,
+                      }))}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
                       disabled={field.disabled}
-                    >
-                      <SelectTrigger
-                        id={departmentId}
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        aria-invalid={fieldState.invalid}
-                        aria-describedby={
-                          fieldState.invalid ? departmentErrorId : undefined
-                        }
-                        className="w-full"
-                      >
-                        <SelectValue placeholder="Selecione o setor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {departmentChoices.map((option) => (
-                          <SelectItem key={option.id} value={String(option.id)}>
-                            {option.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Selecione o setor"
+                      searchPlaceholder="Buscar setor…"
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={
+                        fieldState.invalid ? departmentErrorId : undefined
+                      }
+                    />
                     {fieldState.invalid ? (
                       <FieldError
                         id={departmentErrorId}

@@ -461,8 +461,9 @@ export type RestorePersonPasswordInput = { id: number }
   está no schema e a data layer grava `parsed.data.email`, nunca o input cru.
 - `role` é opcional nos dois schemas: o formulário do admin não tem o campo. Quem
   decide o papel final é `decidePersonCreation`/`decidePersonUpdate`.
-- `departmentId` é `number`, sem `coerce` (mesmo motivo de tags): a UI converte
-  com `Number(value)` no `onValueChange` do select.
+- `departmentId` é `number`, sem `coerce` (mesmo motivo de tags). O campo de
+  setor é o `Combobox`, que devolve o próprio `id` numérico no `onChange`: não
+  há conversão na UI.
 - Unicidade do e-mail não é checada no schema.
 
 ### `app/_lib/validation/password.ts` (acrescido)
@@ -892,7 +893,7 @@ const [people, departmentOptions] = await Promise.all([
   as não alocadas".
 - Botão "Nova pessoa". Passa `people`, `access`, `actor.id` e
   `departmentOptions` aos componentes (o admin também precisa das opções, para o
-  select de mover).
+  campo de setor ao mover).
 
 ### `app/(app)/registry/people/_components/` (novo)
 
@@ -930,16 +931,20 @@ const [people, departmentOptions] = await Promise.all([
     encerradas e a pessoa vai definir uma nova no próximo acesso."
 - **Formulário** (React Hook Form + `zodResolver`):
   - Criar, diretor: `createPersonSchema`; campos Nome, E-mail, Setor
-    (`personCreationDepartments(departmentOptions)`), Papel (`ROLES` com
-    `ROLE_LABELS`, default `member`). Com `forcedRoleFor(setorEscolhido)` não
-    nulo, o select mostra o papel forçado e fica desabilitado.
+    (`Combobox` com `personCreationDepartments(departmentOptions)`), Papel
+    (`Select` com `ROLES` e `ROLE_LABELS`, default `member`). Com
+    `forcedRoleFor(setorEscolhido)` não nulo, o select mostra o papel forçado e
+    fica desabilitado.
   - Criar, admin: `createPersonSchema` com `departmentId` fixo
     (`access.departmentId`) em `defaultValues`, sem campo de setor nem de papel.
-  - Editar: `updatePersonSchema` com `id` da linha; Setor com
+  - Editar: `updatePersonSchema` com `id` da linha; Setor em `Combobox` com
     `personMoveDepartments(access, departmentOptions, row.departmentId)`; Papel
-    só quando `canAssignRole(access)`, com a mesma trava de `forcedRoleFor`. Ao
-    tirar alguém da Diretoria, o select de papel volta a ficar livre e precisa
-    de escolha explícita (default do form = papel atual).
+    (`Select`) só quando `canAssignRole(access)`, com a mesma trava de
+    `forcedRoleFor`. Ao tirar alguém da Diretoria, o select de papel volta a
+    ficar livre e precisa de escolha explícita (default do form = papel atual).
+  - Setor: rótulo de `departmentOptionLabel` (a busca também acha pelas notas,
+    como "Não alocado" e "inativo"), `placeholder` `Selecione o setor`, busca
+    `Buscar setor…`. Papel continua `Select`: são só dois valores fixos.
   - `EMAIL_TAKEN` → erro no campo `email`; `INVALID_INPUT` → toast ou campo;
     resto → toast com `result.message`.
 - Client Components não importam `@/db/*`, `drizzle-orm`, `app/_lib/data` nem
@@ -1008,6 +1013,58 @@ export interface DataTableFilter {
   busca, E (o filtro por coluna do TanStack).
 - Tabela vazia por filtro mostra "Nenhum resultado para os filtros aplicados.";
   sem dados, `emptyMessage`.
+
+#### `app/_components/combobox.tsx` (`Combobox`, novo)
+
+Campo de escolha única com busca, para listas que crescem com o cadastro (setor,
+tag). Listas fixas e curtas (tipo do chamado, papel) continuam `Select`. Client
+Component montado com `Popover` + `Command` do shadcn (`cmdk`, aprovado pelo
+usuário). Usado pelos formulários de chamado, Pessoas e Tags.
+
+```ts
+interface ComboboxOption<TValue extends string | number> {
+  value: TValue
+  label: string
+}
+
+interface ComboboxProps<TValue extends string | number> {
+  options: ComboboxOption<TValue>[]
+  value: TValue | null | undefined
+  onChange: (value: TValue) => void
+  onBlur?: () => void
+  placeholder: string
+  searchPlaceholder: string
+  emptyText?: string
+  disabled?: boolean
+  id?: string
+  ref?: Ref<HTMLButtonElement>
+  "aria-invalid"?: boolean
+  "aria-describedby"?: string
+}
+```
+
+- **Valor tipado.** `onChange` devolve o `value` da opção no tipo original:
+  com ids `number`, o formulário recebe `number` direto, sem `Number(value)`.
+  `value` nulo, indefinido ou sem opção correspondente mostra o `placeholder`.
+- **React Hook Form.** Dentro de `Controller`, recebe `field.ref`,
+  `field.value`, `field.onChange`, `field.onBlur` e `field.disabled`. `id`,
+  `ref`, `onBlur`, `aria-invalid` e `aria-describedby` vão para o gatilho
+  (`Button` `outline` com `role="combobox"`): o `FieldLabel htmlFor` aponta
+  para ele e `setError(..., { shouldFocus: true })` o foca.
+- **Busca.** Compara só o `label` (o `value` não é pesquisável), por trecho,
+  depois de normalizar os dois lados: `NFD` sem marcas de acento, minúsculas,
+  `trim`. Busca vazia mostra tudo; sem correspondência, `emptyText` (padrão
+  `Nenhum resultado.`).
+- **Teclado.** `Enter` ou `Espaço` no gatilho abre a lista com o foco na busca;
+  setas percorrem as opções e voltam ao início depois da última (`loop`);
+  `Enter` escolhe e fecha; `Esc` fecha só a lista. Ao fechar, o foco volta ao
+  gatilho. Ao abrir, a opção escolhida vem destacada e com ícone de marcado.
+- **Rolagem.** A lista tem altura máxima (`max-h-72`) e rola. O `Popover` é
+  `modal` de propósito: dentro de um `Dialog`, o bloqueio de rolagem do dialog
+  descarta a roda do mouse sobre conteúdo renderizado fora dele (o popover vai
+  para um portal); com `modal`, o popover passa a ser a camada ativa e a lista
+  rola.
+- A lista ocupa a largura do gatilho e o rótulo longo é truncado.
 
 #### `app/(app)/registry/_components/` (compartilhado pelos três cadastros)
 

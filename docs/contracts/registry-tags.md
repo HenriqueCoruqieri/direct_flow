@@ -305,8 +305,9 @@ export type SetTagActiveInput = { id: number; isActive: boolean }
 | `isActive`     | boolean                      | `Situação inválida.`                          |
 
 `departmentId` é `number`, sem `coerce` (manteria o tipo de entrada `unknown` e
-quebraria o `zodResolver`). O select entrega string: a UI converte com
-`Number(value)` no `onValueChange`. Unicidade não é checada no schema.
+quebraria o `zodResolver`). O campo de setor é o `Combobox`, que devolve o
+próprio `id` numérico no `onChange`: não há conversão na UI. Unicidade não é
+checada no schema.
 
 ## `df-auth` — o que criar e mudar
 
@@ -575,8 +576,12 @@ const [tags, departmentOptions] = await Promise.all([
   - Nenhuma opção marcada no grupo = grupo sem filtro. Dentro do grupo as opções
     somam (OU); entre grupos, todas precisam bater (E).
 - Formulário criar/renomear: React Hook Form + `zodResolver`.
-  - Criar, diretor: `createTagSchema`, campo `departmentId` em `Select` com
-    `tagCreationDepartments(departmentOptions)`, convertendo com `Number(value)`.
+  - Criar, diretor: `createTagSchema`, campo `departmentId` em `Combobox`
+    (`app/_components/combobox.tsx`, API em "Peças compartilhadas" de
+    `docs/contracts/registry-people.md`) com
+    `tagCreationDepartments(departmentOptions)`, rótulo `name`, `placeholder`
+    `Selecione o setor`, busca `Buscar setor…` (sem diferenciar maiúsculas nem
+    acentos). O `onChange` já entrega o `id` numérico.
   - Criar, admin: `createTagSchema` com `departmentId` fixo em `defaultValues`
     (`access.departmentId`), sem campo visível.
   - Renomear: só `name` no formulário (valide com `renameTagSchema.pick({ name: true })`
