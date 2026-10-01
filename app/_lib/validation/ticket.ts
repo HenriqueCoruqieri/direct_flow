@@ -44,3 +44,16 @@ export const createTicketSchema = z.object({
 })
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>
+
+export const TICKET_ID_MAX = 2_147_483_647
+
+export const ticketIdParamSchema = z
+  .string({ error: "Chamado inválido." })
+  .regex(/^[1-9]\d*$/, { error: "Chamado inválido." })
+  .transform(Number)
+  .pipe(z.number().max(TICKET_ID_MAX, { error: "Chamado inválido." }))
+
+export const parseTicketIdParam = (value: string): number | null => {
+  const result = ticketIdParamSchema.safeParse(value)
+  return result.success ? result.data : null
+}

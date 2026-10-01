@@ -3,8 +3,10 @@ import { z } from "zod"
 import { isDateKey } from "@/app/_lib/date"
 import { DEFAULT_PERIOD, PRESET_PERIODS } from "@/app/_lib/domain/period"
 import type { PeriodSelection } from "@/app/_lib/types/period"
-
-export type RawSearchParams = Record<string, string | string[] | undefined>
+import {
+  firstSearchParam,
+  type RawSearchParams,
+} from "@/app/_lib/validation/search-params"
 
 const dateKeyField = z
   .string({ error: "Informe a data." })
@@ -26,14 +28,11 @@ export const dashboardSearchParamsSchema = z.discriminatedUnion("periodo", [
 
 export type DashboardSearchParams = z.infer<typeof dashboardSearchParamsSchema>
 
-const firstValue = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] : value
-
 export const parseDashboardParams = (raw: RawSearchParams): PeriodSelection => {
   const result = dashboardSearchParamsSchema.safeParse({
-    periodo: firstValue(raw.periodo),
-    de: firstValue(raw.de),
-    ate: firstValue(raw.ate),
+    periodo: firstSearchParam(raw.periodo),
+    de: firstSearchParam(raw.de),
+    ate: firstSearchParam(raw.ate),
   })
   return result.success ? result.data : { periodo: DEFAULT_PERIOD }
 }

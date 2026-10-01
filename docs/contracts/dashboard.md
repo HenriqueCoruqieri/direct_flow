@@ -198,8 +198,12 @@ export const describeMembership: (departmentName: string, role: Role) => string
 
 ## Validação — `app/_lib/validation/dashboard.ts`
 
+> `RawSearchParams` e o "primeiro valor de cada chave" (`firstSearchParam`)
+> moveram para `app/_lib/validation/search-params.ts` em
+> `docs/contracts/my-tickets.md`, para Meus chamados reusar. Comportamento igual.
+
 ```ts
-export type RawSearchParams = Record<string, string | string[] | undefined>
+import type { RawSearchParams } from "@/app/_lib/validation/search-params"
 
 export const dashboardSearchParamsSchema: z.ZodDiscriminatedUnion<...>
 export type DashboardSearchParams = z.infer<typeof dashboardSearchParamsSchema>

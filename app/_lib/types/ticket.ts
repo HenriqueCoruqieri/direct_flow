@@ -86,3 +86,61 @@ export interface NewTicketFormBlocked {
 }
 
 export type NewTicketFormOptions = NewTicketFormAvailable | NewTicketFormBlocked
+
+export interface TicketViewerFacts {
+  userId: number
+  departmentId: number
+  isBoard: boolean
+}
+
+export interface TicketVisibilityFacts {
+  createdBy: number
+  assignedTo: number | null
+  currentDepartmentId: number
+}
+
+export interface TicketPendingTransfer {
+  id: number
+  fromDepartmentName: string
+  toDepartmentId: number
+  toDepartmentName: string
+  requestedByName: string
+  requestedAt: Date
+  requestReason: string | null
+}
+
+export interface TicketHistoryEntry {
+  id: number
+  event: HistoryEvent
+  changedAt: Date
+  changedByName: string
+  fromStatus: TicketStatus | null
+  toStatus: TicketStatus | null
+  fromPriority: TicketPriority | null
+  toPriority: TicketPriority | null
+  fromDepartmentName: string | null
+  toDepartmentName: string | null
+  fromAssigneeName: string | null
+  toAssigneeName: string | null
+  fromTagName: string | null
+  toTagName: string | null
+  note: string | null
+}
+
+export interface TicketDetail extends TicketVisibilityFacts {
+  id: number
+  title: string
+  description: string
+  type: TicketType
+  status: TicketStatus
+  priority: TicketPriority
+  authorName: string
+  assigneeName: string | null
+  originDepartmentId: number
+  originDepartmentName: string
+  currentDepartmentName: string
+  tagName: string | null
+  createdAt: Date
+  pendingTransfer: TicketPendingTransfer | null
+  history: TicketHistoryEntry[]
+}
