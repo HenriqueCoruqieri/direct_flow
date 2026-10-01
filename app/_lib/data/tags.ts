@@ -6,6 +6,7 @@ import type {
   InsertTagOutcome,
   TagListItem,
   TagListScope,
+  TagOption,
   UpdateTagActiveOutcome,
   UpdateTagNameOutcome,
 } from "@/app/_lib/types/tag"
@@ -61,6 +62,16 @@ export async function listTags(scope: TagListScope): Promise<TagListItem[]> {
       sql`lower(${tag.name})`,
       tag.id,
     )
+}
+
+export async function listActiveDepartmentTags(
+  departmentId: number,
+): Promise<TagOption[]> {
+  return db
+    .select({ id: tag.id, name: tag.name })
+    .from(tag)
+    .where(and(eq(tag.departmentId, departmentId), eq(tag.isActive, true)))
+    .orderBy(sql`lower(${tag.name})`, tag.id)
 }
 
 export async function insertTag(
