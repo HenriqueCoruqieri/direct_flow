@@ -78,12 +78,13 @@ export const INITIAL_TICKET_PRIORITY: TicketPriority = "media"
 export const formatTicketNumber = (ticketId: number): string => `#${ticketId}`
 
 export const TICKET_CREATION_BLOCK_MESSAGES = {
-  USER_INACTIVE: "Sua conta está desativada. Não é possível abrir chamados.",
-  PASSWORD_CHANGE_REQUIRED: "Defina a sua senha antes de abrir chamados.",
+  USER_INACTIVE:
+    "Sua conta está desativada. Não é possível registrar chamados.",
+  PASSWORD_CHANGE_REQUIRED: "Defina a sua senha antes de registrar chamados.",
   DEPARTMENT_UNASSIGNED:
-    "Sua conta ainda não está em um setor. Peça a um administrador que coloque você em um setor para abrir chamados.",
+    "Seu perfil não está associado a nenhum setor, informe seu administrador.",
   DEPARTMENT_WITHOUT_TAGS:
-    "Seu setor ainda não tem tags ativas. Peça ao administrador do setor que cadastre uma tag para abrir chamados.",
+    "Não há nenhuma Tag disponível para registro de chamados, informe seu administrador.",
 } satisfies Record<TicketCreationBlockReason, string>
 
 export const checkTicketCreation = (

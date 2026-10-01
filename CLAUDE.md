@@ -31,8 +31,17 @@ em caminho de outro; quando precisa, reporta e encerra o turno.
 `/document` documentação · `/consult` consultoria antes de codar ·
 `/test` teste da feature no navegador, com relatório
 
-Os servidores MCP de teste (`playwright` e `next-devtools`) ficam em
-`.mcp.json` e são usados só pelo `df-qa`.
+Servidores MCP (`.mcp.json`):
+
+| Servidor        | Para quê                                          | Quem usa                                |
+| --------------- | ------------------------------------------------- | --------------------------------------- |
+| `playwright`    | navegador                                         | `df-qa`                                 |
+| `next-devtools` | erros e logs do dev server                        | `df-qa`                                 |
+| `postgres`      | consulta ao banco, **só leitura** (ADR 013)       | `df-qa`, `df-debug`                     |
+| `context7`      | documentação das bibliotecas na versão do projeto | agentes que escrevem, e o `df-reviewer` |
+
+O `postgres` conecta com `DB_READONLY_URL` (role `df_readonly`), nunca com o
+`DATABASE_URL` da aplicação.
 
 Os comandos são os orquestradores. Eles acionam agentes, repassam contexto e
 verificam; não escrevem código de produção.

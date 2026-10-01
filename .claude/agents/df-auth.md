@@ -1,7 +1,7 @@
 ---
 name: df-auth
 description: Autenticação e autorização do Direct Flow com Better Auth — configuração, schema de auth, sessão, proxy (antigo middleware), telas de login e o route handler do Better Auth. Use para qualquer camada do projeto que envolva login, sessão, permissão de admin de setor ou proteção de rota.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7
 model: opus
 ---
 

@@ -19,9 +19,6 @@ const DepartmentsPage = async () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="font-heading text-title font-semibold">Setores</h1>
-          <p className="text-caption text-muted-foreground">
-            Crie, renomeie e ative ou desative os setores da organização.
-          </p>
         </div>
         <DepartmentFormDialog mode="create" />
       </div>

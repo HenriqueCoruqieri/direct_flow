@@ -1,7 +1,7 @@
 ---
 name: df-architect
 description: Camada de contratos do Direct Flow — schema Drizzle, migrations, tipos, schemas Zod, regras de negócio puras (app/_lib/domain) e formatação de datas. Use SEMPRE antes de qualquer outro agente ao iniciar uma entidade ou fluxo novo, e quando o modelo de dados ou uma regra de negócio precisar mudar.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7
 model: opus
 ---
 

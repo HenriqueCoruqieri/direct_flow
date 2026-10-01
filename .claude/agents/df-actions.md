@@ -1,7 +1,7 @@
 ---
 name: df-actions
 description: Server Actions do Direct Flow — toda mutação iniciada pela interface. Valida com Zod, autoriza com app/_lib/domain, chama app/_lib/data, dispara e-mail e revalida. Use para criar, encaminhar, aprovar, atribuir ou encerrar ticket, e para cadastro de tags.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7
 model: opus
 ---
 

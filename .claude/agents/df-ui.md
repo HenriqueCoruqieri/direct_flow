@@ -1,7 +1,7 @@
 ---
 name: df-ui
 description: Interface do Direct Flow — rotas do App Router, Server e Client Components, shadcn/ui, React Hook Form + Zod, TanStack Table, lucide-react, Sonner e Tailwind. Use para qualquer tela, componente, formulário, tabela ou layout.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7
 model: opus
 ---
 

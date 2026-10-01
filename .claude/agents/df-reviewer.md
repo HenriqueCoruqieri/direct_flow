@@ -1,7 +1,7 @@
 ---
 name: df-reviewer
 description: Revisor do Direct Flow — verifica conformidade com as regras da stack, limites entre camadas e qualidade antes do merge. Não escreve código, apenas aponta. Use ao fechar uma feature ou antes de abrir PR.
-tools: Read, Glob, Grep, Bash
+tools: Read, Glob, Grep, Bash, mcp__context7
 model: opus
 ---
 

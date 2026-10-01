@@ -13,6 +13,14 @@ arquivos divergem do que você tem em memória. Leia o guia relevante em
 `node_modules/next/dist/docs/` antes de escrever código de rota, layout,
 Server Action, cache ou proxy (o antigo middleware). Respeite avisos de deprecação.
 
+O mesmo vale para as outras bibliotecas da stack, todas em versões recentes
+(Better Auth, Drizzle, Zod 4, TanStack Table, React Hook Form, shadcn, Resend).
+Antes de usar uma API da qual você não tem certeza na versão do `package.json`,
+consulte o MCP `context7` (`resolve-library-id` e depois `query-docs`, passando
+a versão). Para o **Next.js**, a fonte continua sendo `node_modules/next/dist/docs/`,
+que é exatamente a versão instalada. Se o `context7` divergir do código já
+existente no projeto, o projeto ganha: reporte a divergência em vez de reescrever.
+
 O bloco `<!-- BEGIN:nextjs-agent-rules -->` em `AGENTS.md` é gerado pelo
 `next dev`. Não o remova; se ele reaparecer no diff, comite junto com o trabalho.
 

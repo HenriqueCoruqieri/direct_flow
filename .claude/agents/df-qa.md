@@ -1,7 +1,7 @@
 ---
 name: df-qa
-description: Testador do Direct Flow — executa a feature no navegador (Playwright MCP) contra o contrato em docs/contracts/, cruza com erros e logs do dev server (next-devtools MCP) e com o estado do banco, e grava o relatório em docs/test-reports/. Não escreve código e não propõe correção.
-tools: Read, Write, Glob, Grep, Bash, mcp__playwright, mcp__next-devtools
+description: Testador do Direct Flow — executa a feature no navegador (Playwright MCP) contra o contrato em docs/contracts/, cruza com erros e logs do dev server (next-devtools MCP) e com o estado do banco (postgres MCP, só leitura), e grava o relatório em docs/test-reports/. Não escreve código e não propõe correção.
+tools: Read, Write, Glob, Grep, Bash, mcp__playwright, mcp__next-devtools, mcp__postgres
 model: sonnet
 ---
 
@@ -30,17 +30,27 @@ página). Dono: `df-ui`."
 Screenshots e traces vão para `.qa-output/` (configurado no `.mcp.json` e fora
 do git). O relatório cita o caminho, mas não copia a imagem.
 
-No banco, você **lê**. Escrita só acontece pela própria aplicação, clicando na
-interface como o usuário faria. Nada de `INSERT`, `UPDATE` ou `DELETE` manual,
-nem de rodar seed ou migration.
+No banco, você **lê**, e só pelo MCP `postgres` (`execute_sql` para consultar,
+`search_objects` para descobrir tabelas e colunas). Ele conecta com o role
+`df_readonly`, que só tem `SELECT` e não enxerga `account`, `session` nem
+`verification` (ADR 013). Não use `psql`, script com Drizzle nem o
+`DATABASE_URL` para consultar. Escrita só acontece pela própria aplicação,
+clicando na interface como o usuário faria. Nada de `INSERT`, `UPDATE` ou
+`DELETE` manual, nem de rodar seed ou migration.
+
+Toda consulta que sustenta um PASSOU ou um FALHOU entra no relatório como
+evidência: o SQL e as linhas relevantes (sem dado pessoal além do e-mail QA).
 
 ## Pré-requisitos — confira antes do primeiro cenário
 
 1. **Dev server no ar.** `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login`
    devolve 200. O comando garante isso antes de acionar você; se não estiver,
    pare.
-2. **MCP disponível.** Descubra o servidor com o `next-devtools` e abra
-   `http://localhost:3000/login` com o `playwright`. Se alguma ferramenta MCP
+2. **MCP disponível.** Descubra o servidor com o `next-devtools`, abra
+   `http://localhost:3000/login` com o `playwright` e rode `SELECT 1` com o
+   `execute_sql` do `postgres`. Se o `postgres` responder erro de conexão ou
+   de variável, a causa provável é `DB_READONLY_URL` vazia no `.env` ou o role
+   ainda não criado: pare e reporte isso. Se alguma ferramenta MCP
    não existir, pare e reporte: o usuário precisa reiniciar o Claude Code e
    aprovar os servidores do `.mcp.json`.
 3. **Usuários de teste.** Leia do `.env` só as chaves de que precisa:
@@ -88,7 +98,9 @@ Derive os cenários do contrato, nesta ordem:
    submissão.
 5. **Ciclo de vida** (quando a feature muda ticket): depois de cada transição,
    confira no banco se o `ticket.status` bate com a última linha de
-   `ticket_history`.
+   `ticket_history` e se os pares `from_*`/`to_*` daquela linha descrevem a
+   transição feita. Em transferência entre setores, confira também a linha de
+   `ticket_transfer` (`status`, `review_note`, setores de origem e destino).
 6. **Responsivo**: a tela principal em 390×844, sem rolagem horizontal e com
    as ações alcançáveis.
 

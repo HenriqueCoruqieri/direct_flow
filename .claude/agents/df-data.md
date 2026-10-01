@@ -1,7 +1,7 @@
 ---
 name: df-data
 description: Camada de acesso a dados do Direct Flow — conexão Drizzle e todas as queries e mutações SQL em app/_lib/data. Use quando precisar ler ou gravar no banco. É o único agente que escreve Drizzle fora do schema.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7
 model: sonnet
 ---
 

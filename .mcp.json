@@ -15,6 +15,23 @@
         "--output-dir",
         ".qa-output"
       ]
+    },
+    "postgres": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@bytebase/dbhub@1.4.0",
+        "--transport",
+        "stdio",
+        "--config",
+        "dbhub.toml"
+      ]
+    },
+    "context7": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp@4.1.1"]
     }
   }
 }

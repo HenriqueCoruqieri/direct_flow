@@ -1,0 +1,24 @@
+# Configuração do MCP "postgres" (DBHub), usado só pelo df-qa e pelo df-debug.
+# Ver docs/adr/013-readonly-database-mcp.md.
+#
+# Sem segredo aqui: a connection string vem de DB_READONLY_URL, que o DBHub lê
+# do .env na raiz do projeto. Ela usa o role df_readonly (db/roles/readonly-role.sql),
+# NUNCA o DATABASE_URL da aplicação.
+
+[[sources]]
+id = "directflow"
+dsn = "${DB_READONLY_URL}"
+# Segundos. O role também tem statement_timeout, este é o limite do lado do MCP.
+query_timeout = 15
+
+# Primeira camada de proteção: o MCP recusa o que não for SELECT/WITH/EXPLAIN.
+# A camada que vale de verdade é o GRANT só de SELECT no role.
+[[tools]]
+name = "execute_sql"
+source = "directflow"
+readonly = true
+max_rows = 200
+
+[[tools]]
+name = "search_objects"
+source = "directflow"

@@ -32,11 +32,6 @@ const PeoplePage = async () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="font-heading text-title font-semibold">Pessoas</h1>
-          <p className="text-caption text-muted-foreground">
-            {isDirector
-              ? "Cadastre, edite e ative ou desative todas as pessoas da organização."
-              : "Cadastre, edite e ative ou desative as pessoas do seu setor e as não alocadas."}
-          </p>
         </div>
         {isDirector ? (
           <PersonFormDialog

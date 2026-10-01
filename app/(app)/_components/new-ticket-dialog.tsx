@@ -179,7 +179,7 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
           <DialogHeader>
             <DialogTitle>Novo chamado</DialogTitle>
             <DialogDescription>
-              Descreva o problema ou pedido. Todos os campos são obrigatórios.
+              Descreva o chamado de forma clara, detalhada e objetiva.
             </DialogDescription>
           </DialogHeader>
 
@@ -317,7 +317,7 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               control={form.control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={tagId}>Tag do seu setor</FieldLabel>
+                  <FieldLabel htmlFor={tagId}>Tags</FieldLabel>
                   <Combobox
                     id={tagId}
                     ref={field.ref}
@@ -337,8 +337,8 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                     <FieldError id={tagErrorId} errors={[fieldState.error]} />
                   ) : (
                     <FieldDescription id={tagHintId}>
-                      A tag é sempre do seu setor, mesmo quando o destino é
-                      outro setor.
+                      A tag é utilizada para categorizar e mapear os maiores
+                      ofensores da fila de atendimento.
                     </FieldDescription>
                   )}
                 </Field>

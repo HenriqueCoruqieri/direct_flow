@@ -26,8 +26,8 @@ Se o contrato citar plano ou ADR, passe os caminhos junto.
 - **Dev server:** `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login`.
   Se não responder 200, suba o `npm run dev` em background e espere responder.
   Anote que foi você quem subiu, para derrubar no fim.
-- **Servidores MCP:** confira se as ferramentas `mcp__playwright__*` e
-  `mcp__next-devtools__*` estão disponíveis na sessão. Se não estiverem, pare e
+- **Servidores MCP:** confira se as ferramentas `mcp__playwright__*`,
+  `mcp__next-devtools__*` e `mcp__postgres__*` estão disponíveis na sessão. Se não estiverem, pare e
   peça ao usuário que reinicie o Claude Code e aprove os servidores do
   `.mcp.json`.
 
@@ -51,7 +51,8 @@ agente. Um relatório com falha sem evidência ou sem dono volta para o `df-qa`
 completar.
 
 Se o `df-qa` parou por pré-requisito, repasse ao usuário exatamente o que falta
-(rodar o seed com `SEED_QA=true`, aprovar o MCP, esvaziar `RESEND_API_KEY`) e
+(rodar o seed com `SEED_QA=true`, aprovar o MCP, preencher `DB_READONLY_URL`,
+esvaziar `RESEND_API_KEY`) e
 encerre.
 
 ## 5. Encerramento (execução isolada)

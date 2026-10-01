@@ -1,7 +1,7 @@
 ---
 name: df-email
 description: E-mails transacionais do Direct Flow com Resend — cliente, templates e funções de envio. Use para notificação de ticket criado, encaminhado, pendente de aprovação, aprovado, atribuído ou encerrado.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7
 model: sonnet
 ---
 
