@@ -19,7 +19,10 @@ const NavItem = ({ href, label, icon }: NavItemProps) => {
       aria-current={active ? "page" : undefined}
       className="group/nav flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm font-semibold text-text-tertiary transition-colors outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-[current=page]:bg-surface-active aria-[current=page]:font-extrabold aria-[current=page]:text-foreground"
     >
-      <span className="flex group-aria-[current=page]/nav:text-primary [&_svg]:size-4.5">
+      <span
+        aria-hidden="true"
+        className="flex group-aria-[current=page]/nav:text-primary [&_svg]:size-4.5"
+      >
         {icon}
       </span>
       {label}

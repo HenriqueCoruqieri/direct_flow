@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime } from "@/app/_lib/date"
+import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import { describeAccountStatus, ROLE_LABELS } from "@/app/_lib/domain/user"
 import type { UserProfile } from "@/app/_lib/types/user"
 
@@ -21,7 +22,9 @@ const AccountDetails = ({ profile }: AccountDetailsProps) => {
     { label: "Membro desde", value: formatDate(profile.createdAt) },
     {
       label: "Último acesso",
-      value: profile.lastLoginAt ? formatDateTime(profile.lastLoginAt) : "—",
+      value: profile.lastLoginAt
+        ? formatDateTime(profile.lastLoginAt)
+        : EMPTY_VALUE_LABEL,
     },
   ]
 

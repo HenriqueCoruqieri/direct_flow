@@ -27,7 +27,10 @@ const RegistryNav = ({ items }: RegistryNavProps) => {
         data-active={inRegistry || undefined}
         className="group/registry flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-sm font-semibold text-text-tertiary transition-colors outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-active:text-foreground"
       >
-        <span className="flex group-data-active/registry:text-primary [&_svg]:size-4.5">
+        <span
+          aria-hidden="true"
+          className="flex group-data-active/registry:text-primary [&_svg]:size-4.5"
+        >
           <FolderIcon aria-hidden="true" />
         </span>
         Cadastros

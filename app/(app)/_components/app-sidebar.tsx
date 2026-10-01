@@ -1,6 +1,7 @@
-import { HouseIcon } from "lucide-react"
+import { HouseIcon, TicketIcon } from "lucide-react"
 
 import LogoMark from "@/app/_components/logo-mark"
+import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 import NavItem from "./nav-item"
@@ -39,6 +40,13 @@ const AppSidebar = ({
               href="/dashboard"
               label="Início"
               icon={<HouseIcon aria-hidden="true" />}
+            />
+          </li>
+          <li>
+            <NavItem
+              href={MY_TICKETS_PATH}
+              label={MY_TICKETS_LABEL}
+              icon={<TicketIcon aria-hidden="true" />}
             />
           </li>
           {registryItems.length > 0 ? (

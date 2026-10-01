@@ -1,6 +1,7 @@
 "use client"
 
 import { type ColumnDef, type RowData, useTable } from "@tanstack/react-table"
+import { useRouter } from "next/navigation"
 
 import {
   Table,
@@ -32,12 +33,31 @@ const selectedValuesOf = (value: unknown): string[] =>
     ? value.filter((item): item is string => typeof item === "string")
     : []
 
+const hasTextSelection = (): boolean => {
+  const selection = window.getSelection()
+  return selection !== null && selection.toString().length > 0
+}
+
+const shouldIgnoreRowClick = (
+  event: React.MouseEvent<HTMLTableRowElement>,
+): boolean =>
+  event.button !== 0 ||
+  event.ctrlKey ||
+  event.metaKey ||
+  event.shiftKey ||
+  event.altKey ||
+  hasTextSelection() ||
+  !(event.target instanceof Element) ||
+  !event.currentTarget.contains(event.target) ||
+  event.target.closest("a, button, input") !== null
+
 interface DataTableProps<TData extends RowData> {
   columns: ReadonlyArray<ColumnDef<DataTableFeatures, TData>>
   data: ReadonlyArray<TData>
   emptyMessage: string
   search?: DataTableSearchConfig
   filters?: ReadonlyArray<DataTableFilter>
+  rowHref?: (row: TData) => string
 }
 
 const DataTable = <TData extends RowData>({
@@ -46,7 +66,9 @@ const DataTable = <TData extends RowData>({
   emptyMessage,
   search,
   filters = [],
+  rowHref,
 }: DataTableProps<TData>) => {
+  const router = useRouter()
   const table = useTable({
     features: dataTableFeatures,
     columns,
@@ -116,7 +138,18 @@ const DataTable = <TData extends RowData>({
           <TableBody>
             {rows.length > 0 ? (
               rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className={rowHref ? "cursor-pointer" : undefined}
+                  onClick={
+                    rowHref
+                      ? (event) => {
+                          if (shouldIgnoreRowClick(event)) return
+                          router.push(rowHref(row.original))
+                        }
+                      : undefined
+                  }
+                >
                   {row.getAllCells().map((cell) => (
                     <TableCell key={cell.id} className="px-4 py-3">
                       <table.FlexRender cell={cell} />

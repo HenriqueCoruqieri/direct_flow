@@ -1,4 +1,5 @@
 import { findDashboardSummary } from "@/app/_lib/data/dashboard"
+import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import type { DateRange } from "@/app/_lib/types/period"
 
 import StatCard from "./stat-card"
@@ -26,7 +27,7 @@ const DashboardStats = async ({ departmentId, range }: DashboardStatsProps) => {
       <StatCard label="Chamados no período" value={summary.ticketCount} />
       <StatCard
         label="Principal tag ofensora"
-        value={topTag ? topTag.name : "—"}
+        value={topTag ? topTag.name : EMPTY_VALUE_LABEL}
         valueTitle={topTag?.name}
         valueClassName={topTag ? tagValueSize(topTag.name) : undefined}
         hint={
