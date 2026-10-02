@@ -13,9 +13,14 @@ import {
   diffTicketEdit,
   hasTicketEditChanges,
 } from "@/app/_lib/domain/ticket-edit"
+import {
+  canResolveTicket,
+  RESOLVED_TICKET_STATUS,
+} from "@/app/_lib/domain/ticket-resolution"
 import type {
   InsertTicketOutcome,
   InsertTicketValues,
+  TicketActorFacts,
   TicketDetail,
 } from "@/app/_lib/types/ticket"
 import type {
@@ -23,6 +28,10 @@ import type {
   UpdateTicketByAuthorOutcome,
   UpdateTicketByAuthorValues,
 } from "@/app/_lib/types/ticket-edit"
+import type {
+  UpdateTicketResolutionOutcome,
+  UpdateTicketResolutionValues,
+} from "@/app/_lib/types/ticket-resolution"
 import { db } from "@/db"
 import {
   department,
@@ -74,6 +83,8 @@ export async function findTicketDetail(
         tagId: tag.id,
         tagName: tag.name,
         createdAt: ticket.createdAt,
+        solution: ticket.solution,
+        resolvedAt: ticket.resolvedAt,
       })
       .from(ticket)
       .innerJoin(author, eq(author.id, ticket.createdBy))
@@ -350,5 +361,95 @@ export async function updateTicketByAuthor(
     }
 
     return { status: "saved", ticketId, tagChanged: changes.tag !== null }
+  })
+}
+
+export async function updateTicketResolution(
+  values: UpdateTicketResolutionValues,
+): Promise<UpdateTicketResolutionOutcome> {
+  const { ticketId, solution, resolverId } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("update")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const [resolverRow] = await tx
+      .select({
+        departmentId: user.departmentId,
+        role: user.role,
+        isActive: user.isActive,
+        mustChangePassword: user.mustChangePassword,
+        isBoard: department.isBoard,
+      })
+      .from(user)
+      .innerJoin(department, eq(department.id, user.departmentId))
+      .where(eq(user.id, resolverId))
+      .for("share", { of: user })
+
+    if (!resolverRow) return { status: "not_resolvable" }
+
+    const resolver: TicketActorFacts = {
+      userId: resolverId,
+      departmentId: resolverRow.departmentId,
+      isBoard: resolverRow.isBoard,
+      role: resolverRow.role,
+      isActive: resolverRow.isActive,
+      mustChangePassword: resolverRow.mustChangePassword,
+    }
+
+    if (!canViewTicket(resolver, ticketRow)) return { status: "not_found" }
+
+    const [pendingTransfer] = await tx
+      .select({ id: ticketTransfer.id })
+      .from(ticketTransfer)
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1)
+
+    if (
+      !canResolveTicket(resolver, {
+        ...ticketRow,
+        hasPendingTransfer: pendingTransfer !== undefined,
+      })
+    ) {
+      return { status: "not_resolvable" }
+    }
+
+    const changedAt = new Date()
+
+    await tx
+      .update(ticket)
+      .set({
+        status: RESOLVED_TICKET_STATUS,
+        solution,
+        resolvedAt: changedAt,
+        updatedAt: changedAt,
+      })
+      .where(eq(ticket.id, ticketId))
+
+    await tx.insert(ticketHistory).values({
+      ticketId,
+      changedBy: resolverId,
+      event: "resolucao",
+      fromStatus: ticketRow.status,
+      toStatus: RESOLVED_TICKET_STATUS,
+      changedAt,
+    })
+
+    return { status: "saved", ticketId }
   })
 }

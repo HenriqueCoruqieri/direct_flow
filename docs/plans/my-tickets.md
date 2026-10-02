@@ -2,6 +2,13 @@
 
 Aprovado em 2026-10-01. Contrato técnico em `docs/contracts/my-tickets.md`.
 
+> **Exceção de 2026-10-02** (`docs/plans/ticket-resolution-and-comments.md`): a
+> regra "nenhum botão sem função" ganha exceção explícita. Botões de features
+> futuras ("Anexar" e "Enviar para outro setor" no card Conclusão) usam o padrão
+> de ação bloqueada: esmaecidos, toast no clique/toque/`Enter`, sem action.
+> Conclusão e mensagens (comentários) deixaram de estar fora: entram por esse
+> plano.
+
 ## Decisões fixadas pelo usuário
 
 | Tema                 | Decisão                                                                                                                                                                                                                                                                       |

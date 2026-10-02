@@ -542,6 +542,7 @@ valor novo no enum quebra o `tsc` até ganhar rótulo e frase.
 | `encerramento`             | Encerramento             | `Encerrou o chamado com status Fechado.`                         | sem status: `Encerrou o chamado.`                                                                                       |
 | `mudanca_tag`              | Mudança de tag           | `Trocou a tag de Acesso para Rede.`                              | só destino: `Definiu a tag Rede.`; só origem: `Removeu a tag Acesso.`; nenhum: `Alterou a tag.`                         |
 | `edicao`                   | Edição                   | `Editou o chamado.`                                              | sempre a mesma frase; o que mudou vem na `note` (`Alterou título e tipo (Dúvida → Bug).`), ver `ticket-edit.md`         |
+| `resolucao`                | Resolução                | `Resolveu o chamado.`                                            | sempre a mesma frase; a solução fica no card Conclusão, ver `ticket-resolution.md`                                      |
 
 Hoje o banco só tem `criacao`, `mudanca_status` (seed demo) e
 `transferencia_solicitada`. As outras frases existem para a tela já exibir o que
@@ -927,8 +928,11 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   `describeHistoryEntry(entry)` e, se houver, `note`. Histórico vazio (não
   acontece hoje) → `Nenhum evento registrado.`
 - **Sem nenhum botão de ação** (concluir, editar, atribuir, aprovar, mensagem,
-  anexo). Nada de placeholder "em breve". Exceção posterior: o botão "Editar"
-  do autor, definido em `docs/contracts/ticket-edit.md`.
+  anexo). Nada de placeholder "em breve". Exceções posteriores: o botão
+  "Editar" do autor (`docs/contracts/ticket-edit.md`); os cards Conclusão e
+  Comentários, com "Resolver", "Comentar" e os botões bloqueados "Anexar" e
+  "Enviar para outro setor" (`docs/contracts/ticket-resolution.md`). Botão de
+  feature futura só entra no padrão de ação bloqueada.
 
 ### Regras gerais de UI
 

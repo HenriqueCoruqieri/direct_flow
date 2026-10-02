@@ -21,6 +21,7 @@ export const HISTORY_EVENT_LABELS = {
   encerramento: "Encerramento",
   mudanca_tag: "Mudança de tag",
   edicao: "Edição",
+  resolucao: "Resolução",
 } satisfies Record<HistoryEvent, string>
 
 const statusLabel = (status: TicketStatus | null): string | null =>
@@ -91,6 +92,7 @@ const HISTORY_EVENT_DESCRIBERS = {
       unknown: "Alterou a tag.",
     }),
   edicao: () => "Editou o chamado.",
+  resolucao: () => "Resolveu o chamado.",
 } satisfies Record<HistoryEvent, HistoryEntryDescriber>
 
 export const describeHistoryEntry = (entry: TicketHistoryEntry): string =>

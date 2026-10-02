@@ -74,6 +74,7 @@ export const historyEventEnum = pgEnum("history_event", [
   "encerramento",
   "mudanca_tag",
   "edicao",
+  "resolucao",
 ])
 
 export const messageVisibilityEnum = pgEnum("message_visibility", [
@@ -180,6 +181,7 @@ export const ticket = pgTable(
       .references(() => department.id, { onDelete: "restrict" }),
     firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    solution: text("solution"),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     dueAt: timestamp("due_at", { withTimezone: true }),
     ...timestamps,

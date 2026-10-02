@@ -1,3 +1,4 @@
+import type { Role } from "@/app/_lib/types/actor"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
   HistoryEvent,
@@ -76,6 +77,12 @@ export interface TicketViewerFacts {
   isBoard: boolean
 }
 
+export interface TicketActorFacts extends TicketViewerFacts {
+  role: Role
+  isActive: boolean
+  mustChangePassword: boolean
+}
+
 export interface TicketVisibilityFacts {
   createdBy: number
   assignedTo: number | null
@@ -125,6 +132,8 @@ export interface TicketDetail extends TicketVisibilityFacts {
   tagId: number | null
   tagName: string | null
   createdAt: Date
+  solution: string | null
+  resolvedAt: Date | null
   pendingTransfer: TicketPendingTransfer | null
   history: TicketHistoryEntry[]
 }

@@ -1,35 +1,18 @@
 import { PencilIcon } from "lucide-react"
 
-import { Button } from "@/app/_components/ui/button"
-import { cn } from "@/app/_lib/utils"
+import BlockableOutlineButton from "@/app/_components/blockable-outline-button"
 
-interface EditTicketButtonProps extends Omit<
-  React.ComponentProps<typeof Button>,
-  "children" | "variant" | "size" | "asChild" | "disabled" | "aria-disabled"
-> {
-  blocked?: boolean
-}
+type EditTicketButtonProps = Omit<
+  React.ComponentProps<typeof BlockableOutlineButton>,
+  "children" | "size"
+>
 
-const EditTicketButton = ({
-  blocked = false,
-  className,
-  ...props
-}: EditTicketButtonProps) => {
+const EditTicketButton = (props: EditTicketButtonProps) => {
   return (
-    <Button
-      type="button"
-      variant="outline"
-      aria-disabled={blocked || undefined}
-      className={cn(
-        blocked &&
-          "cursor-not-allowed opacity-50 hover:bg-background dark:hover:bg-input/30",
-        className,
-      )}
-      {...props}
-    >
+    <BlockableOutlineButton {...props}>
       <PencilIcon aria-hidden="true" className="size-4" />
       Editar
-    </Button>
+    </BlockableOutlineButton>
   )
 }
 

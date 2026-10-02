@@ -124,6 +124,8 @@ export const formatTicketNumber = (ticketId: number): string => `#${ticketId}`
 export const ticketDetailPath = (ticketId: number): string =>
   `/tickets/${ticketId}`
 
+export const TICKET_NOT_FOUND_MESSAGE = "Chamado não encontrado."
+
 export const canViewTicket = (
   viewer: TicketViewerFacts,
   ticket: TicketVisibilityFacts,

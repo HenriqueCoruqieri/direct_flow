@@ -6,20 +6,28 @@ import { notFound } from "next/navigation"
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { requireSession } from "@/app/_lib/auth/session"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
+import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
 import {
+  ticketCommentFormStateFor,
+  ticketMessageScopeFor,
+} from "@/app/_lib/domain/ticket-comments"
+import {
   buildTicketEditFormOptions,
   ticketEditButtonStateFor,
 } from "@/app/_lib/domain/ticket-edit"
-import type { TicketEditorFacts } from "@/app/_lib/types/ticket-edit"
+import { ticketConclusionStateFor } from "@/app/_lib/domain/ticket-resolution"
+import type { TicketActorFacts } from "@/app/_lib/types/ticket"
 import { parseTicketIdParam } from "@/app/_lib/validation/ticket"
 
 import AppTopBar from "../../_components/app-top-bar"
 import EditTicketBlockedButton from "./_components/edit-ticket-blocked-button"
 import EditTicketDialog from "./_components/edit-ticket-dialog"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
+import TicketComments from "./_components/ticket-comments"
+import TicketConclusion from "./_components/ticket-conclusion"
 import TicketDescription from "./_components/ticket-description"
 import TicketDetailFields from "./_components/ticket-detail-fields"
 import TicketDetailHeader from "./_components/ticket-detail-header"
@@ -36,7 +44,7 @@ export const generateMetadata = async ({
 }
 
 const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
-  const actor = await requireSession()
+  const session = await requireSession()
   const id = parseTicketIdParam((await params).id)
   if (id === null) notFound()
 
@@ -46,26 +54,34 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   ])
   if (!facts || !ticket) notFound()
 
-  const editor: TicketEditorFacts = {
-    userId: actor.id,
+  const actor: TicketActorFacts = {
+    userId: session.id,
     departmentId: facts.departmentId,
     isBoard: facts.isBoard,
+    role: facts.role,
     isActive: facts.isActive,
     mustChangePassword: facts.mustChangePassword,
   }
-  if (!canViewTicket(editor, ticket)) notFound()
+  if (!canViewTicket(actor, ticket)) notFound()
 
-  const editButton = ticketEditButtonStateFor(editor, ticket)
+  const editButton = ticketEditButtonStateFor(actor, ticket)
+  const conclusion = ticketConclusionStateFor(actor, ticket)
+  const commentForm = ticketCommentFormStateFor(actor, ticket)
+
+  const [messages, editTags] = await Promise.all([
+    listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
+    editButton.state === "editable"
+      ? listActiveDepartmentTags(facts.departmentId)
+      : null,
+  ])
+
   const editAction =
-    editButton.state === "editable" ? (
-      <EditTicketDialog
-        options={buildTicketEditFormOptions(
-          ticket,
-          await listActiveDepartmentTags(facts.departmentId),
-        )}
-      />
-    ) : editButton.state === "blocked" ? (
+    editButton.state === "blocked" ? (
       <EditTicketBlockedButton message={editButton.message} />
+    ) : editTags !== null ? (
+      <EditTicketDialog
+        options={buildTicketEditFormOptions(ticket, editTags)}
+      />
     ) : undefined
 
   return (
@@ -93,12 +109,25 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
           <PendingTransferNotice transfer={ticket.pendingTransfer} />
         ) : null}
 
-        <div className="grid grid-cols-1 gap-5.5 lg:grid-cols-3 lg:items-start">
+        <div className="grid grid-cols-1 gap-5.5 lg:grid-cols-3 lg:items-stretch">
           <div className="flex min-w-0 flex-col gap-5.5 lg:col-span-2">
             <TicketDescription description={ticket.description} />
             <TicketTimeline entries={ticket.history} />
+            <TicketConclusion
+              ticketId={ticket.id}
+              state={conclusion}
+              className="lg:flex-1"
+            />
           </div>
-          <TicketDetailFields ticket={ticket} />
+          <div className="flex min-w-0 flex-col gap-5.5">
+            <TicketDetailFields ticket={ticket} />
+            <TicketComments
+              ticketId={ticket.id}
+              messages={messages}
+              form={commentForm}
+              className="lg:flex-1"
+            />
+          </div>
         </div>
       </div>
     </>

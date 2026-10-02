@@ -17,6 +17,13 @@ no setor dele, sem transferência pendente e fora de `aguardando_aprovacao`,
 mudou) e `ticket_history` (`edicao`, mais `mudanca_tag` se a tag mudou). Sem
 e-mail.
 
+> Revisão de 2026-10-02 (`docs/contracts/ticket-resolution.md`): a página do
+> detalhe passa a montar um único `TicketActorFacts` (com `role`), que satisfaz
+> `TicketEditorFacts` sem conversão; `ticketEditButtonStateFor` não muda. A
+> edição continua valendo em `resolvido` (título, descrição, tipo, tag); a
+> **solução** não é editável. O `EditTicketDialog` perdeu a `DialogDescription`
+> (ver a seção dele).
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

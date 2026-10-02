@@ -11,6 +11,7 @@ import {
   checkTicketCreation,
   describeTicketCreated,
   TICKET_CREATION_BLOCK_MESSAGES,
+  TICKET_NOT_FOUND_MESSAGE,
   ticketDetailPath,
 } from "@/app/_lib/domain/ticket"
 import { describeTicketEdited } from "@/app/_lib/domain/ticket-edit"
@@ -169,7 +170,7 @@ const EDIT_OUTCOME_FAILURES = {
   not_found: {
     ok: false,
     code: "NOT_FOUND",
-    message: "Chamado não encontrado.",
+    message: TICKET_NOT_FOUND_MESSAGE,
   },
   not_editable: {
     ok: false,
