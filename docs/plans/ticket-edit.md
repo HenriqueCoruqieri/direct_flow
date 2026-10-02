@@ -39,7 +39,8 @@ anexos e mensagens.
 - **Domínio**: `canEditTicket` (com tabela de status editáveis), opções do
   formulário, diferença, nota do histórico, mensagem de sucesso; rótulo `Edição`
   e frase `Editou o chamado.`.
-- **Validação**: `editTicketSchema` = criação sem destino + `ticketId`.
+- **Validação**: `editTicketSchema` = criação sem destino + `ticketId`. Desde
+  2026-10-02 a criação já não tem destino; a edição deriva dela direto.
 - **`df-data`**: `tagId` no detalhe; `updateTicketByAuthor` em transação.
 - **`df-actions`**: `editTicket`.
 - **`df-ui`**: decisão do botão na página, `EditTicketDialog`. Linha do tempo sem

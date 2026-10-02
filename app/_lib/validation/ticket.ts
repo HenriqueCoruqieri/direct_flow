@@ -39,7 +39,6 @@ export const createTicketSchema = z.object({
   title: ticketTitleSchema,
   description: ticketDescriptionSchema,
   type: ticketTypeSchema,
-  departmentId: registryIdSchema("Selecione o setor de destino."),
   tagId: registryIdSchema("Selecione a tag."),
 })
 
@@ -65,8 +64,8 @@ export const parseTicketIdParam = (value: string): number | null => {
   return result.success ? result.data : null
 }
 
-export const editTicketSchema = createTicketSchema
-  .omit({ departmentId: true })
-  .extend({ ticketId: ticketIdSchema })
+export const editTicketSchema = createTicketSchema.extend({
+  ticketId: ticketIdSchema,
+})
 
 export type EditTicketInput = z.infer<typeof editTicketSchema>

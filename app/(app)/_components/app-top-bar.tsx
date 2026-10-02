@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
 
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
-import { listDepartmentOptions } from "@/app/_lib/data/departments"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { buildNewTicketFormOptions } from "@/app/_lib/domain/ticket"
 
@@ -13,11 +12,8 @@ const AppTopBar = async () => {
   const facts = await getAccountFacts()
   if (!facts) notFound()
 
-  const [tags, departmentOptions] = await Promise.all([
-    listActiveDepartmentTags(facts.departmentId),
-    listDepartmentOptions(),
-  ])
-  const options = buildNewTicketFormOptions(facts, tags, departmentOptions)
+  const tags = await listActiveDepartmentTags(facts.departmentId)
+  const options = buildNewTicketFormOptions(facts, tags)
 
   return (
     <AppTopBarFrame

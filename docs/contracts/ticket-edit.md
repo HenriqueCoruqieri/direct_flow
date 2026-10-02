@@ -318,7 +318,7 @@ sem tag: `Definiu a tag Rede.`).
 
 ```ts
 export const ticketIdSchema // number int > 0 e <= TICKET_ID_MAX, "Chamado inválido."
-export const editTicketSchema // createTicketSchema.omit({ departmentId }).extend({ ticketId })
+export const editTicketSchema // createTicketSchema.extend({ ticketId })
 export type EditTicketInput = {
   ticketId: number
   title: string
@@ -330,8 +330,11 @@ export type EditTicketInput = {
 
 - Mesmos campos e mensagens do `createTicketSchema` (título, descrição, tipo,
   tag), por derivação: nenhuma regra de campo é reescrita.
-- `departmentId` não existe na edição: destino, status, prioridade e responsável
-  não são editáveis e não entram no schema. Chave extra no envio é descartada.
+- Setor, status, prioridade e responsável não são editáveis e não entram no
+  schema. Chave extra no envio é descartada.
+- Desde a revisão de 2026-10-02 o `createTicketSchema` não tem mais
+  `departmentId` (`ticket-creation.md`), então a derivação deixou de precisar do
+  `omit`. Os campos da edição continuam os mesmos.
 - `ticketId` sem `coerce`; vem dos `defaults`, não de campo visível.
 - Autor e setor **não** estão no schema: vêm da sessão e do banco.
 
@@ -569,9 +572,12 @@ Props: `options: TicketEditFormOptions`.
 
 - Gatilho: `Button` `variant="outline"`, ícone `PencilIcon` (`aria-hidden`),
   texto `Editar`.
-- `DialogTitle` `Editar chamado #42` (`formatTicketNumber`); `DialogDescription`
-  `Altere título, descrição, tipo ou tag. Setor, status e prioridade não mudam
-por aqui.`
+- `DialogTitle` `Editar chamado #42` (`formatTicketNumber`). **Sem**
+  `DialogDescription` (retirada pelo usuário em 2026-10-02, intencional). Sem
+  descrição, o Radix avisa no console (`Missing Description or
+aria-describedby={undefined} for {DialogContent}`): o `DialogContent` recebe
+  `aria-describedby={undefined}` para declarar que o dialog não tem descrição.
+  Nenhum outro elemento do formulário substitui a descrição.
 - `useForm<EditTicketInput>({ resolver: zodResolver(editTicketSchema),
 defaultValues: options.defaults })`. **Ao abrir**, `form.reset(options.defaults)`:
   depois de salvar, a página volta com valores novos e o próximo "Editar" precisa
@@ -652,7 +658,8 @@ usa um chamado novo, `#E` abaixo.
 Preparação (como QA Admin Suporte): QA Suporte com **duas** tags ativas,
 `[QA] Acesso` e `[QA] Edição B` (criar ou reativar); QA Infra com `[QA] Rede`
 ativa. Depois, como QA Membro Suporte: "Novo chamado" `[QA] Edição base`, tipo
-Dúvida, destino QA Suporte, tag `[QA] Acesso` → `#E` (`aberto`). Anotar
+Dúvida, tag `[QA] Acesso` → `#E` (`aberto`; desde 2026-10-02 a criação não tem
+setor de destino). Anotar
 `max(id)` de `ticket_history` antes de cada cenário que diz "nada gravado".
 
 | #   | Quem                 | Ação                                                                                                                                                                                 | Esperado                                                                                                                                                                                                                                                                                                                |
@@ -685,7 +692,12 @@ Dúvida, destino QA Suporte, tag `[QA] Acesso` → `#E` (`aberto`). Anotar
 | 26  | QA Admin Suporte     | abrir `/tickets/66` (mesmo setor, não é autor); depois, como QA Membro Suporte, repetir 21 e 22 no #68 ou em outro chamado próprio `aguardando_aprovacao` com transferência pendente | admin: detalhe abre, **sem** botão "Editar" (nem esmaecido); idem para o Diretor no #66. Membro: mesmo comportamento do 21 e do 22, com o nome do setor de destino daquele chamado no toast (`Aguarde a solução ou devolutiva de {setor}`)                                                                              |
 
 O cenário 17 é opcional se a troca de setor no meio do dialog não puder ser
-coordenada; nesse caso, registrar como não executado. `fechado` e `cancelado`
+coordenada; nesse caso, registrar como não executado.
+
+Desde a revisão de 2026-10-02 a criação não gera mais chamado
+`aguardando_aprovacao` com transferência pendente. Os cenários 14 e 21–26 usam
+só os legados de QA Membro Suporte (#66, #68 e, nos testes de 2026-10-01,
+#70), em leitura. `fechado` e `cancelado`
 próprios continuam **sem** botão, nem esmaecido: é o cenário 16. Os cenários
 21–24 são a versão desta tela da bateria 14a–14g de
 `docs/contracts/ticket-creation.md`; o comportamento é o mesmo, então uma falha

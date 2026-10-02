@@ -3,6 +3,13 @@
 Aprovado em 2026-09-30. Contrato a escrever na Onda 0 em
 `docs/contracts/ticket-creation.md`, com as regras das próximas features.
 
+> **Revisto em 2026-10-02** (`docs/plans/ticket-resolution-and-comments.md`):
+> o setor de destino saiu da criação. Todo chamado nasce `aberto`, no setor do
+> autor, sem `ticket_transfer`. As linhas "Campos" (destino), "Destino", "Outro
+> setor", o toast "enviado para aprovação" e o critério de pronto 2 deixaram de
+> valer; o envio para outro setor passa a ser ato no detalhe (feature futura).
+> Os textos de bloqueio terminam em "informe sua liderança".
+
 ## Decisões fixadas pelo usuário
 
 | Tema          | Decisão                                                                                                                                                                                                               |

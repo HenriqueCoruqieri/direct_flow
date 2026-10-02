@@ -4,15 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
-import {
-  Controller,
-  type DefaultValues,
-  useForm,
-  useWatch,
-} from "react-hook-form"
+import { Controller, type DefaultValues, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
-import Combobox from "@/app/_components/combobox"
 import { Button } from "@/app/_components/ui/button"
 import {
   Dialog,
@@ -24,17 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/app/_components/ui/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/app/_components/ui/field"
 import { createTicket } from "@/app/_lib/actions/tickets"
-import {
-  describeApprovalNotice,
-  requiresApproval,
-} from "@/app/_lib/domain/ticket"
 import type { NewTicketFormAvailable } from "@/app/_lib/types/ticket"
 import {
   type CreateTicketInput,
@@ -54,61 +38,34 @@ interface NewTicketDialogProps {
 const TAG_HINT =
   "A tag é utilizada para categorizar e mapear os maiores ofensores da fila de atendimento."
 
-const initialValuesFor = (
-  options: NewTicketFormAvailable,
-): DefaultValues<CreateTicketInput> => ({
+const INITIAL_VALUES: DefaultValues<CreateTicketInput> = {
   title: "",
   description: "",
-  departmentId: options.defaultDestinationId ?? undefined,
-})
-
-const describedBy = (...ids: (string | null)[]): string | undefined => {
-  const present = ids.filter((id): id is string => id !== null)
-  return present.length > 0 ? present.join(" ") : undefined
 }
 
 const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
   const titleId = useId()
   const descriptionId = useId()
   const typeId = useId()
-  const departmentId = useId()
   const tagId = useId()
   const router = useRouter()
   const [open, setOpen] = useState(false)
 
   const form = useForm<CreateTicketInput>({
     resolver: zodResolver(createTicketSchema),
-    defaultValues: initialValuesFor(options),
+    defaultValues: INITIAL_VALUES,
   })
 
   const isSubmitting = form.formState.isSubmitting
-  const destinationOptions = options.destinations.map((destination) => ({
-    value: destination.id,
-    label: destination.name,
-  }))
-
-  const selectedDepartmentId = useWatch({
-    control: form.control,
-    name: "departmentId",
-  })
-  const selectedDestination =
-    options.destinations.find(
-      (destination) => destination.id === selectedDepartmentId,
-    ) ?? null
-  const approvalNotice =
-    selectedDestination !== null &&
-    requiresApproval(options.authorDepartmentId, selectedDestination.id)
-      ? describeApprovalNotice(selectedDestination.name)
-      : null
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting) return
-    if (!nextOpen) form.reset(initialValuesFor(options))
+    if (!nextOpen) form.reset(INITIAL_VALUES)
     setOpen(nextOpen)
   }
 
   const closeAndDiscard = () => {
-    form.reset(initialValuesFor(options))
+    form.reset(INITIAL_VALUES)
     setOpen(false)
   }
 
@@ -127,16 +84,6 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
       return
     }
 
-    if (result.code === "INVALID_DESTINATION") {
-      form.setError(
-        "departmentId",
-        { message: result.message },
-        { shouldFocus: true },
-      )
-      router.refresh()
-      return
-    }
-
     toast.error(result.message)
 
     if (result.code === "FORBIDDEN") {
@@ -144,9 +91,6 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
       router.refresh()
     }
   }
-
-  const departmentErrorId = `${departmentId}-error`
-  const departmentNoticeId = `${departmentId}-notice`
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -201,45 +145,6 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                   {...field}
                   fieldState={fieldState}
                 />
-              )}
-            />
-
-            <Controller
-              name="departmentId"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={departmentId}>
-                    Setor de destino
-                  </FieldLabel>
-                  <Combobox
-                    id={departmentId}
-                    ref={field.ref}
-                    options={destinationOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    disabled={field.disabled}
-                    placeholder="Selecione o setor"
-                    searchPlaceholder="Buscar setor…"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={describedBy(
-                      fieldState.invalid ? departmentErrorId : null,
-                      approvalNotice !== null ? departmentNoticeId : null,
-                    )}
-                  />
-                  {fieldState.invalid ? (
-                    <FieldError
-                      id={departmentErrorId}
-                      errors={[fieldState.error]}
-                    />
-                  ) : null}
-                  {approvalNotice !== null ? (
-                    <FieldDescription id={departmentNoticeId}>
-                      {approvalNotice}
-                    </FieldDescription>
-                  ) : null}
-                </Field>
               )}
             />
 

@@ -26,8 +26,7 @@ import {
   editTicketSchema,
 } from "@/app/_lib/validation/ticket"
 
-export type TicketErrorCode =
-  "INVALID_INPUT" | "FORBIDDEN" | "INVALID_TAG" | "INVALID_DESTINATION"
+export type TicketErrorCode = "INVALID_INPUT" | "FORBIDDEN" | "INVALID_TAG"
 
 export interface CreateTicketSuccess {
   ok: true
@@ -50,8 +49,6 @@ const DASHBOARD_PATH = "/dashboard"
 const FORBIDDEN_MESSAGE = "Você não tem permissão para abrir chamados."
 const INVALID_TAG_MESSAGE =
   "Esta tag não está disponível. Escolha uma tag ativa do seu setor."
-const INVALID_DESTINATION_MESSAGE =
-  "Este setor não pode receber chamados. Escolha outro setor de destino."
 const UNEXPECTED_ERROR_MESSAGE =
   "Não foi possível abrir o chamado agora. Tente novamente."
 
@@ -71,11 +68,6 @@ const OUTCOME_FAILURES = {
     ok: false,
     code: "INVALID_TAG",
     message: INVALID_TAG_MESSAGE,
-  },
-  invalid_destination: {
-    ok: false,
-    code: "INVALID_DESTINATION",
-    message: INVALID_DESTINATION_MESSAGE,
   },
 } satisfies Record<InsertTicketFailureStatus, TicketActionFailure>
 
@@ -117,7 +109,6 @@ export const createTicket = async (
       description: parsed.data.description,
       type: parsed.data.type,
       tagId: parsed.data.tagId,
-      destinationDepartmentId: parsed.data.departmentId,
       createdBy: actor.id,
       originDepartmentId: facts.departmentId,
     })
@@ -132,7 +123,7 @@ export const createTicket = async (
 
   return {
     ok: true,
-    message: describeTicketCreated(outcome),
+    message: describeTicketCreated(outcome.ticketId),
     ticketId: outcome.ticketId,
   }
 }

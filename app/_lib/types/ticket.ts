@@ -1,4 +1,3 @@
-import type { DepartmentOption } from "@/app/_lib/types/department"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
   HistoryEvent,
@@ -8,11 +7,6 @@ import type {
 } from "@/db/schema"
 
 export type { HistoryEvent, TicketPriority, TicketStatus, TicketType }
-
-export type InitialTicketStatus = Extract<
-  TicketStatus,
-  "aberto" | "aguardando_aprovacao"
->
 
 export interface TicketAuthorFacts {
   isActive: boolean
@@ -48,7 +42,6 @@ export interface InsertTicketValues {
   description: string
   type: TicketType
   tagId: number
-  destinationDepartmentId: number
   createdBy: number
   originDepartmentId: number
 }
@@ -56,27 +49,17 @@ export interface InsertTicketValues {
 export interface TicketSaved {
   status: "saved"
   ticketId: number
-  ticketStatus: InitialTicketStatus
-  destinationDepartmentName: string
 }
 
 export interface TicketInvalidTag {
   status: "invalid_tag"
 }
 
-export interface TicketInvalidDestination {
-  status: "invalid_destination"
-}
-
-export type InsertTicketOutcome =
-  TicketSaved | TicketInvalidTag | TicketInvalidDestination
+export type InsertTicketOutcome = TicketSaved | TicketInvalidTag
 
 export interface NewTicketFormAvailable {
   canCreate: true
-  authorDepartmentId: number
-  defaultDestinationId: number | null
   tags: TagOption[]
-  destinations: DepartmentOption[]
 }
 
 export interface NewTicketFormBlocked {

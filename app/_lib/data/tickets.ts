@@ -2,12 +2,10 @@ import { and, asc, eq } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import {
-  canReceiveTickets,
   canViewTicket,
   INITIAL_TICKET_PRIORITY,
-  initialTicketStatusFor,
+  INITIAL_TICKET_STATUS,
   isUsableTicketTag,
-  requiresApproval,
 } from "@/app/_lib/domain/ticket"
 import {
   canEditTicket,
@@ -173,32 +171,13 @@ export async function insertTicket(
       return { status: "invalid_tag" }
     }
 
-    const [departmentRow] = await tx
-      .select({
-        name: department.name,
-        isActive: department.isActive,
-        isUnassigned: department.isUnassigned,
-      })
-      .from(department)
-      .where(eq(department.id, values.destinationDepartmentId))
-      .for("share")
-
-    if (!departmentRow || !canReceiveTickets(departmentRow)) {
-      return { status: "invalid_destination" }
-    }
-
-    const ticketStatus = initialTicketStatusFor(
-      values.originDepartmentId,
-      values.destinationDepartmentId,
-    )
-
     const [created] = await tx
       .insert(ticket)
       .values({
         title: values.title,
         description: values.description,
         type: values.type,
-        status: ticketStatus,
+        status: INITIAL_TICKET_STATUS,
         priority: INITIAL_TICKET_PRIORITY,
         createdBy: values.createdBy,
         originDepartmentId: values.originDepartmentId,
@@ -216,42 +195,13 @@ export async function insertTicket(
       ticketId: created.id,
       changedBy: values.createdBy,
       event: "criacao",
-      toStatus: ticketStatus,
+      toStatus: INITIAL_TICKET_STATUS,
       toPriority: INITIAL_TICKET_PRIORITY,
       toDepartmentId: values.originDepartmentId,
       changedAt: created.createdAt,
     })
 
-    if (
-      requiresApproval(
-        values.originDepartmentId,
-        values.destinationDepartmentId,
-      )
-    ) {
-      await tx.insert(ticketTransfer).values({
-        ticketId: created.id,
-        fromDepartmentId: values.originDepartmentId,
-        toDepartmentId: values.destinationDepartmentId,
-        requestedBy: values.createdBy,
-        createdAt: created.createdAt,
-      })
-
-      await tx.insert(ticketHistory).values({
-        ticketId: created.id,
-        changedBy: values.createdBy,
-        event: "transferencia_solicitada",
-        fromDepartmentId: values.originDepartmentId,
-        toDepartmentId: values.destinationDepartmentId,
-        changedAt: created.createdAt,
-      })
-    }
-
-    return {
-      status: "saved",
-      ticketId: created.id,
-      ticketStatus,
-      destinationDepartmentName: departmentRow.name,
-    }
+    return { status: "saved", ticketId: created.id }
   })
 }
 

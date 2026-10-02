@@ -12,7 +12,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -97,7 +96,10 @@ const EditTicketDialog = ({ options }: EditTicketDialogProps) => {
         <EditTicketButton />
       </DialogTrigger>
 
-      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-lg">
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-lg"
+      >
         <form
           noValidate
           onSubmit={form.handleSubmit(onSubmit)}
@@ -107,10 +109,6 @@ const EditTicketDialog = ({ options }: EditTicketDialogProps) => {
             <DialogTitle>
               Editar chamado {formatTicketNumber(options.defaults.ticketId)}
             </DialogTitle>
-            <DialogDescription>
-              Altere título, descrição, tipo ou tag. Setor, status e prioridade
-              não mudam por aqui.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4">
