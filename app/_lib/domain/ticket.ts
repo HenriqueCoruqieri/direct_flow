@@ -88,7 +88,7 @@ export type NonFinalTicketStatus = StatusesFlagged<
   false
 >
 
-const isNonFinalTicketStatus = (
+export const isNonFinalTicketStatus = (
   status: TicketStatus,
 ): status is NonFinalTicketStatus => !TICKET_STATUS_IS_FINAL[status]
 

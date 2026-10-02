@@ -30,21 +30,10 @@ import {
   FieldError,
   FieldLabel,
 } from "@/app/_components/ui/field"
-import { Input } from "@/app/_components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/app/_components/ui/select"
-import { Textarea } from "@/app/_components/ui/textarea"
 import { createTicket } from "@/app/_lib/actions/tickets"
 import {
   describeApprovalNotice,
   requiresApproval,
-  TICKET_TYPE_LABELS,
-  TICKET_TYPES,
 } from "@/app/_lib/domain/ticket"
 import type { NewTicketFormAvailable } from "@/app/_lib/types/ticket"
 import {
@@ -53,13 +42,17 @@ import {
 } from "@/app/_lib/validation/ticket"
 
 import NewTicketButton from "./new-ticket-button"
+import TicketDescriptionField from "./ticket-description-field"
+import TicketTagField from "./ticket-tag-field"
+import TicketTitleField from "./ticket-title-field"
+import TicketTypeField from "./ticket-type-field"
 
 interface NewTicketDialogProps {
   options: NewTicketFormAvailable
 }
 
-const ticketTypeFromValue = (value: string) =>
-  TICKET_TYPES.find((type) => type === value)
+const TAG_HINT =
+  "A tag é utilizada para categorizar e mapear os maiores ofensores da fila de atendimento."
 
 const initialValuesFor = (
   options: NewTicketFormAvailable,
@@ -92,10 +85,6 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
   const destinationOptions = options.destinations.map((destination) => ({
     value: destination.id,
     label: destination.name,
-  }))
-  const tagOptions = options.tags.map((tag) => ({
-    value: tag.id,
-    label: tag.name,
   }))
 
   const selectedDepartmentId = useWatch({
@@ -156,13 +145,8 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
     }
   }
 
-  const titleErrorId = `${titleId}-error`
-  const descriptionErrorId = `${descriptionId}-error`
-  const typeErrorId = `${typeId}-error`
   const departmentErrorId = `${departmentId}-error`
   const departmentNoticeId = `${departmentId}-notice`
-  const tagErrorId = `${tagId}-error`
-  const tagHintId = `${tagId}-hint`
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -188,21 +172,11 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               name="title"
               control={form.control}
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={titleId}>Título</FieldLabel>
-                  <Input
-                    {...field}
-                    id={titleId}
-                    autoComplete="off"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? titleErrorId : undefined
-                    }
-                  />
-                  {fieldState.invalid ? (
-                    <FieldError id={titleErrorId} errors={[fieldState.error]} />
-                  ) : null}
-                </Field>
+                <TicketTitleField
+                  id={titleId}
+                  {...field}
+                  fieldState={fieldState}
+                />
               )}
             />
 
@@ -210,25 +184,11 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               name="description"
               control={form.control}
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={descriptionId}>Descrição</FieldLabel>
-                  <Textarea
-                    {...field}
-                    id={descriptionId}
-                    rows={5}
-                    className="max-h-64 min-h-28"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? descriptionErrorId : undefined
-                    }
-                  />
-                  {fieldState.invalid ? (
-                    <FieldError
-                      id={descriptionErrorId}
-                      errors={[fieldState.error]}
-                    />
-                  ) : null}
-                </Field>
+                <TicketDescriptionField
+                  id={descriptionId}
+                  {...field}
+                  fieldState={fieldState}
+                />
               )}
             />
 
@@ -236,40 +196,11 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               name="type"
               control={form.control}
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={typeId}>Tipo</FieldLabel>
-                  <Select
-                    name={field.name}
-                    value={field.value ?? ""}
-                    onValueChange={(value) =>
-                      field.onChange(ticketTypeFromValue(value))
-                    }
-                    disabled={field.disabled}
-                  >
-                    <SelectTrigger
-                      id={typeId}
-                      ref={field.ref}
-                      onBlur={field.onBlur}
-                      aria-invalid={fieldState.invalid}
-                      aria-describedby={
-                        fieldState.invalid ? typeErrorId : undefined
-                      }
-                      className="w-full"
-                    >
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TICKET_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {TICKET_TYPE_LABELS[type]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {fieldState.invalid ? (
-                    <FieldError id={typeErrorId} errors={[fieldState.error]} />
-                  ) : null}
-                </Field>
+                <TicketTypeField
+                  id={typeId}
+                  {...field}
+                  fieldState={fieldState}
+                />
               )}
             />
 
@@ -316,32 +247,14 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               name="tagId"
               control={form.control}
               render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={tagId}>Tags</FieldLabel>
-                  <Combobox
-                    id={tagId}
-                    ref={field.ref}
-                    options={tagOptions}
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    disabled={field.disabled}
-                    placeholder="Selecione a tag"
-                    searchPlaceholder="Buscar tag…"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? tagErrorId : tagHintId
-                    }
-                  />
-                  {fieldState.invalid ? (
-                    <FieldError id={tagErrorId} errors={[fieldState.error]} />
-                  ) : (
-                    <FieldDescription id={tagHintId}>
-                      A tag é utilizada para categorizar e mapear os maiores
-                      ofensores da fila de atendimento.
-                    </FieldDescription>
-                  )}
-                </Field>
+                <TicketTagField
+                  id={tagId}
+                  label="Tags"
+                  {...field}
+                  fieldState={fieldState}
+                  tags={options.tags}
+                  hint={TAG_HINT}
+                />
               )}
             />
           </div>

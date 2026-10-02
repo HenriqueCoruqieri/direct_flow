@@ -139,6 +139,7 @@ export interface TicketDetail extends TicketVisibilityFacts {
   originDepartmentId: number
   originDepartmentName: string
   currentDepartmentName: string
+  tagId: number | null
   tagName: string | null
   createdAt: Date
   pendingTransfer: TicketPendingTransfer | null

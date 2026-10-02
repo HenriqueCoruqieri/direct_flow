@@ -73,6 +73,7 @@ export const historyEventEnum = pgEnum("history_event", [
   "reabertura",
   "encerramento",
   "mudanca_tag",
+  "edicao",
 ])
 
 export const messageVisibilityEnum = pgEnum("message_visibility", [

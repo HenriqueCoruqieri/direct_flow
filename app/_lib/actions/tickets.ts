@@ -5,19 +5,25 @@ import { revalidatePath } from "next/cache"
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getSession } from "@/app/_lib/auth/session"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
-import { insertTicket } from "@/app/_lib/data/tickets"
+import { insertTicket, updateTicketByAuthor } from "@/app/_lib/data/tickets"
+import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import {
   checkTicketCreation,
   describeTicketCreated,
   TICKET_CREATION_BLOCK_MESSAGES,
+  ticketDetailPath,
 } from "@/app/_lib/domain/ticket"
+import { describeTicketEdited } from "@/app/_lib/domain/ticket-edit"
 import type {
   InsertTicketOutcome,
   TicketCreationBlockReason,
 } from "@/app/_lib/types/ticket"
+import type { UpdateTicketByAuthorOutcome } from "@/app/_lib/types/ticket-edit"
 import {
   type CreateTicketInput,
   createTicketSchema,
+  type EditTicketInput,
+  editTicketSchema,
 } from "@/app/_lib/validation/ticket"
 
 export type TicketErrorCode =
@@ -128,5 +134,106 @@ export const createTicket = async (
     ok: true,
     message: describeTicketCreated(outcome),
     ticketId: outcome.ticketId,
+  }
+}
+
+export type EditTicketErrorCode =
+  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "INVALID_TAG" | "NO_CHANGES"
+
+export interface EditTicketSuccess {
+  ok: true
+  message: string
+}
+
+export interface EditTicketFailure {
+  ok: false
+  message: string
+  code?: EditTicketErrorCode
+}
+
+export type EditTicketResult = EditTicketSuccess | EditTicketFailure
+
+type UpdateTicketByAuthorFailureStatus = Exclude<
+  UpdateTicketByAuthorOutcome["status"],
+  "saved"
+>
+
+const EDIT_FORBIDDEN_MESSAGE =
+  "Você não tem permissão para editar este chamado."
+const EDIT_UNEXPECTED_ERROR_MESSAGE =
+  "Não foi possível salvar o chamado agora. Tente novamente."
+
+const EDIT_FORBIDDEN_FAILURE: EditTicketFailure = {
+  ok: false,
+  code: "FORBIDDEN",
+  message: EDIT_FORBIDDEN_MESSAGE,
+}
+
+const EDIT_UNEXPECTED_FAILURE: EditTicketFailure = {
+  ok: false,
+  message: EDIT_UNEXPECTED_ERROR_MESSAGE,
+}
+
+const EDIT_OUTCOME_FAILURES = {
+  not_found: {
+    ok: false,
+    code: "NOT_FOUND",
+    message: "Chamado não encontrado.",
+  },
+  not_editable: {
+    ok: false,
+    code: "FORBIDDEN",
+    message: "Você não pode editar este chamado.",
+  },
+  invalid_tag: {
+    ok: false,
+    code: "INVALID_TAG",
+    message: INVALID_TAG_MESSAGE,
+  },
+  no_changes: {
+    ok: false,
+    code: "NO_CHANGES",
+    message: "Nenhuma alteração para salvar.",
+  },
+} satisfies Record<UpdateTicketByAuthorFailureStatus, EditTicketFailure>
+
+const editInvalidInput = (
+  firstIssueMessage: string | undefined,
+): EditTicketFailure => ({
+  ok: false,
+  code: "INVALID_INPUT",
+  message: firstIssueMessage ?? EDIT_UNEXPECTED_ERROR_MESSAGE,
+})
+
+export const editTicket = async (
+  input: EditTicketInput,
+): Promise<EditTicketResult> => {
+  const actor = await getSession()
+  if (!actor) return EDIT_FORBIDDEN_FAILURE
+
+  const parsed = editTicketSchema.safeParse(input)
+  if (!parsed.success) return editInvalidInput(parsed.error.issues[0]?.message)
+
+  let outcome: UpdateTicketByAuthorOutcome
+
+  try {
+    outcome = await updateTicketByAuthor({
+      ...parsed.data,
+      authorId: actor.id,
+    })
+  } catch (error) {
+    console.error("[editTicket]", error)
+    return EDIT_UNEXPECTED_FAILURE
+  }
+
+  if (outcome.status !== "saved") return EDIT_OUTCOME_FAILURES[outcome.status]
+
+  revalidatePath(ticketDetailPath(outcome.ticketId))
+  revalidatePath(MY_TICKETS_PATH)
+  if (outcome.tagChanged) revalidatePath(DASHBOARD_PATH)
+
+  return {
+    ok: true,
+    message: describeTicketEdited(outcome.ticketId),
   }
 }

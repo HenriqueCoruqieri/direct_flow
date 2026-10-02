@@ -1,0 +1,1 @@
+ALTER TYPE "public"."history_event" ADD VALUE 'edicao';

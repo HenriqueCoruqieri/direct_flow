@@ -3,16 +3,28 @@ import { alias } from "drizzle-orm/pg-core"
 
 import {
   canReceiveTickets,
+  canViewTicket,
   INITIAL_TICKET_PRIORITY,
   initialTicketStatusFor,
   isUsableTicketTag,
   requiresApproval,
 } from "@/app/_lib/domain/ticket"
+import {
+  canEditTicket,
+  describeTicketEditNote,
+  diffTicketEdit,
+  hasTicketEditChanges,
+} from "@/app/_lib/domain/ticket-edit"
 import type {
   InsertTicketOutcome,
   InsertTicketValues,
   TicketDetail,
 } from "@/app/_lib/types/ticket"
+import type {
+  TicketEditorFacts,
+  UpdateTicketByAuthorOutcome,
+  UpdateTicketByAuthorValues,
+} from "@/app/_lib/types/ticket-edit"
 import { db } from "@/db"
 import {
   department,
@@ -61,6 +73,7 @@ export async function findTicketDetail(
         originDepartmentName: originDepartment.name,
         currentDepartmentId: ticket.currentDepartmentId,
         currentDepartmentName: currentDepartment.name,
+        tagId: tag.id,
         tagName: tag.name,
         createdAt: ticket.createdAt,
       })
@@ -239,5 +252,153 @@ export async function insertTicket(
       ticketStatus,
       destinationDepartmentName: departmentRow.name,
     }
+  })
+}
+
+export async function updateTicketByAuthor(
+  values: UpdateTicketByAuthorValues,
+): Promise<UpdateTicketByAuthorOutcome> {
+  const { ticketId, authorId } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+        title: ticket.title,
+        description: ticket.description,
+        type: ticket.type,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("update")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const [authorRow] = await tx
+      .select({
+        departmentId: user.departmentId,
+        isActive: user.isActive,
+        mustChangePassword: user.mustChangePassword,
+        isBoard: department.isBoard,
+      })
+      .from(user)
+      .innerJoin(department, eq(department.id, user.departmentId))
+      .where(eq(user.id, authorId))
+      .for("share", { of: user })
+
+    if (!authorRow) return { status: "not_editable" }
+
+    const editor: TicketEditorFacts = {
+      userId: authorId,
+      departmentId: authorRow.departmentId,
+      isBoard: authorRow.isBoard,
+      isActive: authorRow.isActive,
+      mustChangePassword: authorRow.mustChangePassword,
+    }
+
+    if (!canViewTicket(editor, ticketRow)) return { status: "not_found" }
+
+    const [pendingTransfer] = await tx
+      .select({ id: ticketTransfer.id })
+      .from(ticketTransfer)
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1)
+
+    if (
+      !canEditTicket(editor, {
+        createdBy: ticketRow.createdBy,
+        currentDepartmentId: ticketRow.currentDepartmentId,
+        status: ticketRow.status,
+        hasPendingTransfer: pendingTransfer !== undefined,
+      })
+    ) {
+      return { status: "not_editable" }
+    }
+
+    const [currentTagRow] = await tx
+      .select({ tagId: ticketTag.tagId })
+      .from(ticketTag)
+      .where(eq(ticketTag.ticketId, ticketId))
+
+    const [chosenTagRow] = await tx
+      .select({ departmentId: tag.departmentId, isActive: tag.isActive })
+      .from(tag)
+      .where(eq(tag.id, values.tagId))
+      .for("share")
+
+    if (
+      !chosenTagRow ||
+      !isUsableTicketTag(chosenTagRow, editor.departmentId)
+    ) {
+      return { status: "invalid_tag" }
+    }
+
+    const changes = diffTicketEdit(
+      {
+        title: ticketRow.title,
+        description: ticketRow.description,
+        type: ticketRow.type,
+        tagId: currentTagRow?.tagId ?? null,
+      },
+      values,
+    )
+
+    if (!hasTicketEditChanges(changes)) return { status: "no_changes" }
+
+    const changedAt = new Date()
+
+    await tx
+      .update(ticket)
+      .set({
+        title: values.title,
+        description: values.description,
+        type: values.type,
+        updatedAt: changedAt,
+      })
+      .where(eq(ticket.id, ticketId))
+
+    if (changes.tag) {
+      if (currentTagRow) {
+        await tx
+          .update(ticketTag)
+          .set({ tagId: values.tagId, createdAt: changedAt })
+          .where(eq(ticketTag.ticketId, ticketId))
+      } else {
+        await tx.insert(ticketTag).values({
+          ticketId,
+          tagId: values.tagId,
+          createdAt: changedAt,
+        })
+      }
+    }
+
+    await tx.insert(ticketHistory).values({
+      ticketId,
+      changedBy: authorId,
+      event: "edicao",
+      note: describeTicketEditNote(changes),
+      changedAt,
+    })
+
+    if (changes.tag) {
+      await tx.insert(ticketHistory).values({
+        ticketId,
+        changedBy: authorId,
+        event: "mudanca_tag",
+        fromTagId: changes.tag.fromTagId,
+        toTagId: changes.tag.toTagId,
+        changedAt,
+      })
+    }
+
+    return { status: "saved", ticketId, tagChanged: changes.tag !== null }
   })
 }

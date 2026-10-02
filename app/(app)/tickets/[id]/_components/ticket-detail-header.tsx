@@ -19,6 +19,7 @@ interface TicketDetailHeaderProps {
   title: string
   status: TicketStatus
   priority: TicketPriority
+  action?: React.ReactNode
 }
 
 const TicketDetailHeader = ({
@@ -26,15 +27,19 @@ const TicketDetailHeader = ({
   title,
   status,
   priority,
+  action,
 }: TicketDetailHeaderProps) => {
   return (
     <header className="flex flex-col gap-2">
       <span className="text-caption font-bold text-muted-foreground tabular-nums">
         {formatTicketNumber(id)}
       </span>
-      <h1 className="font-heading text-title font-semibold wrap-break-word">
-        {title}
-      </h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <h1 className="min-w-0 font-heading text-title font-semibold wrap-break-word">
+          {title}
+        </h1>
+        {action !== undefined ? <div className="shrink-0">{action}</div> : null}
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <TicketStatusBadge status={status} />
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary">

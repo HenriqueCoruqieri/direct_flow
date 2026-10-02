@@ -20,6 +20,7 @@ export const HISTORY_EVENT_LABELS = {
   reabertura: "Reabertura",
   encerramento: "Encerramento",
   mudanca_tag: "Mudança de tag",
+  edicao: "Edição",
 } satisfies Record<HistoryEvent, string>
 
 const statusLabel = (status: TicketStatus | null): string | null =>
@@ -89,6 +90,7 @@ const HISTORY_EVENT_DESCRIBERS = {
       removed: (from) => `Removeu a tag ${from}.`,
       unknown: "Alterou a tag.",
     }),
+  edicao: () => "Editou o chamado.",
 } satisfies Record<HistoryEvent, HistoryEntryDescriber>
 
 export const describeHistoryEntry = (entry: TicketHistoryEntry): string =>

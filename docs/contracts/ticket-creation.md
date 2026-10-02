@@ -250,15 +250,15 @@ export const describeTicketCreated: (saved: TicketSaved) => string
 
 Textos:
 
-| Caso                                | Texto                                                                                                             |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `USER_INACTIVE`                     | `Sua conta está desativada. Não é possível abrir chamados.`                                                       |
-| `PASSWORD_CHANGE_REQUIRED`          | `Defina a sua senha antes de abrir chamados.`                                                                     |
-| `DEPARTMENT_UNASSIGNED`             | `Sua conta ainda não está em um setor. Peça a um administrador que coloque você em um setor para abrir chamados.` |
-| `DEPARTMENT_WITHOUT_TAGS`           | `Seu setor ainda não tem tags ativas. Peça ao administrador do setor que cadastre uma tag para abrir chamados.`   |
-| `describeApprovalNotice("RH")`      | `O chamado vai aguardar a aprovação do administrador de RH. Depois de enviado, você não poderá mais alterá-lo.`   |
-| `describeTicketCreated`, `aberto`   | `Chamado #42 criado.`                                                                                             |
-| `describeTicketCreated`, aguardando | `Chamado #42 enviado para aprovação de RH.`                                                                       |
+| Caso                                | Texto                                                                                                           |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `USER_INACTIVE`                     | `Sua conta está desativada. Não é possível registrar chamados.`                                                 |
+| `PASSWORD_CHANGE_REQUIRED`          | `Defina a sua senha antes de registrar chamados.`                                                               |
+| `DEPARTMENT_UNASSIGNED`             | `Seu perfil não está associado a nenhum setor, informe seu administrador.`                                      |
+| `DEPARTMENT_WITHOUT_TAGS`           | `Não há nenhuma Tag disponível para registro de chamados, informe seu administrador.`                           |
+| `describeApprovalNotice("RH")`      | `O chamado vai aguardar a aprovação do administrador de RH. Depois de enviado, você não poderá mais alterá-lo.` |
+| `describeTicketCreated`, `aberto`   | `Chamado #42 criado.`                                                                                           |
+| `describeTicketCreated`, aguardando | `Chamado #42 enviado para aprovação de RH.`                                                                     |
 
 `PASSWORD_CHANGE_REQUIRED` não está no plano; entra como defesa, igual a
 `resolveRegistryAccess`. A tela nunca o mostra (o layout manda para
@@ -485,12 +485,12 @@ página.
 
 ### Solução: separar moldura e dado
 
-| Arquivo (`app/(app)/_components/`) | Tipo                             | Papel                                                                                                                                 |
-| ---------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `app-top-bar-frame.tsx`            | sem diretiva, sem hook, sem dado | Moldura atual (busca + espaço do botão). Prop `action: React.ReactNode`. Importável pelo servidor e pelo `error.tsx`                  |
-| `app-top-bar.tsx`                  | async Server Component           | Carrega o dado, monta `NewTicketFormOptions`, renderiza `AppTopBarFrame` com o botão certo. Mesmo nome e import de hoje para a página |
-| `new-ticket-dialog.tsx`            | `"use client"`                   | Botão "Novo chamado" + `Dialog` + formulário. Recebe `options: NewTicketFormAvailable`                                                |
-| `new-ticket-blocked-button.tsx`    | `"use client"`                   | Botão "Novo chamado" desabilitado com explicação. Recebe `message: string`. Usado pelo `AppTopBar` (bloqueio) e pelo `error.tsx`      |
+| Arquivo (`app/(app)/_components/`) | Tipo                             | Papel                                                                                                                                  |
+| ---------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `app-top-bar-frame.tsx`            | sem diretiva, sem hook, sem dado | Moldura atual (busca + espaço do botão). Prop `action: React.ReactNode`. Importável pelo servidor e pelo `error.tsx`                   |
+| `app-top-bar.tsx`                  | async Server Component           | Carrega o dado, monta `NewTicketFormOptions`, renderiza `AppTopBarFrame` com o botão certo. Mesmo nome e import de hoje para a página  |
+| `new-ticket-dialog.tsx`            | `"use client"`                   | Botão "Novo chamado" + `Dialog` + formulário. Recebe `options: NewTicketFormAvailable`                                                 |
+| `new-ticket-blocked-button.tsx`    | `"use client"`                   | Botão "Novo chamado" esmaecido; o clique mostra o motivo em toast. Recebe `message: string`. Usado pelo `AppTopBar` e pelo `error.tsx` |
 
 O formulário pode ficar num arquivo próprio (`new-ticket-form.tsx`) se o dialog
 crescer; decisão do `df-ui`.
@@ -519,19 +519,49 @@ const options = buildNewTicketFormOptions(facts, tags, departmentOptions)
 
 ### `NewTicketBlockedButton`
 
-- O botão tem o mesmo visual do botão ativo, desabilitado.
-- A explicação precisa funcionar com toque e teclado. Botão com `disabled`
-  nativo não recebe foco nem evento, então o gatilho do `Popover` é um
-  `<button aria-disabled="true">`: continua focável, é anunciado como
-  desabilitado e não dispara ação nenhuma além de mostrar a explicação.
-- O `Popover` abre no clique, no toque e no foco por teclado. `Tooltip`
-  sozinho não abre no celular.
-- A mensagem também fica num `span` `sr-only` permanente, apontado pelo
-  `aria-describedby` do botão, para o leitor de tela anunciá-la sem depender do
-  `Popover` estar aberto.
-- No teclado, o primeiro `Enter`/`Espaço` fecha o `Popover` que o foco abriu
-  (o Radix trata a tecla como alternância do gatilho). É aceito: a mensagem
-  segue disponível pelo `aria-describedby`, e uma nova tecla reabre.
+Props: `message: string`. Gatilho: o botão "Novo chamado" com o mesmo visual
+do ativo, esmaecido. O mesmo comportamento vale para o "Editar" esmaecido
+(`docs/contracts/ticket-edit.md`, seção `EditTicketBlockedButton`): as regras
+abaixo são a referência das duas telas.
+
+A peça `app/_components/blocked-action-tooltip.tsx` deixa de existir: não há
+tooltip, popover nem qualquer explicação no hover ou no foco. Se o
+comportamento abaixo for extraído para uma peça compartilhada pelos dois
+botões, ela é genérica (não conhece chamado) e fica solta em
+`app/_components/`; a decisão é do `df-ui`. O comportamento não se repete com
+diferenças entre as duas telas.
+
+#### Comportamento do botão de ação bloqueada
+
+| Entrada        | Hover / foco                                | Ativação                                                       |
+| -------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| Mouse          | **nada** aparece                            | clique → toast com a mensagem                                  |
+| Teclado        | **nada** aparece                            | `Enter` ou `Espaço` com o foco no botão → toast com a mensagem |
+| Toque          | —                                           | toque → toast com a mensagem                                   |
+| Leitor de tela | descrição anunciada pelo `aria-describedby` | idem às linhas acima                                           |
+
+- **Botão `<button type="button" aria-disabled="true">`, sem `disabled`
+  nativo.** `disabled` tira o botão da ordem de foco e cancela o clique; com
+  `aria-disabled` ele continua focável, é anunciado como indisponível e recebe
+  o clique. Visual esmaecido (`opacity-50`, `cursor-not-allowed`, sem efeito de
+  hover).
+- **Nada no hover nem no foco.** Sem `Tooltip`, sem `Popover`, sem atributo
+  `title` (o navegador o mostraria no hover). Foco por `Tab` só mostra o anel de
+  foco padrão.
+- **Ativação = `onClick`.** O `click` do `<button>` já cobre mouse, toque e
+  `Enter`/`Espaço` (o navegador dispara o clique sintético), sem distinguir
+  `pointerType`. O handler só chama `toast.info(message, { id })`, com `id`
+  estável por botão (`useId`): cliques repetidos atualizam o mesmo toast em vez
+  de empilhar. O toast não recebe nem rouba o foco; o foco continua no botão.
+- **Nunca age.** Em nenhuma entrada o botão abre dialog, monta formulário,
+  navega ou chama Server Action. A única reação é o toast.
+- **Leitor de tela.** A mensagem fica num `span` `sr-only` permanente, com `id`
+  via `useId`, apontado pelo `aria-describedby` do botão: o anúncio é
+  "{rótulo}, botão, indisponível" seguido da mensagem. O nome acessível
+  continua sendo só o rótulo do botão.
+- **Texto.** A mensagem chega pronta por prop (`options.message`, vindo de
+  `TICKET_CREATION_BLOCK_MESSAGES`, ou o texto fixo do `error.tsx`) e é a
+  mesma no toast e no `span`; o componente não monta nem formata frase.
 
 ### `NewTicketDialog` (React Hook Form + `zodResolver(createTicketSchema)`)
 
@@ -605,6 +635,9 @@ contrato próprios; o que está aqui é o ponto de partida, não a especificaç�
 
 ### Detalhe e edição pelo autor
 
+> Especificado em `docs/contracts/my-tickets.md` (detalhe) e
+> `docs/contracts/ticket-edit.md` (edição). A edição também exclui `cancelado`.
+
 - O autor só age sobre o chamado quando: `current_department_id` = setor dele,
   **sem** `ticket_transfer` pendente e `status <> fechado`. Enquanto
   `aguardando_aprovacao` para outro setor, não age (o plano: "o autor perde o
@@ -664,7 +697,8 @@ de <setor>.`; card do Início +1 (o chamado ainda está no setor do autor).
    `enum_range(null::history_event)` contém `mudanca_tag`; `ticket_history` tem
    `from_tag_id` e `to_tag_id`.
 6. Bloqueios: pessoa no Não alocado e pessoa de setor sem tag ativa veem o botão
-   desabilitado com a mensagem de `TICKET_CREATION_BLOCK_MESSAGES`; a action
+   esmaecido e, ao clicar, o toast com a mensagem de
+   `TICKET_CREATION_BLOCK_MESSAGES`; a action
    chamada direto devolve `FORBIDDEN`.
 7. `npx tsc --noEmit`, `npm run lint` e `npm run build` passam; `df-reviewer`
    sem bloqueante; `df-qa` aprova os cenários abaixo.
@@ -676,7 +710,7 @@ Usuários e setores de `docs/contracts/qa-seed.md`. Todo título criado começa 
 
 | #   | Quem              | Preparação                                                                          | Ação                                                                               | Esperado                                                                                                                                                                                                                                                                          |
 | --- | ----------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | QA Membro Suporte | QA Suporte sem tag ativa (desativar as existentes como QA Admin Suporte, se houver) | abrir o Início                                                                     | botão "Novo chamado" desabilitado; explicação `DEPARTMENT_WITHOUT_TAGS` no toque/clique e no foco                                                                                                                                                                                 |
+| 1   | QA Membro Suporte | QA Suporte sem tag ativa (desativar as existentes como QA Admin Suporte, se houver) | abrir o Início                                                                     | botão "Novo chamado" esmaecido; nada no hover nem no foco; clique, toque, `Enter` e `Espaço` mostram o toast `DEPARTMENT_WITHOUT_TAGS`, conforme o cenário 14 (executá-lo neste estado, antes do 2)                                                                               |
 | 2   | QA Admin Suporte  | —                                                                                   | criar tag `[QA] Acesso` em QA Suporte; QA Admin Infra cria `[QA] Rede` em QA Infra | tags ativas                                                                                                                                                                                                                                                                       |
 | 3   | QA Membro Suporte | cenário 2                                                                           | abrir o dialog                                                                     | destino pré-selecionado QA Suporte; Diretoria primeiro na lista; Não alocado e setores inativos ausentes; tag lista só `[QA] Acesso` (sem `[QA] Rede`)                                                                                                                            |
 | 4   | QA Membro Suporte | dialog aberto                                                                       | enviar vazio; título `ab`; descrição `curta`                                       | erros no campo com os textos da tabela de validação; nenhum request de action                                                                                                                                                                                                     |
@@ -685,9 +719,9 @@ Usuários e setores de `docs/contracts/qa-seed.md`. Todo título criado começa 
 | 7   | QA Membro Suporte | dialog aberto                                                                       | forjar `tagId` = id de `[QA] Rede` (alterar o payload da action)                   | `INVALID_TAG`, erro no campo Tag; nenhuma linha nova em `ticket`, `ticket_tag`, `ticket_history`, `ticket_transfer`                                                                                                                                                               |
 | 8   | QA Membro Suporte | dialog aberto                                                                       | forjar `departmentId` = id do Não alocado; depois id de um setor inativo           | `INVALID_DESTINATION`, erro no campo Destino; nada gravado                                                                                                                                                                                                                        |
 | 9   | QA Admin Suporte  | dialog aberto pelo membro                                                           | desativar `[QA] Acesso`; o membro envia                                            | `FORBIDDEN` com `DEPARTMENT_WITHOUT_TAGS` (era a única tag); dialog fecha; barra volta bloqueada                                                                                                                                                                                  |
-| 10  | Diretor           | —                                                                                   | mover QA Membro Suporte para o Não alocado; o membro abre o Início                 | botão desabilitado com `DEPARTMENT_UNASSIGNED`. Ao fim, mover de volta para QA Suporte e reativar `[QA] Acesso`                                                                                                                                                                   |
+| 10  | Diretor           | —                                                                                   | mover QA Membro Suporte para o Não alocado; o membro abre o Início                 | botão esmaecido; passar o mouse não mostra nada (14a); clicar mostra o toast `Seu perfil não está associado a nenhum setor, informe seu administrador.` e não abre dialog (14b). Ao fim, mover de volta para QA Suporte e reativar `[QA] Acesso`                                  |
 | 11  | banco, só leitura | —                                                                                   | consultar `pg_indexes`, `ticket_tag`, `enum_range` e `information_schema.columns`  | `indexdef` de `ticket_tag_single_per_ticket_idx` é `CREATE UNIQUE INDEX ... (ticket_id)`; `select ticket_id from ticket_tag group by ticket_id having count(*) > 1` sem linhas; `enum_range(null::history_event)` contém `mudanca_tag`; colunas `from_tag_id`/`to_tag_id` existem |
-| 12  | qualquer          | forçar erro na página do Início (ex.: banco indisponível)                           | abrir o Início                                                                     | `error.tsx` mostra a barra com busca e "Novo chamado" desabilitado com a mensagem de indisponibilidade; "Tentar novamente" funciona                                                                                                                                               |
+| 12  | qualquer          | forçar erro na página do Início (ex.: banco indisponível)                           | abrir o Início                                                                     | `error.tsx` mostra a barra com busca e "Novo chamado" esmaecido; hover e foco não mostram nada; clique e `Enter` mostram o toast com a mensagem de indisponibilidade; "Tentar novamente" funciona                                                                                 |
 
 O cenário 11 é só leitura porque o `df-qa` não escreve no banco à mão. A prova
 pelo erro (um `insert into ticket_tag` de segunda tag recusado pelo índice) fica
@@ -720,12 +754,34 @@ tag não é excluída). Ao fim do cenário, desativar `[QA] Configuração` e as
 | 13h | forjar `tagId` = id de `[QA] Rede` (como no cenário 7) e enviar                           | `Esta tag não está disponível. Escolha uma tag ativa do seu setor.` abaixo do campo Tag; foco no gatilho do campo Tag (elemento ativo é o `button[role=combobox]` dele), com `aria-invalid="true"`; nada gravado |
 | 13i | forjar `departmentId` = id do Não alocado (como no cenário 8) e enviar                    | `Este setor não pode receber chamados. Escolha outro setor de destino.` abaixo do campo Setor de destino; foco no gatilho desse campo, com `aria-invalid="true"`; nada gravado                                   |
 
+### Cenário 14 — botão bloqueado com toast
+
+Quem: QA Membro Suporte, no estado do cenário 1 (QA Suporte sem tag ativa),
+antes do cenário 2. Mensagem esperada, texto exato:
+`Não há nenhuma Tag disponível para registro de chamados, informe seu administrador.`
+Anotar antes `max(id)` de `ticket` e de `ticket_history`. A ferramenta de
+navegador trata `aria-disabled` como "não habilitado" e recusa a ação sem
+`force: true`; use `force: true` em hover, clique e toque nesse botão (o evento
+continua chegando a ele, que é o que se testa). "Request de action" = `POST`
+com cabeçalho `Next-Action` na aba de rede.
+
+| #   | Ação                                                                                                                                | Esperado                                                                                                                                                                                                                  |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 14a | desktop, mouse: passar o mouse sobre "Novo chamado" e esperar 2 s; depois tirar o mouse                                             | botão esmaecido, `aria-disabled="true"`, sem atributo `disabled` nem `title`; com o mouse em cima, **nada** aparece (nenhum tooltip, popover ou toast no DOM)                                                             |
+| 14b | desktop, mouse: clicar "Novo chamado"; depois clicar mais duas vezes seguidas                                                       | o primeiro clique mostra um toast com a mensagem exata; os cliques seguintes não empilham toasts (no máximo um toast com a mensagem visível); dialog "Novo chamado" não abre; nenhum request de action                    |
+| 14c | só teclado: `Tab` até "Novo chamado" e esperar 2 s; `Enter`; esperar o toast sumir; `Espaço`                                        | o foco chega ao botão e **nada** aparece além do anel de foco; `Enter` mostra o toast com a mensagem exata; `Espaço` também; o dialog não abre; o foco continua no botão (o toast não o recebe); nenhum request de action |
+| 14d | árvore de acessibilidade do botão, sem toast visível                                                                                | nome acessível `Novo chamado`; `aria-describedby` aponta para um elemento `sr-only` presente no DOM com a mensagem exata                                                                                                  |
+| 14e | viewport móvel com toque emulado (Playwright: contexto com `hasTouch: true`, `isMobile: true`, 390×844; usar `tap`): tocar no botão | o toque mostra o toast com a mensagem exata; dialog não abre; nenhum request de action                                                                                                                                    |
+| 14f | banco, só leitura, depois de 14a–14e                                                                                                | `max(id)` de `ticket` e de `ticket_history` inalterados; nenhuma linha nova em `ticket_tag` nem `ticket_transfer`                                                                                                         |
+| 14g | qualquer, durante 14a–14e                                                                                                           | nenhum erro nem aviso de hidratação no dev server (MCP `next-devtools`)                                                                                                                                                   |
+
 ## Checklist de encerramento da feature
 
 - [x] schema, migration `0007`, tipos, domínio e `createTicketSchema` (`df-architect`)
 - [ ] `listActiveDepartmentTags` em `app/_lib/data/tags.ts`; `insertTicket` em `app/_lib/data/tickets.ts` (`df-data`)
 - [ ] `createTicket` em `app/_lib/actions/tickets.ts` (`df-actions`)
 - [ ] `AppTopBarFrame`, `AppTopBar` async, `NewTicketDialog`, `NewTicketBlockedButton`; `error.tsx` sem import de `AppTopBar` (`df-ui`)
+- [ ] botão bloqueado sem nada no hover/foco, toast com o motivo no clique, toque e `Enter`/`Espaço`, `aria-describedby` para `span` `sr-only`; `app/_components/blocked-action-tooltip.tsx` removido (`df-ui`)
 - [ ] `npm run db:migrate` aplicado pelo usuário
 - [ ] cenários do `df-qa`
 - [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`

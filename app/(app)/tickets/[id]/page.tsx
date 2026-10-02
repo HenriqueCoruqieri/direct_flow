@@ -5,13 +5,20 @@ import { notFound } from "next/navigation"
 
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { requireSession } from "@/app/_lib/auth/session"
+import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
-import type { TicketViewerFacts } from "@/app/_lib/types/ticket"
+import {
+  buildTicketEditFormOptions,
+  ticketEditButtonStateFor,
+} from "@/app/_lib/domain/ticket-edit"
+import type { TicketEditorFacts } from "@/app/_lib/types/ticket-edit"
 import { parseTicketIdParam } from "@/app/_lib/validation/ticket"
 
 import AppTopBar from "../../_components/app-top-bar"
+import EditTicketBlockedButton from "./_components/edit-ticket-blocked-button"
+import EditTicketDialog from "./_components/edit-ticket-dialog"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
 import TicketDescription from "./_components/ticket-description"
 import TicketDetailFields from "./_components/ticket-detail-fields"
@@ -39,12 +46,27 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   ])
   if (!facts || !ticket) notFound()
 
-  const viewer: TicketViewerFacts = {
+  const editor: TicketEditorFacts = {
     userId: actor.id,
     departmentId: facts.departmentId,
     isBoard: facts.isBoard,
+    isActive: facts.isActive,
+    mustChangePassword: facts.mustChangePassword,
   }
-  if (!canViewTicket(viewer, ticket)) notFound()
+  if (!canViewTicket(editor, ticket)) notFound()
+
+  const editButton = ticketEditButtonStateFor(editor, ticket)
+  const editAction =
+    editButton.state === "editable" ? (
+      <EditTicketDialog
+        options={buildTicketEditFormOptions(
+          ticket,
+          await listActiveDepartmentTags(facts.departmentId),
+        )}
+      />
+    ) : editButton.state === "blocked" ? (
+      <EditTicketBlockedButton message={editButton.message} />
+    ) : undefined
 
   return (
     <>
@@ -63,6 +85,7 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
             title={ticket.title}
             status={ticket.status}
             priority={ticket.priority}
+            action={editAction}
           />
         </div>
 
