@@ -58,6 +58,7 @@ interface DataTableProps<TData extends RowData> {
   search?: DataTableSearchConfig
   filters?: ReadonlyArray<DataTableFilter>
   rowHref?: (row: TData) => string
+  toolbarFooter?: React.ReactNode
 }
 
 const DataTable = <TData extends RowData>({
@@ -67,6 +68,7 @@ const DataTable = <TData extends RowData>({
   search,
   filters = [],
   rowHref,
+  toolbarFooter,
 }: DataTableProps<TData>) => {
   const router = useRouter()
   const table = useTable({
@@ -116,6 +118,7 @@ const DataTable = <TData extends RowData>({
           ) : null}
         </div>
       ) : null}
+      {toolbarFooter}
 
       <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
         <Table>

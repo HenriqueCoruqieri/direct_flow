@@ -27,7 +27,9 @@ diferentes conforme quem faz a conta.
 - O `react-day-picker` depende de `date-fns`. Import direto de `date-fns` é
   proibido em qualquer arquivo. Há **uma** exceção:
   `import { ptBR } from "react-day-picker/locale"` em
-  `app/(app)/dashboard/_components/custom-period-picker.tsx`. Esse módulo só
+  `app/(app)/_components/custom-period-picker.tsx` (antes em
+  `app/(app)/dashboard/_components/`; o arquivo subiu quando Meus chamados
+  passou a reusar o seletor, e a exceção acompanha o arquivo, não a tela). Esse módulo só
   repassa `date-fns/locale`, e o import serve apenas para configurar o locale do
   `Calendar` (nomes de mês e de dia). Ele não formata nem calcula data; isso
   continua sendo feito só por `app/_lib/date.ts`.
@@ -43,6 +45,9 @@ diferentes conforme quem faz a conta.
   demo cria chamados nessa faixa justamente para provar isso.
 - Quem precisar de "dia" em outra feature usa `DateKey` e as funções de
   `app/_lib/date.ts`; `new Date().getDate()` e similares são erro de desenho.
+- Filtro sem período ("Todos", em Meus chamados) não é um intervalo:
+  `resolvePeriodFilterRange` devolve `null` e a consulta não filtra por data.
+  Nenhum intervalo artificial (ex.: desde 1970) é inventado para representá-lo.
 - Usuário em outro fuso vê o calendário de São Paulo. Se um dia houver setor fora
   do Brasil, o fuso vira dado do setor e `APP_TIME_ZONE` vira parâmetro — mudança
   localizada em `app/_lib/date.ts`.

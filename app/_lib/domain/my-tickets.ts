@@ -1,8 +1,14 @@
+import { ALL_TIME_SELECTION, PRESET_PERIODS } from "@/app/_lib/domain/period"
 import { NON_FINAL_TICKET_STATUSES } from "@/app/_lib/domain/ticket"
 import type {
+  MyTicketsEmptyCopy,
   MyTicketsTab,
   MyTicketsTabRule,
 } from "@/app/_lib/types/my-tickets"
+import type {
+  PeriodFilterSelection,
+  PresetPeriodOption,
+} from "@/app/_lib/types/period"
 
 export const MY_TICKETS_PATH = "/tickets"
 
@@ -11,6 +17,20 @@ export const MY_TICKETS_LABEL = "Meus chamados"
 export { MY_TICKETS_TABS } from "@/app/_lib/domain/my-tickets-tabs"
 
 export const DEFAULT_MY_TICKETS_TAB: MyTicketsTab = "opened"
+
+export const MY_TICKETS_PERIOD_PRESETS = [
+  "todos",
+  ...PRESET_PERIODS,
+] as const satisfies readonly PresetPeriodOption[]
+
+export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection =
+  ALL_TIME_SELECTION
+
+export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy = {
+  title: "Nenhum chamado neste período",
+  description:
+    "Nenhum chamado desta aba foi aberto no período escolhido. Escolha outro período ou “Todos”.",
+}
 
 export const MY_TICKETS_TAB_RULES = {
   opened: {
@@ -46,3 +66,12 @@ export const MY_TICKETS_TAB_RULES = {
       "Os chamados que você abriu e foram cancelados aparecem aqui.",
   },
 } satisfies Record<MyTicketsTab, MyTicketsTabRule>
+
+export const myTicketsEmptyCopy = (
+  tab: MyTicketsTab,
+  period: PeriodFilterSelection,
+): MyTicketsEmptyCopy => {
+  if (period.periodo !== "todos") return MY_TICKETS_EMPTY_PERIOD
+  const { emptyTitle, emptyDescription } = MY_TICKETS_TAB_RULES[tab]
+  return { title: emptyTitle, description: emptyDescription }
+}

@@ -8,14 +8,16 @@ import type {
   MyTicketsTab,
   MyTicketsTabCounts,
 } from "@/app/_lib/types/my-tickets"
+import type { PeriodFilterSelection } from "@/app/_lib/types/period"
 import { myTicketsTabHref } from "@/app/_lib/validation/my-tickets"
 
 interface MyTicketsTabsProps {
   current: MyTicketsTab
   counts: MyTicketsTabCounts
+  period: PeriodFilterSelection
 }
 
-const MyTicketsTabs = ({ current, counts }: MyTicketsTabsProps) => {
+const MyTicketsTabs = ({ current, counts, period }: MyTicketsTabsProps) => {
   return (
     <div className="border-b border-border-subtle">
       <nav
@@ -25,7 +27,7 @@ const MyTicketsTabs = ({ current, counts }: MyTicketsTabsProps) => {
         {MY_TICKETS_TABS.map((tab) => (
           <Link
             key={tab}
-            href={myTicketsTabHref(tab)}
+            href={myTicketsTabHref(tab, period)}
             scroll={false}
             aria-current={tab === current ? "page" : undefined}
             className="group/tab inline-flex h-10 shrink-0 items-center gap-2 rounded-t-lg border-b-2 border-transparent px-3 text-sm font-semibold whitespace-nowrap text-text-tertiary transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset aria-[current=page]:border-primary aria-[current=page]:font-extrabold aria-[current=page]:text-foreground"

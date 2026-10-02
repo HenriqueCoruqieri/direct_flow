@@ -1,4 +1,9 @@
-import type { Period, PresetPeriod } from "@/app/_lib/types/period"
+import type {
+  AllTimeSelection,
+  Period,
+  PeriodOption,
+  PresetPeriod,
+} from "@/app/_lib/types/period"
 
 export const PERIODS = [
   "hoje",
@@ -15,9 +20,12 @@ export const PRESET_PERIODS = [
 
 export const DEFAULT_PERIOD: PresetPeriod = "hoje"
 
-export const PERIOD_LABELS: Record<Period, string> = {
+export const ALL_TIME_SELECTION: AllTimeSelection = { periodo: "todos" }
+
+export const PERIOD_LABELS = {
+  todos: "Todos",
   hoje: "Hoje",
   semana: "Semana",
   mes: "Mês",
   personalizado: "Personalizado",
-}
+} satisfies Record<PeriodOption, string>

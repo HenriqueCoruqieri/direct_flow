@@ -8,6 +8,7 @@ import utc from "dayjs/plugin/utc"
 import type {
   DateKey,
   DateRange,
+  PeriodFilterSelection,
   PeriodSelection,
 } from "@/app/_lib/types/period"
 
@@ -98,6 +99,12 @@ export const resolvePeriodRange = (
       return dayRange(selection.de, selection.ate)
   }
 }
+
+export const resolvePeriodFilterRange = (
+  selection: PeriodFilterSelection,
+  now: DateInput = new Date(),
+): DateRange | null =>
+  selection.periodo === "todos" ? null : resolvePeriodRange(selection, now)
 
 export const formatRangeLabel = (range: DateRange): string => {
   const first = dayjs.utc(toDateKey(range.start))

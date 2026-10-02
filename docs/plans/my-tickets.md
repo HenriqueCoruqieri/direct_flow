@@ -12,7 +12,7 @@ Aprovado em 2026-10-01. Contrato técnico em `docs/contracts/my-tickets.md`.
 | Tabela               | `DataTable` compartilhado: #, título, tipo, tag, setor atual, status (badge), aberto em. Busca por # ou título; filtros Status, Tipo, Tag; linha inteira abre o detalhe; sem paginação                                                                                        |
 | Detalhe              | `/tickets/[id]`, só leitura: cabeçalho (#, título, status, prioridade), tipo, tag, setores de origem e atual, autor, responsável (`—`), aberto em, descrição, aviso "Aguardando aprovação de <setor>" quando há transferência pendente, linha do tempo do histórico com nomes |
 | Visibilidade         | Autor, responsável, quem está no setor **atual**, diretores. Senão 404. Regra única no domínio (`canViewTicket`), para Fila e Aprovações reaproveitarem. Admin do destino vendo chamado aguardando aprovação fica para Aprovações                                             |
-| Fora                 | Conclusão, fechamento automático em 7 dias, aprovação, atribuição, edição, mensagens, anexos, busca global. Nenhum botão sem função                                                                                                                                           |
+| Fora                 | Conclusão, fechamento automático em 7 dias, aprovação, atribuição, edição (depois: `docs/plans/ticket-edit.md`), mensagens, anexos, busca global. Nenhum botão sem função                                                                                                     |
 | Pronto para o futuro | Rótulos de **todos** os valores de `ticket_status`, `ticket_priority` e `history_event`, com `satisfies Record` (valor novo no enum quebra o `tsc`)                                                                                                                           |
 | Gravação             | Nenhuma: sem action, sem migration                                                                                                                                                                                                                                            |
 
@@ -84,6 +84,48 @@ não tem menu hoje, nem para Cadastros).
 5. Nenhuma gravação, nenhuma migration, nenhuma action.
 6. `tsc`, lint e build passam; `df-reviewer` sem bloqueante; `df-qa` aprova os
    cenários.
+
+## Filtro por data de abertura
+
+Acrescentado em 2026-10-01. Contrato no adendo de
+`docs/contracts/my-tickets.md`.
+
+### Decisões fixadas pelo usuário
+
+| Tema      | Decisão                                                                                                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Onde      | Abaixo do campo de busca da tabela de `/tickets`                                                                                      |
+| Seletor   | O mesmo do Início (pílulas + calendário do Personalizado), reaproveitado, não copiado                                                 |
+| Âncora    | Data de abertura (`ticket.created_at`), intervalo meio-aberto no fuso de São Paulo (ADR 009), mesma resolução de período do Início    |
+| Opções    | **Todos** (novo, padrão aqui, sem filtro), Hoje, Semana, Mês, Personalizado. O Início **não** ganha Todos e continua abrindo em Hoje  |
+| Contagens | As quatro abas contam dentro do período escolhido                                                                                     |
+| Estado    | Na URL, junto com a aba, com os mesmos parâmetros do Início (`?periodo=&de=&ate=`); aplicado no servidor. Valor inválido cai em Todos |
+| Idioma    | Valores continuam em português na URL; a tradução de enums e da URL do Início é decisão pendente separada                             |
+
+### Impacto
+
+- **Schema e migration**: nenhum.
+- **Tipos**: `PeriodFilterSelection` (seleção que aceita Todos), sem mexer em
+  `PeriodSelection` do Início.
+- **Domínio**: rótulo `Todos`; conjunto de períodos por tela
+  (`MY_TICKETS_PERIOD_PRESETS`); padrão Todos; texto do vazio por período.
+- **Datas**: `resolvePeriodFilterRange` (Todos → sem intervalo).
+- **Validação**: peças comuns de período em `validation/period.ts`; leitura do
+  período de Meus chamados; link de aba mantendo o período.
+- **`df-data`**: `listMyTickets` e `countMyTicketsByTab` recebem o intervalo
+  opcional.
+- **`df-ui`**: seletor genérico em `app/(app)/_components/`, slot abaixo da busca
+  no `DataTable`, abas mantendo o período, estado vazio do período.
+- **`df-actions`, `df-auth`, `df-email`**: nada.
+
+### Riscos
+
+1. Trocar o período zera busca e filtros da tabela (mesmo comportamento de
+   trocar de aba).
+2. Com um período sem chamados, a tabela some e o seletor fica sozinho acima do
+   estado vazio; é proposital, para sempre haver como voltar.
+3. A busca e os filtros da tabela continuam no cliente, sobre o que o servidor
+   já filtrou pelo período.
 
 ## Commits por etapa
 

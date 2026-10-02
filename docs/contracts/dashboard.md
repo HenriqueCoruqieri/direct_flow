@@ -42,7 +42,9 @@ O seed demo escreve em `tag`, `ticket`, `ticket_tag` e `ticket_history`.
 
 **Exceção única, do locale do calendário.** O único import permitido que vem do
 `date-fns` é `import { ptBR } from "react-day-picker/locale"`, e só em
-`app/(app)/dashboard/_components/custom-period-picker.tsx`. Esse módulo só
+`app/(app)/_components/custom-period-picker.tsx` (era
+`app/(app)/dashboard/_components/`; subiu quando Meus chamados passou a usar o
+mesmo seletor, `docs/contracts/my-tickets.md`, adendo do filtro por data). Esse módulo só
 repassa `date-fns/locale`. O `ptBR` serve apenas para a prop `locale` do
 `Calendar` e dá só os nomes de mês e dia: o locale do `date-fns` começa a semana
 no domingo (`weekStartsOn: 0`). O início da semana vem de `WEEK_STARTS_ON` de
@@ -180,6 +182,11 @@ export const PERIOD_LABELS: Record<Period, string>
 `PERIOD_LABELS`: `Hoje`, `Semana`, `Mês`, `Personalizado`. As pílulas iteram
 `PERIODS` e leem o rótulo daqui.
 
+> `PERIOD_LABELS` passou a `satisfies Record<PeriodOption, string>` e ganhou
+> `todos: "Todos"`, usado só por Meus chamados (`docs/contracts/my-tickets.md`,
+> adendo do filtro por data). O Início continua iterando `PRESET_PERIODS`, sem
+> `todos`, e `parseDashboardParams` continua devolvendo `PeriodSelection`.
+
 ### `app/_lib/domain/user.ts`
 
 ```ts
@@ -201,6 +208,12 @@ export const describeMembership: (departmentName: string, role: Role) => string
 > `RawSearchParams` e o "primeiro valor de cada chave" (`firstSearchParam`)
 > moveram para `app/_lib/validation/search-params.ts` em
 > `docs/contracts/my-tickets.md`, para Meus chamados reusar. Comportamento igual.
+>
+> O schema do personalizado (`customPeriodSchema`), a leitura dos três
+> parâmetros (`readPeriodParams`) e a serialização (`serializePeriodParams`)
+> moveram para `app/_lib/validation/period.ts`, junto com `periodFilterHref`.
+> A API abaixo não mudou; `serializeDashboardParams` delega a
+> `serializePeriodParams`.
 
 ```ts
 import type { RawSearchParams } from "@/app/_lib/validation/search-params"
@@ -440,6 +453,12 @@ navegação e não é guarda da página.
   `null`.
 
 ### Filtro de período
+
+> O seletor ficou genérico e subiu para `app/(app)/_components/` (props
+> `pathname`, `keep`, `presets`, `selection`; links por `periodFilterHref`). O
+> Início o usa com `pathname="/dashboard"` e `presets={PRESET_PERIODS}`; URLs e
+> comportamento abaixo continuam valendo. Ver `docs/contracts/my-tickets.md`,
+> adendo do filtro por data.
 
 - Pílulas `Hoje`, `Semana`, `Mês`: **`Link`** para
   `` `/dashboard?${serializeDashboardParams({ periodo })}` ``, ativa quando

@@ -1,4 +1,4 @@
-import { desc, eq, inArray, or, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, gte, inArray, lt, or, type SQL, sql } from "drizzle-orm"
 
 import {
   MY_TICKETS_TAB_RULES,
@@ -9,6 +9,7 @@ import type {
   MyTicketsTab,
   MyTicketsTabCounts,
 } from "@/app/_lib/types/my-tickets"
+import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { department, tag, ticket, ticketTag } from "@/db/schema"
 
@@ -19,9 +20,15 @@ const tabCondition = (userId: number, tab: MyTicketsTab): SQL => {
   return sql`(${eq(column, userId)} and ${inArray(ticket.status, [...rule.statuses])})`
 }
 
+const periodCondition = (range: DateRange | null): SQL | undefined =>
+  range === null
+    ? undefined
+    : and(gte(ticket.createdAt, range.start), lt(ticket.createdAt, range.end))
+
 export async function listMyTickets(
   userId: number,
   tab: MyTicketsTab,
+  range: DateRange | null = null,
 ): Promise<MyTicketListItem[]> {
   return db
     .select({
@@ -39,12 +46,13 @@ export async function listMyTickets(
     .innerJoin(department, eq(department.id, ticket.currentDepartmentId))
     .leftJoin(ticketTag, eq(ticketTag.ticketId, ticket.id))
     .leftJoin(tag, eq(tag.id, ticketTag.tagId))
-    .where(tabCondition(userId, tab))
+    .where(and(tabCondition(userId, tab), periodCondition(range)))
     .orderBy(desc(ticket.createdAt), desc(ticket.id))
 }
 
 export async function countMyTicketsByTab(
   userId: number,
+  range: DateRange | null = null,
 ): Promise<MyTicketsTabCounts> {
   const columns = Object.fromEntries(
     MY_TICKETS_TABS.map((tab) => [
@@ -58,7 +66,12 @@ export async function countMyTicketsByTab(
   const [row] = await db
     .select(columns)
     .from(ticket)
-    .where(or(eq(ticket.createdBy, userId), eq(ticket.assignedTo, userId)))
+    .where(
+      and(
+        or(eq(ticket.createdBy, userId), eq(ticket.assignedTo, userId)),
+        periodCondition(range),
+      ),
+    )
 
   const counts: MyTicketsTabCounts = {
     opened: 0,

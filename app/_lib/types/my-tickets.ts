@@ -15,6 +15,11 @@ export interface MyTicketsTabRule {
 
 export type MyTicketsTabCounts = Record<MyTicketsTab, number>
 
+export interface MyTicketsEmptyCopy {
+  title: string
+  description: string
+}
+
 export interface MyTicketListItem {
   id: number
   title: string

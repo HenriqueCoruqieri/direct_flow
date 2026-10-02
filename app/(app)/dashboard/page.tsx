@@ -3,15 +3,16 @@ import { Suspense } from "react"
 
 import { requireSession } from "@/app/_lib/auth/session"
 import { formatRangeLabel, resolvePeriodRange } from "@/app/_lib/date"
+import { PRESET_PERIODS } from "@/app/_lib/domain/period"
 import {
   parseDashboardParams,
   serializeDashboardParams,
 } from "@/app/_lib/validation/dashboard"
 
 import AppTopBar from "../_components/app-top-bar"
+import PeriodFilter from "../_components/period-filter"
 import DashboardStats from "./_components/dashboard-stats"
 import DashboardStatsSkeleton from "./_components/dashboard-stats-skeleton"
-import PeriodFilter from "./_components/period-filter"
 
 export const metadata: Metadata = {
   title: "Início",
@@ -33,7 +34,11 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
               {formatRangeLabel(range)}
             </p>
           </div>
-          <PeriodFilter selection={selection} />
+          <PeriodFilter
+            pathname="/dashboard"
+            presets={PRESET_PERIODS}
+            selection={selection}
+          />
         </div>
 
         <Suspense

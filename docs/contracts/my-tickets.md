@@ -16,6 +16,258 @@ Server Action; nenhuma gravação. Duas telas (`/tickets` e `/tickets/[id]`), tr
 funções de dados e os rótulos de todos os valores de `ticket_status`,
 `ticket_priority` e `history_event`.
 
+A edição pelo autor no detalhe (botão "Editar", `edicao` no histórico) tem
+contrato próprio: `docs/contracts/ticket-edit.md`.
+
+## Adendo — filtro por data de abertura
+
+Acrescentado em 2026-10-01. Decisões no plano (`docs/plans/my-tickets.md`, seção
+"Filtro por data de abertura"). Continua só leitura: nenhuma migration, nenhuma
+action.
+
+### Regra
+
+| Item      | Definição                                                                                                                                |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Âncora    | `ticket.created_at` (data de abertura)                                                                                                   |
+| Períodos  | `Todos` (sem filtro, **padrão desta tela**), `Hoje`, `Semana`, `Mês`, `Personalizado`. Os quatro últimos com a mesma resolução do Início |
+| Intervalo | Meio-aberto `[start, end)` no fuso `America/Sao_Paulo` (ADR 009), por `resolvePeriodRange`                                               |
+| Alcance   | Lista **e** contagens das quatro abas usam o mesmo intervalo                                                                             |
+| URL       | `?tab=&periodo=&de=&ate=`. `Todos` não é escrito na URL (ausência de `periodo`); `?periodo=todos` digitado também vale                   |
+| Inválido  | `periodo` desconhecido, personalizado sem data, data inexistente ou `ate < de` → `Todos`, sem erro e sem redirecionar                    |
+| Valores   | Em português na URL (`hoje`, `semana`, `mes`, `personalizado`, `todos`), como no Início. A tradução é decisão separada                   |
+| Início    | Não muda: sem `Todos`, padrão `Hoje`. `/dashboard?periodo=todos` cai em `Hoje`                                                           |
+
+URLs:
+
+```
+/tickets?tab=opened                                              → Todos
+/tickets?tab=opened&periodo=hoje
+/tickets?tab=closed&periodo=semana
+/tickets?tab=opened&periodo=personalizado&de=2026-09-01&ate=2026-09-10
+```
+
+### Tipos — `app/_lib/types/period.ts` (acrescido)
+
+```ts
+export type AllTimePeriod = "todos"
+export type PeriodOption = Period | AllTimePeriod
+export type PresetPeriodOption = Exclude<PeriodOption, "personalizado">
+
+export interface AllTimeSelection {
+  periodo: AllTimePeriod
+}
+
+export type PeriodFilterSelection = PeriodSelection | AllTimeSelection
+```
+
+`Period`, `PresetPeriod` e `PeriodSelection` não mudaram: o Início continua
+tipado sem `todos`, e `resolvePeriodRange` continua sem caso para ele. Quem
+aceita `Todos` usa `PeriodFilterSelection`.
+
+### `app/_lib/types/my-tickets.ts` (acrescido)
+
+```ts
+export interface MyTicketsEmptyCopy {
+  title: string
+  description: string
+}
+```
+
+### Domínio
+
+`app/_lib/domain/period.ts`:
+
+```ts
+export const ALL_TIME_SELECTION: AllTimeSelection // { periodo: "todos" }
+export const PERIOD_LABELS // satisfies Record<PeriodOption, string>; ganhou todos: "Todos"
+```
+
+`app/_lib/domain/my-tickets.ts`:
+
+```ts
+export const MY_TICKETS_PERIOD_PRESETS // ["todos", "hoje", "semana", "mes"] as const
+export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection // ALL_TIME_SELECTION
+export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy
+export const myTicketsEmptyCopy: (
+  tab: MyTicketsTab,
+  period: PeriodFilterSelection,
+) => MyTicketsEmptyCopy
+```
+
+- **O conjunto de períodos é por tela.** O Início itera `PRESET_PERIODS`
+  (`hoje`, `semana`, `mes`); Meus chamados itera `MY_TICKETS_PERIOD_PRESETS`.
+  Os dois seguidos de `Personalizado`. Rótulo de qualquer um vem de
+  `PERIOD_LABELS`.
+- `myTicketsEmptyCopy`: com `Todos`, o título e a descrição da aba
+  (`MY_TICKETS_TAB_RULES[tab]`, como hoje); com qualquer outro período,
+  `MY_TICKETS_EMPTY_PERIOD`:
+
+  | Campo         | Texto                                                                                         |
+  | ------------- | --------------------------------------------------------------------------------------------- |
+  | `title`       | `Nenhum chamado neste período`                                                                |
+  | `description` | `Nenhum chamado desta aba foi aberto no período escolhido. Escolha outro período ou “Todos”.` |
+
+### Datas — `app/_lib/date.ts` (acrescido)
+
+```ts
+export const resolvePeriodFilterRange: (
+  selection: PeriodFilterSelection,
+  now?: DateInput,
+) => DateRange | null
+```
+
+`todos` → `null` (sem filtro); qualquer outro → `resolvePeriodRange(selection)`.
+É a única tradução de `Todos`; ninguém testa `periodo === "todos"` para decidir
+o intervalo.
+
+### Validação
+
+`app/_lib/validation/period.ts` (novo) — peças comuns aos filtros de período,
+extraídas de `validation/dashboard.ts` sem mudar o comportamento do Início:
+
+```ts
+export const customPeriodSchema // personalizado: de/ate isDateKey, ate >= de
+export interface RawPeriodParams {
+  periodo: string | undefined
+  de: string | undefined
+  ate: string | undefined
+}
+export const readPeriodParams: (raw: RawSearchParams) => RawPeriodParams
+export const serializePeriodParams: (selection: PeriodFilterSelection) => string
+export const periodFilterHref: (
+  pathname: string,
+  keep: Readonly<Record<string, string>>,
+  selection: PeriodFilterSelection,
+) => string
+```
+
+| Função                  | Semântica                                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `readPeriodParams`      | Primeiro valor de `periodo`, `de` e `ate` (`firstSearchParam`)                                                                                          |
+| `serializePeriodParams` | `todos` → `""`; `hoje` → `periodo=hoje`; personalizado → `periodo=personalizado&de=…&ate=…`                                                             |
+| `periodFilterHref`      | **A** forma de montar o link de um filtro de período: `keep` primeiro (ex.: `{ tab }`), depois o período. Sem nenhum parâmetro → só `pathname`, sem `?` |
+
+`app/_lib/validation/dashboard.ts`: mesma API (`dashboardSearchParamsSchema`,
+`parseDashboardParams`, `serializeDashboardParams`), agora montada sobre as
+peças acima.
+
+`app/_lib/validation/my-tickets.ts` (acrescido):
+
+```ts
+export const myTicketsPeriodSchema // discriminatedUnion: enum(MY_TICKETS_PERIOD_PRESETS) | customPeriodSchema
+export type MyTicketsPeriodParams = z.infer<typeof myTicketsPeriodSchema>
+
+export const parseMyTicketsPeriod: (
+  raw: RawSearchParams,
+) => PeriodFilterSelection
+export const myTicketsTabHref: (
+  tab: MyTicketsTab,
+  period?: PeriodFilterSelection, // padrão DEFAULT_MY_TICKETS_PERIOD
+) => string
+```
+
+- `parseMyTicketsPeriod` nunca lança; inválido → `DEFAULT_MY_TICKETS_PERIOD`.
+  Aba e período são lidos **independentemente**: aba inválida com período válido
+  mantém o período, e vice-versa.
+- `myTicketsTabHref(tab, period)` = `periodFilterHref("/tickets", { tab }, period)`.
+  As abas passam o período atual; sem o segundo argumento o link sai sem
+  período (`/tickets?tab=opened`, igual ao de hoje).
+
+### `df-data` — `app/_lib/data/my-tickets.ts` (alterado)
+
+```ts
+export async function listMyTickets(
+  userId: number,
+  tab: MyTicketsTab,
+  range: DateRange | null = null,
+): Promise<MyTicketListItem[]>
+
+export async function countMyTicketsByTab(
+  userId: number,
+  range: DateRange | null = null,
+): Promise<MyTicketsTabCounts>
+```
+
+- Um helper privado só, usado pelas duas funções, ao lado de `tabCondition`:
+  `range === null` → nenhuma condição; senão
+  `ticket.created_at >= range.start and ticket.created_at < range.end`
+  (`gte` + `lt`; nunca `between` nem `lte`).
+- `listMyTickets`: `where tabCondition(userId, tab) and <período>`.
+- `countMyTicketsByTab`: o `where` externo vira
+  `(created_by = $1 or assigned_to = $1) and <período>`; os `filter` por aba não
+  mudam. Assim cada contagem é exatamente o tamanho da lista da aba no mesmo
+  período.
+- Sem `range`, o resultado é idêntico ao de hoje.
+- Índice: `ticket_created_by_idx` / `ticket_assigned_to_idx` continuam
+  atendendo (o volume por pessoa é pequeno). Se o `EXPLAIN` mostrar problema,
+  reporte.
+
+### `df-ui`
+
+**Seletor reaproveitado.** `PeriodFilter`, `CustomPeriodPicker` e
+`period-pill-variants` passam a ter dois usuários no grupo `(app)` e sobem de
+`app/(app)/dashboard/_components/` para `app/(app)/_components/` (colocation).
+Ficam genéricos por props, sem saber de tela:
+
+```ts
+interface PeriodFilterProps {
+  pathname: string
+  keep?: Readonly<Record<string, string>>
+  presets: readonly PresetPeriodOption[]
+  selection: PeriodFilterSelection
+}
+
+interface CustomPeriodPickerProps {
+  pathname: string
+  keep?: Readonly<Record<string, string>>
+  selection: PeriodFilterSelection
+}
+```
+
+- Pílulas: `presets.map`, `href={periodFilterHref(pathname, keep ?? {}, { periodo })}`,
+  rótulo `PERIOD_LABELS[periodo]`, ativa quando `selection.periodo === periodo`.
+- Picker: no "Aplicar",
+  `router.push(periodFilterHref(pathname, keep ?? {}, { periodo: "personalizado", de, ate }), { scroll: false })`.
+  O resto (calendário, `ptBR`, `WEEK_STARTS_ON`, conversões) não muda.
+- Início: `<PeriodFilter pathname="/dashboard" presets={PRESET_PERIODS} selection={selection} />`.
+  Comportamento e URLs idênticos aos de hoje.
+- A exceção do `react-day-picker/locale` (ADR 009) acompanha o arquivo:
+  passa a valer só em `app/(app)/_components/custom-period-picker.tsx`.
+
+**`/tickets` — `page.tsx`:**
+
+```tsx
+const raw = await searchParams
+const tab = parseMyTicketsTab(raw)
+const period = parseMyTicketsPeriod(raw)
+const range = resolvePeriodFilterRange(period)
+const [tickets, counts] = await Promise.all([
+  listMyTickets(actor.id, tab, range),
+  countMyTicketsByTab(actor.id, range),
+])
+```
+
+- O seletor (`<PeriodFilter pathname={MY_TICKETS_PATH} keep={{ tab }} presets={MY_TICKETS_PERIOD_PRESETS} selection={period} />`)
+  fica **abaixo do campo de busca da tabela**. O `DataTable` ganha uma prop
+  opcional para isso (sugestão: `toolbarFooter?: React.ReactNode`, renderizada
+  abaixo da linha de busca e filtros; sem ela, nada muda em Pessoas, Setores e
+  Tags). A página monta o `PeriodFilter` (Server Component) e o passa como prop
+  para `MyTicketsTable`, que o repassa ao `DataTable`.
+- **Lista vazia**: a tabela não é montada (como hoje), mas o seletor continua
+  visível, no mesmo lugar, acima do estado vazio. Sem isso, um período sem
+  chamados deixaria a pessoa sem como voltar. O estado vazio usa
+  `myTicketsEmptyCopy(tab, period)`.
+- `MyTicketsTabs` recebe `period` e usa `myTicketsTabHref(tab, period)`: trocar
+  de aba mantém o período; trocar de período mantém a aba.
+- `key` da tabela: `myTicketsTabHref(tab, period)` (aba **e** período). Trocar o
+  período zera busca e filtros da tabela, pelo mesmo motivo da aba: as opções de
+  Tag são derivadas das linhas.
+- Com período diferente de `Todos`, subtítulo `formatRangeLabel(range)` ao lado
+  do título, como no Início. Com `Todos`, sem subtítulo.
+- A busca e os filtros da tabela continuam no cliente, sobre as linhas que o
+  servidor já filtrou pelo período.
+
 ## Tabelas e enums lidos
 
 | Tabela            | Colunas lidas                                                                                                                                                                                                      |
@@ -129,12 +381,17 @@ export interface TicketDetail extends TicketVisibilityFacts {
   originDepartmentId: number
   originDepartmentName: string
   currentDepartmentName: string
+  tagId: number | null
   tagName: string | null
   createdAt: Date
   pendingTransfer: TicketPendingTransfer | null
   history: TicketHistoryEntry[]
 }
 ```
+
+> `tagId` foi acrescentado por `docs/contracts/ticket-edit.md` (o dialog de
+> edição pré-seleciona a tag atual). `findTicketDetail` passa a selecioná-lo
+> (`tag.id`, nulo sem `ticket_tag`).
 
 - `TicketDetail` estende `TicketVisibilityFacts`: o detalhe carregado entra
   direto em `canViewTicket`, sem conversão.
@@ -284,6 +541,7 @@ valor novo no enum quebra o `tsc` até ganhar rótulo e frase.
 | `reabertura`               | Reabertura               | `Reabriu o chamado com status Aberto.`                           | sem status: `Reabriu o chamado.`                                                                                        |
 | `encerramento`             | Encerramento             | `Encerrou o chamado com status Fechado.`                         | sem status: `Encerrou o chamado.`                                                                                       |
 | `mudanca_tag`              | Mudança de tag           | `Trocou a tag de Acesso para Rede.`                              | só destino: `Definiu a tag Rede.`; só origem: `Removeu a tag Acesso.`; nenhum: `Alterou a tag.`                         |
+| `edicao`                   | Edição                   | `Editou o chamado.`                                              | sempre a mesma frase; o que mudou vem na `note` (`Alterou título e tipo (Dúvida → Bug).`), ver `ticket-edit.md`         |
 
 Hoje o banco só tem `criacao`, `mudanca_status` (seed demo) e
 `transferencia_solicitada`. As outras frases existem para a tela já exibir o que
@@ -348,6 +606,7 @@ export const myTicketsTabHref: (tab: MyTicketsTab) => string
   A URL continua como está (não há `redirect` para a canônica).
 - **`myTicketsTabHref`** é a única forma de montar o link de aba:
   `/tickets?tab=opened`. Sempre com o parâmetro, inclusive na aba padrão.
+  Ganhou o segundo argumento `period` no adendo do filtro por data.
 
 ### `app/_lib/validation/ticket.ts` (acrescido)
 
@@ -385,6 +644,9 @@ export async function countMyTicketsByTab(
   userId: number,
 ): Promise<MyTicketsTabCounts>
 ```
+
+> Assinaturas atualizadas no adendo do filtro por data: as duas ganharam
+> `range: DateRange | null = null`.
 
 Arquivo próprio porque é uma visão por pessoa; o que é do chamado em si
 (`insertTicket`, `findTicketDetail`) fica em `tickets.ts`.
@@ -510,6 +772,8 @@ const MyTicketsPage = async ({ searchParams }: PageProps<"/tickets">) => {
 }
 ```
 
+> Leitura de período, intervalo e seletor: ver o adendo do filtro por data.
+
 - `<AppTopBar />` no topo, como no Início. A busca dele continua sem função.
 - Título `MY_TICKETS_LABEL` (`h1`).
 - `<MyTicketsTabs current={tab} counts={counts} />`.
@@ -587,6 +851,9 @@ interface DataTableProps<TData extends RowData> {
 Props: `tab: MyTicketsTab`. Mostra `MY_TICKETS_TAB_RULES[tab].emptyTitle` e
 `emptyDescription` (textos na tabela de abas acima), com ícone `lucide-react`
 decorativo (`aria-hidden`). **Sem botão** ("Novo chamado" já está na barra).
+Com o filtro por data, o texto vem de `myTicketsEmptyCopy(tab, period)` (as
+props passam a ser `tab` e `period`, ou o próprio `MyTicketsEmptyCopy`, a
+critério do `df-ui`).
 
 ### Badge de status — `app/(app)/_components/ticket-status-badge.tsx`
 
@@ -660,7 +927,8 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   `describeHistoryEntry(entry)` e, se houver, `note`. Histórico vazio (não
   acontece hoje) → `Nenhum evento registrado.`
 - **Sem nenhum botão de ação** (concluir, editar, atribuir, aprovar, mensagem,
-  anexo). Nada de placeholder "em breve".
+  anexo). Nada de placeholder "em breve". Exceção posterior: o botão "Editar"
+  do autor, definido em `docs/contracts/ticket-edit.md`.
 
 ### Regras gerais de UI
 
@@ -739,9 +1007,35 @@ continuam sendo os chamados de referência para o detalhe (cenários 12 a 18).
 | 21  | QA Membro Suporte | título da aba do navegador em `/tickets/66` e `/tickets/<id de chamado alheio>`                                                                                                                                                                                                                                                                  | `/tickets/66`: "Chamado #66" (só o número, nunca o título do chamado). Chamado alheio (404): título padrão de not-found (`404: This page could not be found.`), o mesmo de `/tickets/abc` e de id inexistente; nunca "Chamado #<id>" nem nada do chamado                                                                |
 | 22  | qualquer          | navegar pelas telas da feature                                                                                                                                                                                                                                                                                                                   | nenhum erro nem aviso de hidratação no dev server; nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer` (comparar `max(id)` antes e depois)                                                                                                                                                              |
 
+### Cenários do filtro por data (adendo)
+
+Período no fuso de São Paulo. Para conferir no banco, o intervalo de um dia
+`D` é `created_at >= (D::timestamp at time zone 'America/Sao_Paulo') and
+created_at < ((D + 1)::timestamp at time zone 'America/Sao_Paulo')`; semana de
+segunda a domingo; mês corrente inteiro. O Diretor tem chamados do seed demo
+espalhados por hoje, ontem às 21h–23h59, esta semana, este mês e o mês anterior
+(`docs/contracts/dashboard.md`, bloco demo): é a pessoa certa para os períodos.
+
+| #   | Quem              | Ação                                                                                                                                                                            | Esperado                                                                                                                                                                                                                |
+| --- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 23  | Diretor           | `/tickets`                                                                                                                                                                      | seletor abaixo do campo "Buscar por # ou título", na ordem Todos, Hoje, Semana, Mês, Personalizado; **Todos** ativo (`aria-current="page"`); sem subtítulo de período; contagens iguais às do cenário 3                 |
+| 24  | Diretor           | clicar Hoje, Semana e Mês, nessa ordem                                                                                                                                          | URLs `/tickets?tab=opened&periodo=hoje`, `…=semana`, `…=mes`; subtítulo `formatRangeLabel` (ex.: `1 out 2026`); lista e as quatro contagens batem com a consulta do cenário 3 acrescida do intervalo, para cada período |
+| 25  | Diretor           | Hoje                                                                                                                                                                            | nenhum chamado criado ontem entre 21h e 23h59 de Brasília aparece, em nenhuma aba (no banco esses já são "hoje" em UTC): é o teste do fuso                                                                              |
+| 26  | Diretor           | Personalizado → escolher de 1 ao 10 do mês anterior → Aplicar                                                                                                                   | URL `…&periodo=personalizado&de=AAAA-MM-01&ate=AAAA-MM-10`; o dia 10 inteiro incluído; lista e contagens batem com o banco; calendário começa na segunda                                                                |
+| 27  | Diretor           | com Semana ativo, clicar nas abas Fechados e Cancelados                                                                                                                         | a aba muda e o período continua Semana (URL mantém `periodo=semana`); contagens das quatro abas continuam no período                                                                                                    |
+| 28  | Diretor           | na aba Fechados com Semana, clicar Mês                                                                                                                                          | a aba continua Fechados (`tab=closed`), o período vira Mês                                                                                                                                                              |
+| 29  | Diretor           | marcar um filtro de Tipo e digitar na busca; depois trocar o período                                                                                                            | busca e filtros zerados ao trocar o período                                                                                                                                                                             |
+| 30  | QA Membro Suporte | escolher um período sem chamados (Personalizado num mês antigo)                                                                                                                 | sem tabela; o seletor continua visível; estado vazio "Nenhum chamado neste período" com a descrição do contrato; contagens 0; clicar Todos volta à lista                                                                |
+| 31  | qualquer          | `/tickets?periodo=xyz`, `?periodo=Hoje`, `?periodo=personalizado`, `?periodo=personalizado&de=2026-09-10&ate=2026-09-01`, `?periodo=personalizado&de=2026-02-30&ate=2026-03-01` | todos mostram Todos ativo e a lista completa da aba, sem erro                                                                                                                                                           |
+| 32  | qualquer          | `/tickets?tab=xyz&periodo=semana` e `/tickets?tab=closed&periodo=xyz`                                                                                                           | o primeiro: aba Abertos por mim com Semana; o segundo: Fechados com Todos (aba e período caem no padrão independentemente)                                                                                              |
+| 33  | qualquer          | `/tickets?tab=opened&periodo=todos`                                                                                                                                             | igual a `/tickets?tab=opened`                                                                                                                                                                                           |
+| 34  | qualquer          | após 24 e 27, "voltar" do navegador                                                                                                                                             | cada passo volta com aba, período, lista e contagens coerentes com a URL                                                                                                                                                |
+| 35  | Diretor           | Início                                                                                                                                                                          | sem pílula Todos; abre em Hoje; Hoje/Semana/Mês/Personalizado funcionam como antes (cartões iguais ao gabarito do seed); `/dashboard?periodo=todos` mostra Hoje                                                         |
+| 36  | qualquer          | navegar pelos cenários 23–35                                                                                                                                                    | nenhum erro nem aviso de hidratação no dev server; nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer`                                                                                                  |
+
 ## Critério de pronto
 
-1. Cenários 1–22 aprovados pelo `df-qa`.
+1. Cenários 1–22 aprovados pelo `df-qa`. Do adendo, cenários 23–36.
 2. Contagens das abas iguais à consulta do cenário 3 para pelo menos duas
    pessoas.
 3. Nenhuma linha gravada pela feature; nenhuma migration; nenhuma action.
@@ -755,3 +1049,10 @@ continuam sendo os chamados de referência para o detalhe (cenários 12 a 18).
 - [ ] item do menu, `/tickets`, `/tickets/[id]`, `TicketStatusBadge`, `rowHref` no `DataTable` (`df-ui`)
 - [ ] cenários do `df-qa`
 - [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+
+Adendo do filtro por data:
+
+- [x] `PeriodFilterSelection`, `PERIOD_LABELS.todos`, `MY_TICKETS_PERIOD_PRESETS`, `myTicketsEmptyCopy`, `resolvePeriodFilterRange`, `validation/period.ts`, `parseMyTicketsPeriod`, `myTicketsTabHref(tab, period)` (`df-architect`)
+- [ ] `range` em `listMyTickets` e `countMyTicketsByTab` (`df-data`)
+- [ ] `PeriodFilter`/`CustomPeriodPicker` genéricos em `app/(app)/_components/`, slot no `DataTable`, `/tickets` com período, abas mantendo o período, estado vazio por período (`df-ui`)
+- [ ] cenários 23–36 do `df-qa`

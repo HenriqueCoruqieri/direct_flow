@@ -19,17 +19,19 @@ import {
   WEEK_STARTS_ON,
 } from "@/app/_lib/date"
 import { PERIOD_LABELS } from "@/app/_lib/domain/period"
-import type { PeriodSelection } from "@/app/_lib/types/period"
-import { serializeDashboardParams } from "@/app/_lib/validation/dashboard"
+import type { PeriodFilterSelection } from "@/app/_lib/types/period"
+import { periodFilterHref } from "@/app/_lib/validation/period"
 
 import { periodPillVariants } from "./period-pill-variants"
 
 interface CustomPeriodPickerProps {
-  selection: PeriodSelection
+  pathname: string
+  keep?: Readonly<Record<string, string>>
+  selection: PeriodFilterSelection
 }
 
 const rangeFromSelection = (
-  selection: PeriodSelection,
+  selection: PeriodFilterSelection,
 ): CalendarRange | undefined =>
   selection.periodo === "personalizado"
     ? {
@@ -38,7 +40,11 @@ const rangeFromSelection = (
       }
     : undefined
 
-const CustomPeriodPicker = ({ selection }: CustomPeriodPickerProps) => {
+const CustomPeriodPicker = ({
+  pathname,
+  keep = {},
+  selection,
+}: CustomPeriodPickerProps) => {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [range, setRange] = useState<CalendarRange | undefined>(() =>
@@ -58,7 +64,7 @@ const CustomPeriodPicker = ({ selection }: CustomPeriodPickerProps) => {
     const ate = calendarDateToKey(range.to ?? range.from)
     setOpen(false)
     router.push(
-      `/dashboard?${serializeDashboardParams({ periodo: "personalizado", de, ate })}`,
+      periodFilterHref(pathname, keep, { periodo: "personalizado", de, ate }),
       { scroll: false },
     )
   }

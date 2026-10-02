@@ -150,9 +150,14 @@ const tagFiltersFor = (
 interface MyTicketsTableProps {
   tab: MyTicketsTab
   tickets: MyTicketListItem[]
+  periodFilter: React.ReactNode
 }
 
-const MyTicketsTable = ({ tab, tickets }: MyTicketsTableProps) => {
+const MyTicketsTable = ({
+  tab,
+  tickets,
+  periodFilter,
+}: MyTicketsTableProps) => {
   const filters = useMemo<DataTableFilter[]>(
     () => [...statusFiltersFor(tab), TYPE_FILTER, ...tagFiltersFor(tickets)],
     [tab, tickets],
@@ -166,6 +171,7 @@ const MyTicketsTable = ({ tab, tickets }: MyTicketsTableProps) => {
       search={SEARCH}
       filters={filters}
       rowHref={rowHref}
+      toolbarFooter={periodFilter}
     />
   )
 }
