@@ -97,3 +97,9 @@ const HISTORY_EVENT_DESCRIBERS = {
 
 export const describeHistoryEntry = (entry: TicketHistoryEntry): string =>
   HISTORY_EVENT_DESCRIBERS[entry.event](entry)
+
+export const SYSTEM_ACTOR_LABEL = "Sistema"
+
+export const describeHistoryActor = (
+  entry: Pick<TicketHistoryEntry, "changedByName">,
+): string => entry.changedByName ?? SYSTEM_ACTOR_LABEL

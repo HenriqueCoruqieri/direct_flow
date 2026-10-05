@@ -1,4 +1,4 @@
-import { ALL_TIME_SELECTION, PRESET_PERIODS } from "@/app/_lib/domain/period"
+import { PRESET_PERIODS } from "@/app/_lib/domain/period"
 import { NON_FINAL_TICKET_STATUSES } from "@/app/_lib/domain/ticket"
 import type {
   MyTicketsEmptyCopy,
@@ -23,8 +23,9 @@ export const MY_TICKETS_PERIOD_PRESETS = [
   ...PRESET_PERIODS,
 ] as const satisfies readonly PresetPeriodOption[]
 
-export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection =
-  ALL_TIME_SELECTION
+export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection = {
+  periodo: "hoje",
+}
 
 export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy = {
   title: "Nenhum chamado neste período",

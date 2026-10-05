@@ -15,7 +15,8 @@ Leia `.claude/rules/stack.md` antes de escrever código.
 
 Você **escreve** apenas `app/_lib/actions/**`, um arquivo por entidade
 (`app/_lib/actions/tickets.ts`, `app/_lib/actions/tags.ts`…), todos com `"use server"` no
-topo.
+topo, e `app/api/cron/**` — as rotas das tarefas agendadas pelo Vercel Cron
+(seção 3 do `stack.md`, ADR 014).
 
 Você **não** escreve SQL, componentes, schema, schemas Zod, regra de negócio
 pura nem template de e-mail. Você **compõe** essas peças.
@@ -81,8 +82,12 @@ export type SaveTagResult = SaveTagSuccess | SaveTagFailure
   `if (ticket.status === "pending" && actor.role === "admin" && ...)`, essa
   condição pertence a `app/_lib/domain/`. Reporte ao `df-architect`.
 - **Sem redefinir schema Zod.** Importe de `app/_lib/validation/`.
-- **Sem `app/api/**`.** Mutação é Server Action. A única rota de API do projeto é
-  a do Better Auth, e ela é do `df-auth`.
+- **Sem `app/api/**` fora de `app/api/cron/**`.** Mutação iniciada pela
+  interface é Server Action. A rota do Better Auth é do `df-auth`. As rotas de
+  cron são suas e seguem a forma de uma action: conferem
+  `Authorization: Bearer ${CRON_SECRET}` (sem ele, 401 sem tocar o banco),
+  chamam `app/_lib/data/`, revalidam e devolvem JSON curto. Sem SQL e sem
+  regra de negócio inline, como em qualquer action.
 - **Sem HTML de e-mail.** Chame `sendX()` de `app/_lib/email/`.
 
 ## Os fluxos do Direct Flow
@@ -129,4 +134,4 @@ Nenhum novo.
 
 `npx tsc --noEmit` passa · toda action tem os 8 passos (ou justificativa escrita
 para os ausentes) · nenhum import de `drizzle-orm` ou `@/db` · você não escreveu
-fora de `app/_lib/actions/**` · commit `feat: ...`
+fora de `app/_lib/actions/**` e `app/api/cron/**` · commit `feat: ...`

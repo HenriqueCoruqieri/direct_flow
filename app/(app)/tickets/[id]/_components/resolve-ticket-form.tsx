@@ -8,8 +8,6 @@ import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import { Button } from "@/app/_components/ui/button"
-import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
-import { Textarea } from "@/app/_components/ui/textarea"
 import { resolveTicket } from "@/app/_lib/actions/ticket-resolution"
 import type { ResolveTicketFormDefaults } from "@/app/_lib/types/ticket-resolution"
 import {
@@ -18,6 +16,7 @@ import {
 } from "@/app/_lib/validation/ticket-resolution"
 
 import ConclusionBlockedActions from "./conclusion-blocked-actions"
+import TicketSolutionField from "./ticket-solution-field"
 
 interface ResolveTicketFormProps {
   defaults: ResolveTicketFormDefaults
@@ -25,7 +24,6 @@ interface ResolveTicketFormProps {
 
 const ResolveTicketForm = ({ defaults }: ResolveTicketFormProps) => {
   const solutionId = useId()
-  const solutionErrorId = `${solutionId}-error`
   const router = useRouter()
 
   const form = useForm<ResolveTicketInput>({
@@ -69,27 +67,11 @@ const ResolveTicketForm = ({ defaults }: ResolveTicketFormProps) => {
         name="solution"
         control={form.control}
         render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="gap-1.5">
-            <FieldLabel htmlFor={solutionId}>Solução</FieldLabel>
-            <Textarea
-              ref={field.ref}
-              id={solutionId}
-              name={field.name}
-              value={field.value}
-              disabled={field.disabled}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              rows={4}
-              className="max-h-80 min-h-24"
-              aria-invalid={fieldState.invalid}
-              aria-describedby={
-                fieldState.invalid ? solutionErrorId : undefined
-              }
-            />
-            {fieldState.invalid ? (
-              <FieldError id={solutionErrorId} errors={[fieldState.error]} />
-            ) : null}
-          </Field>
+          <TicketSolutionField
+            id={solutionId}
+            {...field}
+            fieldState={fieldState}
+          />
         )}
       />
 

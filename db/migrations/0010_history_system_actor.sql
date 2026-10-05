@@ -1,0 +1,1 @@
+ALTER TABLE "ticket_history" ALTER COLUMN "changed_by" DROP NOT NULL;

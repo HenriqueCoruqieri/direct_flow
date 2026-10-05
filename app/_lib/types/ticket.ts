@@ -103,7 +103,7 @@ export interface TicketHistoryEntry {
   id: number
   event: HistoryEvent
   changedAt: Date
-  changedByName: string
+  changedByName: string | null
   fromStatus: TicketStatus | null
   toStatus: TicketStatus | null
   fromPriority: TicketPriority | null

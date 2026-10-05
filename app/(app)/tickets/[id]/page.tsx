@@ -24,13 +24,13 @@ import { parseTicketIdParam } from "@/app/_lib/validation/ticket"
 
 import AppTopBar from "../../_components/app-top-bar"
 import EditTicketBlockedButton from "./_components/edit-ticket-blocked-button"
-import EditTicketDialog from "./_components/edit-ticket-dialog"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
 import TicketComments from "./_components/ticket-comments"
 import TicketConclusion from "./_components/ticket-conclusion"
 import TicketDescription from "./_components/ticket-description"
 import TicketDetailFields from "./_components/ticket-detail-fields"
 import TicketDetailHeader from "./_components/ticket-detail-header"
+import TicketEditProvider from "./_components/ticket-edit-provider"
 import TicketTimeline from "./_components/ticket-timeline"
 
 export const generateMetadata = async ({
@@ -64,9 +64,10 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   }
   if (!canViewTicket(actor, ticket)) notFound()
 
-  const editButton = ticketEditButtonStateFor(actor, ticket)
-  const conclusion = ticketConclusionStateFor(actor, ticket)
-  const commentForm = ticketCommentFormStateFor(actor, ticket)
+  const now = new Date()
+  const editButton = ticketEditButtonStateFor(actor, ticket, now)
+  const conclusion = ticketConclusionStateFor(actor, ticket, now)
+  const commentForm = ticketCommentFormStateFor(actor, ticket, now)
 
   const [messages, editTags] = await Promise.all([
     listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
@@ -75,61 +76,73 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
       : null,
   ])
 
-  const editAction =
-    editButton.state === "blocked" ? (
-      <EditTicketBlockedButton message={editButton.message} />
-    ) : editTags !== null ? (
-      <EditTicketDialog
-        options={buildTicketEditFormOptions(ticket, editTags)}
-      />
-    ) : undefined
+  const editOptions =
+    editTags !== null ? buildTicketEditFormOptions(ticket, editTags) : null
+  const editable = editOptions !== null
+
+  const content = (
+    <div className="flex flex-col gap-5.5 px-5 pt-5 pb-8 lg:px-6">
+      <div className="flex flex-col gap-3.5">
+        <Link
+          href={MY_TICKETS_PATH}
+          className="inline-flex w-fit items-center gap-1.5 rounded-md text-caption font-semibold text-text-tertiary transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <ArrowLeftIcon aria-hidden="true" className="size-4" />
+          {MY_TICKETS_LABEL}
+        </Link>
+        <TicketDetailHeader
+          id={ticket.id}
+          title={ticket.title}
+          status={ticket.status}
+          priority={ticket.priority}
+          editable={editable}
+          action={
+            editButton.state === "blocked" ? (
+              <EditTicketBlockedButton message={editButton.message} />
+            ) : undefined
+          }
+        />
+      </div>
+
+      {ticket.pendingTransfer !== null ? (
+        <PendingTransferNotice transfer={ticket.pendingTransfer} />
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-5.5 lg:grid-cols-3 lg:items-stretch">
+        <div className="flex min-w-0 flex-col gap-5.5 lg:col-span-2">
+          <TicketDescription
+            description={ticket.description}
+            editable={editable}
+          />
+          <TicketTimeline entries={ticket.history} />
+          <TicketConclusion
+            ticketId={ticket.id}
+            state={conclusion}
+            editable={editable}
+            className="lg:flex-1"
+          />
+        </div>
+        <div className="flex min-w-0 flex-col gap-5.5">
+          <TicketDetailFields ticket={ticket} editable={editable} />
+          <TicketComments
+            ticketId={ticket.id}
+            messages={messages}
+            form={commentForm}
+            className="lg:flex-1"
+          />
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <>
       <AppTopBar />
-      <div className="flex flex-col gap-5.5 px-5 pt-5 pb-8 lg:px-6">
-        <div className="flex flex-col gap-3.5">
-          <Link
-            href={MY_TICKETS_PATH}
-            className="inline-flex w-fit items-center gap-1.5 rounded-md text-caption font-semibold text-text-tertiary transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <ArrowLeftIcon aria-hidden="true" className="size-4" />
-            {MY_TICKETS_LABEL}
-          </Link>
-          <TicketDetailHeader
-            id={ticket.id}
-            title={ticket.title}
-            status={ticket.status}
-            priority={ticket.priority}
-            action={editAction}
-          />
-        </div>
-
-        {ticket.pendingTransfer !== null ? (
-          <PendingTransferNotice transfer={ticket.pendingTransfer} />
-        ) : null}
-
-        <div className="grid grid-cols-1 gap-5.5 lg:grid-cols-3 lg:items-stretch">
-          <div className="flex min-w-0 flex-col gap-5.5 lg:col-span-2">
-            <TicketDescription description={ticket.description} />
-            <TicketTimeline entries={ticket.history} />
-            <TicketConclusion
-              ticketId={ticket.id}
-              state={conclusion}
-              className="lg:flex-1"
-            />
-          </div>
-          <div className="flex min-w-0 flex-col gap-5.5">
-            <TicketDetailFields ticket={ticket} />
-            <TicketComments
-              ticketId={ticket.id}
-              messages={messages}
-              form={commentForm}
-              className="lg:flex-1"
-            />
-          </div>
-        </div>
-      </div>
+      {editOptions !== null ? (
+        <TicketEditProvider options={editOptions}>{content}</TicketEditProvider>
+      ) : (
+        content
+      )}
     </>
   )
 }

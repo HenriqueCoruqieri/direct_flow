@@ -6,37 +6,60 @@ import {
 import type { TicketConclusionState } from "@/app/_lib/types/ticket-resolution"
 import { cn } from "@/app/_lib/utils"
 
+import HiddenWhileEditing from "./hidden-while-editing"
 import LockedSolutionField from "./locked-solution-field"
 import ResolveTicketForm from "./resolve-ticket-form"
+import TicketEditSolution from "./ticket-edit-solution"
 
 interface TicketConclusionProps {
   ticketId: number
   state: TicketConclusionState
+  editable?: boolean
   className?: string
 }
 
 const TicketConclusion = ({
   ticketId,
   state,
+  editable = false,
   className,
 }: TicketConclusionProps) => {
+  const noSolution = (
+    <p className="text-sm text-muted-foreground">{NO_SOLUTION_LABEL}</p>
+  )
+
   let body: React.ReactNode
 
   switch (state.state) {
-    case "resolvable":
-      body = (
+    case "resolvable": {
+      const resolveForm = (
         <ResolveTicketForm
           defaults={buildResolveTicketFormDefaults(ticketId)}
         />
       )
+      body = editable ? (
+        <HiddenWhileEditing replacement={noSolution}>
+          {resolveForm}
+        </HiddenWhileEditing>
+      ) : (
+        resolveForm
+      )
       break
-    case "resolved":
+    }
+    case "resolved": {
+      const lockedSolution = (
+        <LockedSolutionField
+          value={state.solution ?? NO_SOLUTION_LABEL}
+          muted={state.solution === null}
+        />
+      )
       body = (
         <div className="flex flex-col gap-2">
-          <LockedSolutionField
-            value={state.solution ?? NO_SOLUTION_LABEL}
-            muted={state.solution === null}
-          />
+          {editable ? (
+            <TicketEditSolution>{lockedSolution}</TicketEditSolution>
+          ) : (
+            lockedSolution
+          )}
           {state.resolvedAt !== null ? (
             <p className="text-caption text-muted-foreground">
               Resolvido em{" "}
@@ -45,16 +68,26 @@ const TicketConclusion = ({
               </time>
             </p>
           ) : null}
+          {state.editableUntil !== null ? (
+            <p className="text-caption text-muted-foreground">
+              Editável até{" "}
+              <time
+                dateTime={toISO(state.editableUntil)}
+                className="tabular-nums"
+              >
+                {formatDateTime(state.editableUntil)}
+              </time>
+            </p>
+          ) : null}
         </div>
       )
       break
+    }
     case "awaiting_transfer":
       body = <LockedSolutionField value={state.message} />
       break
     case "empty":
-      body = (
-        <p className="text-sm text-muted-foreground">{NO_SOLUTION_LABEL}</p>
-      )
+      body = noSolution
       break
   }
 

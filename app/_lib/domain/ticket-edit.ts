@@ -1,11 +1,13 @@
 import {
   formatTicketNumber,
-  isNonFinalTicketStatus,
+  RESOLVED_TICKET_STATUS,
   TICKET_TYPE_LABELS,
 } from "@/app/_lib/domain/ticket"
+import { isTicketLocked } from "@/app/_lib/domain/ticket-closure"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type { TicketStatus } from "@/app/_lib/types/ticket"
 import type {
+  EditTicketFormDefaults,
   TicketEditabilityFacts,
   TicketEditBlockReason,
   TicketEditButtonFacts,
@@ -32,9 +34,13 @@ const TICKET_STATUS_IS_EDITABLE_BY_AUTHOR = {
 export const isAuthorEditableStatus = (status: TicketStatus): boolean =>
   TICKET_STATUS_IS_EDITABLE_BY_AUTHOR[status]
 
+export const canEditSolution = (status: TicketStatus): boolean =>
+  status === RESOLVED_TICKET_STATUS
+
 export const ticketEditBlockFor = (
   editor: TicketEditorFacts,
   ticket: TicketEditabilityFacts,
+  now: Date,
 ): TicketEditBlockReason | null => {
   if (!editor.isActive) return "EDITOR_INACTIVE"
   if (editor.mustChangePassword) return "PASSWORD_CHANGE_REQUIRED"
@@ -42,7 +48,9 @@ export const ticketEditBlockFor = (
   if (ticket.currentDepartmentId !== editor.departmentId) {
     return "OUTSIDE_EDITOR_DEPARTMENT"
   }
-  if (!isNonFinalTicketStatus(ticket.status)) return "TICKET_FINISHED"
+  if (isTicketLocked(ticket.status, ticket.resolvedAt, now)) {
+    return "TICKET_FINISHED"
+  }
   if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"
   if (!isAuthorEditableStatus(ticket.status)) return "STATUS_NOT_EDITABLE"
   return null
@@ -51,7 +59,8 @@ export const ticketEditBlockFor = (
 export const canEditTicket = (
   editor: TicketEditorFacts,
   ticket: TicketEditabilityFacts,
-): boolean => ticketEditBlockFor(editor, ticket) === null
+  now: Date,
+): boolean => ticketEditBlockFor(editor, ticket, now) === null
 
 export const describeTicketAwaitingApproval = (
   toDepartmentName: string,
@@ -60,13 +69,19 @@ export const describeTicketAwaitingApproval = (
 export const ticketEditButtonStateFor = (
   editor: TicketEditorFacts,
   ticket: TicketEditButtonFacts,
+  now: Date,
 ): TicketEditButtonState => {
-  const reason = ticketEditBlockFor(editor, {
-    createdBy: ticket.createdBy,
-    currentDepartmentId: ticket.currentDepartmentId,
-    status: ticket.status,
-    hasPendingTransfer: ticket.pendingTransfer !== null,
-  })
+  const reason = ticketEditBlockFor(
+    editor,
+    {
+      createdBy: ticket.createdBy,
+      currentDepartmentId: ticket.currentDepartmentId,
+      status: ticket.status,
+      resolvedAt: ticket.resolvedAt,
+      hasPendingTransfer: ticket.pendingTransfer !== null,
+    },
+    now,
+  )
 
   if (reason === null) return { state: "editable" }
   if (reason === "AWAITING_APPROVAL" && ticket.pendingTransfer !== null) {
@@ -88,16 +103,22 @@ export const buildTicketEditFormOptions = (
     ticket.tagId !== null && tags.some((tag) => tag.id === ticket.tagId)
       ? ticket.tagId
       : undefined
+  const includesSolution = canEditSolution(ticket.status)
+
+  const defaults: EditTicketFormDefaults = {
+    ticketId: ticket.id,
+    title: ticket.title,
+    description: ticket.description,
+    type: ticket.type,
+    tagId,
+  }
 
   return {
-    defaults: {
-      ticketId: ticket.id,
-      title: ticket.title,
-      description: ticket.description,
-      type: ticket.type,
-      tagId,
-    },
+    defaults: includesSolution
+      ? { ...defaults, solution: ticket.solution ?? "" }
+      : defaults,
     tags: [...tags],
+    includesSolution,
   }
 }
 
@@ -113,13 +134,15 @@ export const diffTicketEdit = (
     current.tagId === next.tagId
       ? null
       : { fromTagId: current.tagId, toTagId: next.tagId },
+  solution: next.solution !== undefined && current.solution !== next.solution,
 })
 
 export const hasTicketEditChanges = (changes: TicketEditChanges): boolean =>
   changes.title ||
   changes.description ||
   changes.type !== null ||
-  changes.tag !== null
+  changes.tag !== null ||
+  changes.solution
 
 const joinWithAnd = (items: readonly string[]): string =>
   items.length < 2
@@ -134,6 +157,7 @@ export const describeTicketEditNote = (changes: TicketEditChanges): string => {
       ? `tipo (${TICKET_TYPE_LABELS[changes.type.from]} → ${TICKET_TYPE_LABELS[changes.type.to]})`
       : null,
     changes.tag ? "tag" : null,
+    changes.solution ? "solução" : null,
   ].filter((part): part is string => part !== null)
 
   return parts.length === 0

@@ -1,5 +1,4 @@
 import type {
-  AllTimeSelection,
   Period,
   PeriodOption,
   PresetPeriod,
@@ -19,8 +18,6 @@ export const PRESET_PERIODS = [
 ] as const satisfies readonly PresetPeriod[]
 
 export const DEFAULT_PERIOD: PresetPeriod = "hoje"
-
-export const ALL_TIME_SELECTION: AllTimeSelection = { periodo: "todos" }
 
 export const PERIOD_LABELS = {
   todos: "Todos",

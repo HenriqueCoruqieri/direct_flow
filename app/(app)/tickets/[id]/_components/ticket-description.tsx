@@ -1,8 +1,20 @@
+import TicketEditDescription from "./ticket-edit-description"
+
 interface TicketDescriptionProps {
   description: string
+  editable?: boolean
 }
 
-const TicketDescription = ({ description }: TicketDescriptionProps) => {
+const TicketDescription = ({
+  description,
+  editable = false,
+}: TicketDescriptionProps) => {
+  const text = (
+    <p className="text-sm leading-relaxed wrap-break-word whitespace-pre-wrap text-text-secondary">
+      {description}
+    </p>
+  )
+
   return (
     <section
       aria-labelledby="ticket-description-heading"
@@ -14,9 +26,7 @@ const TicketDescription = ({ description }: TicketDescriptionProps) => {
       >
         Descrição
       </h2>
-      <p className="text-sm leading-relaxed wrap-break-word whitespace-pre-wrap text-text-secondary">
-        {description}
-      </p>
+      {editable ? <TicketEditDescription>{text}</TicketEditDescription> : text}
     </section>
   )
 }

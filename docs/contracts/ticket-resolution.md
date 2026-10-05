@@ -21,6 +21,22 @@ transação que trava o chamado e grava `ticket` + `ticket_history`
 (`resolucao`); quem vê o chamado comenta (público ou privado) numa transação que
 grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 
+> Revisão de 2026-10-05 (`docs/contracts/ticket-edit-window.md`): `resolvido`
+> fica aberto a edição do autor (inclusive da **solução**, que deixa de ser
+> travada) e a comentários por 7 × 24 h após `resolved_at`; vencida a janela,
+> `isTicketLocked` trata o chamado como encerrado e um cron diário grava
+> `fechado` com uma linha `encerramento` do sistema (`changed_by` nulo). Mudam
+> aqui: `ticketConclusionStateFor`, `ticketCommentBlockFor`,
+> `canCommentOnTicket` e `ticketCommentFormStateFor` ganharam `now: Date`;
+> `TicketCommentFacts` ganhou `resolvedAt`; `TicketConclusionResolved` ganhou
+> `editableUntil` (`Editável até …` no card); `insertTicketMessage` lê
+> `resolved_at` sob a trava. `RESOLVED_TICKET_STATUS` mora agora em
+> `domain/ticket.ts` (única fonte; `domain/ticket-resolution.ts` não o
+> reexporta) e `ticketSolutionSchema` em
+> `validation/ticket.ts`. A linha "resolvido — a solução não é editável" da
+> tabela de status resolvíveis e o risco 2 ficam superados. O cenário 16 muda
+> depois do primeiro cron: o #10 do seed demo passa a `fechado`.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

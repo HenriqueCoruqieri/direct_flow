@@ -63,7 +63,7 @@ sessão crua às camadas de baixo.
 `.claude/rules/stack.md` proíbe criar rotas de API para falar com o próprio
 backend. `app/api/auth/[...all]/route.ts` é exceção explícita e é sua: o Better
 Auth expõe os próprios endpoints e precisa desse catch-all. Não crie nenhuma
-outra rota sob `app/api/`.
+outra rota sob `app/api/` (as de `app/api/cron/**` são do `df-actions`).
 
 ## Sessão e autorização
 

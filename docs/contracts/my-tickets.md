@@ -19,6 +19,17 @@ funções de dados e os rótulos de todos os valores de `ticket_status`,
 A edição pelo autor no detalhe (botão "Editar", `edicao` no histórico) tem
 contrato próprio: `docs/contracts/ticket-edit.md`.
 
+> Revisão de 2026-10-05 (`docs/contracts/ticket-edit-window.md`): o período
+> padrão desta tela passa de `Todos` para **`Hoje`** (adendo abaixo
+> atualizado); `Todos` é escrito na URL (`periodo=todos`); `myTicketsTabHref`
+> exige o período. Na linha do tempo, `changedByName` pode ser nulo (linha do
+> sistema): `findTicketDetail` faz `left join` em `users` por `changed_by`, e a
+> UI mostra `describeHistoryActor(entry)` (`Sistema` quando nulo). Os cenários
+> 23, 31, 32 e 33 do adendo foram reescritos abaixo para o novo padrão; a
+> versão anterior está no histórico do git. `ALL_TIME_SELECTION` deixou de ser
+> usado com o novo padrão e foi removido de `domain/period.ts`; o tipo
+> `AllTimeSelection` continua em `types/period.ts`.
+
 ## Adendo — filtro por data de abertura
 
 Acrescentado em 2026-10-01. Decisões no plano (`docs/plans/my-tickets.md`, seção
@@ -27,21 +38,22 @@ action.
 
 ### Regra
 
-| Item      | Definição                                                                                                                                |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Âncora    | `ticket.created_at` (data de abertura)                                                                                                   |
-| Períodos  | `Todos` (sem filtro, **padrão desta tela**), `Hoje`, `Semana`, `Mês`, `Personalizado`. Os quatro últimos com a mesma resolução do Início |
-| Intervalo | Meio-aberto `[start, end)` no fuso `America/Sao_Paulo` (ADR 009), por `resolvePeriodRange`                                               |
-| Alcance   | Lista **e** contagens das quatro abas usam o mesmo intervalo                                                                             |
-| URL       | `?tab=&periodo=&de=&ate=`. `Todos` não é escrito na URL (ausência de `periodo`); `?periodo=todos` digitado também vale                   |
-| Inválido  | `periodo` desconhecido, personalizado sem data, data inexistente ou `ate < de` → `Todos`, sem erro e sem redirecionar                    |
-| Valores   | Em português na URL (`hoje`, `semana`, `mes`, `personalizado`, `todos`), como no Início. A tradução é decisão separada                   |
-| Início    | Não muda: sem `Todos`, padrão `Hoje`. `/dashboard?periodo=todos` cai em `Hoje`                                                           |
+| Item      | Definição                                                                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Âncora    | `ticket.created_at` (data de abertura)                                                                                                                     |
+| Períodos  | `Todos` (sem filtro), `Hoje` (**padrão desta tela** desde 2026-10-05), `Semana`, `Mês`, `Personalizado`. Os quatro últimos com a mesma resolução do Início |
+| Intervalo | Meio-aberto `[start, end)` no fuso `America/Sao_Paulo` (ADR 009), por `resolvePeriodRange`                                                                 |
+| Alcance   | Lista **e** contagens das quatro abas usam o mesmo intervalo                                                                                               |
+| URL       | `?tab=&periodo=&de=&ate=`. Todo período é escrito na URL, inclusive `periodo=todos`; ausência de `periodo` = `Hoje`                                        |
+| Inválido  | `periodo` desconhecido, personalizado sem data, data inexistente ou `ate < de` → `Hoje`, sem erro e sem redirecionar                                       |
+| Valores   | Em português na URL (`hoje`, `semana`, `mes`, `personalizado`, `todos`), como no Início. A tradução é decisão separada                                     |
+| Início    | Não muda: sem `Todos`, padrão `Hoje`. `/dashboard?periodo=todos` cai em `Hoje`                                                                             |
 
 URLs:
 
 ```
-/tickets?tab=opened                                              → Todos
+/tickets?tab=opened                                              → Hoje
+/tickets?tab=opened&periodo=todos                                → Todos
 /tickets?tab=opened&periodo=hoje
 /tickets?tab=closed&periodo=semana
 /tickets?tab=opened&periodo=personalizado&de=2026-09-01&ate=2026-09-10
@@ -79,7 +91,7 @@ export interface MyTicketsEmptyCopy {
 `app/_lib/domain/period.ts`:
 
 ```ts
-export const ALL_TIME_SELECTION: AllTimeSelection // { periodo: "todos" }
+export const ALL_TIME_SELECTION: AllTimeSelection // { periodo: "todos" } (removido em 2026-10-05, sem uso)
 export const PERIOD_LABELS // satisfies Record<PeriodOption, string>; ganhou todos: "Todos"
 ```
 
@@ -87,7 +99,7 @@ export const PERIOD_LABELS // satisfies Record<PeriodOption, string>; ganhou tod
 
 ```ts
 export const MY_TICKETS_PERIOD_PRESETS // ["todos", "hoje", "semana", "mes"] as const
-export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection // ALL_TIME_SELECTION
+export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection // { periodo: "hoje" } (era ALL_TIME_SELECTION até 2026-10-05)
 export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy
 export const myTicketsEmptyCopy: (
   tab: MyTicketsTab,
@@ -145,7 +157,7 @@ export const periodFilterHref: (
 | Função                  | Semântica                                                                                                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `readPeriodParams`      | Primeiro valor de `periodo`, `de` e `ate` (`firstSearchParam`)                                                                                          |
-| `serializePeriodParams` | `todos` → `""`; `hoje` → `periodo=hoje`; personalizado → `periodo=personalizado&de=…&ate=…`                                                             |
+| `serializePeriodParams` | `todos` → `periodo=todos` (era `""` até 2026-10-05); `hoje` → `periodo=hoje`; personalizado → `periodo=personalizado&de=…&ate=…`                        |
 | `periodFilterHref`      | **A** forma de montar o link de um filtro de período: `keep` primeiro (ex.: `{ tab }`), depois o período. Sem nenhum parâmetro → só `pathname`, sem `?` |
 
 `app/_lib/validation/dashboard.ts`: mesma API (`dashboardSearchParamsSchema`,
@@ -163,16 +175,16 @@ export const parseMyTicketsPeriod: (
 ) => PeriodFilterSelection
 export const myTicketsTabHref: (
   tab: MyTicketsTab,
-  period?: PeriodFilterSelection, // padrão DEFAULT_MY_TICKETS_PERIOD
+  period: PeriodFilterSelection, // obrigatório desde 2026-10-05
 ) => string
 ```
 
-- `parseMyTicketsPeriod` nunca lança; inválido → `DEFAULT_MY_TICKETS_PERIOD`.
-  Aba e período são lidos **independentemente**: aba inválida com período válido
-  mantém o período, e vice-versa.
+- `parseMyTicketsPeriod` nunca lança; inválido → `DEFAULT_MY_TICKETS_PERIOD`
+  (`Hoje`). Aba e período são lidos **independentemente**: aba inválida com
+  período válido mantém o período, e vice-versa.
 - `myTicketsTabHref(tab, period)` = `periodFilterHref("/tickets", { tab }, period)`.
-  As abas passam o período atual; sem o segundo argumento o link sai sem
-  período (`/tickets?tab=opened`, igual ao de hoje).
+  As abas passam o período atual, que sempre sai na URL (`…&periodo=todos`
+  inclusive).
 
 ### `df-data` — `app/_lib/data/my-tickets.ts` (alterado)
 
@@ -1020,22 +1032,22 @@ segunda a domingo; mês corrente inteiro. O Diretor tem chamados do seed demo
 espalhados por hoje, ontem às 21h–23h59, esta semana, este mês e o mês anterior
 (`docs/contracts/dashboard.md`, bloco demo): é a pessoa certa para os períodos.
 
-| #   | Quem              | Ação                                                                                                                                                                            | Esperado                                                                                                                                                                                                                |
-| --- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 23  | Diretor           | `/tickets`                                                                                                                                                                      | seletor abaixo do campo "Buscar por # ou título", na ordem Todos, Hoje, Semana, Mês, Personalizado; **Todos** ativo (`aria-current="page"`); sem subtítulo de período; contagens iguais às do cenário 3                 |
-| 24  | Diretor           | clicar Hoje, Semana e Mês, nessa ordem                                                                                                                                          | URLs `/tickets?tab=opened&periodo=hoje`, `…=semana`, `…=mes`; subtítulo `formatRangeLabel` (ex.: `1 out 2026`); lista e as quatro contagens batem com a consulta do cenário 3 acrescida do intervalo, para cada período |
-| 25  | Diretor           | Hoje                                                                                                                                                                            | nenhum chamado criado ontem entre 21h e 23h59 de Brasília aparece, em nenhuma aba (no banco esses já são "hoje" em UTC): é o teste do fuso                                                                              |
-| 26  | Diretor           | Personalizado → escolher de 1 ao 10 do mês anterior → Aplicar                                                                                                                   | URL `…&periodo=personalizado&de=AAAA-MM-01&ate=AAAA-MM-10`; o dia 10 inteiro incluído; lista e contagens batem com o banco; calendário começa na segunda                                                                |
-| 27  | Diretor           | com Semana ativo, clicar nas abas Fechados e Cancelados                                                                                                                         | a aba muda e o período continua Semana (URL mantém `periodo=semana`); contagens das quatro abas continuam no período                                                                                                    |
-| 28  | Diretor           | na aba Fechados com Semana, clicar Mês                                                                                                                                          | a aba continua Fechados (`tab=closed`), o período vira Mês                                                                                                                                                              |
-| 29  | Diretor           | marcar um filtro de Tipo e digitar na busca; depois trocar o período                                                                                                            | busca e filtros zerados ao trocar o período                                                                                                                                                                             |
-| 30  | QA Membro Suporte | escolher um período sem chamados (Personalizado num mês antigo)                                                                                                                 | sem tabela; o seletor continua visível; estado vazio "Nenhum chamado neste período" com a descrição do contrato; contagens 0; clicar Todos volta à lista                                                                |
-| 31  | qualquer          | `/tickets?periodo=xyz`, `?periodo=Hoje`, `?periodo=personalizado`, `?periodo=personalizado&de=2026-09-10&ate=2026-09-01`, `?periodo=personalizado&de=2026-02-30&ate=2026-03-01` | todos mostram Todos ativo e a lista completa da aba, sem erro                                                                                                                                                           |
-| 32  | qualquer          | `/tickets?tab=xyz&periodo=semana` e `/tickets?tab=closed&periodo=xyz`                                                                                                           | o primeiro: aba Abertos por mim com Semana; o segundo: Fechados com Todos (aba e período caem no padrão independentemente)                                                                                              |
-| 33  | qualquer          | `/tickets?tab=opened&periodo=todos`                                                                                                                                             | igual a `/tickets?tab=opened`                                                                                                                                                                                           |
-| 34  | qualquer          | após 24 e 27, "voltar" do navegador                                                                                                                                             | cada passo volta com aba, período, lista e contagens coerentes com a URL                                                                                                                                                |
-| 35  | Diretor           | Início                                                                                                                                                                          | sem pílula Todos; abre em Hoje; Hoje/Semana/Mês/Personalizado funcionam como antes (cartões iguais ao gabarito do seed); `/dashboard?periodo=todos` mostra Hoje                                                         |
-| 36  | qualquer          | navegar pelos cenários 23–35                                                                                                                                                    | nenhum erro nem aviso de hidratação no dev server; nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer`                                                                                                  |
+| #   | Quem              | Ação                                                                                                                                                                            | Esperado                                                                                                                                                                                                                                                                         |
+| --- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 23  | Diretor           | `/tickets`; depois clicar Todos                                                                                                                                                 | seletor abaixo do campo "Buscar por # ou título", na ordem Todos, Hoje, Semana, Mês, Personalizado; **Hoje** ativo (`aria-current="page"`) com subtítulo da data de hoje. Clicar Todos: URL `/tickets?tab=opened&periodo=todos`, sem subtítulo, contagens iguais às do cenário 3 |
+| 24  | Diretor           | clicar Hoje, Semana e Mês, nessa ordem                                                                                                                                          | URLs `/tickets?tab=opened&periodo=hoje`, `…=semana`, `…=mes`; subtítulo `formatRangeLabel` (ex.: `1 out 2026`); lista e as quatro contagens batem com a consulta do cenário 3 acrescida do intervalo, para cada período                                                          |
+| 25  | Diretor           | Hoje                                                                                                                                                                            | nenhum chamado criado ontem entre 21h e 23h59 de Brasília aparece, em nenhuma aba (no banco esses já são "hoje" em UTC): é o teste do fuso                                                                                                                                       |
+| 26  | Diretor           | Personalizado → escolher de 1 ao 10 do mês anterior → Aplicar                                                                                                                   | URL `…&periodo=personalizado&de=AAAA-MM-01&ate=AAAA-MM-10`; o dia 10 inteiro incluído; lista e contagens batem com o banco; calendário começa na segunda                                                                                                                         |
+| 27  | Diretor           | com Semana ativo, clicar nas abas Fechados e Cancelados                                                                                                                         | a aba muda e o período continua Semana (URL mantém `periodo=semana`); contagens das quatro abas continuam no período                                                                                                                                                             |
+| 28  | Diretor           | na aba Fechados com Semana, clicar Mês                                                                                                                                          | a aba continua Fechados (`tab=closed`), o período vira Mês                                                                                                                                                                                                                       |
+| 29  | Diretor           | marcar um filtro de Tipo e digitar na busca; depois trocar o período                                                                                                            | busca e filtros zerados ao trocar o período                                                                                                                                                                                                                                      |
+| 30  | QA Membro Suporte | escolher um período sem chamados (Personalizado num mês antigo)                                                                                                                 | sem tabela; o seletor continua visível; estado vazio "Nenhum chamado neste período" com a descrição do contrato; contagens 0; clicar Todos volta à lista                                                                                                                         |
+| 31  | qualquer          | `/tickets?periodo=xyz`, `?periodo=Hoje`, `?periodo=personalizado`, `?periodo=personalizado&de=2026-09-10&ate=2026-09-01`, `?periodo=personalizado&de=2026-02-30&ate=2026-03-01` | todos mostram Hoje ativo e a lista da aba no dia de hoje, sem erro                                                                                                                                                                                                               |
+| 32  | qualquer          | `/tickets?tab=xyz&periodo=semana` e `/tickets?tab=closed&periodo=xyz`                                                                                                           | o primeiro: aba Abertos por mim com Semana; o segundo: Fechados com Hoje (aba e período caem no padrão independentemente)                                                                                                                                                        |
+| 33  | qualquer          | `/tickets?tab=opened&periodo=todos` e `/tickets?tab=opened`                                                                                                                     | o primeiro com Todos ativo e a lista completa; o segundo igual a `/tickets?tab=opened&periodo=hoje`                                                                                                                                                                              |
+| 34  | qualquer          | após 24 e 27, "voltar" do navegador                                                                                                                                             | cada passo volta com aba, período, lista e contagens coerentes com a URL                                                                                                                                                                                                         |
+| 35  | Diretor           | Início                                                                                                                                                                          | sem pílula Todos; abre em Hoje; Hoje/Semana/Mês/Personalizado funcionam como antes (cartões iguais ao gabarito do seed); `/dashboard?periodo=todos` mostra Hoje                                                                                                                  |
+| 36  | qualquer          | navegar pelos cenários 23–35                                                                                                                                                    | nenhum erro nem aviso de hidratação no dev server; nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer`                                                                                                                                                           |
 
 ## Critério de pronto
 

@@ -108,6 +108,22 @@ Se o comando passou a lista de arquivos alterados, priorize os cenários que
 passam por eles. Se o contrato for omisso ou ambíguo num ponto, não invente o
 esperado: registre em "Observações" como ambiguidade para o `df-architect`.
 
+## Navegador visível
+
+O teste é sempre acompanhado na tela (o usuário pode estar gravando). O
+servidor `playwright` do `.mcp.json` abre o Chrome **visível** por padrão:
+
+- nunca use modo headless nem lance um navegador próprio por
+  `browser_run_code_unsafe` (`chromium.launch()` etc.); todo o teste roda na
+  janela do servidor MCP;
+- no início, depois da primeira navegação, rode
+  `browser_run_code_unsafe` com `async (page) => { await page.bringToFront() }`
+  para a janela sair de trás do editor;
+- navegue em ritmo natural, uma aba só, sem pular etapas que o usuário veria
+  (preencha os campos pela interface, não só pelo payload);
+- ao terminar, **deixe a janela aberta** (não chame `browser_close`), para o
+  usuário encerrar a gravação.
+
 ## Execução
 
 - Um papel por vez: faça login pelo `/login`, execute os cenários e saia antes

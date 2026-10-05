@@ -7,6 +7,10 @@ import {
   TICKET_TITLE_MIN_LENGTH,
   TICKET_TYPES,
 } from "@/app/_lib/domain/ticket"
+import {
+  TICKET_SOLUTION_MAX_LENGTH,
+  TICKET_SOLUTION_MIN_LENGTH,
+} from "@/app/_lib/domain/ticket-resolution"
 import { registryIdSchema } from "@/app/_lib/validation/registry"
 
 export const ticketTitleSchema = z
@@ -34,6 +38,17 @@ export const ticketDescriptionSchema = z
 export const ticketTypeSchema = z.enum(TICKET_TYPES, {
   error: "Selecione o tipo do chamado.",
 })
+
+export const ticketSolutionSchema = z
+  .string({ error: "Descreva a solução." })
+  .trim()
+  .min(1, { error: "Descreva a solução." })
+  .min(TICKET_SOLUTION_MIN_LENGTH, {
+    error: `A solução precisa ter no mínimo ${TICKET_SOLUTION_MIN_LENGTH} caracteres.`,
+  })
+  .max(TICKET_SOLUTION_MAX_LENGTH, {
+    error: `A solução precisa ter no máximo ${TICKET_SOLUTION_MAX_LENGTH} caracteres.`,
+  })
 
 export const createTicketSchema = z.object({
   title: ticketTitleSchema,
@@ -66,6 +81,7 @@ export const parseTicketIdParam = (value: string): number | null => {
 
 export const editTicketSchema = createTicketSchema.extend({
   ticketId: ticketIdSchema,
+  solution: ticketSolutionSchema.optional(),
 })
 
 export type EditTicketInput = z.infer<typeof editTicketSchema>

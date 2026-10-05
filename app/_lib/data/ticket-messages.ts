@@ -46,12 +46,15 @@ export async function insertTicketMessage(
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
         status: ticket.status,
+        resolvedAt: ticket.resolvedAt,
       })
       .from(ticket)
       .where(eq(ticket.id, ticketId))
       .for("share")
 
     if (!ticketRow) return { status: "not_found" }
+
+    const now = new Date()
 
     const [commenterRow] = await tx
       .select({
@@ -79,7 +82,7 @@ export async function insertTicketMessage(
 
     if (!canViewTicket(commenter, ticketRow)) return { status: "not_found" }
 
-    if (!canCommentOnTicket(commenter, ticketRow)) {
+    if (!canCommentOnTicket(commenter, ticketRow, now)) {
       return { status: "not_commentable" }
     }
 

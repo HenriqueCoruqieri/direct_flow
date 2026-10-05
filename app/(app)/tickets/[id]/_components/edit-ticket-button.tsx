@@ -2,10 +2,12 @@ import { PencilIcon } from "lucide-react"
 
 import BlockableOutlineButton from "@/app/_components/blockable-outline-button"
 
-type EditTicketButtonProps = Omit<
+interface EditTicketButtonProps extends Omit<
   React.ComponentProps<typeof BlockableOutlineButton>,
   "children" | "size"
->
+> {
+  blocked?: boolean
+}
 
 const EditTicketButton = (props: EditTicketButtonProps) => {
   return (

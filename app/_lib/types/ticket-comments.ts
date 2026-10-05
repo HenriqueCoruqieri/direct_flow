@@ -9,6 +9,7 @@ export type { MessageVisibility }
 
 export interface TicketCommentFacts extends TicketVisibilityFacts {
   status: TicketStatus
+  resolvedAt: Date | null
 }
 
 export type TicketCommentBlockReason =

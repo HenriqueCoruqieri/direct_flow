@@ -1,4 +1,5 @@
-import { canViewTicket, isNonFinalTicketStatus } from "@/app/_lib/domain/ticket"
+import { canViewTicket } from "@/app/_lib/domain/ticket"
+import { isTicketLocked } from "@/app/_lib/domain/ticket-closure"
 import type {
   TicketActorFacts,
   TicketViewerFacts,
@@ -31,24 +32,29 @@ export const TICKET_COMMENT_ADDED_MESSAGE = "Comentário publicado."
 export const ticketCommentBlockFor = (
   commenter: TicketActorFacts,
   ticket: TicketCommentFacts,
+  now: Date,
 ): TicketCommentBlockReason | null => {
   if (!commenter.isActive) return "COMMENTER_INACTIVE"
   if (commenter.mustChangePassword) return "PASSWORD_CHANGE_REQUIRED"
   if (!canViewTicket(commenter, ticket)) return "CANNOT_VIEW"
-  if (!isNonFinalTicketStatus(ticket.status)) return "TICKET_FINISHED"
+  if (isTicketLocked(ticket.status, ticket.resolvedAt, now)) {
+    return "TICKET_FINISHED"
+  }
   return null
 }
 
 export const canCommentOnTicket = (
   commenter: TicketActorFacts,
   ticket: TicketCommentFacts,
-): boolean => ticketCommentBlockFor(commenter, ticket) === null
+  now: Date,
+): boolean => ticketCommentBlockFor(commenter, ticket, now) === null
 
 export const ticketCommentFormStateFor = (
   commenter: TicketActorFacts,
   ticket: TicketCommentFacts,
+  now: Date,
 ): TicketCommentFormState => {
-  const reason = ticketCommentBlockFor(commenter, ticket)
+  const reason = ticketCommentBlockFor(commenter, ticket, now)
   if (reason === null) return { state: "open" }
   if (reason === "TICKET_FINISHED") {
     return { state: "closed", message: TICKET_COMMENTS_CLOSED_MESSAGE }

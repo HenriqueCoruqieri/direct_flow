@@ -123,6 +123,10 @@ Exceções permitidas (as únicas, e cada uma tem dono):
 
 - `app/api/auth/[...all]/route.ts` — handler obrigatório do Better Auth (`df-auth`)
 - webhooks de terceiros, se e quando existirem (`df-email` para Resend)
+- `app/api/cron/**/route.ts` — tarefas agendadas disparadas pelo Vercel Cron
+  (`vercel.json`), protegidas por `CRON_SECRET` (`df-actions`, ADR 014). Seguem
+  a forma de uma action: autenticam o chamador, chamam `app/_lib/data/` e
+  revalidam; nunca escrevem SQL.
 
 Qualquer outra rota de API precisa de justificativa escrita em `docs/adr/`.
 
@@ -303,8 +307,11 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
   reporta a pasta proposta, os arquivos que iriam para ela e por que formam uma
   peça só, e encerra o turno. O orquestrador leva a pergunta ao usuário.
 - **Camadas e utilitários** → `app/_lib/` (`data`, `actions`, `validation`,
-  `domain`, `types`, `auth`, `email`, `date.ts`, `utils.ts`). Hooks
-  compartilhados → `app/_hooks/`.
+  `domain`, `types`, `auth`, `email`, `date.ts`, `utils.ts`).
+- **Hooks seguem a mesma colocation dos componentes.** Usado por **uma rota
+  só** → `_hooks/` da rota (`app/(app)/tickets/[id]/_hooks/use-ticket-edit.ts`);
+  por várias rotas do mesmo grupo → `_hooks/` do grupo; por áreas diferentes →
+  `app/_hooks/`. Sobe de nível só quando uma segunda área passa a usá-lo.
 - **`cn` tem uma fonte só: `@/app/_lib/utils`.** Todo arquivo, primitivos do
   shadcn inclusive, importa `cn` daí. Importar do pacote `cn` (ou `cn/*`) direto
   é erro de lint (`no-restricted-imports`); a única exceção é o próprio
@@ -336,13 +343,13 @@ agentes podem **ler** qualquer arquivo.
 | Caminho                                                                                                                              | Escreve                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
 | `db/schema.ts` (domínio **e** `users`), `db/migrations/**`, `drizzle.config.ts`                                                      | `df-architect`                            |
-| `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`, `.gitignore`, `.env.example`                             | `df-architect`                            |
+| `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`, `.gitignore`, `.env.example`, `vercel.json`              | `df-architect`                            |
 | `app/_lib/types/**`, `app/_lib/validation/**`, `app/_lib/domain/**`, `app/_lib/date.ts`                                              | `df-architect`                            |
 | `docs/**` (exceto `docs/test-reports/**`)                                                                                            | `df-architect`                            |
 | `docs/test-reports/**`                                                                                                               | `df-qa`                                   |
 | `db/auth-schema.ts` (só `session`, `account`, `verification`), `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`    | `df-auth`                                 |
 | `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`, `app/_lib/storage/**`                                                               | `df-data`                                 |
-| `app/_lib/actions/**`                                                                                                                | `df-actions`                              |
+| `app/_lib/actions/**`, `app/api/cron/**`                                                                                             | `df-actions`                              |
 | `app/_lib/email/**`, `emails/**`                                                                                                     | `df-email`                                |
 | `app/**` (exceto `app/(auth)/**`, `app/api/**` e `app/_lib/**`), incluindo `app/_components/**`, `app/_hooks/**` e `app/globals.css` | `df-ui`                                   |
 | `app/_lib/utils.ts`, `components.json`                                                                                               | `df-ui`                                   |

@@ -13,7 +13,16 @@ import {
   zonedDateTime,
 } from "@/app/_lib/date"
 import { BOARD_DEPARTMENT_NAME } from "@/app/_lib/domain/department"
-import { TICKET_TYPES } from "@/app/_lib/domain/ticket"
+import {
+  INITIAL_TICKET_STATUS,
+  RESOLVED_TICKET_STATUS,
+  TICKET_TYPES,
+} from "@/app/_lib/domain/ticket"
+import {
+  DAY_MS,
+  isResolutionWindowOpen,
+  RESOLUTION_EDIT_WINDOW_MS,
+} from "@/app/_lib/domain/ticket-closure"
 import type { DateKey, DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { account } from "@/db/auth-schema"
@@ -186,6 +195,140 @@ const QA_USERS: QaUserBlueprint[] = [
   },
 ]
 
+const QA_WINDOW_MEMBER_EMAIL = "qa.member.suporte@directflow.test"
+const QA_WINDOW_DEPARTMENT_NAME: QaDepartmentName = "QA Suporte"
+const QA_WINDOW_TAG_NAME = "[QA] Acesso"
+const QA_WINDOW_DESCRIPTION =
+  "[QA] Chamado criado pelo seed para testar a janela de edição."
+const QA_WINDOW_SOLUTION =
+  "[QA] Solução registrada pelo seed para testar a janela de edição."
+
+interface QaWindowTicketBlueprint {
+  title: string
+  expectsOpenWindow: boolean
+}
+
+const QA_WINDOW_TICKETS: QaWindowTicketBlueprint[] = [
+  { title: "[QA] Janela vencida", expectsOpenWindow: false },
+  { title: "[QA] Janela aberta", expectsOpenWindow: true },
+]
+
+async function seedQaWindowTickets(
+  tx: Transaction,
+  departmentId: number,
+  now: Date,
+): Promise<void> {
+  const [member] = await tx
+    .select({ id: user.id })
+    .from(user)
+    .where(sql`lower(${user.email}) = lower(${QA_WINDOW_MEMBER_EMAIL})`)
+    .limit(1)
+
+  if (!member) {
+    throw new Error(
+      `Seed QA: usuário "${QA_WINDOW_MEMBER_EMAIL}" não foi criado nem encontrado.`,
+    )
+  }
+
+  const [existingTag] = await tx
+    .select({ id: tag.id })
+    .from(tag)
+    .where(
+      and(
+        eq(tag.departmentId, departmentId),
+        sql`lower(${tag.name}) = lower(${QA_WINDOW_TAG_NAME})`,
+      ),
+    )
+    .limit(1)
+
+  let tagId = existingTag?.id
+  if (tagId === undefined) {
+    const [createdTag] = await tx
+      .insert(tag)
+      .values({ name: QA_WINDOW_TAG_NAME, departmentId })
+      .returning({ id: tag.id })
+    tagId = createdTag.id
+  }
+
+  for (const blueprint of QA_WINDOW_TICKETS) {
+    const existing = await tx
+      .select({ resolvedAt: ticket.resolvedAt })
+      .from(ticket)
+      .where(
+        and(
+          eq(ticket.createdBy, member.id),
+          eq(ticket.title, blueprint.title),
+          eq(ticket.status, RESOLVED_TICKET_STATUS),
+        ),
+      )
+
+    const alreadyOnRightSide = existing.some(
+      (row) =>
+        isResolutionWindowOpen(row.resolvedAt, now) ===
+        blueprint.expectsOpenWindow,
+    )
+
+    if (alreadyOnRightSide) {
+      console.log(
+        `Seed QA ignorado: "${blueprint.title}" já existe no lado certo da janela.`,
+      )
+      continue
+    }
+
+    const resolvedAgeMs = blueprint.expectsOpenWindow
+      ? RESOLUTION_EDIT_WINDOW_MS - DAY_MS
+      : RESOLUTION_EDIT_WINDOW_MS + DAY_MS
+    const resolvedAt = new Date(now.getTime() - resolvedAgeMs)
+    const createdAt = new Date(resolvedAt.getTime() - DAY_MS)
+
+    const [created] = await tx
+      .insert(ticket)
+      .values({
+        title: blueprint.title,
+        description: QA_WINDOW_DESCRIPTION,
+        type: "duvida",
+        status: RESOLVED_TICKET_STATUS,
+        priority: "media",
+        createdBy: member.id,
+        originDepartmentId: departmentId,
+        currentDepartmentId: departmentId,
+        solution: QA_WINDOW_SOLUTION,
+        createdAt,
+        updatedAt: resolvedAt,
+        resolvedAt,
+      })
+      .returning({ id: ticket.id })
+
+    await tx
+      .insert(ticketTag)
+      .values({ ticketId: created.id, tagId, createdAt })
+
+    await tx.insert(ticketHistory).values([
+      {
+        ticketId: created.id,
+        changedBy: member.id,
+        event: "criacao",
+        toStatus: INITIAL_TICKET_STATUS,
+        toPriority: "media",
+        toDepartmentId: departmentId,
+        changedAt: createdAt,
+      },
+      {
+        ticketId: created.id,
+        changedBy: member.id,
+        event: "resolucao",
+        fromStatus: INITIAL_TICKET_STATUS,
+        toStatus: RESOLVED_TICKET_STATUS,
+        changedAt: resolvedAt,
+      },
+    ])
+
+    console.log(
+      `Seed QA: chamado "${blueprint.title}" (id ${created.id}) criado com janela ${blueprint.expectsOpenWindow ? "aberta" : "vencida"}.`,
+    )
+  }
+}
+
 async function seedQa(): Promise<void> {
   if (process.env.SEED_QA !== "true") return
 
@@ -264,6 +407,15 @@ async function seedQa(): Promise<void> {
         `Seed QA: usuário "${blueprint.email}" (id ${userId}) criado como ${blueprint.role} em "${blueprint.departmentName}".`,
       )
     }
+
+    const windowDepartmentId = departmentIds.get(QA_WINDOW_DEPARTMENT_NAME)
+    if (windowDepartmentId === undefined) {
+      throw new Error(
+        `Seed QA: setor "${QA_WINDOW_DEPARTMENT_NAME}" não foi criado nem encontrado.`,
+      )
+    }
+
+    await seedQaWindowTickets(tx, windowDepartmentId, new Date())
   })
 }
 

@@ -6,6 +6,7 @@ import type { TicketPriority, TicketStatus } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
 
 import TicketStatusBadge from "../../../_components/ticket-status-badge"
+import TicketEditHeading from "./ticket-edit-heading"
 
 const PRIORITY_DOT_CLASSES = {
   baixa: "bg-prioridade-baixa",
@@ -20,6 +21,7 @@ interface TicketDetailHeaderProps {
   status: TicketStatus
   priority: TicketPriority
   action?: React.ReactNode
+  editable?: boolean
 }
 
 const TicketDetailHeader = ({
@@ -28,17 +30,30 @@ const TicketDetailHeader = ({
   status,
   priority,
   action,
+  editable = false,
 }: TicketDetailHeaderProps) => {
+  const heading = (
+    <h1 className="min-w-0 font-heading text-title font-semibold wrap-break-word">
+      {title}
+    </h1>
+  )
+
   return (
     <header className="flex flex-col gap-2">
       <span className="text-caption font-bold text-muted-foreground tabular-nums">
         {formatTicketNumber(id)}
       </span>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <h1 className="min-w-0 font-heading text-title font-semibold wrap-break-word">
-          {title}
-        </h1>
-        {action !== undefined ? <div className="shrink-0">{action}</div> : null}
+        {editable ? (
+          <TicketEditHeading heading={heading} />
+        ) : (
+          <>
+            {heading}
+            {action !== undefined ? (
+              <div className="shrink-0">{action}</div>
+            ) : null}
+          </>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <TicketStatusBadge status={status} />

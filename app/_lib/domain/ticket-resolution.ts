@@ -2,9 +2,11 @@ import {
   describePendingTransfer,
   formatTicketNumber,
   isNonFinalTicketStatus,
+  RESOLVED_TICKET_STATUS,
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_DESCRIPTION_MIN_LENGTH,
 } from "@/app/_lib/domain/ticket"
+import { resolutionEditableUntil } from "@/app/_lib/domain/ticket-closure"
 import type {
   TicketActorFacts,
   TicketPendingTransfer,
@@ -18,8 +20,6 @@ import type {
   TicketResolutionBlockReason,
   TicketResolutionFacts,
 } from "@/app/_lib/types/ticket-resolution"
-
-export const RESOLVED_TICKET_STATUS: TicketStatus = "resolvido"
 
 export const TICKET_SOLUTION_MIN_LENGTH = TICKET_DESCRIPTION_MIN_LENGTH
 
@@ -108,12 +108,18 @@ export const describeTransferAwaitingConclusion = (
 export const ticketConclusionStateFor = (
   viewer: TicketActorFacts,
   ticket: TicketConclusionFacts,
+  now: Date,
 ): TicketConclusionState => {
   if (showsTicketSolution(ticket.status)) {
     return {
       state: "resolved",
       solution: ticket.solution,
       resolvedAt: ticket.resolvedAt,
+      editableUntil: resolutionEditableUntil(
+        ticket.status,
+        ticket.resolvedAt,
+        now,
+      ),
     }
   }
   if (!isNonFinalTicketStatus(ticket.status)) return { state: "empty" }

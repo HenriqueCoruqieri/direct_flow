@@ -24,6 +24,21 @@ e-mail.
 > **solução** não é editável. O `EditTicketDialog` perdeu a `DialogDescription`
 > (ver a seção dele).
 
+> Revisão de 2026-10-05 (`docs/contracts/ticket-edit-window.md`): o
+> `EditTicketDialog` **sai**; a edição acontece na própria página do detalhe
+> (modo de edição). Em `resolvido`, a edição passa a valer só dentro da janela
+> de 7 × 24 h após `resolved_at` e inclui a **solução** (`solution` opcional
+> em `editTicketSchema`, `canEditSolution`, "solução" no fim da nota de
+> `edicao`). `ticketEditBlockFor`, `canEditTicket` e `ticketEditButtonStateFor`
+> ganharam o parâmetro `now: Date`; `TICKET_FINISHED` passou a cobrir também
+> `resolvido` vencido (`isTicketLocked`). `TicketEditabilityFacts` ganhou
+> `resolvedAt`; `TicketEditSnapshot`, `TicketEditValues`, `TicketEditChanges` e
+> `EditTicketFormDefaults` ganharam `solution`; `TicketEditFormOptions` ganhou
+> `includesSolution`. As seções abaixo sobre dialog, tabela de status
+> (`resolvido`) e sequência de `updateTicketByAuthor` valem com essas
+> mudanças; os cenários 2, 5 e 8 deste documento (dialog) são substituídos
+> pelos de `ticket-edit-window.md`.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

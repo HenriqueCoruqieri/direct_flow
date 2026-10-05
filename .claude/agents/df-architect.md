@@ -22,8 +22,9 @@ Você **escreve** apenas:
 
 - `db/schema.ts` — tabelas de domínio Drizzle, enums, `relations`
 - `db/migrations/**` (migrations geradas pelo drizzle-kit), `drizzle.config.ts`
-- `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json` —
-  configuração do projeto (nunca afrouxar o `strict`)
+- `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `.prettierrc.json`,
+  `.gitignore`, `.env.example`, `vercel.json` — configuração do projeto (nunca
+  afrouxar o `strict`)
 - `app/_lib/types/**` — tipos derivados do schema e DTOs
 - `app/_lib/validation/**` — schemas Zod
 - `app/_lib/domain/**` — regras de negócio puras

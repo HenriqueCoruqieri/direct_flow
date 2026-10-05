@@ -3,7 +3,7 @@ import type { ControllerFieldState } from "react-hook-form"
 import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
 import { Textarea } from "@/app/_components/ui/textarea"
 
-interface TicketDescriptionFieldProps {
+interface TicketSolutionFieldProps {
   id: string
   name: string
   value: string | undefined
@@ -12,10 +12,9 @@ interface TicketDescriptionFieldProps {
   onBlur: () => void
   ref?: React.Ref<HTMLTextAreaElement>
   fieldState: ControllerFieldState
-  hideLabel?: boolean
 }
 
-const TicketDescriptionField = ({
+const TicketSolutionField = ({
   id,
   name,
   value,
@@ -24,15 +23,12 @@ const TicketDescriptionField = ({
   onBlur,
   ref,
   fieldState,
-  hideLabel = false,
-}: TicketDescriptionFieldProps) => {
+}: TicketSolutionFieldProps) => {
   const errorId = `${id}-error`
 
   return (
     <Field data-invalid={fieldState.invalid} className="gap-1.5">
-      <FieldLabel htmlFor={id} className={hideLabel ? "sr-only" : undefined}>
-        Descrição
-      </FieldLabel>
+      <FieldLabel htmlFor={id}>Solução</FieldLabel>
       <Textarea
         ref={ref}
         id={id}
@@ -41,8 +37,8 @@ const TicketDescriptionField = ({
         disabled={disabled}
         onChange={onChange}
         onBlur={onBlur}
-        rows={5}
-        className="max-h-64 min-h-28"
+        rows={4}
+        className="max-h-80 min-h-24"
         aria-invalid={fieldState.invalid}
         aria-describedby={fieldState.invalid ? errorId : undefined}
       />
@@ -53,4 +49,4 @@ const TicketDescriptionField = ({
   )
 }
 
-export default TicketDescriptionField
+export default TicketSolutionField

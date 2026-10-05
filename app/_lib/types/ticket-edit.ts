@@ -15,6 +15,7 @@ export interface TicketEditabilityFacts {
   createdBy: number
   currentDepartmentId: number
   status: TicketStatus
+  resolvedAt: Date | null
   hasPendingTransfer: boolean
 }
 
@@ -59,10 +60,12 @@ export interface TicketEditSnapshot {
   description: string
   type: TicketType
   tagId: number | null
+  solution: string | null
 }
 
 export interface TicketEditSource extends TicketEditSnapshot {
   id: number
+  status: TicketStatus
 }
 
 export interface TicketEditValues {
@@ -70,6 +73,7 @@ export interface TicketEditValues {
   description: string
   type: TicketType
   tagId: number
+  solution?: string
 }
 
 export interface TicketTypeChange {
@@ -87,6 +91,7 @@ export interface TicketEditChanges {
   description: boolean
   type: TicketTypeChange | null
   tag: TicketTagChange | null
+  solution: boolean
 }
 
 export interface UpdateTicketByAuthorValues extends TicketEditValues {
@@ -125,9 +130,11 @@ export interface EditTicketFormDefaults {
   description: string
   type: TicketType
   tagId?: number
+  solution?: string
 }
 
 export interface TicketEditFormOptions {
   defaults: EditTicketFormDefaults
   tags: TagOption[]
+  includesSolution: boolean
 }

@@ -1,5 +1,6 @@
 import { formatDateTime, toISO } from "@/app/_lib/date"
 import {
+  describeHistoryActor,
   describeHistoryEntry,
   HISTORY_EVENT_LABELS,
 } from "@/app/_lib/domain/ticket-history"
@@ -50,7 +51,7 @@ const TicketTimeline = ({ entries }: TicketTimelineProps) => {
                     {HISTORY_EVENT_LABELS[entry.event]}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    {entry.changedByName} ·{" "}
+                    {describeHistoryActor(entry)} ·{" "}
                     <time
                       dateTime={toISO(entry.changedAt)}
                       className="tabular-nums"

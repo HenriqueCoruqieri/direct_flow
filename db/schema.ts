@@ -272,9 +272,9 @@ export const ticketHistory = pgTable(
     ticketId: integer("ticket_id")
       .notNull()
       .references(() => ticket.id, { onDelete: "cascade" }),
-    changedBy: integer("changed_by")
-      .notNull()
-      .references(() => user.id, { onDelete: "restrict" }),
+    changedBy: integer("changed_by").references(() => user.id, {
+      onDelete: "restrict",
+    }),
     event: historyEventEnum("event").notNull(),
     fromStatus: ticketStatusEnum("from_status"),
     toStatus: ticketStatusEnum("to_status"),

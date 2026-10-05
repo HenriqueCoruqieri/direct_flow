@@ -119,6 +119,10 @@ export const INITIAL_TICKET_STATUS: TicketStatus = "aberto"
 
 export const INITIAL_TICKET_PRIORITY: TicketPriority = "media"
 
+export const RESOLVED_TICKET_STATUS: TicketStatus = "resolvido"
+
+export const CLOSED_TICKET_STATUS: TicketStatus = "fechado"
+
 export const formatTicketNumber = (ticketId: number): string => `#${ticketId}`
 
 export const ticketDetailPath = (ticketId: number): string =>

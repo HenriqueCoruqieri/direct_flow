@@ -17,8 +17,8 @@ siga esse padrão em vez de tipar `children` à mão.
 
 Você **escreve**:
 
-- `app/**` — exceto `app/(auth)/**` e `app/api/**` (do `df-auth`) e `app/_lib/**` (de cada agente de camada)
-- `app/_components/**` e `app/_hooks/**` — código compartilhado entre rotas
+- `app/**` — exceto `app/(auth)/**` e `app/api/auth/**` (do `df-auth`), `app/api/cron/**` (do `df-actions`) e `app/_lib/**` (de cada agente de camada)
+- `app/_components/**` e `app/_hooks/**` — código compartilhado entre rotas; `_hooks/` de rota ou de grupo seguem a colocation da seção 5 do `stack.md`
 - `app/globals.css` e os tokens de tema
 - `app/_lib/utils.ts` e `components.json` — configuração do shadcn
 

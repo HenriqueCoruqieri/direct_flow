@@ -38,7 +38,6 @@ export const serializePeriodParams = (
   selection: PeriodFilterSelection,
 ): string => {
   const params = new URLSearchParams()
-  if (selection.periodo === "todos") return params.toString()
   params.set("periodo", selection.periodo)
   if (selection.periodo === "personalizado") {
     params.set("de", selection.de)

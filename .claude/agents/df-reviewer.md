@@ -48,8 +48,8 @@ grep -rnE "\"(date-fns|moment|luxon|js-joda)\"" package.json
 # TanStack Query sem ADR (seção 1)
 grep -rn "@tanstack/react-query" app
 
-# Rota de API indevida (seção 3) — só api/auth é permitida
-find app/api -name "route.ts" -not -path "*auth*"
+# Rota de API indevida (seção 3) — só api/auth e api/cron são permitidas
+find app/api -name "route.ts" -not -path "*auth*" -not -path "*cron*"
 
 # Escape de tipo
 grep -rnE ": any\b|as any|@ts-ignore|@ts-expect-error" app db
@@ -119,5 +119,6 @@ ESLint já resolvem — eles são a autoridade nisso.
 
 Se aparecer uma violação cuja regra é ambígua ou cujo dono não é claro, não
 invente a interpretação: reporte como ATENÇÃO, aponte a ambiguidade e sugira que
-`.claude/rules/stack.md` seja esclarecido pelo `df-architect`. Regra ambígua é
+`.claude/rules/stack.md` seja esclarecido pelo orquestrador, com aprovação do
+usuário (seção 7: `.claude/**` não é de nenhum agente). Regra ambígua é
 como conflito entre agentes começa.

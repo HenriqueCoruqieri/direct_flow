@@ -48,5 +48,5 @@ export const parseMyTicketsPeriod = (
 
 export const myTicketsTabHref = (
   tab: MyTicketsTab,
-  period: PeriodFilterSelection = DEFAULT_MY_TICKETS_PERIOD,
+  period: PeriodFilterSelection,
 ): string => periodFilterHref(MY_TICKETS_PATH, { tab }, period)

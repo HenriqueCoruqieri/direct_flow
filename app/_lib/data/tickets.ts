@@ -1,28 +1,30 @@
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import {
   canViewTicket,
+  CLOSED_TICKET_STATUS,
   INITIAL_TICKET_PRIORITY,
   INITIAL_TICKET_STATUS,
   isUsableTicketTag,
+  RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
+import { AUTO_CLOSE_NOTE } from "@/app/_lib/domain/ticket-closure"
 import {
+  canEditSolution,
   canEditTicket,
   describeTicketEditNote,
   diffTicketEdit,
   hasTicketEditChanges,
 } from "@/app/_lib/domain/ticket-edit"
-import {
-  canResolveTicket,
-  RESOLVED_TICKET_STATUS,
-} from "@/app/_lib/domain/ticket-resolution"
+import { canResolveTicket } from "@/app/_lib/domain/ticket-resolution"
 import type {
   InsertTicketOutcome,
   InsertTicketValues,
   TicketActorFacts,
   TicketDetail,
 } from "@/app/_lib/types/ticket"
+import type { CloseExpiredResolvedTicketsOutcome } from "@/app/_lib/types/ticket-closure"
 import type {
   TicketEditorFacts,
   UpdateTicketByAuthorOutcome,
@@ -144,7 +146,7 @@ export async function findTicketDetail(
         note: ticketHistory.note,
       })
       .from(ticketHistory)
-      .innerJoin(changer, eq(changer.id, ticketHistory.changedBy))
+      .leftJoin(changer, eq(changer.id, ticketHistory.changedBy))
       .leftJoin(
         fromDepartment,
         eq(fromDepartment.id, ticketHistory.fromDepartmentId),
@@ -231,12 +233,16 @@ export async function updateTicketByAuthor(
         title: ticket.title,
         description: ticket.description,
         type: ticket.type,
+        solution: ticket.solution,
+        resolvedAt: ticket.resolvedAt,
       })
       .from(ticket)
       .where(eq(ticket.id, ticketId))
       .for("update")
 
     if (!ticketRow) return { status: "not_found" }
+
+    const now = new Date()
 
     const [authorRow] = await tx
       .select({
@@ -274,13 +280,22 @@ export async function updateTicketByAuthor(
       .limit(1)
 
     if (
-      !canEditTicket(editor, {
-        createdBy: ticketRow.createdBy,
-        currentDepartmentId: ticketRow.currentDepartmentId,
-        status: ticketRow.status,
-        hasPendingTransfer: pendingTransfer !== undefined,
-      })
+      !canEditTicket(
+        editor,
+        {
+          createdBy: ticketRow.createdBy,
+          currentDepartmentId: ticketRow.currentDepartmentId,
+          status: ticketRow.status,
+          resolvedAt: ticketRow.resolvedAt,
+          hasPendingTransfer: pendingTransfer !== undefined,
+        },
+        now,
+      )
     ) {
+      return { status: "not_editable" }
+    }
+
+    if (values.solution !== undefined && !canEditSolution(ticketRow.status)) {
       return { status: "not_editable" }
     }
 
@@ -308,13 +323,14 @@ export async function updateTicketByAuthor(
         description: ticketRow.description,
         type: ticketRow.type,
         tagId: currentTagRow?.tagId ?? null,
+        solution: ticketRow.solution,
       },
       values,
     )
 
     if (!hasTicketEditChanges(changes)) return { status: "no_changes" }
 
-    const changedAt = new Date()
+    const changedAt = now
 
     await tx
       .update(ticket)
@@ -322,6 +338,7 @@ export async function updateTicketByAuthor(
         title: values.title,
         description: values.description,
         type: values.type,
+        ...(changes.solution ? { solution: values.solution } : {}),
         updatedAt: changedAt,
       })
       .where(eq(ticket.id, ticketId))
@@ -451,5 +468,51 @@ export async function updateTicketResolution(
     })
 
     return { status: "saved", ticketId }
+  })
+}
+
+export async function closeExpiredResolvedTickets(
+  cutoff: Date,
+  now: Date,
+): Promise<CloseExpiredResolvedTicketsOutcome> {
+  return db.transaction(async (tx) => {
+    const candidates = await tx
+      .select({ id: ticket.id })
+      .from(ticket)
+      .where(
+        and(
+          eq(ticket.status, RESOLVED_TICKET_STATUS),
+          or(isNull(ticket.resolvedAt), lte(ticket.resolvedAt, cutoff)),
+        ),
+      )
+      .orderBy(asc(ticket.id))
+      .for("update", { skipLocked: true })
+
+    if (candidates.length === 0) return { closedCount: 0 }
+
+    const ids = candidates.map((candidate) => candidate.id)
+
+    await tx
+      .update(ticket)
+      .set({
+        status: CLOSED_TICKET_STATUS,
+        closedAt: now,
+        updatedAt: now,
+      })
+      .where(inArray(ticket.id, ids))
+
+    await tx.insert(ticketHistory).values(
+      ids.map((ticketId) => ({
+        ticketId,
+        changedBy: null,
+        event: "encerramento" as const,
+        fromStatus: RESOLVED_TICKET_STATUS,
+        toStatus: CLOSED_TICKET_STATUS,
+        note: AUTO_CLOSE_NOTE,
+        changedAt: now,
+      })),
+    )
+
+    return { closedCount: ids.length }
   })
 }

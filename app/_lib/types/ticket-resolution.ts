@@ -34,6 +34,7 @@ export interface TicketConclusionResolved {
   state: "resolved"
   solution: string | null
   resolvedAt: Date | null
+  editableUntil: Date | null
 }
 
 export interface TicketConclusionAwaitingTransfer {
