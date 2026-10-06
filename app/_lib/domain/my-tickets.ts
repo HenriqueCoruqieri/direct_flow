@@ -1,5 +1,9 @@
 import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
-import { NON_FINAL_TICKET_STATUSES } from "@/app/_lib/domain/ticket"
+import {
+  ACTIVE_TICKET_STATUSES,
+  RESOLVED_TICKET_STATUS,
+} from "@/app/_lib/domain/ticket"
+import { RESOLUTION_EDIT_WINDOW_DAYS } from "@/app/_lib/domain/ticket-closure"
 import type {
   MyTicketsEmptyCopy,
   MyTicketsTab,
@@ -31,18 +35,25 @@ export const MY_TICKETS_TAB_RULES = {
   opened: {
     label: "Abertos por mim",
     relation: "author",
-    statuses: NON_FINAL_TICKET_STATUSES,
+    statuses: ACTIVE_TICKET_STATUSES,
     emptyTitle: "Nenhum chamado em andamento",
     emptyDescription:
-      "Os chamados que você abrir aparecem aqui até serem fechados ou cancelados.",
+      "Os chamados que você abrir aparecem aqui até serem resolvidos ou cancelados.",
   },
   assigned: {
     label: "Atribuídos a mim",
     relation: "assignee",
-    statuses: NON_FINAL_TICKET_STATUSES,
+    statuses: ACTIVE_TICKET_STATUSES,
     emptyTitle: "Nenhum chamado atribuído a você",
     emptyDescription:
-      "Os chamados pelos quais você for responsável aparecem aqui até serem fechados ou cancelados.",
+      "Os chamados pelos quais você for responsável aparecem aqui até serem resolvidos ou cancelados.",
+  },
+  resolved: {
+    label: "Resolvidos",
+    relation: "author",
+    statuses: [RESOLVED_TICKET_STATUS],
+    emptyTitle: "Nenhum chamado resolvido",
+    emptyDescription: `Os chamados que você abriu e foram resolvidos aparecem aqui até o fechamento automático, ${RESOLUTION_EDIT_WINDOW_DAYS} dias após a resolução.`,
   },
   closed: {
     label: "Fechados",

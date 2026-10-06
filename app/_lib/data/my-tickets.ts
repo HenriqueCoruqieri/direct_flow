@@ -72,6 +72,7 @@ export async function countMyTicketsByTab(
   const counts: MyTicketsTabCounts = {
     opened: 0,
     assigned: 0,
+    resolved: 0,
     closed: 0,
     cancelled: 0,
   }

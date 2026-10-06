@@ -37,6 +37,15 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > tabela de status resolvíveis e o risco 2 ficam superados. O cenário 16 muda
 > depois do primeiro cron: o #10 do seed demo passa a `fechado`.
 
+> Revisão de 2026-10-06 (aba Resolvidos, `docs/contracts/my-tickets.md` e
+> `docs/contracts/department-queue.md`): um `resolvido` **sai** de "Abertos por
+> mim", "Atribuídos a mim" e de "Em aberto" da Fila e passa às abas
+> **Resolvidos** (`?tab=resolved`) das duas telas. A revalidação de
+> `/tickets` no passo 4 do `resolveTicket` continua necessária (agora move a
+> linha de aba), e o passo 4 passa a revalidar também `DEPARTMENT_QUEUE_PATH`
+> (`/queue`): o chamado sai de "Em aberto" e entra em "Resolvidos" da Fila.
+> Cenário 7 abaixo atualizado.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)
@@ -621,9 +630,11 @@ Sequência:
 3. `try`: `updateTicketResolution({ ticketId, solution, resolverId: actor.id })`.
    `catch` → `console.error("[resolveTicket]", error)` e falha inesperada.
 4. Traduz o outcome (tabela, `satisfies Record<…FailureStatus, …>` como no
-   `editTicket`). `saved` → `revalidatePath(ticketDetailPath(ticketId))` e
-   `revalidatePath(MY_TICKETS_PATH)` (status da linha e contagem das abas; um
-   `resolvido` continua em "Abertos por mim"). O Início não muda (conta por
+   `editTicket`). `saved` → `revalidatePath(ticketDetailPath(ticketId))`,
+   `revalidatePath(MY_TICKETS_PATH)` (contagem das abas; desde 2026-10-06 o
+   `resolvido` sai de "Abertos por mim" e entra em "Resolvidos") e
+   `revalidatePath(DEPARTMENT_QUEUE_PATH)` (desde 2026-10-06: o chamado sai de
+   "Em aberto" e entra em "Resolvidos" da Fila). O Início não muda (conta por
    data de abertura e tag, não por status).
 
 | Situação         | `code`          | Mensagem                                                      |
@@ -909,7 +920,7 @@ action a partir de um formulário legítimo aberto em outro chamado.
 | 4   | QA Membro Suporte | `Resolver` com o campo vazio; depois `curta`                                                                                                                      | `Descreva a solução.`; depois `A solução precisa ter no mínimo 10 caracteres.`; nenhum request de action                                                                                                                                                                                                                                             |
 | 5   | QA Membro Suporte | solução `  [QA] Reiniciei o serviço e validei o acesso.  ` → `Resolver`                                                                                           | toast `Chamado #R1 resolvido.`; badge `Resolvido`; card mostra a solução travada (sem os espaços das pontas) e `Resolvido em dd/mm/aaaa hh:mm`; botões bloqueados somem; último item da linha do tempo "Resolução" · QA Membro Suporte · data/hora · `Resolveu o chamado.`, sem nota                                                                 |
 | 6   | banco, só leitura | depois do 5                                                                                                                                                       | `ticket` #R1: `status = resolvido`, `solution` = texto com `trim`, `resolved_at = updated_at` = `changed_at` da linha nova; `priority`, `assigned_to`, setores inalterados. `ticket_history`: uma linha nova, `event = resolucao`, `changed_by` = membro, `from_status = aberto`, `to_status = resolvido`, `note` nula, demais `from_*`/`to_*` nulas |
-| 7   | QA Membro Suporte | em Meus chamados, aba Abertos por mim                                                                                                                             | #R1 continua listado, com status `Resolvido`; contagens batem com o banco                                                                                                                                                                                                                                                                            |
+| 7   | QA Membro Suporte | em Meus chamados, abas Abertos por mim e Resolvidos                                                                                                               | #R1 fora de Abertos por mim e listado em Resolvidos (`?tab=resolved`), com status `Resolvido`; contagens batem com o banco                                                                                                                                                                                                                           |
 | 8   | QA Membro Suporte | do formulário de #R2 (antes de resolvê-lo), forjar `ticketId` = R1                                                                                                | toast `Você não pode resolver este chamado.` (`ALREADY_RESOLVED`); nada gravado                                                                                                                                                                                                                                                                      |
 | 9   | QA Admin Suporte  | abrir `/tickets/R2` (não é autor; admin do setor atual) → resolver                                                                                                | formulário presente; toast `Chamado #R2 resolvido.`; no banco `changed_by` = QA Admin Suporte; linha do tempo com o nome dele                                                                                                                                                                                                                        |
 | 10  | Diretor           | abrir `/tickets/R3` → resolver                                                                                                                                    | formulário presente; toast `Chamado #R3 resolvido.`; `changed_by` = diretor                                                                                                                                                                                                                                                                          |
