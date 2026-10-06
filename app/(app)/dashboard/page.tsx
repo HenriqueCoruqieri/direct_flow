@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { requireSession } from "@/app/_lib/auth/session"
-import { formatRangeLabel, resolvePeriodRange } from "@/app/_lib/date"
+import { formatRangeLabel, resolvePeriodRange, todayKey } from "@/app/_lib/date"
 import { PRESET_PERIODS } from "@/app/_lib/domain/period"
 import {
   parseDashboardParams,
@@ -20,8 +20,9 @@ export const metadata: Metadata = {
 
 const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
   const actor = await requireSession()
-  const selection = parseDashboardParams(await searchParams)
-  const range = resolvePeriodRange(selection)
+  const now = new Date()
+  const selection = parseDashboardParams(await searchParams, todayKey(now))
+  const range = resolvePeriodRange(selection, now)
 
   return (
     <>

@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { isDateKey } from "@/app/_lib/date"
-import type { PeriodFilterSelection } from "@/app/_lib/types/period"
+import type { DateKey, PeriodFilterSelection } from "@/app/_lib/types/period"
 import {
   firstSearchParam,
   type RawSearchParams,
@@ -11,16 +11,21 @@ const dateKeyField = z
   .string({ error: "Informe a data." })
   .refine(isDateKey, { error: "Data inválida." })
 
-export const customPeriodSchema = z
-  .object({
-    periodo: z.literal("personalizado"),
-    de: dateKeyField,
-    ate: dateKeyField,
-  })
-  .refine((data) => data.ate >= data.de, {
-    error: "A data final precisa ser igual ou posterior à inicial.",
-    path: ["ate"],
-  })
+export const customPeriodSchema = (today: DateKey) =>
+  z
+    .object({
+      periodo: z.literal("personalizado"),
+      de: dateKeyField,
+      ate: dateKeyField,
+    })
+    .refine((data) => data.ate >= data.de, {
+      error: "A data final precisa ser igual ou posterior à inicial.",
+      path: ["ate"],
+    })
+    .refine((data) => data.ate <= today, {
+      error: "O período não pode terminar depois de hoje.",
+      path: ["ate"],
+    })
 
 export interface RawPeriodParams {
   periodo: string | undefined

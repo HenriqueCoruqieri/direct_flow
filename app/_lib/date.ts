@@ -124,3 +124,6 @@ export const calendarDateToKey = (value: Date): DateKey =>
   dayjs(value).format(DATE_KEY_FORMAT)
 
 export const dateKeyToCalendarDate = (key: DateKey): Date => dayjs(key).toDate()
+
+export const todayCalendarDate = (now: DateInput = new Date()): Date =>
+  dateKeyToCalendarDate(todayKey(now))

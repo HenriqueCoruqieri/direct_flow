@@ -12,6 +12,10 @@ import {
   TICKET_SOLUTION_MIN_LENGTH,
 } from "@/app/_lib/domain/ticket-resolution"
 import { registryIdSchema } from "@/app/_lib/validation/registry"
+import {
+  idSearchParamSchema,
+  POSTGRES_INTEGER_MAX,
+} from "@/app/_lib/validation/search-params"
 
 export const ticketTitleSchema = z
   .string({ error: "Informe o título." })
@@ -59,7 +63,7 @@ export const createTicketSchema = z.object({
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>
 
-export const TICKET_ID_MAX = 2_147_483_647
+export const TICKET_ID_MAX = POSTGRES_INTEGER_MAX
 
 const INVALID_TICKET_MESSAGE = "Chamado inválido."
 
@@ -68,11 +72,7 @@ export const ticketIdSchema = registryIdSchema(INVALID_TICKET_MESSAGE).max(
   { error: INVALID_TICKET_MESSAGE },
 )
 
-export const ticketIdParamSchema = z
-  .string({ error: INVALID_TICKET_MESSAGE })
-  .regex(/^[1-9]\d*$/, { error: INVALID_TICKET_MESSAGE })
-  .transform(Number)
-  .pipe(z.number().max(TICKET_ID_MAX, { error: INVALID_TICKET_MESSAGE }))
+export const ticketIdParamSchema = idSearchParamSchema(INVALID_TICKET_MESSAGE)
 
 export const parseTicketIdParam = (value: string): number | null => {
   const result = ticketIdParamSchema.safeParse(value)

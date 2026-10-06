@@ -6,6 +6,37 @@ Decisão de fuso em `docs/adr/009-calendar-in-sao-paulo-timezone.md`.
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 `drizzle-orm@0.45.2`.
 
+## Revisão de 2026-10-05 — datas futuras no Personalizado
+
+Plano: `docs/plans/pending-improvements.md`, Entrega A. A especificação comum às
+duas telas (regra, tabela de assinaturas, `todayCalendarDate`,
+`CustomPeriodPicker`) e os cenários 37–44 estão em
+`docs/contracts/my-tickets.md`, "Revisão de 2026-10-05 — datas futuras". Aqui, só
+o que é do Início:
+
+- **Regra**: personalizado com `ate` depois de hoje (São Paulo) é inválido e cai
+  em `{ periodo: "hoje" }`, como os demais inválidos. Sem recorte; hoje é
+  permitido.
+- **Validação**: `dashboardSearchParamsSchema` vira `dashboardSearchParamsSchema(today: DateKey)`;
+  `parseDashboardParams(raw, today: DateKey)`. `serializeDashboardParams` não
+  muda. `DashboardSearchParams` continua o mesmo tipo
+  (`z.infer<ReturnType<typeof dashboardSearchParamsSchema>>`).
+- **`app/(app)/dashboard/page.tsx`** (`df-ui`), uma leitura do relógio por
+  request:
+
+  ```tsx
+  const now = new Date()
+  const selection = parseDashboardParams(await searchParams, todayKey(now))
+  const range = resolvePeriodRange(selection, now)
+  ```
+
+- **Calendário**: o mesmo `CustomPeriodPicker` de Meus chamados; a mudança
+  (`disabled={{ after: today }}`, `endMonth={today}`) vale para as duas telas de
+  uma vez.
+
+As seções "Validação" e "Filtro de período" abaixo continuam valendo, com esta
+regra a mais.
+
 ## Decisões fixadas pelo usuário
 
 | Regra               | Definição                                                                                                                  |
@@ -85,6 +116,7 @@ export const formatRangeLabel: (range: DateRange) => string
 
 export const calendarDateToKey: (value: Date) => DateKey
 export const dateKeyToCalendarDate: (key: DateKey) => Date
+export const todayCalendarDate: (now?: DateInput) => Date // revisão de 2026-10-05
 ```
 
 | Função                            | Semântica                                                                                                                                                                 |
@@ -234,7 +266,8 @@ export const serializeDashboardParams: (selection: PeriodSelection) => string
 **`parseDashboardParams` nunca lança.** Pega o primeiro valor de cada chave
 repetida (`?periodo=hoje&periodo=mes` → `hoje`), roda `safeParse` e, se falhar
 por qualquer motivo — `periodo` ausente ou desconhecido, personalizado sem data,
-data inexistente, `ate < de` —, devolve `{ periodo: "hoje" }`.
+data inexistente, `ate < de`, `ate` depois de hoje (revisão de 2026-10-05) —,
+devolve `{ periodo: "hoje" }`.
 
 **`serializeDashboardParams`** é o inverso: `periodo=hoje` ou
 `periodo=personalizado&de=2026-09-01&ate=2026-09-10`, sem `?`. É a única forma de

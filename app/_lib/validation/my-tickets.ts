@@ -8,7 +8,7 @@ import {
   MY_TICKETS_TABS,
 } from "@/app/_lib/domain/my-tickets"
 import type { MyTicketsTab } from "@/app/_lib/types/my-tickets"
-import type { PeriodFilterSelection } from "@/app/_lib/types/period"
+import type { DateKey, PeriodFilterSelection } from "@/app/_lib/types/period"
 import {
   customPeriodSchema,
   periodFilterHref,
@@ -25,12 +25,15 @@ export const myTicketsSearchParamsSchema = z.object({
 
 export type MyTicketsSearchParams = z.infer<typeof myTicketsSearchParamsSchema>
 
-export const myTicketsPeriodSchema = z.discriminatedUnion("periodo", [
-  z.object({ periodo: z.enum(MY_TICKETS_PERIOD_PRESETS) }),
-  customPeriodSchema,
-])
+export const myTicketsPeriodSchema = (today: DateKey) =>
+  z.discriminatedUnion("periodo", [
+    z.object({ periodo: z.enum(MY_TICKETS_PERIOD_PRESETS) }),
+    customPeriodSchema(today),
+  ])
 
-export type MyTicketsPeriodParams = z.infer<typeof myTicketsPeriodSchema>
+export type MyTicketsPeriodParams = z.infer<
+  ReturnType<typeof myTicketsPeriodSchema>
+>
 
 export const parseMyTicketsTab = (raw: RawSearchParams): MyTicketsTab => {
   const result = myTicketsSearchParamsSchema.safeParse({
@@ -41,8 +44,9 @@ export const parseMyTicketsTab = (raw: RawSearchParams): MyTicketsTab => {
 
 export const parseMyTicketsPeriod = (
   raw: RawSearchParams,
+  today: DateKey,
 ): PeriodFilterSelection => {
-  const result = myTicketsPeriodSchema.safeParse(readPeriodParams(raw))
+  const result = myTicketsPeriodSchema(today).safeParse(readPeriodParams(raw))
   return result.success ? result.data : DEFAULT_MY_TICKETS_PERIOD
 }
 

@@ -10,6 +10,173 @@ Padrões de tabela, formulário e resultado de action reusados de
 Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 `zod@4.6.5`, `@tanstack/react-table@9`.
 
+## Revisão de 2026-10-05 — filtros Setor e Status pela URL
+
+Plano: `docs/plans/pending-improvements.md`, Entrega A. Quem gera o link é o
+dialog de bloqueio de Setores (`docs/contracts/registry-departments.md`, revisão
+da mesma data). Sem schema, sem migration, sem mudança em `df-data`,
+`df-actions` ou `df-auth`: a lista continua vindo inteira de
+`listPeople(personScopeFor(access))`, e o filtro é só estado inicial da tabela
+no cliente.
+
+### URL
+
+```
+/registry/people                              → sem filtro (como hoje)
+/registry/people?setor=12&status=ativo        → Setor = 12 e Status = Ativo
+/registry/people?status=inativo               → só Status = Inativo
+```
+
+| Parâmetro | Valores                           | Inválido (ignorado, sem erro)                                                      |
+| --------- | --------------------------------- | ---------------------------------------------------------------------------------- |
+| `setor`   | id do setor, inteiro positivo     | não numérico, `0`, negativo, zero à esquerda, acima de 2 147 483 647, id sem setor |
+| `status`  | `ativo` ou `inativo` (minúsculas) | qualquer outro valor, inclusive `Ativo`                                            |
+
+- Os nomes seguem o precedente dos filtros de tela (`periodo`, `de`, `ate` no
+  Início e em Meus chamados): chave e valor em português, porque espelham o
+  rótulo do filtro (Setor, Status → Ativo/Inativo).
+- Cada parâmetro é lido **independentemente**: `?setor=abc&status=ativo` aplica
+  só o Status. Chave repetida vale pelo primeiro valor (`firstSearchParam`).
+- `setor` só vale para o **diretor** (é o único que tem o filtro e a coluna
+  Setor) e só se o id estiver em `departmentOptions`. Para o admin de setor, é
+  ignorado sempre. Isso é decidido por `applicablePeopleFilters`, não pela UI.
+- Filtro alterado na tabela **não** volta para a URL (risco 3 do plano).
+
+### Tipos — `app/_lib/types/person.ts` (acrescido)
+
+```ts
+export type PeopleStatusParam = "ativo" | "inativo"
+
+export interface PeopleFilters {
+  departmentId: number | null
+  isActive: boolean | null
+}
+```
+
+`null` = filtro não aplicado.
+
+### Domínio — `app/_lib/domain/people-filters.ts` (novo)
+
+```ts
+export const PEOPLE_DEPARTMENT_PARAM = "setor"
+export const PEOPLE_STATUS_PARAM = "status"
+export const PEOPLE_STATUS_PARAMS // ["ativo", "inativo"] as const
+export const NO_PEOPLE_FILTERS: PeopleFilters // { departmentId: null, isActive: null }
+
+export const peopleStatusParamFor: (isActive: boolean) => PeopleStatusParam
+export const isActiveFromPeopleStatusParam: (
+  param: PeopleStatusParam,
+) => boolean
+export const peopleRegistryHref: (filters: PeopleFilters) => string
+export const activeDepartmentPeopleHref: (departmentId: number) => string
+export const applicablePeopleFilters: (
+  filters: PeopleFilters,
+  access: GrantedRegistryAccess,
+  departmentOptions: readonly DepartmentOption[],
+) => PeopleFilters
+```
+
+| Nome                         | Semântica                                                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `peopleRegistryHref`         | **A** forma de montar link para Pessoas com filtro: `setor` antes de `status`; sem filtro → `/registry/people`, sem `?`                                  |
+| `activeDepartmentPeopleHref` | `peopleRegistryHref({ departmentId, isActive: true })` → `/registry/people?setor=12&status=ativo`. Usada pelo bloqueio de Setores                        |
+| `applicablePeopleFilters`    | Diretor: mantém `departmentId` se existir em `departmentOptions`, senão `null`. Admin de setor: `departmentId` sempre `null`. `isActive` passa como veio |
+
+Arquivo separado de `domain/person.ts` porque `domain/department.ts` precisa do
+link, e `domain/person.ts` já importa `domain/department.ts`: juntar criaria
+ciclo entre os dois.
+
+### Validação — `app/_lib/validation/people-filters.ts` (novo)
+
+```ts
+export const peopleFiltersSchema // z.object({ setor, status }), cada campo opcional com .catch(undefined)
+export type PeopleFiltersParams = z.infer<typeof peopleFiltersSchema>
+export const parsePeopleFilters: (raw: RawSearchParams) => PeopleFilters
+```
+
+- **`parsePeopleFilters` nunca lança.** Cada campo inválido vira `undefined`
+  sozinho (`.catch`), sem derrubar o outro; o resultado é traduzido para
+  `PeopleFilters` (`ativo` → `true`, `inativo` → `false`).
+- `setor` usa `idSearchParamSchema` (novo em `validation/search-params.ts`): só
+  dígitos sem zero à esquerda e até o `integer` do Postgres. É a mesma regra do
+  id de chamado na rota (`ticketIdParamSchema` passou a usar essa fábrica, sem
+  mudar comportamento).
+- Mensagens (`Setor inválido.`, `Status inválido.`) existem por convenção; nunca
+  são exibidas.
+
+### `df-ui` — o que muda
+
+**`app/_components/data-table/data-table.tsx`** — prop nova, opcional:
+
+```ts
+interface DataTableProps<TData extends RowData> {
+  ...
+  initialColumnFilters?: ColumnFiltersState
+}
+```
+
+- `ColumnFiltersState` vem de `@tanstack/react-table` (v9, reexporta
+  `table-core`): `Array<{ id: string; value: unknown }>`.
+- Repassada a `useTable` como `initialState: { columnFilters: initialColumnFilters }`.
+  É lida **uma vez**, na montagem: depois disso o filtro é estado da tabela,
+  removível pelo popover e por "Limpar filtros" como qualquer outro.
+- Sem a prop, comportamento idêntico ao de hoje (Setores, Tags, Meus chamados).
+- Servidor e cliente montam a tabela com o mesmo estado inicial: sem diferença
+  de marcação, sem erro de hidratação.
+
+**`app/(app)/registry/people/page.tsx`**
+
+```tsx
+const PeoplePage = async ({ searchParams }: PageProps<"/registry/people">) => {
+  const actor = await requireSession()
+  const access = await requireRegistryAccess()
+  const [people, departmentOptions] = await Promise.all([...])
+  const filters = applicablePeopleFilters(
+    parsePeopleFilters(await searchParams),
+    access,
+    departmentOptions,
+  )
+  ...
+  <PeopleTable key={peopleRegistryHref(filters)} initialFilters={filters} ... />
+}
+```
+
+- O `key` refaz a tabela quando a URL troca de filtro numa navegação sem
+  recarregar (ex.: um segundo "Ver pessoas" de outro setor); sem ele,
+  `initialState` não seria relido.
+
+**`app/(app)/registry/people/_components/people-table.tsx`**
+
+- Prop nova `initialFilters: PeopleFilters`.
+- Converte para `initialColumnFilters` (`useMemo`):
+  `departmentId !== null` → `{ id: "departmentId", value: [String(departmentId)] }`;
+  `isActive !== null` → `{ id: "isActive", value: [String(isActive)] }`. Os
+  valores são strings porque é assim que o filtro `inValues` e as opções
+  (`String(option.id)`, `"true"`/`"false"`) comparam.
+- Para o admin de setor `departmentId` já chega `null` (não existe a coluna
+  `departmentId` nas colunas dele; filtro para coluna inexistente não pode ser
+  passado ao TanStack).
+
+### Cenários para o `df-qa` (filtros pela URL)
+
+Ids de setor conferidos no banco (`select id, name from department`). O fluxo
+pelo botão "Ver pessoas" está nos cenários A1–A11 de
+`docs/contracts/registry-departments.md`.
+
+| #   | Quem              | Ação                                                                                                             | Esperado                                                                                                                                                                                       |
+| --- | ----------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1  | Diretor           | `/registry/people?setor=<id QA Suporte>&status=ativo`                                                            | Setor QA Suporte e Status Ativo marcados (botão "Filtros" com 2); lista = pessoas ativas de QA Suporte; mesmo número de `select count(*) from users where department_id = $1 and is_active`    |
+| P2  | Diretor           | `/registry/people?status=inativo`                                                                                | só Status Inativo marcado; lista = pessoas inativas                                                                                                                                            |
+| P3  | Diretor           | `?setor=abc&status=ativo`, `?setor=0&status=ativo`, `?setor=007&status=ativo`, `?setor=99999999999&status=ativo` | em todos, só Status Ativo marcado; nenhum erro                                                                                                                                                 |
+| P4  | Diretor           | `?setor=999999` (id sem setor)                                                                                   | nenhum filtro marcado; lista completa; nenhum erro                                                                                                                                             |
+| P5  | Diretor           | `?setor=<id>&status=Ativo` e `?setor=<id>&status=xyz`                                                            | só Setor marcado                                                                                                                                                                               |
+| P6  | Diretor           | `?setor=<id QA Suporte>&setor=<id QA Infra>`                                                                     | Setor QA Suporte marcado (primeiro valor)                                                                                                                                                      |
+| P7  | Diretor           | em P1, desmarcar os dois filtros; navegar para Setores e voltar pelo menu Pessoas                                | lista completa ao desmarcar; pelo menu (`/registry/people`, sem parâmetro) abre sem filtro                                                                                                     |
+| P8  | QA Admin Suporte  | `/registry/people?setor=<id QA Infra>&status=ativo`                                                              | **nada a mais**: mesma lista de `/registry/people?status=ativo` (pessoas ativas de QA Suporte e do Não alocado); nenhuma pessoa de QA Infra; sem grupo Setor nos filtros; Status Ativo marcado |
+| P9  | QA Admin Suporte  | `/registry/people?setor=<id QA Suporte>`                                                                         | `setor` ignorado: nenhum filtro marcado; lista igual à de `/registry/people`                                                                                                                   |
+| P10 | QA Membro Suporte | `/registry/people?setor=<id QA Suporte>&status=ativo`                                                            | 404, como sem parâmetro                                                                                                                                                                        |
+| P11 | qualquer          | navegar por P1–P10                                                                                               | nenhum erro nem aviso de hidratação no dev server                                                                                                                                              |
+
 ## Decisões fixadas pelo usuário (resumo do plano)
 
 | Tema            | Decisão                                                                                                                                                                                                                                                                        |
@@ -979,6 +1146,7 @@ interface DataTableProps<TData extends RowData> {
   emptyMessage: string
   search?: DataTableSearchConfig
   filters?: ReadonlyArray<DataTableFilter>
+  initialColumnFilters?: ColumnFiltersState // revisão de 2026-10-05
 }
 
 interface DataTableSearchConfig {

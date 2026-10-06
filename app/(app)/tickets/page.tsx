@@ -2,7 +2,11 @@ import type { Metadata } from "next"
 
 import { requireSession } from "@/app/_lib/auth/session"
 import { countMyTicketsByTab, listMyTickets } from "@/app/_lib/data/my-tickets"
-import { formatRangeLabel, resolvePeriodFilterRange } from "@/app/_lib/date"
+import {
+  formatRangeLabel,
+  resolvePeriodFilterRange,
+  todayKey,
+} from "@/app/_lib/date"
 import {
   MY_TICKETS_LABEL,
   MY_TICKETS_PATH,
@@ -29,8 +33,9 @@ const MyTicketsPage = async ({ searchParams }: PageProps<"/tickets">) => {
   const actor = await requireSession()
   const raw = await searchParams
   const tab = parseMyTicketsTab(raw)
-  const period = parseMyTicketsPeriod(raw)
-  const range = resolvePeriodFilterRange(period)
+  const now = new Date()
+  const period = parseMyTicketsPeriod(raw, todayKey(now))
+  const range = resolvePeriodFilterRange(period, now)
   const [tickets, counts] = await Promise.all([
     listMyTickets(actor.id, tab, range),
     countMyTicketsByTab(actor.id, range),

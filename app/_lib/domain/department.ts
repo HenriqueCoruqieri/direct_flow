@@ -1,3 +1,4 @@
+import { activeDepartmentPeopleHref } from "@/app/_lib/domain/people-filters"
 import type {
   DepartmentAvailability,
   DepartmentDeactivationBlocked,
@@ -57,6 +58,16 @@ export const checkDepartmentDeactivation = ({
 const pluralize = (count: number, singular: string, plural: string): string =>
   `${count} ${count === 1 ? singular : plural}`
 
+const capitalize = (text: string): string =>
+  `${text.charAt(0).toUpperCase()}${text.slice(1)}`
+
+const isPresent = (part: string | null): part is string => part !== null
+
+export const isDepartmentDeactivationLocked = (
+  check: DepartmentDeactivationCheck,
+): boolean =>
+  !check.ok && (check.reason === "IS_BOARD" || check.reason === "IS_UNASSIGNED")
+
 export const describeDepartmentDeactivationBlock = (
   block: DepartmentDeactivationBlocked,
 ): string => {
@@ -67,14 +78,33 @@ export const describeDepartmentDeactivationBlock = (
     return "O setor de pessoas não alocadas não pode ser desativado."
   }
 
+  const { activeUsers, openTickets } = block
   const pending = [
-    block.activeUsers > 0
-      ? pluralize(block.activeUsers, "pessoa ativa", "pessoas ativas")
+    activeUsers > 0
+      ? pluralize(activeUsers, "pessoa ativa", "pessoas ativas")
       : null,
-    block.openTickets > 0
-      ? pluralize(block.openTickets, "chamado em aberto", "chamados em aberto")
+    openTickets > 0
+      ? pluralize(openTickets, "chamado em aberto", "chamados em aberto")
       : null,
-  ].filter((part): part is string => part !== null)
+  ].filter(isPresent)
+  const instructions = [
+    activeUsers > 0
+      ? `mova ${activeUsers === 1 ? "a pessoa" : "as pessoas"} para outro setor`
+      : null,
+    openTickets > 0
+      ? `conclua ou encaminhe ${openTickets === 1 ? "o chamado" : "os chamados"}`
+      : null,
+  ].filter(isPresent)
 
-  return `Não é possível desativar este setor: ele tem ${pending.join(" e ")}. Mova as pessoas para outro setor e conclua ou encaminhe os chamados antes.`
+  if (pending.length === 0) return "Não é possível desativar este setor."
+
+  return `Não é possível desativar este setor: ele tem ${pending.join(" e ")}. ${capitalize(instructions.join(" e "))} antes.`
 }
+
+export const deactivationBlockPeopleHref = (
+  departmentId: number,
+  block: DepartmentDeactivationBlocked,
+): string | null =>
+  !isDepartmentDeactivationLocked(block) && block.activeUsers > 0
+    ? activeDepartmentPeopleHref(departmentId)
+    : null

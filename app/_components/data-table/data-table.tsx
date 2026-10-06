@@ -1,6 +1,11 @@
 "use client"
 
-import { type ColumnDef, type RowData, useTable } from "@tanstack/react-table"
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  type RowData,
+  useTable,
+} from "@tanstack/react-table"
 import { useRouter } from "next/navigation"
 
 import {
@@ -59,6 +64,7 @@ interface DataTableProps<TData extends RowData> {
   filters?: ReadonlyArray<DataTableFilter>
   rowHref?: (row: TData) => string
   toolbarFooter?: React.ReactNode
+  initialColumnFilters?: ColumnFiltersState
 }
 
 const DataTable = <TData extends RowData>({
@@ -69,12 +75,16 @@ const DataTable = <TData extends RowData>({
   filters = [],
   rowHref,
   toolbarFooter,
+  initialColumnFilters,
 }: DataTableProps<TData>) => {
   const router = useRouter()
   const table = useTable({
     features: dataTableFeatures,
     columns,
     data,
+    initialState: initialColumnFilters
+      ? { columnFilters: initialColumnFilters }
+      : undefined,
   })
 
   const searchColumn = search ? table.getColumn(search.columnId) : undefined

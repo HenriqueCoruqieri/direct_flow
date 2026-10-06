@@ -1,6 +1,9 @@
 "use client"
 
-import { createColumnHelper } from "@tanstack/react-table"
+import {
+  type ColumnFiltersState,
+  createColumnHelper,
+} from "@tanstack/react-table"
 import { useMemo } from "react"
 
 import DataTable from "@/app/_components/data-table/data-table"
@@ -13,7 +16,7 @@ import { canManagePerson, NEVER_ACCESSED_LABEL } from "@/app/_lib/domain/person"
 import { isDirectorAccess } from "@/app/_lib/domain/registry"
 import { getInitials, ROLE_LABELS, ROLES } from "@/app/_lib/domain/user"
 import type { DepartmentOption } from "@/app/_lib/types/department"
-import type { PersonListItem } from "@/app/_lib/types/person"
+import type { PeopleFilters, PersonListItem } from "@/app/_lib/types/person"
 import type { GrantedRegistryAccess } from "@/app/_lib/types/registry"
 
 import UserAvatar from "../../../_components/user-avatar"
@@ -137,11 +140,21 @@ const roleFilter: DataTableFilter = {
 
 const DEPARTMENT_ADMIN_FILTERS = [roleFilter, activeStatusFilter]
 
+const columnFiltersFrom = (filters: PeopleFilters): ColumnFiltersState => [
+  ...(filters.departmentId === null
+    ? []
+    : [{ id: "departmentId", value: [String(filters.departmentId)] }]),
+  ...(filters.isActive === null
+    ? []
+    : [{ id: "isActive", value: [String(filters.isActive)] }]),
+]
+
 interface PeopleTableProps {
   people: PersonListItem[]
   access: GrantedRegistryAccess
   actorId: number
   departmentOptions: DepartmentOption[]
+  initialFilters: PeopleFilters
 }
 
 const PeopleTable = ({
@@ -149,8 +162,14 @@ const PeopleTable = ({
   access,
   actorId,
   departmentOptions,
+  initialFilters,
 }: PeopleTableProps) => {
   const isDirector = isDirectorAccess(access)
+
+  const initialColumnFilters = useMemo(
+    () => columnFiltersFrom(initialFilters),
+    [initialFilters],
+  )
 
   const rows = useMemo<PersonRow[]>(() => {
     const context = { access, actorId, departmentOptions }
@@ -183,6 +202,7 @@ const PeopleTable = ({
       emptyMessage="Nenhuma pessoa cadastrada."
       search={SEARCH}
       filters={filters}
+      initialColumnFilters={initialColumnFilters}
     />
   )
 }

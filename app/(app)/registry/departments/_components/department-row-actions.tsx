@@ -1,7 +1,9 @@
 import { setDepartmentActive } from "@/app/_lib/actions/departments"
 import {
   checkDepartmentDeactivation,
+  deactivationBlockPeopleHref,
   describeDepartmentDeactivationBlock,
+  isDepartmentDeactivationLocked,
 } from "@/app/_lib/domain/department"
 import type { DepartmentListItem } from "@/app/_lib/types/department"
 
@@ -16,9 +18,10 @@ interface DepartmentRowActionsProps {
 
 const DepartmentRowActions = ({ department }: DepartmentRowActionsProps) => {
   const check = checkDepartmentDeactivation(department)
-  const isLocked =
-    !check.ok &&
-    (check.reason === "IS_BOARD" || check.reason === "IS_UNASSIGNED")
+  const isLocked = isDepartmentDeactivationLocked(check)
+  const peopleHref = check.ok
+    ? null
+    : deactivationBlockPeopleHref(department.id, check)
 
   const statusAction = department.isActive ? (
     isLocked ? null : (
@@ -27,6 +30,11 @@ const DepartmentRowActions = ({ department }: DepartmentRowActionsProps) => {
         description="O setor deixa de receber pessoas e chamados. Você pode reativá-lo depois."
         blockedReason={
           check.ok ? null : describeDepartmentDeactivationBlock(check)
+        }
+        blockedLink={
+          peopleHref === null
+            ? null
+            : { label: "Ver pessoas", href: peopleHref }
         }
         onDeactivate={() =>
           setDepartmentActive({ id: department.id, isActive: false })

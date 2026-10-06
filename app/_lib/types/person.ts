@@ -129,3 +129,10 @@ export type UpdatePersonActiveOutcome =
   PersonSaved | PersonNotFound | PersonDepartmentInactive | PersonLastDirector
 
 export type ResetPersonPasswordOutcome = PersonSaved | PersonNotFound
+
+export type PeopleStatusParam = "ativo" | "inativo"
+
+export interface PeopleFilters {
+  departmentId: number | null
+  isActive: boolean | null
+}

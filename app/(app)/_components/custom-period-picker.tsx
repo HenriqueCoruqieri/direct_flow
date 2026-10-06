@@ -16,6 +16,7 @@ import {
 import {
   calendarDateToKey,
   dateKeyToCalendarDate,
+  todayCalendarDate,
   WEEK_STARTS_ON,
 } from "@/app/_lib/date"
 import { PERIOD_LABELS } from "@/app/_lib/domain/period"
@@ -47,6 +48,7 @@ const CustomPeriodPicker = ({
 }: CustomPeriodPickerProps) => {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [today, setToday] = useState(() => todayCalendarDate())
   const [range, setRange] = useState<CalendarRange | undefined>(() =>
     rangeFromSelection(selection),
   )
@@ -54,7 +56,10 @@ const CustomPeriodPicker = ({
   const active = selection.periodo === "personalizado"
 
   const handleOpenChange = (next: boolean) => {
-    if (next) setRange(rangeFromSelection(selection))
+    if (next) {
+      setRange(rangeFromSelection(selection))
+      setToday(todayCalendarDate())
+    }
     setOpen(next)
   }
 
@@ -89,6 +94,8 @@ const CustomPeriodPicker = ({
           selected={range}
           onSelect={setRange}
           defaultMonth={range?.from}
+          disabled={{ after: today }}
+          endMonth={today}
           className="p-3"
         />
         <div className="flex items-center justify-end gap-2 border-t border-border-subtle p-3">

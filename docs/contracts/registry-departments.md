@@ -29,6 +29,120 @@ Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 > especiais por `departmentBadgeFor` e esconde "Desativar" nos dois. Quem está na
 > Diretoria passa a ser sempre admin (ADR 011, nota de Pessoas).
 
+## Revisão de 2026-10-05 — bloqueio que cita só o que bloqueia e atalho para Pessoas
+
+Plano: `docs/plans/pending-improvements.md`, Entrega A. Os filtros pela URL do
+lado de Pessoas estão em `docs/contracts/registry-people.md` (revisão da mesma
+data). Sem schema, sem migration, sem mudança em `df-data`, `df-actions` ou
+`df-auth`.
+
+**O bug.** `describeDepartmentDeactivationBlock` terminava sempre com "Mova as
+pessoas para outro setor e conclua ou encaminhe os chamados antes.", mesmo num
+bloqueio só por chamados. A função passa a citar **só** o que bloqueia, com
+singular e plural. A tabela "Mensagens produzidas" (seção Domínio) já está
+atualizada; a mensagem da action `setDepartmentActive` muda sozinha, porque é a
+mesma função.
+
+### Domínio — `app/_lib/domain/department.ts` (acrescido)
+
+```ts
+export const isDepartmentDeactivationLocked: (
+  check: DepartmentDeactivationCheck,
+) => boolean
+
+export const deactivationBlockPeopleHref: (
+  departmentId: number,
+  block: DepartmentDeactivationBlocked,
+) => string | null
+```
+
+`isDepartmentDeactivationLocked` é **a** resposta para "o botão Desativar
+aparece?": `true` quando o `check` de `checkDepartmentDeactivation` é bloqueio
+permanente (`IS_BOARD` ou `IS_UNASSIGNED`), e aí a UI oculta o botão; `false`
+para `{ ok: true }` e para bloqueio por dependência (`HAS_ACTIVE_USERS`,
+`HAS_OPEN_TICKETS`), que mostram o dialog. Recebe o `check` inteiro, então a UI
+passa o resultado direto, sem testar `ok` nem `reason`. O mesmo predicado é
+usado por `deactivationBlockPeopleHref`.
+
+| Caso                                          | Retorno                                       |
+| --------------------------------------------- | --------------------------------------------- |
+| `IS_BOARD` ou `IS_UNASSIGNED`                 | `null` (o dialog nem aparece para esses dois) |
+| `activeUsers > 0`                             | `/registry/people?setor=<id>&status=ativo`    |
+| `activeUsers === 0` (bloqueio só por chamado) | `null`                                        |
+
+É **a** resposta para "o dialog mostra Ver pessoas?": não nulo → mostra, com
+este `href`. A UI não testa `activeUsers` nem monta URL. O `href` vem de
+`activeDepartmentPeopleHref` (`app/_lib/domain/people-filters.ts`, ver
+`registry-people.md`), a única forma de montar o link filtrado de Pessoas.
+
+### `df-ui` — o que muda
+
+**`app/(app)/registry/_components/deactivate-registry-dialog.tsx`**
+
+- Prop nova, opcional: `blockedLink?: DeactivateRegistryDialogLink | null`, com
+  `interface DeactivateRegistryDialogLink { label: string; href: string }`
+  (nome sugerido; é uma `interface` nomeada por causa do `| null`).
+- Só é usada quando o dialog está no estado bloqueado (`blockedReason` não
+  nulo). Com o link, o rodapé fica: **"Entendi"** (`AlertDialogCancel`, como
+  hoje) e, à direita, **o link** como botão primário (`Button asChild` com
+  `Link` do `next/link`), texto `blockedLink.label`.
+- Sem a prop (ou `null`), o dialog é idêntico ao de hoje. Tags e Pessoas não
+  passam a prop e não mudam.
+- O título continua "Não é possível desativar"; a descrição continua sendo
+  `blockedReason`.
+
+**`app/(app)/registry/departments/_components/department-row-actions.tsx`**
+
+```tsx
+const isLocked = isDepartmentDeactivationLocked(check)
+const peopleHref = check.ok ? null : deactivationBlockPeopleHref(department.id, check)
+...
+blockedLink={peopleHref === null ? null : { label: "Ver pessoas", href: peopleHref }}
+```
+
+- Texto exato do botão: **`Ver pessoas`**.
+- O clique navega na mesma aba; a troca de rota desmonta a tabela de Setores e
+  o dialog junto. Nenhum estado precisa ser limpo à mão.
+
+### Mensagens (as quatro variações de bloqueio por dependência)
+
+| Caso              | Texto exato                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 pessoa          | `Não é possível desativar este setor: ele tem 1 pessoa ativa. Mova a pessoa para outro setor antes.`                                                            |
+| 3 pessoas         | `Não é possível desativar este setor: ele tem 3 pessoas ativas. Mova as pessoas para outro setor antes.`                                                        |
+| 1 chamado         | `Não é possível desativar este setor: ele tem 1 chamado em aberto. Conclua ou encaminhe o chamado antes.`                                                       |
+| 2 chamados        | `Não é possível desativar este setor: ele tem 2 chamados em aberto. Conclua ou encaminhe os chamados antes.`                                                    |
+| 3 pessoas e 1 ch. | `Não é possível desativar este setor: ele tem 3 pessoas ativas e 1 chamado em aberto. Mova as pessoas para outro setor e conclua ou encaminhe o chamado antes.` |
+| 1 pessoa e 2 ch.  | `Não é possível desativar este setor: ele tem 1 pessoa ativa e 2 chamados em aberto. Mova a pessoa para outro setor e conclua ou encaminhe os chamados antes.`  |
+
+### Cenários para o `df-qa` (bloqueio e atalho)
+
+Regras de dados de `docs/contracts/qa-seed.md`: tudo o que for criado começa
+com `[QA]`. O setor de teste é `[QA] Bloqueio` (se já existir de uma rodada
+anterior, reativá-lo e reaproveitá-lo; se o nome estiver ocupado, usar
+`[QA] Bloqueio 2`; o mesmo vale para a tag `[QA] Bloqueio tag`). Contagens conferidas no banco (MCP `postgres`, só leitura):
+`select count(*) from users where department_id = $1 and is_active` e
+`select count(*) from ticket where current_department_id = $1 and status in
+('aberto','em_analise','encaminhado','aguardando_aprovacao','em_andamento')`.
+
+| #   | Quem              | Ação                                                                                                                                                                  | Esperado                                                                                                                                                                                                                                                  |
+| --- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | Diretor           | Setores → criar `[QA] Bloqueio`; Desativar                                                                                                                            | dialog de confirmação normal ("Desativar [QA] Bloqueio?"); **Cancelar**. Colunas Pessoas ativas 0 e Chamados em aberto 0                                                                                                                                  |
+| A2  | Diretor           | Pessoas → editar QA Membro Suporte → setor `[QA] Bloqueio`; voltar a Setores → Desativar em `[QA] Bloqueio`                                                           | **só pessoas**: "Não é possível desativar"; texto `… ele tem 1 pessoa ativa. Mova a pessoa para outro setor antes.`; nenhuma menção a chamados; botões "Entendi" e "Ver pessoas"                                                                          |
+| A3  | Diretor           | no dialog de A2, clicar "Ver pessoas"                                                                                                                                 | URL `/registry/people?setor=<id de [QA] Bloqueio>&status=ativo`; botão "Filtros" com contagem 2; no popover, Setor `[QA] Bloqueio` e Status Ativo marcados; lista = só QA Membro Suporte; o número de linhas é igual à coluna Pessoas ativas e à consulta |
+| A4  | Diretor           | em A3, desmarcar Setor no popover; depois "Limpar filtros"; depois recarregar a página                                                                                | desmarcar Setor: lista com todas as pessoas ativas; "Limpar filtros": todas as pessoas, contagem do botão zerada; a URL não muda; recarregar reaplica Setor + Ativo (risco 3 do plano)                                                                    |
+| A4a | Diretor           | Tags → criar `[QA] Bloqueio tag` no setor `[QA] Bloqueio`                                                                                                             | tag criada e ativa no setor. Pré-requisito do A5: sem tag ativa no setor, "Novo chamado" fica desabilitado (`DEPARTMENT_WITHOUT_TAGS`)                                                                                                                    |
+| A5  | QA Membro Suporte | entrar e abrir um chamado `[QA] Bloqueio de setor` (nasce em `[QA] Bloqueio`) com a tag `[QA] Bloqueio tag`                                                           | criado; no banco, `current_department_id` = id de `[QA] Bloqueio`                                                                                                                                                                                         |
+| A6  | Diretor           | Setores → Desativar em `[QA] Bloqueio`                                                                                                                                | **ambos**: `… ele tem 1 pessoa ativa e 1 chamado em aberto. Mova a pessoa para outro setor e conclua ou encaminhe o chamado antes.`; "Ver pessoas" presente                                                                                               |
+| A7  | Diretor           | Pessoas → mover QA Membro Suporte de volta para QA Suporte; Setores → Desativar em `[QA] Bloqueio`                                                                    | **só chamados**: `… ele tem 1 chamado em aberto. Conclua ou encaminhe o chamado antes.`; **sem** "Mova a pessoa/as pessoas"; **sem** botão "Ver pessoas"; só "Entendi"                                                                                    |
+| A8  | Diretor           | abrir `[QA] Bloqueio de setor` e resolvê-lo (diretor resolve qualquer chamado); Tags → Desativar `[QA] Bloqueio tag`; Setores → Desativar `[QA] Bloqueio` → confirmar | dialog de confirmação normal; toast "Setor desativado."; a tag e o setor ficam inativos (estado final da rodada)                                                                                                                                          |
+| A9  | Diretor           | Desativar em Diretoria e em Não alocado                                                                                                                               | o botão continua oculto nos dois (nada muda)                                                                                                                                                                                                              |
+| A10 | Diretor           | Tags e Pessoas: abrir o dialog de desativar de qualquer linha                                                                                                         | idênticos aos de hoje, sem botão de link                                                                                                                                                                                                                  |
+| A11 | qualquer          | navegar por A1–A10                                                                                                                                                    | nenhum erro nem aviso de hidratação no dev server (MCP `next-devtools`)                                                                                                                                                                                   |
+
+Os cenários de URL inválida e do admin de setor estão em
+`docs/contracts/registry-people.md`, revisão de 2026-10-05.
+
 ## Decisões fixadas pelo usuário (resumo do plano)
 
 | Tema           | Decisão                                                                                                                                                    |
@@ -206,24 +320,26 @@ export const describeDepartmentDeactivationBlock: (
 ) => string
 ```
 
-| Nome                                  | Semântica                                                                                                                                                             |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BOARD_DEPARTMENT_NAME`               | Nome com que o **seed** cria a Diretoria. Só isso: o poder vem de `is_board`, nunca do nome. Ninguém compara nome com esta constante para decidir permissão           |
-| `checkDepartmentDeactivation`         | Precedência: `IS_BOARD` → `HAS_ACTIVE_USERS` → `HAS_OPEN_TICKETS` → `{ ok: true }`. Só responde sobre **desativar**; ativar não tem pré-condição                      |
-| `describeDepartmentDeactivationBlock` | Mensagem PT-BR do bloqueio, com as contagens e plural correto. Única fonte do texto: a action devolve, a UI pode usar a mesma função para explicar botão desabilitado |
+| Nome                                  | Semântica                                                                                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BOARD_DEPARTMENT_NAME`               | Nome com que o **seed** cria a Diretoria. Só isso: o poder vem de `is_board`, nunca do nome. Ninguém compara nome com esta constante para decidir permissão                                 |
+| `checkDepartmentDeactivation`         | Precedência: `IS_BOARD` → `HAS_ACTIVE_USERS` → `HAS_OPEN_TICKETS` → `{ ok: true }`. Só responde sobre **desativar**; ativar não tem pré-condição                                            |
+| `describeDepartmentDeactivationBlock` | Mensagem PT-BR do bloqueio, com as contagens e plural correto, citando só o que bloqueia (revisão de 2026-10-05). Única fonte do texto: a action devolve, a UI usa a mesma função no dialog |
 
 Os limites de nome (2 e 80) moram em `app/_lib/domain/registry.ts`
 (`REGISTRY_NAME_MIN_LENGTH`, `REGISTRY_NAME_MAX_LENGTH`), compartilhados com tags.
 `DEPARTMENT_NAME_MIN_LENGTH`/`MAX_LENGTH` foram removidos.
 
-Mensagens produzidas:
+Mensagens produzidas (revistas em 2026-10-05; variações de singular na revisão
+do topo):
 
-| Caso                 | Texto                                                                                                                                                             |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `IS_BOARD`           | `A Diretoria não pode ser desativada.`                                                                                                                            |
-| só pessoas (ex.: 3)  | `Não é possível desativar este setor: ele tem 3 pessoas ativas. Mova as pessoas para outro setor e conclua ou encaminhe os chamados antes.`                       |
-| só chamados (ex.: 1) | `Não é possível desativar este setor: ele tem 1 chamado em aberto. Mova as pessoas para outro setor e conclua ou encaminhe os chamados antes.`                    |
-| ambos                | `Não é possível desativar este setor: ele tem 3 pessoas ativas e 1 chamado em aberto. Mova as pessoas para outro setor e conclua ou encaminhe os chamados antes.` |
+| Caso                 | Texto                                                                                                                                                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IS_BOARD`           | `A Diretoria não pode ser desativada.`                                                                                                                          |
+| `IS_UNASSIGNED`      | `O setor de pessoas não alocadas não pode ser desativado.`                                                                                                      |
+| só pessoas (ex.: 3)  | `Não é possível desativar este setor: ele tem 3 pessoas ativas. Mova as pessoas para outro setor antes.`                                                        |
+| só chamados (ex.: 1) | `Não é possível desativar este setor: ele tem 1 chamado em aberto. Conclua ou encaminhe o chamado antes.`                                                       |
+| ambos                | `Não é possível desativar este setor: ele tem 3 pessoas ativas e 1 chamado em aberto. Mova as pessoas para outro setor e conclua ou encaminhe o chamado antes.` |
 
 ### `app/_lib/domain/status.ts` (novo)
 

@@ -30,6 +30,13 @@ contrato próprio: `docs/contracts/ticket-edit.md`.
 > usado com o novo padrão e foi removido de `domain/period.ts`; o tipo
 > `AllTimeSelection` continua em `types/period.ts`.
 
+> Revisão de 2026-10-05 (`docs/plans/pending-improvements.md`, Entrega A):
+> período personalizado com `de`/`ate` depois de hoje passa a ser inválido
+> (cai em `Hoje`) e o calendário desabilita os dias futuros. `customPeriodSchema`
+> e `myTicketsPeriodSchema` viram fábricas de `today`; `parseMyTicketsPeriod`
+> recebe `today`. Detalhe em "Revisão de 2026-10-05 — datas futuras", no fim do
+> adendo do filtro por data. Vale igual para o Início (`dashboard.md`).
+
 ## Adendo — filtro por data de abertura
 
 Acrescentado em 2026-10-01. Decisões no plano (`docs/plans/my-tickets.md`, seção
@@ -38,16 +45,16 @@ action.
 
 ### Regra
 
-| Item      | Definição                                                                                                                                                  |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Âncora    | `ticket.created_at` (data de abertura)                                                                                                                     |
-| Períodos  | `Todos` (sem filtro), `Hoje` (**padrão desta tela** desde 2026-10-05), `Semana`, `Mês`, `Personalizado`. Os quatro últimos com a mesma resolução do Início |
-| Intervalo | Meio-aberto `[start, end)` no fuso `America/Sao_Paulo` (ADR 009), por `resolvePeriodRange`                                                                 |
-| Alcance   | Lista **e** contagens das quatro abas usam o mesmo intervalo                                                                                               |
-| URL       | `?tab=&periodo=&de=&ate=`. Todo período é escrito na URL, inclusive `periodo=todos`; ausência de `periodo` = `Hoje`                                        |
-| Inválido  | `periodo` desconhecido, personalizado sem data, data inexistente ou `ate < de` → `Hoje`, sem erro e sem redirecionar                                       |
-| Valores   | Em português na URL (`hoje`, `semana`, `mes`, `personalizado`, `todos`), como no Início. A tradução é decisão separada                                     |
-| Início    | Não muda: sem `Todos`, padrão `Hoje`. `/dashboard?periodo=todos` cai em `Hoje`                                                                             |
+| Item      | Definição                                                                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Âncora    | `ticket.created_at` (data de abertura)                                                                                                                       |
+| Períodos  | `Todos` (sem filtro), `Hoje` (**padrão desta tela** desde 2026-10-05), `Semana`, `Mês`, `Personalizado`. Os quatro últimos com a mesma resolução do Início   |
+| Intervalo | Meio-aberto `[start, end)` no fuso `America/Sao_Paulo` (ADR 009), por `resolvePeriodRange`                                                                   |
+| Alcance   | Lista **e** contagens das quatro abas usam o mesmo intervalo                                                                                                 |
+| URL       | `?tab=&periodo=&de=&ate=`. Todo período é escrito na URL, inclusive `periodo=todos`; ausência de `periodo` = `Hoje`                                          |
+| Inválido  | `periodo` desconhecido, personalizado sem data, data inexistente, `ate < de` ou data depois de hoje (desde 2026-10-05) → `Hoje`, sem erro e sem redirecionar |
+| Valores   | Em português na URL (`hoje`, `semana`, `mes`, `personalizado`, `todos`), como no Início. A tradução é decisão separada                                       |
+| Início    | Não muda: sem `Todos`, padrão `Hoje`. `/dashboard?periodo=todos` cai em `Hoje`                                                                               |
 
 URLs:
 
@@ -139,7 +146,7 @@ o intervalo.
 extraídas de `validation/dashboard.ts` sem mudar o comportamento do Início:
 
 ```ts
-export const customPeriodSchema // personalizado: de/ate isDateKey, ate >= de
+export const customPeriodSchema // (today: DateKey) => schema desde 2026-10-05; personalizado: de/ate isDateKey, ate >= de, ate <= today
 export interface RawPeriodParams {
   periodo: string | undefined
   de: string | undefined
@@ -167,11 +174,14 @@ peças acima.
 `app/_lib/validation/my-tickets.ts` (acrescido):
 
 ```ts
-export const myTicketsPeriodSchema // discriminatedUnion: enum(MY_TICKETS_PERIOD_PRESETS) | customPeriodSchema
-export type MyTicketsPeriodParams = z.infer<typeof myTicketsPeriodSchema>
+export const myTicketsPeriodSchema // (today: DateKey) => discriminatedUnion: enum(MY_TICKETS_PERIOD_PRESETS) | customPeriodSchema(today)
+export type MyTicketsPeriodParams = z.infer<
+  ReturnType<typeof myTicketsPeriodSchema>
+>
 
 export const parseMyTicketsPeriod: (
   raw: RawSearchParams,
+  today: DateKey, // desde 2026-10-05
 ) => PeriodFilterSelection
 export const myTicketsTabHref: (
   tab: MyTicketsTab,
@@ -251,9 +261,10 @@ interface CustomPeriodPickerProps {
 
 ```tsx
 const raw = await searchParams
+const now = new Date()
 const tab = parseMyTicketsTab(raw)
-const period = parseMyTicketsPeriod(raw)
-const range = resolvePeriodFilterRange(period)
+const period = parseMyTicketsPeriod(raw, todayKey(now))
+const range = resolvePeriodFilterRange(period, now)
 const [tickets, counts] = await Promise.all([
   listMyTickets(actor.id, tab, range),
   countMyTicketsByTab(actor.id, range),
@@ -279,6 +290,83 @@ const [tickets, counts] = await Promise.all([
   do título, como no Início. Com `Todos`, sem subtítulo.
 - A busca e os filtros da tabela continuam no cliente, sobre as linhas que o
   servidor já filtrou pelo período.
+
+### Revisão de 2026-10-05 — datas futuras
+
+Plano: `docs/plans/pending-improvements.md`, Entrega A. Vale para **Meus
+chamados e Início**; o lado do Início está em `docs/contracts/dashboard.md`
+(revisão da mesma data). Motivo: um período futuro mostrava "0 chamados" e se
+passava por "não houve chamados".
+
+**Regra.** Período personalizado cujo `ate` é depois de hoje (no calendário de
+São Paulo, ADR 009) é inválido. Como `ate >= de` já é exigido, `de` futuro
+também cai. Inválido segue a regra que já existia: padrão da tela (`Hoje` nas
+duas), sem erro, sem redirecionar, sem aviso. **Não há recorte**: um período
+`01/10 – 31/10` consultado em 05/10 é recusado inteiro, não vira `01/10 – 05/10`.
+Hoje é permitido (`ate = hoje` é válido).
+
+#### Validação — o que muda na assinatura
+
+| Antes                                            | Depois                                                                 |
+| ------------------------------------------------ | ---------------------------------------------------------------------- |
+| `customPeriodSchema` (schema)                    | `customPeriodSchema(today: DateKey)` (fábrica)                         |
+| `myTicketsPeriodSchema` (schema)                 | `myTicketsPeriodSchema(today: DateKey)` (fábrica)                      |
+| `dashboardSearchParamsSchema` (schema)           | `dashboardSearchParamsSchema(today: DateKey)` (fábrica)                |
+| `parseMyTicketsPeriod(raw)`                      | `parseMyTicketsPeriod(raw, today: DateKey)`                            |
+| `parseDashboardParams(raw)`                      | `parseDashboardParams(raw, today: DateKey)`                            |
+| `MyTicketsPeriodParams = z.infer<typeof schema>` | `z.infer<ReturnType<typeof myTicketsPeriodSchema>>` (mesmo tipo)       |
+| `DashboardSearchParams = z.infer<typeof schema>` | `z.infer<ReturnType<typeof dashboardSearchParamsSchema>>` (mesmo tipo) |
+
+- `today` é **parâmetro** porque validação é pura: o schema não lê o relógio.
+  Quem chama passa `todayKey(now)` de `@/app/_lib/date` (dia de São Paulo).
+- Refinamento novo em `customPeriodSchema(today)`: `ate <= today`, erro em `ate`
+  `O período não pode terminar depois de hoje.` (mensagem nunca exibida: o
+  parse cai no padrão).
+- Os dois `parse*` continuam nunca lançando; o retorno não mudou de tipo.
+- `serializePeriodParams`, `periodFilterHref`, `myTicketsTabHref` e
+  `serializeDashboardParams` não mudam.
+
+#### Datas — `app/_lib/date.ts` (acrescido)
+
+```ts
+export const todayCalendarDate: (now?: DateInput) => Date
+```
+
+`dateKeyToCalendarDate(todayKey(now))`: a meia-noite **local do navegador** do
+dia de hoje **em São Paulo**. É o "hoje" que o calendário usa para limitar as
+datas. Nunca `new Date()` direto no calendário: num navegador fora de São Paulo
+perto da meia-noite, o dia local é outro.
+
+#### `df-ui` — o que muda
+
+**`app/(app)/tickets/page.tsx`** — uma leitura do relógio por request, como
+`app/(app)/tickets/[id]/page.tsx` já faz:
+
+```tsx
+const now = new Date()
+const period = parseMyTicketsPeriod(raw, todayKey(now))
+const range = resolvePeriodFilterRange(period, now)
+```
+
+**`app/(app)/dashboard/page.tsx`** — ver `dashboard.md`, revisão de 2026-10-05
+(mesma forma, com `parseDashboardParams` e `resolvePeriodRange`).
+
+**`app/(app)/_components/custom-period-picker.tsx`** (um arquivo só, vale nas
+duas telas):
+
+- Estado novo `const [today, setToday] = useState(todayCalendarDate)`
+  (inicializador preguiçoso) e `setToday(todayCalendarDate())` **ao abrir** o
+  popover, em `handleOpenChange`, junto com o `setRange` que já existe. Assim a
+  aba aberta de um dia para o outro não fica com o "hoje" de ontem. O valor não
+  entra na marcação do servidor (o `Calendar` só é montado com o popover
+  aberto), então não há diferença de hidratação.
+- `Calendar` ganha `disabled={{ after: today }}` (dias depois de hoje não
+  clicáveis; hoje continua clicável) e `endMonth={today}` (a navegação não
+  passa do mês atual). As duas props existem no `react-day-picker@10`.
+- O resto não muda: `locale={ptBR}`, `weekStartsOn={WEEK_STARTS_ON}`,
+  conversões com `calendarDateToKey`, `router.push(periodFilterHref(...))`.
+- O servidor continua sendo a autoridade: mesmo que um dia futuro chegue à URL
+  (link antigo, relógio do navegador adiantado), a página cai em `Hoje`.
 
 ## Tabelas e enums lidos
 
@@ -1049,6 +1137,23 @@ espalhados por hoje, ontem às 21h–23h59, esta semana, este mês e o mês ante
 | 35  | Diretor           | Início                                                                                                                                                                          | sem pílula Todos; abre em Hoje; Hoje/Semana/Mês/Personalizado funcionam como antes (cartões iguais ao gabarito do seed); `/dashboard?periodo=todos` mostra Hoje                                                                                                                  |
 | 36  | qualquer          | navegar pelos cenários 23–35                                                                                                                                                    | nenhum erro nem aviso de hidratação no dev server; nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer`                                                                                                                                                           |
 
+### Cenários de datas futuras (revisão de 2026-10-05)
+
+`HOJE` = data de hoje em São Paulo (`AAAA-MM-DD`); `AMANHA` e `ONTEM`, os
+vizinhos. Valem para as duas telas; onde diz "nas duas telas", repetir em
+`/dashboard` e em `/tickets?tab=opened`.
+
+| #   | Quem     | Ação                                                                                                                   | Esperado                                                                                                                                                                                      |
+| --- | -------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 37  | Diretor  | nas duas telas, abrir Personalizado                                                                                    | os dias depois de hoje aparecem desabilitados (não selecionáveis, `aria-disabled` / `disabled` no botão do dia); hoje e dias passados selecionáveis; o botão de próximo mês fica desabilitado |
+| 38  | Diretor  | nas duas telas, tentar clicar num dia futuro do mês atual                                                              | nada é selecionado; "Aplicar" continua desabilitado se nada foi escolhido                                                                                                                     |
+| 39  | Diretor  | nas duas telas, escolher `ONTEM`–`HOJE` → Aplicar                                                                      | URL com `periodo=personalizado&de=ONTEM&ate=HOJE`; Personalizado ativo; números batem com o banco (consulta do cenário 3 com o intervalo)                                                     |
+| 40  | qualquer | `/dashboard?periodo=personalizado&de=HOJE&ate=AMANHA` e `/tickets?tab=opened&periodo=personalizado&de=HOJE&ate=AMANHA` | os dois mostram **Hoje** ativo, subtítulo da data de hoje e os números de Hoje; nenhum erro                                                                                                   |
+| 41  | qualquer | `…&periodo=personalizado&de=AMANHA&ate=AMANHA` e `…&de=2099-01-01&ate=2099-01-31`, nas duas telas                      | Hoje ativo; nenhum erro                                                                                                                                                                       |
+| 42  | qualquer | `…&periodo=personalizado&de=HOJE&ate=HOJE`, nas duas telas                                                             | válido: Personalizado ativo, subtítulo da data de hoje                                                                                                                                        |
+| 43  | Diretor  | `/tickets?tab=closed&periodo=personalizado&de=ONTEM&ate=AMANHA`                                                        | aba Fechados mantida, período Hoje (aba e período continuam independentes)                                                                                                                    |
+| 44  | qualquer | navegar por 37–43                                                                                                      | nenhum erro nem aviso de hidratação no dev server (MCP `next-devtools`); nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer`                                                  |
+
 ## Critério de pronto
 
 1. Cenários 1–22 aprovados pelo `df-qa`. Do adendo, cenários 23–36.
@@ -1072,3 +1177,9 @@ Adendo do filtro por data:
 - [ ] `range` em `listMyTickets` e `countMyTicketsByTab` (`df-data`)
 - [ ] `PeriodFilter`/`CustomPeriodPicker` genéricos em `app/(app)/_components/`, slot no `DataTable`, `/tickets` com período, abas mantendo o período, estado vazio por período (`df-ui`)
 - [ ] cenários 23–36 do `df-qa`
+
+Revisão de 2026-10-05 (datas futuras):
+
+- [x] `customPeriodSchema(today)`, `myTicketsPeriodSchema(today)`, `dashboardSearchParamsSchema(today)`, `parseMyTicketsPeriod(raw, today)`, `parseDashboardParams(raw, today)`, `todayCalendarDate` (`df-architect`)
+- [ ] `today` nas páginas `/tickets` e `/dashboard`; `disabled`/`endMonth` no `CustomPeriodPicker` (`df-ui`)
+- [ ] cenários 37–44 do `df-qa`

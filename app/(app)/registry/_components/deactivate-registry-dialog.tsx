@@ -1,6 +1,7 @@
 "use client"
 
 import { Loader2Icon, PowerOffIcon } from "lucide-react"
+import Link from "next/link"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -18,10 +19,16 @@ import { Button } from "@/app/_components/ui/button"
 
 import type { RegistryMutationResult } from "./registry-mutation-result"
 
+interface DeactivateRegistryDialogLink {
+  label: string
+  href: string
+}
+
 interface DeactivateRegistryDialogProps {
   name: string
   description: string
   blockedReason?: string | null
+  blockedLink?: DeactivateRegistryDialogLink | null
   onDeactivate: () => Promise<RegistryMutationResult>
 }
 
@@ -29,6 +36,7 @@ const DeactivateRegistryDialog = ({
   name,
   description,
   blockedReason = null,
+  blockedLink = null,
   onDeactivate,
 }: DeactivateRegistryDialogProps) => {
   const [open, setOpen] = useState(false)
@@ -86,7 +94,13 @@ const DeactivateRegistryDialog = ({
           <AlertDialogCancel disabled={isPending}>
             {isBlocked ? "Entendi" : "Cancelar"}
           </AlertDialogCancel>
-          {isBlocked ? null : (
+          {isBlocked ? (
+            blockedLink === null ? null : (
+              <Button asChild className="font-bold hover:bg-primary-hover">
+                <Link href={blockedLink.href}>{blockedLink.label}</Link>
+              </Button>
+            )
+          ) : (
             <Button
               type="button"
               variant="destructive"
