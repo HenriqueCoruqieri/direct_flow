@@ -2,6 +2,7 @@ import type {
   Period,
   PeriodOption,
   PresetPeriod,
+  PresetPeriodOption,
 } from "@/app/_lib/types/period"
 
 export const PERIODS = [
@@ -16,6 +17,11 @@ export const PRESET_PERIODS = [
   "semana",
   "mes",
 ] as const satisfies readonly PresetPeriod[]
+
+export const ALL_TIME_PERIOD_PRESETS = [
+  "todos",
+  ...PRESET_PERIODS,
+] as const satisfies readonly PresetPeriodOption[]
 
 export const DEFAULT_PERIOD: PresetPeriod = "hoje"
 

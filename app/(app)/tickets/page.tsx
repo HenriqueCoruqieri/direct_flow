@@ -11,6 +11,8 @@ import {
   MY_TICKETS_LABEL,
   MY_TICKETS_PATH,
   MY_TICKETS_PERIOD_PRESETS,
+  MY_TICKETS_TAB_RULES,
+  MY_TICKETS_TABS,
   myTicketsEmptyCopy,
 } from "@/app/_lib/domain/my-tickets"
 import {
@@ -21,9 +23,9 @@ import {
 
 import AppTopBar from "../_components/app-top-bar"
 import PeriodFilter from "../_components/period-filter"
-import MyTicketsEmptyState from "./_components/my-tickets-empty-state"
+import TicketListEmptyState from "../_components/ticket-list-empty-state"
+import TicketListTabs from "../_components/ticket-list-tabs"
 import MyTicketsTable from "./_components/my-tickets-table"
-import MyTicketsTabs from "./_components/my-tickets-tabs"
 
 export const metadata: Metadata = {
   title: MY_TICKETS_LABEL,
@@ -65,13 +67,22 @@ const MyTicketsPage = async ({ searchParams }: PageProps<"/tickets">) => {
               </p>
             ) : null}
           </div>
-          <MyTicketsTabs current={tab} counts={counts} period={period} />
+          <TicketListTabs
+            ariaLabel="Abas de Meus chamados"
+            current={tab}
+            items={MY_TICKETS_TABS.map((item) => ({
+              value: item,
+              label: MY_TICKETS_TAB_RULES[item].label,
+              count: counts[item],
+              href: myTicketsTabHref(item, period),
+            }))}
+          />
         </div>
 
         {tickets.length === 0 ? (
           <div className="flex flex-col gap-4">
             {periodFilter}
-            <MyTicketsEmptyState copy={myTicketsEmptyCopy(tab, period)} />
+            <TicketListEmptyState {...myTicketsEmptyCopy(tab, period)} />
           </div>
         ) : (
           <MyTicketsTable

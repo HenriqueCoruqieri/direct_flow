@@ -4,13 +4,12 @@ import {
   DEFAULT_MY_TICKETS_PERIOD,
   DEFAULT_MY_TICKETS_TAB,
   MY_TICKETS_PATH,
-  MY_TICKETS_PERIOD_PRESETS,
   MY_TICKETS_TABS,
 } from "@/app/_lib/domain/my-tickets"
 import type { MyTicketsTab } from "@/app/_lib/types/my-tickets"
 import type { DateKey, PeriodFilterSelection } from "@/app/_lib/types/period"
 import {
-  customPeriodSchema,
+  allTimePeriodSchema,
   periodFilterHref,
   readPeriodParams,
 } from "@/app/_lib/validation/period"
@@ -25,11 +24,7 @@ export const myTicketsSearchParamsSchema = z.object({
 
 export type MyTicketsSearchParams = z.infer<typeof myTicketsSearchParamsSchema>
 
-export const myTicketsPeriodSchema = (today: DateKey) =>
-  z.discriminatedUnion("periodo", [
-    z.object({ periodo: z.enum(MY_TICKETS_PERIOD_PRESETS) }),
-    customPeriodSchema(today),
-  ])
+export const myTicketsPeriodSchema = allTimePeriodSchema
 
 export type MyTicketsPeriodParams = z.infer<
   ReturnType<typeof myTicketsPeriodSchema>

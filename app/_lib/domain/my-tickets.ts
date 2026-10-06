@@ -1,14 +1,11 @@
-import { PRESET_PERIODS } from "@/app/_lib/domain/period"
+import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
 import { NON_FINAL_TICKET_STATUSES } from "@/app/_lib/domain/ticket"
 import type {
   MyTicketsEmptyCopy,
   MyTicketsTab,
   MyTicketsTabRule,
 } from "@/app/_lib/types/my-tickets"
-import type {
-  PeriodFilterSelection,
-  PresetPeriodOption,
-} from "@/app/_lib/types/period"
+import type { PeriodFilterSelection } from "@/app/_lib/types/period"
 
 export const MY_TICKETS_PATH = "/tickets"
 
@@ -18,10 +15,7 @@ export { MY_TICKETS_TABS } from "@/app/_lib/domain/my-tickets-tabs"
 
 export const DEFAULT_MY_TICKETS_TAB: MyTicketsTab = "opened"
 
-export const MY_TICKETS_PERIOD_PRESETS = [
-  "todos",
-  ...PRESET_PERIODS,
-] as const satisfies readonly PresetPeriodOption[]
+export const MY_TICKETS_PERIOD_PRESETS = ALL_TIME_PERIOD_PRESETS
 
 export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection = {
   periodo: "hoje",

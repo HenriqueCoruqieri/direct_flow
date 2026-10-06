@@ -1,5 +1,6 @@
-import { and, desc, eq, gte, inArray, lt, or, type SQL, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, or, type SQL, sql } from "drizzle-orm"
 
+import { ticketPeriodCondition } from "@/app/_lib/data/period-condition"
 import {
   MY_TICKETS_TAB_RULES,
   MY_TICKETS_TABS,
@@ -19,11 +20,6 @@ const tabCondition = (userId: number, tab: MyTicketsTab): SQL => {
     rule.relation === "author" ? ticket.createdBy : ticket.assignedTo
   return sql`(${eq(column, userId)} and ${inArray(ticket.status, [...rule.statuses])})`
 }
-
-const periodCondition = (range: DateRange | null): SQL | undefined =>
-  range === null
-    ? undefined
-    : and(gte(ticket.createdAt, range.start), lt(ticket.createdAt, range.end))
 
 export async function listMyTickets(
   userId: number,
@@ -46,7 +42,7 @@ export async function listMyTickets(
     .innerJoin(department, eq(department.id, ticket.currentDepartmentId))
     .leftJoin(ticketTag, eq(ticketTag.ticketId, ticket.id))
     .leftJoin(tag, eq(tag.id, ticketTag.tagId))
-    .where(and(tabCondition(userId, tab), periodCondition(range)))
+    .where(and(tabCondition(userId, tab), ticketPeriodCondition(range)))
     .orderBy(desc(ticket.createdAt), desc(ticket.id))
 }
 
@@ -69,7 +65,7 @@ export async function countMyTicketsByTab(
     .where(
       and(
         or(eq(ticket.createdBy, userId), eq(ticket.assignedTo, userId)),
-        periodCondition(range),
+        ticketPeriodCondition(range),
       ),
     )
 

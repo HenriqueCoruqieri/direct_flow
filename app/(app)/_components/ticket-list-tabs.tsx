@@ -1,40 +1,33 @@
 import Link from "next/link"
 
-import {
-  MY_TICKETS_TAB_RULES,
-  MY_TICKETS_TABS,
-} from "@/app/_lib/domain/my-tickets"
-import type {
-  MyTicketsTab,
-  MyTicketsTabCounts,
-} from "@/app/_lib/types/my-tickets"
-import type { PeriodFilterSelection } from "@/app/_lib/types/period"
-import { myTicketsTabHref } from "@/app/_lib/validation/my-tickets"
-
-interface MyTicketsTabsProps {
-  current: MyTicketsTab
-  counts: MyTicketsTabCounts
-  period: PeriodFilterSelection
+export interface TicketListTabItem {
+  value: string
+  label: string
+  count: number
+  href: string
 }
 
-const MyTicketsTabs = ({ current, counts, period }: MyTicketsTabsProps) => {
+interface TicketListTabsProps {
+  ariaLabel: string
+  items: TicketListTabItem[]
+  current: string
+}
+
+const TicketListTabs = ({ ariaLabel, items, current }: TicketListTabsProps) => {
   return (
     <div className="border-b border-border-subtle">
-      <nav
-        aria-label="Abas de Meus chamados"
-        className="-mb-px flex gap-1 overflow-x-auto"
-      >
-        {MY_TICKETS_TABS.map((tab) => (
+      <nav aria-label={ariaLabel} className="-mb-px flex gap-1 overflow-x-auto">
+        {items.map((item) => (
           <Link
-            key={tab}
-            href={myTicketsTabHref(tab, period)}
+            key={item.value}
+            href={item.href}
             scroll={false}
-            aria-current={tab === current ? "page" : undefined}
+            aria-current={item.value === current ? "page" : undefined}
             className="group/tab inline-flex h-10 shrink-0 items-center gap-2 rounded-t-lg border-b-2 border-transparent px-3 text-sm font-semibold whitespace-nowrap text-text-tertiary transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset aria-[current=page]:border-primary aria-[current=page]:font-extrabold aria-[current=page]:text-foreground"
           >
-            {MY_TICKETS_TAB_RULES[tab].label}
+            {item.label}
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-muted px-1.5 text-xs font-bold text-text-secondary tabular-nums group-aria-[current=page]/tab:bg-primary/10 group-aria-[current=page]/tab:text-primary">
-              {counts[tab]}
+              {item.count}
             </span>
           </Link>
         ))}
@@ -43,4 +36,4 @@ const MyTicketsTabs = ({ current, counts, period }: MyTicketsTabsProps) => {
   )
 }
 
-export default MyTicketsTabs
+export default TicketListTabs

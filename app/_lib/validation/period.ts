@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { isDateKey } from "@/app/_lib/date"
+import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
 import type { DateKey, PeriodFilterSelection } from "@/app/_lib/types/period"
 import {
   firstSearchParam,
@@ -26,6 +27,12 @@ export const customPeriodSchema = (today: DateKey) =>
       error: "O período não pode terminar depois de hoje.",
       path: ["ate"],
     })
+
+export const allTimePeriodSchema = (today: DateKey) =>
+  z.discriminatedUnion("periodo", [
+    z.object({ periodo: z.enum(ALL_TIME_PERIOD_PRESETS) }),
+    customPeriodSchema(today),
+  ])
 
 export interface RawPeriodParams {
   periodo: string | undefined
