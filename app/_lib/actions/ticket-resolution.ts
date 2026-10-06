@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { getSession } from "@/app/_lib/auth/session"
 import { updateTicketResolution } from "@/app/_lib/data/tickets"
+import { DEPARTMENT_QUEUE_PATH } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import {
   TICKET_NOT_FOUND_MESSAGE,
@@ -97,6 +98,7 @@ export const resolveTicket = async (
 
   revalidatePath(ticketDetailPath(outcome.ticketId))
   revalidatePath(MY_TICKETS_PATH)
+  revalidatePath(DEPARTMENT_QUEUE_PATH)
 
   return {
     ok: true,

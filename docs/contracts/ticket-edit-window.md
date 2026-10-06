@@ -26,6 +26,14 @@ Decisão de arquitetura: `docs/adr/014-scheduled-close-of-resolved-tickets.md`.
 > provider trata `INVALID_ASSIGNEE` como `INVALID_TAG` (erro no campo, foco,
 > `router.refresh()`). Nota de `edicao`: "destinatário" entre tag e solução.
 
+> Revisão de 2026-10-06 (aba Resolvidos, `docs/contracts/my-tickets.md`): em
+> Meus chamados e na Fila, `resolvido` tem aba própria (**Resolvidos**,
+> `?tab=resolved`) e não aparece mais em "Abertos por mim", "Atribuídos a mim"
+> nem "Em aberto". A aba lê o status gravado: um `resolvido` com a janela
+> vencida continua em Resolvidos até o cron gravar `fechado`. A regra da
+> janela não muda (`NON_FINAL_TICKET_STATUSES` e `isTicketLocked` intactos).
+> Cenário 21 atualizado.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`, `react-hook-form@7.88`.
 
@@ -554,8 +562,10 @@ no seed.
 
 Assinatura, códigos e mensagens **iguais** (`ticket-edit.md`). O
 `editTicketSchema` já aceita `solution` e o `...parsed.data` a repassa a
-`updateTicketByAuthor`. Conferir só que nada descarta a chave. Revalidação
-igual (o detalhe e Meus chamados; o Início só se a tag mudou). Solução forjada
+`updateTicketByAuthor`. Conferir só que nada descarta a chave. Revalidação:
+o detalhe, Meus chamados e, desde 2026-10-06, `DEPARTMENT_QUEUE_PATH`
+(`/queue`, sempre que salvar: a Fila mostra título, tipo, tag e
+destinatário); o Início só se a tag mudou. Solução forjada
 em chamado não resolvido → `not_editable` → `FORBIDDEN` `Você não pode editar
 este chamado.`.
 
@@ -579,7 +589,9 @@ process.env.CRON_SECRET`. Segredo ausente ou vazio, cabeçalho
 3. `try`: `closeExpiredResolvedTickets(resolutionWindowCutoff(now), now)`.
    `catch` → `console.error("[cron:close-resolved-tickets]", error)` e `500`
    com `{ ok: false, error: "internal" }`.
-4. Se `closedCount > 0`: `revalidatePath(MY_TICKETS_PATH)` (status e abas) e
+4. Se `closedCount > 0`: `revalidatePath(MY_TICKETS_PATH)` (status e abas),
+   `revalidatePath(DEPARTMENT_QUEUE_PATH)` (desde 2026-10-06: o chamado sai de
+   "Resolvidos" e entra em "Fechados" da Fila) e
    `revalidatePath("/(app)/tickets/[id]", "page")` (todos os detalhes: a rota
    não recebe os ids, e o detalhe mostra badge, "Editar", comentário e linha do
    tempo). **Não** revalidar `/dashboard`: o Início conta por data de abertura
@@ -868,7 +880,7 @@ QA Suporte (criar ou reativar). QA Membro Suporte cria pelo "Novo chamado"
 | 18  | banco, só leitura   | depois do 17                                                                                                    | `#V`: `status = fechado`, `closed_at = updated_at`, `resolved_at` e `solution` inalterados. Uma linha nova por chamado fechado: `event = encerramento`, `changed_by` **nulo**, `from_status = resolvido`, `to_status = fechado`, `note = Encerrado automaticamente 7 dias após a resolução.`, `changed_at = closed_at`. `#J` continua `resolvido`. Nenhum `resolvido` com `resolved_at <= now() - interval '7 days'` restante |
 | 19  | qualquer (terminal) | repetir o 17                                                                                                    | `200` com `closedCount` `0`; nenhuma linha nova                                                                                                                                                                                                                                                                                                                                                                               |
 | 20  | QA Membro Suporte   | abrir `/tickets/V`                                                                                              | badge `Fechado`; sem "Editar"; comentários encerrados; último item da linha do tempo: **Encerramento** · `Sistema` · data/hora · `Encerrou o chamado com status Fechado.` com a nota `Encerrado automaticamente 7 dias após a resolução.`                                                                                                                                                                                     |
-| 21  | QA Membro Suporte   | `/tickets?tab=closed&periodo=todos`                                                                             | `#V` listado com status `Fechado`; aba Abertos por mim (Todos) sem o `#V`; contagens batem com o banco                                                                                                                                                                                                                                                                                                                        |
+| 21  | QA Membro Suporte   | `/tickets?tab=closed&periodo=todos`                                                                             | `#V` listado com status `Fechado`; abas Abertos por mim e Resolvidos (Todos) sem o `#V` (antes do 17 ele estava em Resolvidos); contagens batem com o banco                                                                                                                                                                                                                                                                   |
 | 22  | banco + navegador   | `select count(*) from ticket_history where ticket_id = V`; contar os itens da linha do tempo do `#V`            | os dois números iguais (a linha do sistema aparece: prova do `left join`)                                                                                                                                                                                                                                                                                                                                                     |
 
 ### Meus chamados — "Hoje" padrão

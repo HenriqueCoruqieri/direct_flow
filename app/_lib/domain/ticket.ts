@@ -122,9 +122,23 @@ export const INITIAL_TICKET_STATUS: TicketStatus = "aberto"
 
 export const INITIAL_TICKET_PRIORITY: TicketPriority = "media"
 
-export const RESOLVED_TICKET_STATUS: TicketStatus = "resolvido"
+export const RESOLVED_TICKET_STATUS =
+  "resolvido" as const satisfies TicketStatus
 
 export const CLOSED_TICKET_STATUS: TicketStatus = "fechado"
+
+export type ActiveTicketStatus = Exclude<
+  NonFinalTicketStatus,
+  typeof RESOLVED_TICKET_STATUS
+>
+
+export const isActiveTicketStatus = (
+  status: TicketStatus,
+): status is ActiveTicketStatus =>
+  isNonFinalTicketStatus(status) && status !== RESOLVED_TICKET_STATUS
+
+export const ACTIVE_TICKET_STATUSES: readonly ActiveTicketStatus[] =
+  TICKET_STATUSES.filter(isActiveTicketStatus)
 
 export const formatTicketNumber = (ticketId: number): string => `#${ticketId}`
 

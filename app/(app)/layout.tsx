@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation"
 
+import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getAccountState } from "@/app/_lib/auth/account-state"
 import { getRegistryAccess } from "@/app/_lib/auth/registry-access"
 import { requireSession } from "@/app/_lib/auth/session"
 import { findUserProfile } from "@/app/_lib/data/users"
+import { hasDepartmentQueue } from "@/app/_lib/domain/department-queue"
 import { registryNavItemsFor } from "@/app/_lib/domain/registry"
 import {
   describeMembership,
@@ -16,11 +18,13 @@ import MobileHeader from "./_components/mobile-header"
 
 const AppLayout = async ({ children }: LayoutProps<"/">) => {
   const actor = await requireSession()
-  const [profile, registryAccess, accountState] = await Promise.all([
-    findUserProfile(actor.id),
-    getRegistryAccess(),
-    getAccountState(),
-  ])
+  const [profile, registryAccess, accountState, accountFacts] =
+    await Promise.all([
+      findUserProfile(actor.id),
+      getRegistryAccess(),
+      getAccountState(),
+      getAccountFacts(),
+    ])
 
   if (accountState?.mustChangePassword) redirect("/set-password")
   if (!profile) notFound()
@@ -36,6 +40,7 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
         image={profile.image}
         membership={membership}
         registryItems={registryNavItemsFor(registryAccess)}
+        showDepartmentQueue={hasDepartmentQueue(accountFacts)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader

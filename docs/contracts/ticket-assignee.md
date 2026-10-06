@@ -417,11 +417,13 @@ export type EditTicketErrorCode =
   `insertTicket`. `createdBy` continua `actor.id` (sessão) e
   `originDepartmentId` continua `facts.departmentId`; nenhum dos dois vem do
   formulário. `saved` → `revalidatePath("/dashboard")` **e**
-  `revalidatePath(MY_TICKETS_PATH)` (novo). A action não carrega a lista de
-  atribuíveis: a transação decide.
+  `revalidatePath(MY_TICKETS_PATH)` (novo). Desde 2026-10-06 também
+  `revalidatePath(DEPARTMENT_QUEUE_PATH)` (`department-queue.md`: a Fila lista
+  o chamado novo com título, tipo, tag e destinatário). A action não carrega a
+  lista de atribuíveis: a transação decide.
 - `editTicket`: nada a mudar além do mapeamento (o `...parsed.data` já leva
-  `assigneeId`). Revalidação igual: detalhe, `MY_TICKETS_PATH` e, se a tag
-  mudou, o Início.
+  `assigneeId`). Revalidação: detalhe, `MY_TICKETS_PATH`, desde 2026-10-06
+  `DEPARTMENT_QUEUE_PATH` (sempre que salvar) e, se a tag mudou, o Início.
 - **Por que `MY_TICKETS_PATH` alcança o novo destinatário.** `revalidatePath`
   invalida o caminho, não a sessão de quem chamou; e `/tickets` é dinâmica
   (lê a sessão), renderizada a cada visita. O destinatário vê o chamado em

@@ -428,8 +428,9 @@ Sequência:
 originDepartmentId: facts.departmentId })` dentro do `try`.
 6. `catch` → `console.error("[createTicket]", error)` e falha inesperada, sem
    `code`.
-7. Traduz o outcome (tabela). `saved` → `revalidatePath("/dashboard")` e
-   `{ ok: true, message: describeTicketCreated(outcome.ticketId), ticketId:
+7. Traduz o outcome (tabela). `saved` → `revalidatePath("/dashboard")`
+   (`MY_TICKETS_PATH` e `DEPARTMENT_QUEUE_PATH` também, desde
+   `ticket-assignee.md` e `department-queue.md`) e `{ ok: true, message: describeTicketCreated(outcome.ticketId), ticketId:
 outcome.ticketId }`.
 
 **Autor e setor vêm do banco.** `createdBy` é `actor.id` (sessão);

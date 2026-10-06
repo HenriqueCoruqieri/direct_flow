@@ -10,6 +10,10 @@ import {
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
 import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
+import {
+  ticketAssumeBlockFor,
+  ticketSendBlockFor,
+} from "@/app/_lib/domain/ticket-assignment"
 import { AUTO_CLOSE_NOTE } from "@/app/_lib/domain/ticket-closure"
 import {
   canEditSolution,
@@ -25,6 +29,11 @@ import type {
   TicketActorFacts,
   TicketDetail,
 } from "@/app/_lib/types/ticket"
+import type {
+  AssignTicketOutcome,
+  AssignTicketValues,
+  TicketAssignmentFacts,
+} from "@/app/_lib/types/ticket-assignment"
 import type { CloseExpiredResolvedTicketsOutcome } from "@/app/_lib/types/ticket-closure"
 import type {
   TicketEditorFacts,
@@ -512,6 +521,142 @@ export async function updateTicketResolution(
     })
 
     return { status: "saved", ticketId }
+  })
+}
+
+export async function assignTicket(
+  values: AssignTicketValues,
+): Promise<AssignTicketOutcome> {
+  const { ticketId, actorId } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("update")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const [actorRow] = await tx
+      .select({
+        departmentId: user.departmentId,
+        role: user.role,
+        isActive: user.isActive,
+        mustChangePassword: user.mustChangePassword,
+        name: user.name,
+        isBoard: department.isBoard,
+      })
+      .from(user)
+      .innerJoin(department, eq(department.id, user.departmentId))
+      .where(eq(user.id, actorId))
+      .for("share", { of: user })
+
+    if (!actorRow) return { status: "not_assignable" }
+
+    const actor: TicketActorFacts = {
+      userId: actorId,
+      departmentId: actorRow.departmentId,
+      isBoard: actorRow.isBoard,
+      role: actorRow.role,
+      isActive: actorRow.isActive,
+      mustChangePassword: actorRow.mustChangePassword,
+    }
+
+    if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
+
+    const [pendingTransfer] = await tx
+      .select({ id: ticketTransfer.id })
+      .from(ticketTransfer)
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1)
+
+    if (ticketRow.assignedTo !== values.expectedAssigneeId) {
+      if (ticketRow.assignedTo === null) {
+        return {
+          status: "conflict",
+          currentAssigneeId: null,
+          currentAssigneeName: null,
+        }
+      }
+
+      const [currentAssigneeRow] = await tx
+        .select({ name: user.name })
+        .from(user)
+        .where(eq(user.id, ticketRow.assignedTo))
+
+      return {
+        status: "conflict",
+        currentAssigneeId: ticketRow.assignedTo,
+        currentAssigneeName: currentAssigneeRow?.name ?? null,
+      }
+    }
+
+    const facts: TicketAssignmentFacts = {
+      ...ticketRow,
+      hasPendingTransfer: pendingTransfer !== undefined,
+    }
+
+    const blockReason =
+      values.mode === "assume"
+        ? ticketAssumeBlockFor(actor, facts)
+        : ticketSendBlockFor(actor, facts)
+
+    if (blockReason !== null) return { status: "not_assignable" }
+
+    let newAssigneeId = actorId
+    let newAssigneeName = actorRow.name
+
+    if (values.mode === "send") {
+      const [assigneeRow] = await tx
+        .select({
+          departmentId: user.departmentId,
+          isActive: user.isActive,
+          name: user.name,
+        })
+        .from(user)
+        .where(eq(user.id, values.assigneeId))
+        .for("share")
+
+      if (
+        !assigneeRow ||
+        !isUsableTicketAssignee(assigneeRow, ticketRow.currentDepartmentId) ||
+        values.assigneeId === ticketRow.assignedTo
+      ) {
+        return { status: "invalid_assignee" }
+      }
+
+      newAssigneeId = values.assigneeId
+      newAssigneeName = assigneeRow.name
+    }
+
+    const changedAt = new Date()
+
+    await tx
+      .update(ticket)
+      .set({ assignedTo: newAssigneeId, updatedAt: changedAt })
+      .where(eq(ticket.id, ticketId))
+
+    await tx.insert(ticketHistory).values({
+      ticketId,
+      changedBy: actorId,
+      event: "atribuicao",
+      fromAssigneeId: ticketRow.assignedTo,
+      toAssigneeId: newAssigneeId,
+      changedAt,
+    })
+
+    return { status: "saved", ticketId, assigneeName: newAssigneeName }
   })
 }
 

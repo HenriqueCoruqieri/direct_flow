@@ -6,6 +6,7 @@ import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getSession } from "@/app/_lib/auth/session"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { insertTicket, updateTicketByAuthor } from "@/app/_lib/data/tickets"
+import { DEPARTMENT_QUEUE_PATH } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import {
   checkTicketCreation,
@@ -131,6 +132,7 @@ export const createTicket = async (
 
   revalidatePath(DASHBOARD_PATH)
   revalidatePath(MY_TICKETS_PATH)
+  revalidatePath(DEPARTMENT_QUEUE_PATH)
 
   return {
     ok: true,
@@ -242,6 +244,7 @@ export const editTicket = async (
 
   revalidatePath(ticketDetailPath(outcome.ticketId))
   revalidatePath(MY_TICKETS_PATH)
+  revalidatePath(DEPARTMENT_QUEUE_PATH)
   if (outcome.tagChanged) revalidatePath(DASHBOARD_PATH)
 
   return {

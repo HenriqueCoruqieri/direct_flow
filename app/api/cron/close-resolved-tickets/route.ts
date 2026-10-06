@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto"
 import { revalidatePath } from "next/cache"
 
 import { closeExpiredResolvedTickets } from "@/app/_lib/data/tickets"
+import { DEPARTMENT_QUEUE_PATH } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import { resolutionWindowCutoff } from "@/app/_lib/domain/ticket-closure"
 import type { CloseExpiredResolvedTicketsOutcome } from "@/app/_lib/types/ticket-closure"
@@ -83,6 +84,7 @@ export const GET = async (request: Request): Promise<Response> => {
 
   if (outcome.closedCount > 0) {
     revalidatePath(MY_TICKETS_PATH)
+    revalidatePath(DEPARTMENT_QUEUE_PATH)
     revalidatePath(TICKET_DETAIL_ROUTE, "page")
   }
 

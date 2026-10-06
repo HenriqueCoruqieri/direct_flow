@@ -494,9 +494,10 @@ Sequência:
    `code`.
 4. Traduz o outcome (tabela). `saved` →
    `revalidatePath(ticketDetailPath(ticketId))`,
-   `revalidatePath(MY_TICKETS_PATH)` e, só se `tagChanged`,
-   `revalidatePath("/dashboard")` (a tag ofensora do Início pode mudar; título,
-   descrição e tipo não aparecem lá).
+   `revalidatePath(MY_TICKETS_PATH)`, `revalidatePath(DEPARTMENT_QUEUE_PATH)`
+   (desde 2026-10-06, `department-queue.md`: a Fila mostra título, tipo, tag e
+   destinatário) e, só se `tagChanged`, `revalidatePath("/dashboard")` (a tag
+   ofensora do Início pode mudar; título, descrição e tipo não aparecem lá).
 
 **Autor vem da sessão; setor e permissão, do banco.** `authorId` é `actor.id`.
 A action não lê `getAccountFacts` nem decide permissão: a transação lê o autor

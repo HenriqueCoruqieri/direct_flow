@@ -1,6 +1,10 @@
-import { HouseIcon, TicketIcon } from "lucide-react"
+import { HouseIcon, InboxIcon, TicketIcon } from "lucide-react"
 
 import LogoMark from "@/app/_components/logo-mark"
+import {
+  DEPARTMENT_QUEUE_LABEL,
+  DEPARTMENT_QUEUE_PATH,
+} from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
@@ -15,6 +19,7 @@ interface AppSidebarProps {
   image: string | null
   membership: string
   registryItems: RegistryNavItem[]
+  showDepartmentQueue: boolean
 }
 
 const AppSidebar = ({
@@ -23,6 +28,7 @@ const AppSidebar = ({
   image,
   membership,
   registryItems,
+  showDepartmentQueue,
 }: AppSidebarProps) => {
   return (
     <aside className="sticky top-0 hidden h-dvh w-58 shrink-0 flex-col gap-1.5 border-r border-border-subtle bg-surface-bar px-3.5 py-5 lg:flex">
@@ -49,6 +55,15 @@ const AppSidebar = ({
               icon={<TicketIcon aria-hidden="true" />}
             />
           </li>
+          {showDepartmentQueue ? (
+            <li>
+              <NavItem
+                href={DEPARTMENT_QUEUE_PATH}
+                label={DEPARTMENT_QUEUE_LABEL}
+                icon={<InboxIcon aria-hidden="true" />}
+              />
+            </li>
+          ) : null}
           {registryItems.length > 0 ? (
             <li>
               <RegistryNav items={registryItems} />
