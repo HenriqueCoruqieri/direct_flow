@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
-import { Controller, type DefaultValues, useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import { Button } from "@/app/_components/ui/button"
@@ -18,7 +18,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/app/_components/ui/dialog"
+import { Field, FieldLabel } from "@/app/_components/ui/field"
+import { Input } from "@/app/_components/ui/input"
 import { createTicket } from "@/app/_lib/actions/tickets"
+import { TICKET_CREATOR_LABEL } from "@/app/_lib/domain/ticket-assignee"
 import type { NewTicketFormAvailable } from "@/app/_lib/types/ticket"
 import {
   type CreateTicketInput,
@@ -26,6 +29,7 @@ import {
 } from "@/app/_lib/validation/ticket"
 
 import NewTicketButton from "./new-ticket-button"
+import TicketAssigneeField from "./ticket-assignee-field"
 import TicketDescriptionField from "./ticket-description-field"
 import TicketTagField from "./ticket-tag-field"
 import TicketTitleField from "./ticket-title-field"
@@ -38,34 +42,31 @@ interface NewTicketDialogProps {
 const TAG_HINT =
   "A tag é utilizada para categorizar e mapear os maiores ofensores da fila de atendimento."
 
-const INITIAL_VALUES: DefaultValues<CreateTicketInput> = {
-  title: "",
-  description: "",
-}
-
 const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
   const titleId = useId()
   const descriptionId = useId()
   const typeId = useId()
   const tagId = useId()
+  const creatorId = useId()
+  const assigneeId = useId()
   const router = useRouter()
   const [open, setOpen] = useState(false)
 
   const form = useForm<CreateTicketInput>({
     resolver: zodResolver(createTicketSchema),
-    defaultValues: INITIAL_VALUES,
+    defaultValues: options.defaults,
   })
 
   const isSubmitting = form.formState.isSubmitting
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting) return
-    if (!nextOpen) form.reset(INITIAL_VALUES)
+    if (!nextOpen) form.reset(options.defaults)
     setOpen(nextOpen)
   }
 
   const closeAndDiscard = () => {
-    form.reset(INITIAL_VALUES)
+    form.reset(options.defaults)
     setOpen(false)
   }
 
@@ -80,6 +81,16 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
 
     if (result.code === "INVALID_TAG") {
       form.setError("tagId", { message: result.message }, { shouldFocus: true })
+      router.refresh()
+      return
+    }
+
+    if (result.code === "INVALID_ASSIGNEE") {
+      form.setError(
+        "assigneeId",
+        { message: result.message },
+        { shouldFocus: true },
+      )
       router.refresh()
       return
     }
@@ -162,6 +173,28 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                 />
               )}
             />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field className="min-w-0 gap-1.5">
+                <FieldLabel htmlFor={creatorId}>
+                  {TICKET_CREATOR_LABEL}
+                </FieldLabel>
+                <Input id={creatorId} value={options.creatorName} readOnly />
+              </Field>
+
+              <Controller
+                name="assigneeId"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <TicketAssigneeField
+                    id={assigneeId}
+                    {...field}
+                    fieldState={fieldState}
+                    assignees={options.assignees}
+                  />
+                )}
+              />
+            </div>
           </div>
 
           <DialogFooter className="-mx-6 -mb-6 p-4">

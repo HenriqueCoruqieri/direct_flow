@@ -1,9 +1,12 @@
+import { preselectedAssigneeId } from "@/app/_lib/domain/ticket-assignee"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
+  AssigneeOption,
   NewTicketFormOptions,
   TicketAuthorFacts,
   TicketCreationBlockReason,
   TicketCreationCheck,
+  TicketCreatorFacts,
   TicketPendingTransfer,
   TicketPriority,
   TicketStatus,
@@ -179,7 +182,9 @@ export const isUsableTicketTag = (
 
 export const buildNewTicketFormOptions = (
   author: TicketAuthorFacts,
+  creator: TicketCreatorFacts,
   tags: readonly TagOption[],
+  assignees: readonly AssigneeOption[],
 ): NewTicketFormOptions => {
   const check = checkTicketCreation(author, tags.length)
   if (!check.ok) {
@@ -190,7 +195,17 @@ export const buildNewTicketFormOptions = (
     }
   }
 
-  return { canCreate: true, tags: [...tags] }
+  return {
+    canCreate: true,
+    tags: [...tags],
+    assignees: [...assignees],
+    creatorName: creator.name,
+    defaults: {
+      title: "",
+      description: "",
+      assigneeId: preselectedAssigneeId(creator.id, assignees),
+    },
+  }
 }
 
 export const describeTicketCreated = (ticketId: number): string =>

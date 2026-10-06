@@ -27,7 +27,8 @@ import {
   editTicketSchema,
 } from "@/app/_lib/validation/ticket"
 
-export type TicketErrorCode = "INVALID_INPUT" | "FORBIDDEN" | "INVALID_TAG"
+export type TicketErrorCode =
+  "INVALID_INPUT" | "FORBIDDEN" | "INVALID_TAG" | "INVALID_ASSIGNEE"
 
 export interface CreateTicketSuccess {
   ok: true
@@ -50,6 +51,8 @@ const DASHBOARD_PATH = "/dashboard"
 const FORBIDDEN_MESSAGE = "Você não tem permissão para abrir chamados."
 const INVALID_TAG_MESSAGE =
   "Esta tag não está disponível. Escolha uma tag ativa do seu setor."
+const INVALID_ASSIGNEE_MESSAGE =
+  "Este destinatário não está disponível. Escolha uma pessoa ativa do seu setor."
 const UNEXPECTED_ERROR_MESSAGE =
   "Não foi possível abrir o chamado agora. Tente novamente."
 
@@ -69,6 +72,11 @@ const OUTCOME_FAILURES = {
     ok: false,
     code: "INVALID_TAG",
     message: INVALID_TAG_MESSAGE,
+  },
+  invalid_assignee: {
+    ok: false,
+    code: "INVALID_ASSIGNEE",
+    message: INVALID_ASSIGNEE_MESSAGE,
   },
 } satisfies Record<InsertTicketFailureStatus, TicketActionFailure>
 
@@ -110,6 +118,7 @@ export const createTicket = async (
       description: parsed.data.description,
       type: parsed.data.type,
       tagId: parsed.data.tagId,
+      assigneeId: parsed.data.assigneeId,
       createdBy: actor.id,
       originDepartmentId: facts.departmentId,
     })
@@ -121,6 +130,7 @@ export const createTicket = async (
   if (outcome.status !== "saved") return OUTCOME_FAILURES[outcome.status]
 
   revalidatePath(DASHBOARD_PATH)
+  revalidatePath(MY_TICKETS_PATH)
 
   return {
     ok: true,
@@ -130,7 +140,12 @@ export const createTicket = async (
 }
 
 export type EditTicketErrorCode =
-  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "INVALID_TAG" | "NO_CHANGES"
+  | "INVALID_INPUT"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "INVALID_TAG"
+  | "INVALID_ASSIGNEE"
+  | "NO_CHANGES"
 
 export interface EditTicketSuccess {
   ok: true
@@ -181,6 +196,11 @@ const EDIT_OUTCOME_FAILURES = {
     ok: false,
     code: "INVALID_TAG",
     message: INVALID_TAG_MESSAGE,
+  },
+  invalid_assignee: {
+    ok: false,
+    code: "INVALID_ASSIGNEE",
+    message: INVALID_ASSIGNEE_MESSAGE,
   },
   no_changes: {
     ok: false,

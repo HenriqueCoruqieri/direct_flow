@@ -15,9 +15,6 @@ import {
 
 import { TicketEditContext } from "../_hooks/use-ticket-edit"
 
-const UNAVAILABLE_TAG_HINT =
-  "A tag atual não está disponível. Escolha uma tag ativa do seu setor."
-
 interface TicketEditProviderProps {
   options: TicketEditFormOptions
   children: React.ReactNode
@@ -66,6 +63,16 @@ const TicketEditProvider = ({ options, children }: TicketEditProviderProps) => {
       return
     }
 
+    if (result.code === "INVALID_ASSIGNEE") {
+      form.setError(
+        "assigneeId",
+        { message: result.message },
+        { shouldFocus: true },
+      )
+      router.refresh()
+      return
+    }
+
     toast.error(result.message)
 
     if (result.code === "FORBIDDEN" || result.code === "NOT_FOUND") {
@@ -79,10 +86,9 @@ const TicketEditProvider = ({ options, children }: TicketEditProviderProps) => {
       value={{
         form,
         tags: options.tags,
-        tagHint:
-          options.defaults.tagId === undefined
-            ? UNAVAILABLE_TAG_HINT
-            : undefined,
+        tagHint: options.tagHint,
+        assignees: options.assignees,
+        assigneeHint: options.assigneeHint,
         includesSolution: options.includesSolution,
         isEditing,
         isSubmitting,

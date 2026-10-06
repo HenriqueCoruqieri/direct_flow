@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from "@/app/_components/ui/popover"
 
-interface ComboboxOption<TValue extends string | number> {
+export interface ComboboxOption<TValue extends string | number> {
   value: TValue
   label: string
 }

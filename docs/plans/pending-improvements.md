@@ -8,8 +8,10 @@ Contratos técnicos:
 - Entrega A — revisões de 2026-10-05 em `docs/contracts/registry-departments.md`
   (dialog, texto, link), `docs/contracts/registry-people.md` (filtros pela URL),
   `docs/contracts/my-tickets.md` e `docs/contracts/dashboard.md` (datas futuras).
-- Entrega B — revisões em `docs/contracts/ticket-creation.md` e
-  `docs/contracts/ticket-edit-window.md`, escritas na Onda 0 da entrega.
+- Entrega B — contrato `docs/contracts/ticket-assignee.md`, com revisões de
+  2026-10-05 em `docs/contracts/ticket-creation.md`,
+  `docs/contracts/ticket-edit.md`, `docs/contracts/ticket-edit-window.md` e
+  `docs/contracts/my-tickets.md`, escritas na Onda 0 da entrega.
 
 ---
 

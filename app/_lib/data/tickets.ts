@@ -9,6 +9,7 @@ import {
   isUsableTicketTag,
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
+import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import { AUTO_CLOSE_NOTE } from "@/app/_lib/domain/ticket-closure"
 import {
   canEditSolution,
@@ -132,6 +133,7 @@ export async function findTicketDetail(
         id: ticketHistory.id,
         event: ticketHistory.event,
         changedAt: ticketHistory.changedAt,
+        changedById: ticketHistory.changedBy,
         changedByName: changer.name,
         fromStatus: ticketHistory.fromStatus,
         toStatus: ticketHistory.toStatus,
@@ -140,6 +142,7 @@ export async function findTicketDetail(
         fromDepartmentName: fromDepartment.name,
         toDepartmentName: toDepartment.name,
         fromAssigneeName: fromAssignee.name,
+        toAssigneeId: ticketHistory.toAssigneeId,
         toAssigneeName: toAssignee.name,
         fromTagName: fromTag.name,
         toTagName: toTag.name,
@@ -184,6 +187,19 @@ export async function insertTicket(
       return { status: "invalid_tag" }
     }
 
+    const [assigneeRow] = await tx
+      .select({ departmentId: user.departmentId, isActive: user.isActive })
+      .from(user)
+      .where(eq(user.id, values.assigneeId))
+      .for("share")
+
+    if (
+      !assigneeRow ||
+      !isUsableTicketAssignee(assigneeRow, values.originDepartmentId)
+    ) {
+      return { status: "invalid_assignee" }
+    }
+
     const [created] = await tx
       .insert(ticket)
       .values({
@@ -193,6 +209,7 @@ export async function insertTicket(
         status: INITIAL_TICKET_STATUS,
         priority: INITIAL_TICKET_PRIORITY,
         createdBy: values.createdBy,
+        assignedTo: values.assigneeId,
         originDepartmentId: values.originDepartmentId,
         currentDepartmentId: values.originDepartmentId,
       })
@@ -211,6 +228,7 @@ export async function insertTicket(
       toStatus: INITIAL_TICKET_STATUS,
       toPriority: INITIAL_TICKET_PRIORITY,
       toDepartmentId: values.originDepartmentId,
+      toAssigneeId: values.assigneeId,
       changedAt: created.createdAt,
     })
 
@@ -317,12 +335,26 @@ export async function updateTicketByAuthor(
       return { status: "invalid_tag" }
     }
 
+    const [chosenAssigneeRow] = await tx
+      .select({ departmentId: user.departmentId, isActive: user.isActive })
+      .from(user)
+      .where(eq(user.id, values.assigneeId))
+      .for("share")
+
+    if (
+      !chosenAssigneeRow ||
+      !isUsableTicketAssignee(chosenAssigneeRow, editor.departmentId)
+    ) {
+      return { status: "invalid_assignee" }
+    }
+
     const changes = diffTicketEdit(
       {
         title: ticketRow.title,
         description: ticketRow.description,
         type: ticketRow.type,
         tagId: currentTagRow?.tagId ?? null,
+        assignedTo: ticketRow.assignedTo,
         solution: ticketRow.solution,
       },
       values,
@@ -339,6 +371,7 @@ export async function updateTicketByAuthor(
         description: values.description,
         type: values.type,
         ...(changes.solution ? { solution: values.solution } : {}),
+        ...(changes.assignee ? { assignedTo: values.assigneeId } : {}),
         updatedAt: changedAt,
       })
       .where(eq(ticket.id, ticketId))
@@ -373,6 +406,17 @@ export async function updateTicketByAuthor(
         event: "mudanca_tag",
         fromTagId: changes.tag.fromTagId,
         toTagId: changes.tag.toTagId,
+        changedAt,
+      })
+    }
+
+    if (changes.assignee) {
+      await tx.insert(ticketHistory).values({
+        ticketId,
+        changedBy: authorId,
+        event: "atribuicao",
+        fromAssigneeId: changes.assignee.fromAssigneeId,
+        toAssigneeId: changes.assignee.toAssigneeId,
         changedAt,
       })
     }

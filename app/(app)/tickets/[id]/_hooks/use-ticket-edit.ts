@@ -2,12 +2,15 @@ import { createContext, useContext } from "react"
 import type { UseFormReturn } from "react-hook-form"
 
 import type { TagOption } from "@/app/_lib/types/tag"
+import type { AssigneeOption } from "@/app/_lib/types/ticket"
 import type { EditTicketInput } from "@/app/_lib/validation/ticket"
 
 export interface TicketEditContextValue {
   form: UseFormReturn<EditTicketInput>
   tags: readonly TagOption[]
   tagHint: string | undefined
+  assignees: readonly AssigneeOption[]
+  assigneeHint: string | undefined
   includesSolution: boolean
   isEditing: boolean
   isSubmitting: boolean

@@ -60,11 +60,16 @@ const replacement = (
   return texts.unknown
 }
 
+const assignedToSomeoneElse = (entry: TicketHistoryEntry): string =>
+  entry.toAssigneeName && entry.toAssigneeId !== entry.changedById
+    ? ` e o atribuiu a ${entry.toAssigneeName}`
+    : ""
+
 type HistoryEntryDescriber = (entry: TicketHistoryEntry) => string
 
 const HISTORY_EVENT_DESCRIBERS = {
   criacao: (entry) =>
-    `Abriu o chamado${entry.toDepartmentName ? ` em ${entry.toDepartmentName}` : ""}${withStatus(entry.toStatus)}.`,
+    `Abriu o chamado${entry.toDepartmentName ? ` em ${entry.toDepartmentName}` : ""}${withStatus(entry.toStatus)}${assignedToSomeoneElse(entry)}.`,
   mudanca_status: (entry) =>
     `Alterou o status${fromTo(statusLabel(entry.fromStatus), statusLabel(entry.toStatus))}.`,
   mudanca_prioridade: (entry) =>
@@ -72,9 +77,9 @@ const HISTORY_EVENT_DESCRIBERS = {
   atribuicao: (entry) =>
     replacement(entry.fromAssigneeName, entry.toAssigneeName, {
       set: (to) => `Atribuiu o chamado a ${to}.`,
-      replaced: (from, to) => `Trocou o responsável de ${from} para ${to}.`,
-      removed: (from) => `Removeu ${from} como responsável.`,
-      unknown: "Alterou o responsável.",
+      replaced: (from, to) => `Trocou o destinatário de ${from} para ${to}.`,
+      removed: (from) => `Removeu o destinatário ${from}.`,
+      unknown: "Alterou o destinatário.",
     }),
   transferencia_solicitada: (entry) =>
     `Solicitou a transferência${fromTo(entry.fromDepartmentName, entry.toDepartmentName)}.`,

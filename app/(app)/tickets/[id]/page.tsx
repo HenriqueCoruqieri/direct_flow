@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { requireSession } from "@/app/_lib/auth/session"
+import { listTicketAssigneeOptions } from "@/app/_lib/data/people"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
@@ -69,15 +70,17 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   const conclusion = ticketConclusionStateFor(actor, ticket, now)
   const commentForm = ticketCommentFormStateFor(actor, ticket, now)
 
-  const [messages, editTags] = await Promise.all([
+  const isEditable = editButton.state === "editable"
+  const [messages, editTags, editAssignees] = await Promise.all([
     listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
-    editButton.state === "editable"
-      ? listActiveDepartmentTags(facts.departmentId)
-      : null,
+    isEditable ? listActiveDepartmentTags(facts.departmentId) : null,
+    isEditable ? listTicketAssigneeOptions(facts.departmentId) : null,
   ])
 
   const editOptions =
-    editTags !== null ? buildTicketEditFormOptions(ticket, editTags) : null
+    editTags !== null && editAssignees !== null
+      ? buildTicketEditFormOptions(ticket, editTags, editAssignees)
+      : null
   const editable = editOptions !== null
 
   const content = (

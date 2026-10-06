@@ -1,5 +1,7 @@
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
+  AssigneeOption,
+  TicketInvalidAssignee,
   TicketInvalidTag,
   TicketStatus,
   TicketType,
@@ -60,6 +62,7 @@ export interface TicketEditSnapshot {
   description: string
   type: TicketType
   tagId: number | null
+  assignedTo: number | null
   solution: string | null
 }
 
@@ -73,6 +76,7 @@ export interface TicketEditValues {
   description: string
   type: TicketType
   tagId: number
+  assigneeId: number
   solution?: string
 }
 
@@ -86,11 +90,17 @@ export interface TicketTagChange {
   toTagId: number
 }
 
+export interface TicketAssigneeChange {
+  fromAssigneeId: number | null
+  toAssigneeId: number
+}
+
 export interface TicketEditChanges {
   title: boolean
   description: boolean
   type: TicketTypeChange | null
   tag: TicketTagChange | null
+  assignee: TicketAssigneeChange | null
   solution: boolean
 }
 
@@ -122,6 +132,7 @@ export type UpdateTicketByAuthorOutcome =
   | TicketNotFound
   | TicketNotEditable
   | TicketInvalidTag
+  | TicketInvalidAssignee
   | TicketNoChanges
 
 export interface EditTicketFormDefaults {
@@ -130,11 +141,15 @@ export interface EditTicketFormDefaults {
   description: string
   type: TicketType
   tagId?: number
+  assigneeId?: number
   solution?: string
 }
 
 export interface TicketEditFormOptions {
   defaults: EditTicketFormDefaults
   tags: TagOption[]
+  tagHint?: string
+  assignees: AssigneeOption[]
+  assigneeHint?: string
   includesSolution: boolean
 }

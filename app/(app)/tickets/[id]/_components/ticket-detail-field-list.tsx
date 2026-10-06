@@ -1,3 +1,5 @@
+import { cn } from "@/app/_lib/utils"
+
 export const TICKET_DETAIL_FIELD_GRID_CLASS =
   "grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-1"
 
@@ -8,11 +10,15 @@ interface TicketDetailField {
 
 interface TicketDetailFieldListProps {
   fields: TicketDetailField[]
+  className?: string
 }
 
-const TicketDetailFieldList = ({ fields }: TicketDetailFieldListProps) => {
+const TicketDetailFieldList = ({
+  fields,
+  className,
+}: TicketDetailFieldListProps) => {
   return (
-    <dl className={TICKET_DETAIL_FIELD_GRID_CLASS}>
+    <dl className={cn(TICKET_DETAIL_FIELD_GRID_CLASS, className)}>
       {fields.map((field) => (
         <div key={field.label} className="flex min-w-0 flex-col gap-0.5">
           <dt className="text-xs font-bold text-muted-foreground">

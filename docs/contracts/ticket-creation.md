@@ -37,6 +37,28 @@ estão (`aguardando_aprovacao`, transferência pendente sem justificativa: #66,
 Os textos de bloqueio `DEPARTMENT_UNASSIGNED` e `DEPARTMENT_WITHOUT_TAGS`
 passaram a terminar em "informe sua liderança" (alteração do usuário).
 
+## Revisão de 2026-10-05 — destinatário
+
+Decidida no plano `docs/plans/pending-improvements.md` (Entrega B) e
+especificada em `docs/contracts/ticket-assignee.md`, que prevalece sobre este
+documento no que diverge. Resumo:
+
+- O "Novo chamado" ganha **Criador** (somente leitura, nome de quem abre, fora
+  do formulário) e **Destinatário** (combobox obrigatório, padrão = o autor,
+  opções = pessoas ativas do setor do autor), depois da Tag.
+- `createTicketSchema` ganha `assigneeId` (`Selecione o destinatário.`).
+  `InsertTicketValues` ganha `assigneeId`; `InsertTicketOutcome` ganha
+  `invalid_assignee`; `NewTicketFormAvailable` ganha `assignees`,
+  `creatorName` e `defaults`.
+- `buildNewTicketFormOptions(author, creator, tags, assignees)`: dois
+  parâmetros novos.
+- `insertTicket` valida o destinatário sob trava (`users for share`) depois da
+  tag, grava `ticket.assigned_to` e a `criacao` com `to_assignee_id`. A frase
+  "`assignedTo` … ficam nulos" do passo 2 abaixo deixa de valer para
+  `assignedTo`.
+- `createTicket` ganha o código `INVALID_ASSIGNEE` e revalida também
+  `MY_TICKETS_PATH`. O `AppTopBar` carrega a lista de atribuíveis e o criador.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

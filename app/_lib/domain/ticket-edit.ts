@@ -3,9 +3,13 @@ import {
   RESOLVED_TICKET_STATUS,
   TICKET_TYPE_LABELS,
 } from "@/app/_lib/domain/ticket"
+import {
+  assigneeEditHintFor,
+  preselectedAssigneeId,
+} from "@/app/_lib/domain/ticket-assignee"
 import { isTicketLocked } from "@/app/_lib/domain/ticket-closure"
 import type { TagOption } from "@/app/_lib/types/tag"
-import type { TicketStatus } from "@/app/_lib/types/ticket"
+import type { AssigneeOption, TicketStatus } from "@/app/_lib/types/ticket"
 import type {
   EditTicketFormDefaults,
   TicketEditabilityFacts,
@@ -30,6 +34,21 @@ const TICKET_STATUS_IS_EDITABLE_BY_AUTHOR = {
   fechado: false,
   cancelado: false,
 } as const satisfies Record<TicketStatus, boolean>
+
+export const UNAVAILABLE_TAG_HINT =
+  "A tag atual não está disponível. Escolha uma tag ativa do seu setor."
+
+const preselectedTagId = (
+  tagId: number | null,
+  tags: readonly TagOption[],
+): number | undefined =>
+  tagId !== null && tags.some((tag) => tag.id === tagId) ? tagId : undefined
+
+export const tagEditHintFor = (
+  tagId: number | null,
+  tags: readonly TagOption[],
+): string | undefined =>
+  preselectedTagId(tagId, tags) === undefined ? UNAVAILABLE_TAG_HINT : undefined
 
 export const isAuthorEditableStatus = (status: TicketStatus): boolean =>
   TICKET_STATUS_IS_EDITABLE_BY_AUTHOR[status]
@@ -98,11 +117,8 @@ export const ticketEditButtonStateFor = (
 export const buildTicketEditFormOptions = (
   ticket: TicketEditSource,
   tags: readonly TagOption[],
+  assignees: readonly AssigneeOption[],
 ): TicketEditFormOptions => {
-  const tagId =
-    ticket.tagId !== null && tags.some((tag) => tag.id === ticket.tagId)
-      ? ticket.tagId
-      : undefined
   const includesSolution = canEditSolution(ticket.status)
 
   const defaults: EditTicketFormDefaults = {
@@ -110,7 +126,8 @@ export const buildTicketEditFormOptions = (
     title: ticket.title,
     description: ticket.description,
     type: ticket.type,
-    tagId,
+    tagId: preselectedTagId(ticket.tagId, tags),
+    assigneeId: preselectedAssigneeId(ticket.assignedTo, assignees),
   }
 
   return {
@@ -118,6 +135,9 @@ export const buildTicketEditFormOptions = (
       ? { ...defaults, solution: ticket.solution ?? "" }
       : defaults,
     tags: [...tags],
+    tagHint: tagEditHintFor(ticket.tagId, tags),
+    assignees: [...assignees],
+    assigneeHint: assigneeEditHintFor(ticket.assignedTo, assignees),
     includesSolution,
   }
 }
@@ -134,6 +154,10 @@ export const diffTicketEdit = (
     current.tagId === next.tagId
       ? null
       : { fromTagId: current.tagId, toTagId: next.tagId },
+  assignee:
+    current.assignedTo === next.assigneeId
+      ? null
+      : { fromAssigneeId: current.assignedTo, toAssigneeId: next.assigneeId },
   solution: next.solution !== undefined && current.solution !== next.solution,
 })
 
@@ -142,6 +166,7 @@ export const hasTicketEditChanges = (changes: TicketEditChanges): boolean =>
   changes.description ||
   changes.type !== null ||
   changes.tag !== null ||
+  changes.assignee !== null ||
   changes.solution
 
 const joinWithAnd = (items: readonly string[]): string =>
@@ -157,6 +182,7 @@ export const describeTicketEditNote = (changes: TicketEditChanges): string => {
       ? `tipo (${TICKET_TYPE_LABELS[changes.type.from]} → ${TICKET_TYPE_LABELS[changes.type.to]})`
       : null,
     changes.tag ? "tag" : null,
+    changes.assignee ? "destinatário" : null,
     changes.solution ? "solução" : null,
   ].filter((part): part is string => part !== null)
 

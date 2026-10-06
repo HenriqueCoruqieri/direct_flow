@@ -38,11 +38,27 @@ export interface TicketTagFacts {
   isActive: boolean
 }
 
+export interface TicketAssigneeFacts {
+  departmentId: number
+  isActive: boolean
+}
+
+export interface AssigneeOption {
+  id: number
+  name: string
+}
+
+export interface TicketCreatorFacts {
+  id: number
+  name: string
+}
+
 export interface InsertTicketValues {
   title: string
   description: string
   type: TicketType
   tagId: number
+  assigneeId: number
   createdBy: number
   originDepartmentId: number
 }
@@ -56,11 +72,25 @@ export interface TicketInvalidTag {
   status: "invalid_tag"
 }
 
-export type InsertTicketOutcome = TicketSaved | TicketInvalidTag
+export interface TicketInvalidAssignee {
+  status: "invalid_assignee"
+}
+
+export type InsertTicketOutcome =
+  TicketSaved | TicketInvalidTag | TicketInvalidAssignee
+
+export interface NewTicketFormDefaults {
+  title: string
+  description: string
+  assigneeId?: number
+}
 
 export interface NewTicketFormAvailable {
   canCreate: true
   tags: TagOption[]
+  assignees: AssigneeOption[]
+  creatorName: string
+  defaults: NewTicketFormDefaults
 }
 
 export interface NewTicketFormBlocked {
@@ -103,6 +133,7 @@ export interface TicketHistoryEntry {
   id: number
   event: HistoryEvent
   changedAt: Date
+  changedById: number | null
   changedByName: string | null
   fromStatus: TicketStatus | null
   toStatus: TicketStatus | null
@@ -111,6 +142,7 @@ export interface TicketHistoryEntry {
   fromDepartmentName: string | null
   toDepartmentName: string | null
   fromAssigneeName: string | null
+  toAssigneeId: number | null
   toAssigneeName: string | null
   fromTagName: string | null
   toTagName: string | null

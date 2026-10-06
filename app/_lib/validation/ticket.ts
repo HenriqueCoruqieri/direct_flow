@@ -59,6 +59,7 @@ export const createTicketSchema = z.object({
   description: ticketDescriptionSchema,
   type: ticketTypeSchema,
   tagId: registryIdSchema("Selecione a tag."),
+  assigneeId: registryIdSchema("Selecione o destinatário."),
 })
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>

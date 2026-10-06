@@ -15,6 +15,17 @@ que não é tocado aqui:
 
 Decisão de arquitetura: `docs/adr/014-scheduled-close-of-resolved-tickets.md`.
 
+> Revisão de 2026-10-05 (`docs/contracts/ticket-assignee.md`): o modo de edição
+> ganha o campo **Destinatário** (combobox na linha Destinatário do card
+> Detalhes, `Controller` de `assigneeId`, opções `options.assignees`, descrição
+> `options.assigneeHint`). O `page.tsx` carrega a lista de atribuíveis junto
+> com as tags no estado `editable`. `updateTicketByAuthor` valida o
+> destinatário depois da tag (`invalid_assignee`) e, se ele mudou, grava
+> `assigned_to` e a linha `atribuicao`. A precedência passa a `not_found` →
+> `not_editable` → `invalid_tag` → `invalid_assignee` → `no_changes`. O
+> provider trata `INVALID_ASSIGNEE` como `INVALID_TAG` (erro no campo, foco,
+> `router.refresh()`). Nota de `edicao`: "destinatário" entre tag e solução.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`, `react-hook-form@7.88`.
 

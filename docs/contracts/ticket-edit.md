@@ -39,6 +39,20 @@ e-mail.
 > mudanças; os cenários 2, 5 e 8 deste documento (dialog) são substituídos
 > pelos de `ticket-edit-window.md`.
 
+> Revisão de 2026-10-05 (`docs/contracts/ticket-assignee.md`): o autor passa a
+> trocar também o **destinatário** (`assigned_to`), nas mesmas condições de
+> edição. `editTicketSchema` ganha `assigneeId` por derivação;
+> `TicketEditSnapshot` ganha `assignedTo`, `TicketEditValues` ganha
+> `assigneeId`, `TicketEditChanges` ganha `assignee`, `EditTicketFormDefaults`
+> ganha `assigneeId?` e `TicketEditFormOptions` ganha `assignees` e
+> `assigneeHint?`; `UpdateTicketByAuthorOutcome` ganha `invalid_assignee`
+> (código `INVALID_ASSIGNEE`). `buildTicketEditFormOptions` recebe a lista de
+> atribuíveis. Nota de `edicao` na ordem título, descrição, tipo, tag,
+> **destinatário**, solução; a troca grava também `atribuicao` (de/para),
+> depois da `edicao` e da `mudanca_tag`. A frase "`assigned_to` nunca é escrito
+> aqui" deixa de valer: `updateTicketByAuthor` grava `assigned_to` quando o
+> destinatário muda.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

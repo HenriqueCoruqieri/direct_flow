@@ -13,6 +13,7 @@ import type {
   UpdatePersonOutcome,
   UpdatePersonValues,
 } from "@/app/_lib/types/person"
+import type { AssigneeOption } from "@/app/_lib/types/ticket"
 import { db } from "@/db"
 import { account } from "@/db/auth-schema"
 import { department, user } from "@/db/schema"
@@ -92,6 +93,16 @@ export async function listPeople(
           )
         : undefined,
     )
+    .orderBy(sql`lower(${user.name})`, user.id)
+}
+
+export async function listTicketAssigneeOptions(
+  departmentId: number,
+): Promise<AssigneeOption[]> {
+  return db
+    .select({ id: user.id, name: user.name })
+    .from(user)
+    .where(and(eq(user.departmentId, departmentId), eq(user.isActive, true)))
     .orderBy(sql`lower(${user.name})`, user.id)
 }
 
