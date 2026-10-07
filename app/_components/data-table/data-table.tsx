@@ -3,6 +3,7 @@
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  type ColumnVisibilityState,
   type RowData,
   useTable,
 } from "@tanstack/react-table"
@@ -65,7 +66,13 @@ interface DataTableProps<TData extends RowData> {
   rowHref?: (row: TData) => string
   toolbarFooter?: React.ReactNode
   initialColumnFilters?: ColumnFiltersState
+  hiddenColumns?: ReadonlyArray<string>
 }
+
+const hiddenColumnsVisibility = (
+  columnIds: ReadonlyArray<string>,
+): ColumnVisibilityState =>
+  Object.fromEntries(columnIds.map((columnId) => [columnId, false]))
 
 const DataTable = <TData extends RowData>({
   columns,
@@ -75,16 +82,18 @@ const DataTable = <TData extends RowData>({
   filters = [],
   rowHref,
   toolbarFooter,
-  initialColumnFilters,
+  initialColumnFilters = [],
+  hiddenColumns = [],
 }: DataTableProps<TData>) => {
   const router = useRouter()
   const table = useTable({
     features: dataTableFeatures,
     columns,
     data,
-    initialState: initialColumnFilters
-      ? { columnFilters: initialColumnFilters }
-      : undefined,
+    initialState: {
+      columnFilters: initialColumnFilters,
+      columnVisibility: hiddenColumnsVisibility(hiddenColumns),
+    },
   })
 
   const searchColumn = search ? table.getColumn(search.columnId) : undefined
@@ -163,7 +172,7 @@ const DataTable = <TData extends RowData>({
                       : undefined
                   }
                 >
-                  {row.getAllCells().map((cell) => (
+                  {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="px-4 py-3">
                       <table.FlexRender cell={cell} />
                     </TableCell>
@@ -173,7 +182,7 @@ const DataTable = <TData extends RowData>({
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={table.getAllLeafColumns().length}
+                  colSpan={table.getVisibleLeafColumns().length}
                   className="h-24 px-4 text-center text-muted-foreground"
                 >
                   {isFiltered

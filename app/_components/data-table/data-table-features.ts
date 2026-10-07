@@ -1,5 +1,6 @@
 import {
   columnFilteringFeature,
+  columnVisibilityFeature,
   constructFilterFn,
   createFilteredRowModel,
   filterFn_includesString,
@@ -18,6 +19,7 @@ const filterFn_inValues = constructFilterFn({
 
 export const dataTableFeatures = tableFeatures({
   columnFilteringFeature,
+  columnVisibilityFeature,
   filteredRowModel: createFilteredRowModel(),
   filterFns: {
     includesString: filterFn_includesString,

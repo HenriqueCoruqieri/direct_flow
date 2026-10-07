@@ -34,6 +34,20 @@ Decisão de arquitetura: `docs/adr/014-scheduled-close-of-resolved-tickets.md`.
 > janela não muda (`NON_FINAL_TICKET_STATUSES` e `isTicketLocked` intactos).
 > Cenário 21 atualizado.
 
+> Revisão de 2026-10-06 (`docs/contracts/queue-default-and-comment-edit.md`,
+> que prevalece no que diverge): (etapa 2) o campo Destinatário do modo de
+> edição ganha a opção **"Fila de {setor}"** (`options.queueLabel`, valor
+> `null`), pré-selecionada em chamado sem destinatário, sem dica;
+> `updateTicketByAuthor` aceita `assigneeId` nulo (sem checagem nem trava de
+> `users`) e a `atribuicao` de X para nulo grava também `to_department_id`.
+> (etapa 4) quando o destinatário muda num chamado `aberto`, `em_andamento` ou
+> `encaminhado`, o status segue `statusAfterReassignment` e uma
+> `mudanca_status` entra depois da `atribuicao`: a ordem das linhas passa a
+> `edicao` → `mudanca_tag` → `atribuicao` → `mudanca_status`. `resolvido` não
+> muda de status. (etapa 6) comentários continuam travados pela mesma regra e
+> passam a ser editáveis pelo autor enquanto `canCommentOnTicket` for
+> verdadeiro.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`, `react-hook-form@7.88`.
 

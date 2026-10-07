@@ -26,6 +26,26 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > Tabelas, Q2, Q3, Q6 e Q15 abaixo já estão atualizados; cenários novos em
 > "Aba Resolvidos".
 
+> Revisão de 2026-10-06 (`docs/contracts/queue-default-and-comment-edit.md`,
+> que prevalece no que diverge): (etapa 1) a tabela perde as colunas
+> **Criador** e **Destinatário** em qualquer largura; o filtro Destinatário
+> continua, numa coluna oculta (`DataTable` ganha suporte a coluna oculta).
+> (etapa 2) "Fila de {setor}" é o destinatário padrão da criação
+> (`assigned_to` nulo); `describeCurrentAssignee(null)` passa a
+> `Este chamado está na fila do setor.` e o conflito com destinatário nulo,
+> agora alcançável pela devolução à fila no "Editar", passa a
+> `Este chamado voltou para a fila do setor. Confira a lista atualizada.`
+> (etapa 3) `isTicketTaken` = `assignedTo !== null`: "Assumir" só em chamado na
+> fila; o risco 1 abaixo ("assumido é inferido") deixa de valer e chamados
+> antigos com destinatário = autor contam como assumidos. (etapa 4) a decisão
+> "Efeito: status não muda" deixa de valer: `assignTicket` move o status pela
+> regra de atribuição e grava `mudanca_status` depois da `atribuicao`.
+> (etapa 5) as frases de `atribuicao` mudam. Ficam superados: a preparação
+> (`#F1` e `#F3` "com destinatário padrão (`M`)" — o padrão agora é a fila), Q2
+> (colunas), Q13–Q16 (botões de chamado com destinatário = autor), Q17 e Q20
+> ("status inalterado") e Q18 (frase). Os cenários válidos estão no contrato
+> novo.
+
 ## Escopo técnico em uma frase
 
 Uma tela nova (`/queue`), duas leituras e uma escrita: a escrita troca só

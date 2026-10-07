@@ -20,6 +20,20 @@ Padrões de outcome, de resultado de action e de formulário vêm de
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 
+> Revisão de 2026-10-06 (`docs/contracts/queue-default-and-comment-edit.md`,
+> que prevalece no que diverge): (etapa 2) o destinatário padrão do "Novo
+> chamado" passa a ser **"Fila de {setor}"** (`assigneeId: null`, primeira
+> opção do combobox), também disponível no "Editar"; `assigneeId` fica
+> nulo-ável em `createTicketSchema`, `InsertTicketValues`, `TicketEditValues`
+> e `TicketAssigneeChange.toAssigneeId`, e ganha o limite de `integer` (fecha o
+> risco 8); `preselectedAssigneeId(null)` → `null`; `MISSING_ASSIGNEE_HINT`
+> sai; o detalhe mostra `Fila de {setor}` no lugar de `—`; devolver à fila
+> grava `atribuicao` de X para nulo com `to_department_id`;
+> `buildNewTicketFormOptions` ganha `departmentName`. (etapa 4) o status
+> acompanha a atribuição. (etapa 5) as frases de `criacao` e `atribuicao`
+> abaixo são substituídas. Ficam superados os cenários 1, 3, 4 e 5 (padrão =
+> autor), 6 e 13 (frases), 21 e 22 (`—` e dica de chamado sem destinatário).
+
 ## Escopo técnico em uma frase
 
 Todo chamado novo nasce com destinatário (`ticket.assigned_to`), escolhido entre

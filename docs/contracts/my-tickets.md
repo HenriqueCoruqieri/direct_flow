@@ -67,6 +67,23 @@ contrato próprio: `docs/contracts/ticket-edit.md`.
 > tabelas de domínio e os cenários 2, 3, 4, 10, 24 e 27 abaixo já estão
 > atualizados; cenários novos em "Cenários da aba Resolvidos".
 
+> Revisão de 2026-10-06 (`docs/contracts/queue-default-and-comment-edit.md`,
+> que prevalece no que diverge): (etapa 2) no detalhe, Destinatário nulo mostra
+> `Fila de {setor do chamado}` (`describeTicketAssignee`) no lugar de `—`.
+> (etapa 5) na linha do tempo, as frases de `criacao` e `atribuicao` passam a
+> **começar pelo nome de quem agiu** e, no encaminhamento, a citar o setor
+> **atual** dessa pessoa (`TicketHistoryEntry.changedByDepartmentName`, por
+> join em `users.department_id`): `{user} abriu o chamado em {setor}.`,
+> `{user} abriu e assumiu o chamado.`,
+> `{user} do setor {setor} abriu o chamado e o encaminhou para {nome}.`,
+> `{user} assumiu o chamado.`,
+> `{user} do setor {setor} encaminhou o chamado para {nome}.`,
+> `{user} devolveu o chamado à fila de {setor}.` A frase "sem o nome de quem
+> fez" da tabela de `ticket-history.ts` abaixo deixa de valer para esses dois
+> eventos (`historyEntryNamesActor`), e as linhas `criacao` e `atribuicao` da
+> tabela ficam superadas. Demais eventos e rótulos não mudam. As frases são
+> montadas na leitura e valem também para eventos antigos.
+
 ## Adendo — filtro por data de abertura
 
 Acrescentado em 2026-10-01. Decisões no plano (`docs/plans/my-tickets.md`, seção

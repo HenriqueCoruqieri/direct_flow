@@ -11,7 +11,6 @@ import {
   NO_ASSIGNEE_LABEL,
   queueRowActionsFor,
 } from "@/app/_lib/domain/department-queue"
-import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import type {
   DepartmentQueueListItem,
   DepartmentQueueTab,
@@ -37,6 +36,9 @@ const columnHelper = createColumnHelper<
 >()
 const shared = createTicketListColumns<DepartmentQueueListItem>()
 
+const ASSIGNEE_COLUMN_ID = "assignee"
+const HIDDEN_COLUMNS = [ASSIGNEE_COLUMN_ID] as const
+
 const buildColumns = (
   viewer: TicketActorFacts,
   onSend: (ticket: DepartmentQueueListItem) => void,
@@ -46,17 +48,12 @@ const buildColumns = (
     shared.search,
     shared.type,
     shared.tag,
-    columnHelper.accessor("creatorName", {
-      header: "Criador",
-    }),
     columnHelper.accessor(
       (row) =>
         row.assignedTo === null ? NONE_FILTER_VALUE : String(row.assignedTo),
       {
-        id: "assignee",
-        header: "Destinatário",
+        id: ASSIGNEE_COLUMN_ID,
         filterFn: "inValues",
-        cell: ({ row }) => row.original.assigneeName ?? EMPTY_VALUE_LABEL,
       },
     ),
     shared.status,
@@ -84,7 +81,7 @@ const assigneeFiltersFor = (
     tickets,
     (ticket) => ({ id: ticket.assignedTo, name: ticket.assigneeName }),
     {
-      columnId: "assignee",
+      columnId: ASSIGNEE_COLUMN_ID,
       label: "Destinatário",
       noneLabel: NO_ASSIGNEE_LABEL,
     },
@@ -140,6 +137,7 @@ const DepartmentQueueTable = ({
         filters={filters}
         rowHref={ticketRowHref}
         toolbarFooter={toolbarFooter}
+        hiddenColumns={HIDDEN_COLUMNS}
       />
       {sendTarget !== null ? (
         <SendTicketDialog

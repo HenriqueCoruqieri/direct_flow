@@ -59,6 +59,21 @@ documento no que diverge. Resumo:
 - `createTicket` ganha o código `INVALID_ASSIGNEE` e revalida também
   `MY_TICKETS_PATH`. O `AppTopBar` carrega a lista de atribuíveis e o criador.
 
+## Revisão de 2026-10-06 — fila como padrão e status inicial
+
+Especificada em `docs/contracts/queue-default-and-comment-edit.md`, que
+prevalece sobre este documento no que diverge. Resumo:
+
+- (etapa 2) O destinatário padrão passa a ser **"Fila de {setor}"**
+  (`assigneeId: null`, `assigned_to` nulo). `buildNewTicketFormOptions` ganha
+  `departmentName` (setor do autor) e devolve `queueLabel`; o `AppTopBar` lê o
+  nome do setor com `findDepartmentName`. Na fila, `insertTicket` não lê nem
+  trava `users`.
+- (etapa 4) "Todo chamado nasce `aberto`" deixa de valer: o status inicial vem
+  de `creationStatusFor` — fila → `aberto`, o próprio autor → `em_andamento`,
+  colega → `encaminhado` — e é gravado no chamado e no `to_status` da
+  `criacao`. `INITIAL_TICKET_STATUS` sai do domínio.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

@@ -46,6 +46,19 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > (`/queue`): o chamado sai de "Em aberto" e entra em "Resolvidos" da Fila.
 > Cenário 7 abaixo atualizado.
 
+> Revisão de 2026-10-06 (`docs/contracts/queue-default-and-comment-edit.md`,
+> etapa 6, que prevalece no que diverge): **comentário passa a ser editável**
+> por quem o escreveu, enquanto `canCommentOnTicket` for verdadeiro, só o
+> texto (a visibilidade não muda), com a marca `(editado)` quando
+> `updated_at` ≠ `created_at`; o texto anterior não é guardado e nada entra em
+> `ticket_history`. `TicketMessageItem` ganha `authorId` e `updatedAt`
+> (`listTicketMessages` os seleciona). Novos: `canSeeTicketMessage` (a regra
+> de visibilidade por mensagem que o escopo já traduz em SQL),
+> `ticketCommentEditBlockFor`/`canEditTicketComment`, `editTicketCommentSchema`,
+> `updateTicketMessage` (trava `ticket` `for share` → `users` → `message`
+> `for update`) e a action `editTicketComment`. O formulário de novo
+> comentário e a regra de quem comenta não mudam.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)
