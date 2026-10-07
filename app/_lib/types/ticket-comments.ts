@@ -2,7 +2,11 @@ import type {
   TicketStatus,
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
-import type { TicketNotFound } from "@/app/_lib/types/ticket-edit"
+import type {
+  TicketNoChanges,
+  TicketNotEditable,
+  TicketNotFound,
+} from "@/app/_lib/types/ticket-edit"
 import type { MessageVisibility } from "@/db/schema"
 
 export type { MessageVisibility }
@@ -41,11 +45,29 @@ export interface TicketMessageScope {
 
 export interface TicketMessageItem {
   id: number
+  authorId: number
   authorName: string
   content: string
   visibility: MessageVisibility
   createdAt: Date
+  updatedAt: Date
 }
+
+export interface TicketMessageAuthorFacts {
+  authorId: number
+}
+
+export interface TicketMessageVisibilityFacts extends TicketMessageAuthorFacts {
+  visibility: MessageVisibility
+}
+
+export interface TicketMessageTimestamps {
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type TicketCommentEditBlockReason =
+  TicketCommentBlockReason | "NOT_COMMENT_AUTHOR"
 
 export interface InsertTicketMessageValues {
   ticketId: number
@@ -71,4 +93,20 @@ export interface TicketCommentFormDefaults {
   ticketId: number
   content: string
   isPrivate: boolean
+}
+
+export interface UpdateTicketMessageValues {
+  ticketId: number
+  messageId: number
+  editorId: number
+  content: string
+}
+
+export type UpdateTicketMessageOutcome =
+  TicketMessageSaved | TicketNotFound | TicketNotEditable | TicketNoChanges
+
+export interface EditTicketCommentFormDefaults {
+  ticketId: number
+  messageId: number
+  content: string
 }

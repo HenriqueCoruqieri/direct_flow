@@ -12,6 +12,7 @@ import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
 import {
+  canEditTicketComment,
   ticketCommentFormStateFor,
   ticketMessageScopeFor,
 } from "@/app/_lib/domain/ticket-comments"
@@ -82,6 +83,10 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
       ? buildTicketEditFormOptions(ticket, editTags, editAssignees)
       : null
   const editable = editOptions !== null
+  const commentEntries = messages.map((message) => ({
+    message,
+    canEdit: canEditTicketComment(actor, ticket, message, now),
+  }))
 
   const content = (
     <div className="flex flex-col gap-5.5 px-5 pt-5 pb-8 lg:px-6">
@@ -129,7 +134,7 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
           <TicketDetailFields ticket={ticket} editable={editable} />
           <TicketComments
             ticketId={ticket.id}
-            messages={messages}
+            entries={commentEntries}
             form={commentForm}
             className="lg:flex-1"
           />

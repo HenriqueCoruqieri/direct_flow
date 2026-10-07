@@ -846,7 +846,9 @@ message, now)` com o mesmo `now` da página; o resultado chega ao item como
   React Hook Form + `zodResolver(editTicketCommentSchema)`, `defaultValues =
 buildEditTicketCommentFormDefaults(ticketId, message)`; `Textarea` com foco;
   botões `Cancelar` e `SAVE_COMMENT_LABEL` (`SAVE_COMMENT_PENDING_LABEL` durante
-  o envio). Um comentário em edição por vez (recomendação).
+  o envio). Um comentário em edição por vez (recomendação). **Não aplicada
+  pelo `df-ui`:** cada editor tem estado próprio e os envios são
+  independentes; sem impacto em dados.
 - Resultado do `editTicketComment`:
   - `ok` → `toast.success(message)`, sai da edição (a revalidação traz o texto
     novo e o "(editado)").
@@ -929,6 +931,9 @@ A publica `[QA] Público do admin`. Anotar os ids das três mensagens (`m1`,
 - [x] Etapa 5 — `changedByDepartmentName`, frases, `historyEntryNamesActor` (`df-architect`)
 - [x] Etapa 5 — `findTicketDetail` com o setor de quem agiu (`df-data`)
 - [x] Etapa 5 — linha do tempo (`df-ui`)
-- [ ] Etapa 6 — tipos, regra e `editTicketCommentSchema` (`df-architect`); `listTicketMessages` e `updateTicketMessage` (`df-data`); `editTicketComment` (`df-actions`); lista e edição em linha (`df-ui`)
+- [x] Etapa 6 — tipos, `canSeeTicketMessage`, `ticketCommentEditBlockFor`/`canEditTicketComment`, `isTicketMessageEdited`, `buildEditTicketCommentFormDefaults`, textos e `editTicketCommentSchema` (`df-architect`)
+- [x] Etapa 6 — `listTicketMessages` com `authorId`/`updatedAt` e `updateTicketMessage` (`df-data`)
+- [x] Etapa 6 — `editTicketComment` (`df-actions`)
+- [x] Etapa 6 — "(editado)", botão "Editar" e edição em linha (`df-ui`)
 - [ ] Cenários do `df-qa` (bateria inteira, uma vez)
 - [ ] Em cada etapa: `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem bloqueante

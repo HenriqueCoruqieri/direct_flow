@@ -6,12 +6,18 @@ import type {
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
 import type {
+  EditTicketCommentFormDefaults,
   MessageVisibility,
   TicketCommentBlockReason,
+  TicketCommentEditBlockReason,
   TicketCommentFacts,
   TicketCommentFormDefaults,
   TicketCommentFormState,
+  TicketMessageAuthorFacts,
+  TicketMessageItem,
   TicketMessageScope,
+  TicketMessageTimestamps,
+  TicketMessageVisibilityFacts,
 } from "@/app/_lib/types/ticket-comments"
 
 export const TICKET_COMMENT_MIN_LENGTH = 1
@@ -28,6 +34,16 @@ export const TICKET_COMMENTS_CLOSED_MESSAGE =
   "Este chamado foi encerrado e não recebe novos comentários."
 
 export const TICKET_COMMENT_ADDED_MESSAGE = "Comentário publicado."
+
+export const EDIT_COMMENT_LABEL = "Editar"
+
+export const SAVE_COMMENT_LABEL = "Salvar"
+
+export const SAVE_COMMENT_PENDING_LABEL = "Salvando…"
+
+export const EDITED_COMMENT_LABEL = "(editado)"
+
+export const TICKET_COMMENT_EDITED_MESSAGE = "Comentário atualizado."
 
 export const ticketCommentBlockFor = (
   commenter: TicketActorFacts,
@@ -85,3 +101,44 @@ export const isPrivateMessage = (visibility: MessageVisibility): boolean =>
 export const buildTicketCommentFormDefaults = (
   ticketId: number,
 ): TicketCommentFormDefaults => ({ ticketId, content: "", isPrivate: false })
+
+export const canSeeTicketMessage = (
+  viewer: TicketViewerFacts,
+  ticket: Pick<TicketVisibilityFacts, "currentDepartmentId">,
+  message: TicketMessageVisibilityFacts,
+): boolean =>
+  !isPrivateMessage(message.visibility) ||
+  canSeeInternalComments(viewer, ticket) ||
+  message.authorId === viewer.userId
+
+export const ticketCommentEditBlockFor = (
+  editor: TicketActorFacts,
+  ticket: TicketCommentFacts,
+  message: TicketMessageAuthorFacts,
+  now: Date,
+): TicketCommentEditBlockReason | null => {
+  const reason = ticketCommentBlockFor(editor, ticket, now)
+  if (reason !== null) return reason
+  if (message.authorId !== editor.userId) return "NOT_COMMENT_AUTHOR"
+  return null
+}
+
+export const canEditTicketComment = (
+  editor: TicketActorFacts,
+  ticket: TicketCommentFacts,
+  message: TicketMessageAuthorFacts,
+  now: Date,
+): boolean => ticketCommentEditBlockFor(editor, ticket, message, now) === null
+
+export const isTicketMessageEdited = (
+  message: TicketMessageTimestamps,
+): boolean => message.updatedAt.getTime() !== message.createdAt.getTime()
+
+export const buildEditTicketCommentFormDefaults = (
+  ticketId: number,
+  message: Pick<TicketMessageItem, "id" | "content">,
+): EditTicketCommentFormDefaults => ({
+  ticketId,
+  messageId: message.id,
+  content: message.content,
+})
