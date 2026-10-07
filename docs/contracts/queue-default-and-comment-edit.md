@@ -915,7 +915,7 @@ A publica `[QA] Público do admin`. Anotar os ids das três mensagens (`m1`,
 - [x] Etapa 2 — tipos, `queueAssigneeLabel`, `describeTicketAssignee`, `preselectedAssigneeId`/`assigneeEditHintFor` com nulo, `buildNewTicketFormOptions` com setor, `queueLabel` na edição, textos do "Enviar", `assigneeId` nulo-ável (`df-architect`)
 - [x] Etapa 2 — `findDepartmentName`, `insertTicket` e `updateTicketByAuthor` com fila (`df-data`)
 - [x] Etapa 2 — `AppTopBar`, campo, formulários e detalhe (`df-ui`)
-- [ ] Etapa 3 — `isTicketTaken` (`df-architect`)
+- [x] Etapa 3 — `isTicketTaken` (`df-architect`)
 - [ ] Etapa 4 — `TicketAssigneeTarget` e regra de status; sai `INITIAL_TICKET_STATUS` (`df-architect`); status e `mudanca_status` em `insertTicket`, `updateTicketByAuthor` e `assignTicket` (`df-data`)
 - [ ] Etapa 5 — `changedByDepartmentName`, frases, `historyEntryNamesActor` (`df-architect`); `findTicketDetail` (`df-data`); linha do tempo (`df-ui`)
 - [ ] Etapa 6 — tipos, regra e `editTicketCommentSchema` (`df-architect`); `listTicketMessages` e `updateTicketMessage` (`df-data`); `editTicketComment` (`df-actions`); lista e edição em linha (`df-ui`)

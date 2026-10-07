@@ -62,7 +62,7 @@ export const isTicketDispatcher = (
   (actor.role === "admin" && actor.departmentId === departmentId)
 
 export const isTicketTaken = (ticket: TicketVisibilityFacts): boolean =>
-  ticket.assignedTo !== null && ticket.assignedTo !== ticket.createdBy
+  ticket.assignedTo !== null
 
 const actorBlockFor = (
   actor: TicketActorFacts,
