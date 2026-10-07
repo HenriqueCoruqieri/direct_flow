@@ -5,6 +5,8 @@ import type {
 } from "@/app/_lib/types/ticket"
 import type { TicketNotFound } from "@/app/_lib/types/ticket-edit"
 
+export type TicketAssigneeTarget = "queue" | "actor" | "colleague"
+
 export interface TicketAssignmentFacts extends TicketVisibilityFacts {
   status: TicketStatus
   hasPendingTransfer: boolean

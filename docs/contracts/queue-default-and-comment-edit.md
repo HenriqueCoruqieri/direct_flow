@@ -477,8 +477,9 @@ Status movíveis (status novo no enum quebra o `tsc` até ser classificado):
 | -------- | ------------ | ------------- | ---------------------- | -------------- | ----------- | --------- | ----------- |
 | sim      | não          | sim           | não                    | sim            | não         | não       | não         |
 
-`app/_lib/domain/ticket.ts`: **sai** `INITIAL_TICKET_STATUS` (único uso era
-`insertTicket`). `INITIAL_TICKET_PRIORITY` fica.
+`app/_lib/domain/ticket.ts`: **sai** `INITIAL_TICKET_STATUS`. Usos que
+deixam de compilar: `insertTicket` e o seed de QA (`db/seed.ts`, chamados da
+janela de resolução, criados sem destinatário). `INITIAL_TICKET_PRIORITY` fica.
 
 ### `df-data` — `app/_lib/data/tickets.ts`
 
@@ -504,6 +505,13 @@ Outcome igual.
 assigneeTargetFor(actorId, newAssigneeId))`. Se mudou: `status: nextStatus` no
 mesmo `update ticket` (que hoje grava só `assigned_to` e `updated_at`) e uma
 `mudanca_status` depois da `atribuicao`. Outcome igual.
+
+### `df-data` — `db/seed.ts`
+
+Os chamados de QA da janela de resolução nascem sem destinatário: trocar
+`INITIAL_TICKET_STATUS` por `creationStatusFor("queue")` (`aberto`) no
+`to_status` da `criacao` e no `from_status` da `resolucao`. Mesmo valor de
+hoje; nenhuma linha nova.
 
 ### `df-actions`, `df-ui`
 
@@ -916,7 +924,8 @@ A publica `[QA] Público do admin`. Anotar os ids das três mensagens (`m1`,
 - [x] Etapa 2 — `findDepartmentName`, `insertTicket` e `updateTicketByAuthor` com fila (`df-data`)
 - [x] Etapa 2 — `AppTopBar`, campo, formulários e detalhe (`df-ui`)
 - [x] Etapa 3 — `isTicketTaken` (`df-architect`)
-- [ ] Etapa 4 — `TicketAssigneeTarget` e regra de status; sai `INITIAL_TICKET_STATUS` (`df-architect`); status e `mudanca_status` em `insertTicket`, `updateTicketByAuthor` e `assignTicket` (`df-data`)
+- [x] Etapa 4 — `TicketAssigneeTarget`, `assigneeTargetFor`, `creationStatusFor`, `isAssignmentDrivenStatus`, `statusAfterReassignment`; sai `INITIAL_TICKET_STATUS` (`df-architect`)
+- [x] Etapa 4 — status e `mudanca_status` em `insertTicket`, `updateTicketByAuthor` e `assignTicket`; seed sem `INITIAL_TICKET_STATUS` (`df-data`)
 - [ ] Etapa 5 — `changedByDepartmentName`, frases, `historyEntryNamesActor` (`df-architect`); `findTicketDetail` (`df-data`); linha do tempo (`df-ui`)
 - [ ] Etapa 6 — tipos, regra e `editTicketCommentSchema` (`df-architect`); `listTicketMessages` e `updateTicketMessage` (`df-data`); `editTicketComment` (`df-actions`); lista e edição em linha (`df-ui`)
 - [ ] Cenários do `df-qa` (bateria inteira, uma vez)

@@ -118,8 +118,6 @@ export const TICKET_DESCRIPTION_MIN_LENGTH = 10
 
 export const TICKET_DESCRIPTION_MAX_LENGTH = 5000
 
-export const INITIAL_TICKET_STATUS: TicketStatus = "aberto"
-
 export const INITIAL_TICKET_PRIORITY: TicketPriority = "media"
 
 export const RESOLVED_TICKET_STATUS =

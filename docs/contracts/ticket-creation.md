@@ -74,6 +74,16 @@ prevalece sobre este documento no que diverge. Resumo:
   colega → `encaminhado` — e é gravado no chamado e no `to_status` da
   `criacao`. `INITIAL_TICKET_STATUS` sai do domínio.
 
+> Nota de revisão, 2026-10-06: as passagens abaixo que citavam
+> `INITIAL_TICKET_STATUS` como export vigente (tipo `TicketSaved`, domínio de
+> `ticket.ts`, passos 2 e 4 de `insertTicket`) foram ajustadas para
+> `creationStatusFor(assigneeTargetFor(createdBy, assigneeId))`, de
+> `app/_lib/domain/ticket-assignment.ts`. O bloco de `InsertTicketValues`
+> passou a listar `assigneeId: number | null`, e o passo 2 de `insertTicket`
+> grava `assignedTo = values.assigneeId` (nulo = fila) em vez de deixá-lo nulo.
+> As tabelas e checklists das revisões anteriores continuam como registro
+> histórico.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)
@@ -176,6 +186,7 @@ export interface InsertTicketValues {
   description: string
   type: TicketType
   tagId: number
+  assigneeId: number | null
   createdBy: number
   originDepartmentId: number
 }
@@ -208,7 +219,9 @@ export type NewTicketFormOptions = NewTicketFormAvailable | NewTicketFormBlocked
 - `TicketAuthorFacts` é um subconjunto de `RegistryAccessFacts`: o retorno de
   `getAccountFacts()` entra direto, sem conversão.
 - `TicketSaved.status` é o discriminante do outcome (padrão do projeto). O
-  status do chamado não volta: é sempre `INITIAL_TICKET_STATUS` (`aberto`).
+  status do chamado não volta: é
+  `creationStatusFor(assigneeTargetFor(createdBy, assigneeId))` (revisão de
+  2026-10-06; antes, sempre `aberto`).
 - `originDepartmentId` é o setor do autor, lido fresco; é origem **e** setor
   atual do chamado novo.
 - `NewTicketFormOptions` é serializável (só primitivos e arrays): pode ir de
@@ -243,7 +256,6 @@ export const TICKET_TITLE_MIN_LENGTH = 3
 export const TICKET_TITLE_MAX_LENGTH = 200
 export const TICKET_DESCRIPTION_MIN_LENGTH = 10
 export const TICKET_DESCRIPTION_MAX_LENGTH = 5000
-export const INITIAL_TICKET_STATUS: TicketStatus // "aberto"
 export const INITIAL_TICKET_PRIORITY: TicketPriority // "media"
 export const TICKET_CREATION_BLOCK_MESSAGES: Record<
   TicketCreationBlockReason,
@@ -271,7 +283,7 @@ export const describeTicketCreated: (ticketId: number) => string
 | `TICKET_TYPES`              | Os 6 valores de `ticket_type`, na ordem de exibição. Derivado das chaves de `TICKET_TYPE_LABELS`: o `satisfies Record` garante cobertura total do enum. Alimenta `z.enum` e o `Select`                   |
 | `TICKET_TYPE_LABELS`        | `Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`. Única fonte dos rótulos em todo o projeto                                                                             |
 | `TICKET_*_LENGTH`           | Limites de título e descrição, para o schema e para contador de caracteres na UI                                                                                                                         |
-| `INITIAL_TICKET_STATUS`     | `aberto`. Todo chamado nasce assim (revisão de 2026-10-02)                                                                                                                                               |
+| ~~`INITIAL_TICKET_STATUS`~~ | Removido na revisão de 2026-10-06. O status de criação vem de `creationStatusFor` (`app/_lib/domain/ticket-assignment.ts`): fila → `aberto`, autor → `em_andamento`, colega → `encaminhado`              |
 | `INITIAL_TICKET_PRIORITY`   | `media`. O autor não escolhe prioridade                                                                                                                                                                  |
 | `formatTicketNumber`        | `42` → `#42`. Número visível do chamado é o `ticket.id`                                                                                                                                                  |
 | `checkTicketCreation`       | Nesta ordem: inativo → `USER_INACTIVE`; `mustChangePassword` → `PASSWORD_CHANGE_REQUIRED`; Não alocado → `DEPARTMENT_UNASSIGNED`; `activeTagCount < 1` → `DEPARTMENT_WITHOUT_TAGS`; senão `{ ok: true }` |
@@ -377,14 +389,16 @@ Uma transação (`db.transaction`). Sequência, nesta ordem:
 share`. Sem linha ou `!isUsableTicketTag(row, values.originDepartmentId)` →
    `{ status: "invalid_tag" }`, sem gravar nada.
 2. `insert into ticket` com `title`, `description`, `type`, `status:
-INITIAL_TICKET_STATUS`, `priority: INITIAL_TICKET_PRIORITY`, `createdBy`,
+creationStatusFor(assigneeTargetFor(createdBy, assigneeId))` (revisão de
+   2026-10-06), `priority: INITIAL_TICKET_PRIORITY`, `createdBy`,
    `originDepartmentId` e `currentDepartmentId` **ambos** =
-   `values.originDepartmentId`; `returning id, created_at`. `assignedTo`,
-   `dueAt`, `firstResponseAt`, `resolvedAt`, `solution` ficam nulos.
+   `values.originDepartmentId`, `assignedTo = values.assigneeId` (nulo = fila;
+   revisões de 2026-10-05 e 2026-10-06); `returning id, created_at`. `dueAt`,
+   `firstResponseAt`, `resolvedAt`, `solution` ficam nulos.
 3. `insert into ticket_tag (ticket_id, tag_id, created_at)` com `created_at =
 ticket.created_at`.
 4. `insert into ticket_history`, evento `criacao`: `changedBy = createdBy`,
-   `toStatus = INITIAL_TICKET_STATUS`, `toPriority = INITIAL_TICKET_PRIORITY`,
+   `toStatus` = o mesmo status do passo 2, `toPriority = INITIAL_TICKET_PRIORITY`,
    `toDepartmentId = originDepartmentId`, `changedAt = ticket.created_at`. Demais
    colunas nulas.
 5. `{ status: "saved", ticketId }`.
@@ -691,7 +705,9 @@ ticket_title_length` conta caracteres: um título como `a😀` passa no schema
 
 Os do plano, com os nomes técnicos:
 
-1. Membro cria com tag do próprio setor → `ticket.status = aberto`,
+1. Membro cria com tag do próprio setor e destinatário padrão (fila; outros
+   destinatários seguem `creationStatusFor`, revisão de 2026-10-06) →
+   `ticket.status = aberto`,
    `origin = current` = setor do autor, `priority = media`, 1 linha em
    `ticket_tag`, 1 linha em `ticket_history` (`criacao`, `to_status = aberto`),
    nenhum `ticket_transfer`; toast `Chamado #N criado.`; card "Chamados no

@@ -13,11 +13,8 @@ import {
   zonedDateTime,
 } from "@/app/_lib/date"
 import { BOARD_DEPARTMENT_NAME } from "@/app/_lib/domain/department"
-import {
-  INITIAL_TICKET_STATUS,
-  RESOLVED_TICKET_STATUS,
-  TICKET_TYPES,
-} from "@/app/_lib/domain/ticket"
+import { RESOLVED_TICKET_STATUS, TICKET_TYPES } from "@/app/_lib/domain/ticket"
+import { creationStatusFor } from "@/app/_lib/domain/ticket-assignment"
 import {
   DAY_MS,
   isResolutionWindowOpen,
@@ -308,7 +305,7 @@ async function seedQaWindowTickets(
         ticketId: created.id,
         changedBy: member.id,
         event: "criacao",
-        toStatus: INITIAL_TICKET_STATUS,
+        toStatus: creationStatusFor("queue"),
         toPriority: "media",
         toDepartmentId: departmentId,
         changedAt: createdAt,
@@ -317,7 +314,7 @@ async function seedQaWindowTickets(
         ticketId: created.id,
         changedBy: member.id,
         event: "resolucao",
-        fromStatus: INITIAL_TICKET_STATUS,
+        fromStatus: creationStatusFor("queue"),
         toStatus: RESOLVED_TICKET_STATUS,
         changedAt: resolvedAt,
       },
@@ -741,7 +738,7 @@ async function seedDemo(admin: SeedAdminResult): Promise<void> {
       const priority = PRIORITIES[index % PRIORITIES.length]
       const status = STATUS_CYCLE[index % STATUS_CYCLE.length]
       const initialStatus: TicketStatus = FINAL_STATUSES.has(status)
-        ? "aberto"
+        ? creationStatusFor("queue")
         : status
 
       let resolvedAt: Date | null = null
@@ -802,7 +799,7 @@ async function seedDemo(admin: SeedAdminResult): Promise<void> {
           ticketId: createdTicket.id,
           changedBy: admin.adminId,
           event: "mudanca_status",
-          fromStatus: "aberto",
+          fromStatus: initialStatus,
           toStatus: status,
           changedAt:
             status === "fechado"

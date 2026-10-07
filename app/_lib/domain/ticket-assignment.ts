@@ -11,6 +11,7 @@ import type {
 } from "@/app/_lib/types/ticket"
 import type {
   SendTicketFormDefaults,
+  TicketAssigneeTarget,
   TicketAssignmentActorBlockReason,
   TicketAssignmentConflict,
   TicketAssignmentFacts,
@@ -33,6 +34,51 @@ const TICKET_STATUS_IS_ASSIGNABLE = {
 
 export const isAssignableStatus = (status: TicketStatus): boolean =>
   TICKET_STATUS_IS_ASSIGNABLE[status]
+
+const TICKET_STATUS_IS_ASSIGNMENT_DRIVEN = {
+  aberto: true,
+  em_analise: false,
+  encaminhado: true,
+  aguardando_aprovacao: false,
+  em_andamento: true,
+  resolvido: false,
+  fechado: false,
+  cancelado: false,
+} as const satisfies Record<TicketStatus, boolean>
+
+const CREATION_STATUS_BY_TARGET = {
+  queue: "aberto",
+  actor: "em_andamento",
+  colleague: "encaminhado",
+} as const satisfies Record<TicketAssigneeTarget, TicketStatus>
+
+const REASSIGNMENT_STATUS_BY_TARGET = {
+  queue: "encaminhado",
+  actor: "em_andamento",
+  colleague: "encaminhado",
+} as const satisfies Record<TicketAssigneeTarget, TicketStatus>
+
+export const assigneeTargetFor = (
+  actorId: number,
+  assigneeId: number | null,
+): TicketAssigneeTarget => {
+  if (assigneeId === null) return "queue"
+  return assigneeId === actorId ? "actor" : "colleague"
+}
+
+export const creationStatusFor = (target: TicketAssigneeTarget): TicketStatus =>
+  CREATION_STATUS_BY_TARGET[target]
+
+export const isAssignmentDrivenStatus = (status: TicketStatus): boolean =>
+  TICKET_STATUS_IS_ASSIGNMENT_DRIVEN[status]
+
+export const statusAfterReassignment = (
+  current: TicketStatus,
+  target: TicketAssigneeTarget,
+): TicketStatus =>
+  isAssignmentDrivenStatus(current)
+    ? REASSIGNMENT_STATUS_BY_TARGET[target]
+    : current
 
 export const ASSUME_TICKET_LABEL = "Assumir"
 

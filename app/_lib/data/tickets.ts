@@ -5,12 +5,14 @@ import {
   canViewTicket,
   CLOSED_TICKET_STATUS,
   INITIAL_TICKET_PRIORITY,
-  INITIAL_TICKET_STATUS,
   isUsableTicketTag,
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
 import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import {
+  assigneeTargetFor,
+  creationStatusFor,
+  statusAfterReassignment,
   ticketAssumeBlockFor,
   ticketSendBlockFor,
 } from "@/app/_lib/domain/ticket-assignment"
@@ -211,13 +213,17 @@ export async function insertTicket(
       }
     }
 
+    const initialStatus = creationStatusFor(
+      assigneeTargetFor(values.createdBy, values.assigneeId),
+    )
+
     const [created] = await tx
       .insert(ticket)
       .values({
         title: values.title,
         description: values.description,
         type: values.type,
-        status: INITIAL_TICKET_STATUS,
+        status: initialStatus,
         priority: INITIAL_TICKET_PRIORITY,
         createdBy: values.createdBy,
         assignedTo: values.assigneeId,
@@ -236,7 +242,7 @@ export async function insertTicket(
       ticketId: created.id,
       changedBy: values.createdBy,
       event: "criacao",
-      toStatus: INITIAL_TICKET_STATUS,
+      toStatus: initialStatus,
       toPriority: INITIAL_TICKET_PRIORITY,
       toDepartmentId: values.originDepartmentId,
       toAssigneeId: values.assigneeId,
@@ -377,6 +383,13 @@ export async function updateTicketByAuthor(
 
     const changedAt = now
 
+    const nextStatus = changes.assignee
+      ? statusAfterReassignment(
+          ticketRow.status,
+          assigneeTargetFor(authorId, values.assigneeId),
+        )
+      : ticketRow.status
+
     await tx
       .update(ticket)
       .set({
@@ -385,6 +398,7 @@ export async function updateTicketByAuthor(
         type: values.type,
         ...(changes.solution ? { solution: values.solution } : {}),
         ...(changes.assignee ? { assignedTo: values.assigneeId } : {}),
+        ...(nextStatus !== ticketRow.status ? { status: nextStatus } : {}),
         updatedAt: changedAt,
       })
       .where(eq(ticket.id, ticketId))
@@ -433,6 +447,17 @@ export async function updateTicketByAuthor(
         ...(changes.assignee.toAssigneeId === null
           ? { toDepartmentId: ticketRow.currentDepartmentId }
           : {}),
+        changedAt,
+      })
+    }
+
+    if (nextStatus !== ticketRow.status) {
+      await tx.insert(ticketHistory).values({
+        ticketId,
+        changedBy: authorId,
+        event: "mudanca_status",
+        fromStatus: ticketRow.status,
+        toStatus: nextStatus,
         changedAt,
       })
     }
@@ -649,9 +674,18 @@ export async function assignTicket(
 
     const changedAt = new Date()
 
+    const nextStatus = statusAfterReassignment(
+      ticketRow.status,
+      assigneeTargetFor(actorId, newAssigneeId),
+    )
+
     await tx
       .update(ticket)
-      .set({ assignedTo: newAssigneeId, updatedAt: changedAt })
+      .set({
+        assignedTo: newAssigneeId,
+        ...(nextStatus !== ticketRow.status ? { status: nextStatus } : {}),
+        updatedAt: changedAt,
+      })
       .where(eq(ticket.id, ticketId))
 
     await tx.insert(ticketHistory).values({
@@ -662,6 +696,17 @@ export async function assignTicket(
       toAssigneeId: newAssigneeId,
       changedAt,
     })
+
+    if (nextStatus !== ticketRow.status) {
+      await tx.insert(ticketHistory).values({
+        ticketId,
+        changedBy: actorId,
+        event: "mudanca_status",
+        fromStatus: ticketRow.status,
+        toStatus: nextStatus,
+        changedAt,
+      })
+    }
 
     return { status: "saved", ticketId, assigneeName: newAssigneeName }
   })
