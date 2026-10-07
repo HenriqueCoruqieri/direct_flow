@@ -3,6 +3,7 @@ import {
   describeHistoryActor,
   describeHistoryEntry,
   HISTORY_EVENT_LABELS,
+  historyEntryNamesActor,
 } from "@/app/_lib/domain/ticket-history"
 import type { TicketHistoryEntry } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
@@ -51,7 +52,9 @@ const TicketTimeline = ({ entries }: TicketTimelineProps) => {
                     {HISTORY_EVENT_LABELS[entry.event]}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    {describeHistoryActor(entry)} ·{" "}
+                    {historyEntryNamesActor(entry) ? null : (
+                      <>{describeHistoryActor(entry)} · </>
+                    )}
                     <time
                       dateTime={toISO(entry.changedAt)}
                       className="tabular-nums"

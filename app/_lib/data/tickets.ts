@@ -70,6 +70,7 @@ export async function findTicketDetail(
   const requester = alias(user, "requester")
 
   const changer = alias(user, "changer")
+  const changerDepartment = alias(department, "history_changer_department")
   const fromDepartment = alias(department, "history_from_department")
   const toDepartment = alias(department, "history_to_department")
   const fromAssignee = alias(user, "history_from_assignee")
@@ -146,6 +147,7 @@ export async function findTicketDetail(
         changedAt: ticketHistory.changedAt,
         changedById: ticketHistory.changedBy,
         changedByName: changer.name,
+        changedByDepartmentName: changerDepartment.name,
         fromStatus: ticketHistory.fromStatus,
         toStatus: ticketHistory.toStatus,
         fromPriority: ticketHistory.fromPriority,
@@ -161,6 +163,10 @@ export async function findTicketDetail(
       })
       .from(ticketHistory)
       .leftJoin(changer, eq(changer.id, ticketHistory.changedBy))
+      .leftJoin(
+        changerDepartment,
+        eq(changerDepartment.id, changer.departmentId),
+      )
       .leftJoin(
         fromDepartment,
         eq(fromDepartment.id, ticketHistory.fromDepartmentId),

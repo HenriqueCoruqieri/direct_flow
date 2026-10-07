@@ -136,6 +136,7 @@ export interface TicketHistoryEntry {
   changedAt: Date
   changedById: number | null
   changedByName: string | null
+  changedByDepartmentName: string | null
   fromStatus: TicketStatus | null
   toStatus: TicketStatus | null
   fromPriority: TicketPriority | null

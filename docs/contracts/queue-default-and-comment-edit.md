@@ -926,7 +926,9 @@ A publica `[QA] Público do admin`. Anotar os ids das três mensagens (`m1`,
 - [x] Etapa 3 — `isTicketTaken` (`df-architect`)
 - [x] Etapa 4 — `TicketAssigneeTarget`, `assigneeTargetFor`, `creationStatusFor`, `isAssignmentDrivenStatus`, `statusAfterReassignment`; sai `INITIAL_TICKET_STATUS` (`df-architect`)
 - [x] Etapa 4 — status e `mudanca_status` em `insertTicket`, `updateTicketByAuthor` e `assignTicket`; seed sem `INITIAL_TICKET_STATUS` (`df-data`)
-- [ ] Etapa 5 — `changedByDepartmentName`, frases, `historyEntryNamesActor` (`df-architect`); `findTicketDetail` (`df-data`); linha do tempo (`df-ui`)
+- [x] Etapa 5 — `changedByDepartmentName`, frases, `historyEntryNamesActor` (`df-architect`)
+- [x] Etapa 5 — `findTicketDetail` com o setor de quem agiu (`df-data`)
+- [x] Etapa 5 — linha do tempo (`df-ui`)
 - [ ] Etapa 6 — tipos, regra e `editTicketCommentSchema` (`df-architect`); `listTicketMessages` e `updateTicketMessage` (`df-data`); `editTicketComment` (`df-actions`); lista e edição em linha (`df-ui`)
 - [ ] Cenários do `df-qa` (bateria inteira, uma vez)
 - [ ] Em cada etapa: `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem bloqueante

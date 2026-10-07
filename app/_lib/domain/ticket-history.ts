@@ -24,6 +24,32 @@ export const HISTORY_EVENT_LABELS = {
   resolucao: "Resolução",
 } satisfies Record<HistoryEvent, string>
 
+export const SYSTEM_ACTOR_LABEL = "Sistema"
+
+export const describeHistoryActor = (
+  entry: Pick<TicketHistoryEntry, "changedByName">,
+): string => entry.changedByName ?? SYSTEM_ACTOR_LABEL
+
+const describeActorWithDepartment = (
+  entry: Pick<TicketHistoryEntry, "changedByName" | "changedByDepartmentName">,
+): string =>
+  entry.changedByDepartmentName
+    ? `${describeHistoryActor(entry)} do setor ${entry.changedByDepartmentName}`
+    : describeHistoryActor(entry)
+
+const isSelfAssignment = (
+  entry: Pick<TicketHistoryEntry, "toAssigneeId" | "changedById">,
+): boolean =>
+  entry.toAssigneeId !== null && entry.toAssigneeId === entry.changedById
+
+const toAssigneeSuffix = (assigneeName: string | null): string =>
+  assigneeName ? ` para ${assigneeName}` : ""
+
+const inDepartmentSuffix = (
+  preposition: string,
+  departmentName: string | null,
+): string => (departmentName ? ` ${preposition} ${departmentName}` : "")
+
 const statusLabel = (status: TicketStatus | null): string | null =>
   status ? TICKET_STATUS_LABELS[status] : null
 
@@ -60,27 +86,37 @@ const replacement = (
   return texts.unknown
 }
 
-const assignedToSomeoneElse = (entry: TicketHistoryEntry): string =>
-  entry.toAssigneeName && entry.toAssigneeId !== entry.changedById
-    ? ` e o atribuiu a ${entry.toAssigneeName}`
-    : ""
+const describeCreation = (entry: TicketHistoryEntry): string => {
+  if (entry.toAssigneeId === null) {
+    return `${describeHistoryActor(entry)} abriu o chamado${inDepartmentSuffix("em", entry.toDepartmentName)}.`
+  }
+  if (isSelfAssignment(entry)) {
+    return `${describeHistoryActor(entry)} abriu e assumiu o chamado.`
+  }
+  return `${describeActorWithDepartment(entry)} abriu o chamado e o encaminhou${toAssigneeSuffix(entry.toAssigneeName)}.`
+}
+
+const describeAssignment = (entry: TicketHistoryEntry): string => {
+  if (entry.toAssigneeId !== null) {
+    return isSelfAssignment(entry)
+      ? `${describeHistoryActor(entry)} assumiu o chamado.`
+      : `${describeActorWithDepartment(entry)} encaminhou o chamado${toAssigneeSuffix(entry.toAssigneeName)}.`
+  }
+  if (entry.fromAssigneeName) {
+    return `${describeHistoryActor(entry)} devolveu o chamado à fila${inDepartmentSuffix("de", entry.toDepartmentName)}.`
+  }
+  return `${describeHistoryActor(entry)} alterou o destinatário.`
+}
 
 type HistoryEntryDescriber = (entry: TicketHistoryEntry) => string
 
 const HISTORY_EVENT_DESCRIBERS = {
-  criacao: (entry) =>
-    `Abriu o chamado${entry.toDepartmentName ? ` em ${entry.toDepartmentName}` : ""}${withStatus(entry.toStatus)}${assignedToSomeoneElse(entry)}.`,
+  criacao: describeCreation,
   mudanca_status: (entry) =>
     `Alterou o status${fromTo(statusLabel(entry.fromStatus), statusLabel(entry.toStatus))}.`,
   mudanca_prioridade: (entry) =>
     `Alterou a prioridade${fromTo(priorityLabel(entry.fromPriority), priorityLabel(entry.toPriority))}.`,
-  atribuicao: (entry) =>
-    replacement(entry.fromAssigneeName, entry.toAssigneeName, {
-      set: (to) => `Atribuiu o chamado a ${to}.`,
-      replaced: (from, to) => `Trocou o destinatário de ${from} para ${to}.`,
-      removed: (from) => `Removeu o destinatário ${from}.`,
-      unknown: "Alterou o destinatário.",
-    }),
+  atribuicao: describeAssignment,
   transferencia_solicitada: (entry) =>
     `Solicitou a transferência${fromTo(entry.fromDepartmentName, entry.toDepartmentName)}.`,
   transferencia_aprovada: (entry) =>
@@ -103,8 +139,21 @@ const HISTORY_EVENT_DESCRIBERS = {
 export const describeHistoryEntry = (entry: TicketHistoryEntry): string =>
   HISTORY_EVENT_DESCRIBERS[entry.event](entry)
 
-export const SYSTEM_ACTOR_LABEL = "Sistema"
+const HISTORY_EVENT_NAMES_ACTOR = {
+  criacao: true,
+  mudanca_status: false,
+  mudanca_prioridade: false,
+  atribuicao: true,
+  transferencia_solicitada: false,
+  transferencia_aprovada: false,
+  transferencia_rejeitada: false,
+  reabertura: false,
+  encerramento: false,
+  mudanca_tag: false,
+  edicao: false,
+  resolucao: false,
+} satisfies Record<HistoryEvent, boolean>
 
-export const describeHistoryActor = (
-  entry: Pick<TicketHistoryEntry, "changedByName">,
-): string => entry.changedByName ?? SYSTEM_ACTOR_LABEL
+export const historyEntryNamesActor = (
+  entry: Pick<TicketHistoryEntry, "event">,
+): boolean => HISTORY_EVENT_NAMES_ACTOR[entry.event]
