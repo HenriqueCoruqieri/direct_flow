@@ -1,4 +1,4 @@
-import { preselectedAssigneeId } from "@/app/_lib/domain/ticket-assignee"
+import { queueAssigneeLabel } from "@/app/_lib/domain/ticket-assignee"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
   AssigneeOption,
@@ -197,6 +197,7 @@ export const isUsableTicketTag = (
 export const buildNewTicketFormOptions = (
   author: TicketAuthorFacts,
   creator: TicketCreatorFacts,
+  departmentName: string,
   tags: readonly TagOption[],
   assignees: readonly AssigneeOption[],
 ): NewTicketFormOptions => {
@@ -214,10 +215,11 @@ export const buildNewTicketFormOptions = (
     tags: [...tags],
     assignees: [...assignees],
     creatorName: creator.name,
+    queueLabel: queueAssigneeLabel(departmentName),
     defaults: {
       title: "",
       description: "",
-      assigneeId: preselectedAssigneeId(creator.id, assignees),
+      assigneeId: null,
     },
   }
 }

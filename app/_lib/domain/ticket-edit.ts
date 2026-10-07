@@ -6,6 +6,7 @@ import {
 import {
   assigneeEditHintFor,
   preselectedAssigneeId,
+  queueAssigneeLabel,
 } from "@/app/_lib/domain/ticket-assignee"
 import { isTicketLocked } from "@/app/_lib/domain/ticket-closure"
 import type { TagOption } from "@/app/_lib/types/tag"
@@ -138,6 +139,7 @@ export const buildTicketEditFormOptions = (
     tagHint: tagEditHintFor(ticket.tagId, tags),
     assignees: [...assignees],
     assigneeHint: assigneeEditHintFor(ticket.assignedTo, assignees),
+    queueLabel: queueAssigneeLabel(ticket.currentDepartmentName),
     includesSolution,
   }
 }

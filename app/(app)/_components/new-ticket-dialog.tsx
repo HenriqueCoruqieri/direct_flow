@@ -191,6 +191,7 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                     {...field}
                     fieldState={fieldState}
                     assignees={options.assignees}
+                    queueLabel={options.queueLabel}
                   />
                 )}
               />

@@ -54,12 +54,16 @@ export const ticketSolutionSchema = z
     error: `A solução precisa ter no máximo ${TICKET_SOLUTION_MAX_LENGTH} caracteres.`,
   })
 
+const SELECT_ASSIGNEE_MESSAGE = "Selecione o destinatário."
+
 export const createTicketSchema = z.object({
   title: ticketTitleSchema,
   description: ticketDescriptionSchema,
   type: ticketTypeSchema,
   tagId: registryIdSchema("Selecione a tag."),
-  assigneeId: registryIdSchema("Selecione o destinatário."),
+  assigneeId: registryIdSchema(SELECT_ASSIGNEE_MESSAGE)
+    .max(POSTGRES_INTEGER_MAX, { error: SELECT_ASSIGNEE_MESSAGE })
+    .nullable(),
 })
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>

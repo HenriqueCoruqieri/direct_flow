@@ -137,7 +137,7 @@ export const sendTicketDialogTitle = (ticketId: number): string =>
 
 export const describeCurrentAssignee = (assigneeName: string | null): string =>
   assigneeName === null
-    ? "Este chamado ainda não tem destinatário."
+    ? "Este chamado está na fila do setor."
     : `Destinatário atual: ${assigneeName}.`
 
 export const describeTicketAssumed = (ticketId: number): string =>
@@ -157,7 +157,7 @@ export const describeTicketAssignmentConflict = (
     return "Você já assumiu este chamado."
   }
   if (conflict.currentAssigneeName === null) {
-    return "Este chamado ficou sem destinatário. Confira a lista atualizada."
+    return "Este chamado voltou para a fila do setor. Confira a lista atualizada."
   }
   return `Este chamado já foi assumido por ${conflict.currentAssigneeName}.`
 }

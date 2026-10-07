@@ -151,6 +151,18 @@ export async function updateDepartmentActive(
   })
 }
 
+export async function findDepartmentName(
+  departmentId: number,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ name: department.name })
+    .from(department)
+    .where(eq(department.id, departmentId))
+    .limit(1)
+
+  return row?.name ?? null
+}
+
 export async function listDepartmentOptions(): Promise<DepartmentOption[]> {
   return db
     .select({

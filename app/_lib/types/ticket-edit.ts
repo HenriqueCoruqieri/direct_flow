@@ -69,6 +69,7 @@ export interface TicketEditSnapshot {
 export interface TicketEditSource extends TicketEditSnapshot {
   id: number
   status: TicketStatus
+  currentDepartmentName: string
 }
 
 export interface TicketEditValues {
@@ -76,7 +77,7 @@ export interface TicketEditValues {
   description: string
   type: TicketType
   tagId: number
-  assigneeId: number
+  assigneeId: number | null
   solution?: string
 }
 
@@ -92,7 +93,7 @@ export interface TicketTagChange {
 
 export interface TicketAssigneeChange {
   fromAssigneeId: number | null
-  toAssigneeId: number
+  toAssigneeId: number | null
 }
 
 export interface TicketEditChanges {
@@ -141,7 +142,7 @@ export interface EditTicketFormDefaults {
   description: string
   type: TicketType
   tagId?: number
-  assigneeId?: number
+  assigneeId?: number | null
   solution?: string
 }
 
@@ -151,5 +152,6 @@ export interface TicketEditFormOptions {
   tagHint?: string
   assignees: AssigneeOption[]
   assigneeHint?: string
+  queueLabel: string
   includesSolution: boolean
 }

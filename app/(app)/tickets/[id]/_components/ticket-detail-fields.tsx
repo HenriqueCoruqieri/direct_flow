@@ -2,6 +2,7 @@ import { formatDateTime, toISO } from "@/app/_lib/date"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import { TICKET_TYPE_LABELS } from "@/app/_lib/domain/ticket"
 import {
+  describeTicketAssignee,
   TICKET_ASSIGNEE_LABEL,
   TICKET_CREATOR_LABEL,
 } from "@/app/_lib/domain/ticket-assignee"
@@ -35,7 +36,10 @@ const TicketDetailFields = ({
         { label: TICKET_CREATOR_LABEL, value: ticket.authorName },
         {
           label: TICKET_ASSIGNEE_LABEL,
-          value: ticket.assigneeName ?? EMPTY_VALUE_LABEL,
+          value: describeTicketAssignee(
+            ticket.assigneeName,
+            ticket.currentDepartmentName,
+          ),
         },
       ]}
     />

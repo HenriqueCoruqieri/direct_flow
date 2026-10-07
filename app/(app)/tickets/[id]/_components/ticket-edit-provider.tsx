@@ -89,6 +89,7 @@ const TicketEditProvider = ({ options, children }: TicketEditProviderProps) => {
         tagHint: options.tagHint,
         assignees: options.assignees,
         assigneeHint: options.assigneeHint,
+        queueLabel: options.queueLabel,
         includesSolution: options.includesSolution,
         isEditing,
         isSubmitting,

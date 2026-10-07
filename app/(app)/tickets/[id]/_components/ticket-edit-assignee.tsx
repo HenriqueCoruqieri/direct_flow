@@ -21,7 +21,8 @@ const TicketEditAssignee = ({
   children,
 }: TicketEditAssigneeProps) => {
   const assigneeId = useId()
-  const { form, assignees, assigneeHint, isEditing } = useTicketEdit()
+  const { form, assignees, assigneeHint, queueLabel, isEditing } =
+    useTicketEdit()
 
   if (!isEditing) return children
 
@@ -41,6 +42,7 @@ const TicketEditAssignee = ({
             fieldState={fieldState}
             assignees={assignees}
             hint={assigneeHint}
+            queueLabel={queueLabel}
           />
         )}
       />

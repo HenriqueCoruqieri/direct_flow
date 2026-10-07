@@ -11,6 +11,7 @@ export interface TicketEditContextValue {
   tagHint: string | undefined
   assignees: readonly AssigneeOption[]
   assigneeHint: string | undefined
+  queueLabel: string
   includesSolution: boolean
   isEditing: boolean
   isSubmitting: boolean

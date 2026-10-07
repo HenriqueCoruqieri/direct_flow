@@ -196,17 +196,19 @@ export async function insertTicket(
       return { status: "invalid_tag" }
     }
 
-    const [assigneeRow] = await tx
-      .select({ departmentId: user.departmentId, isActive: user.isActive })
-      .from(user)
-      .where(eq(user.id, values.assigneeId))
-      .for("share")
+    if (values.assigneeId !== null) {
+      const [assigneeRow] = await tx
+        .select({ departmentId: user.departmentId, isActive: user.isActive })
+        .from(user)
+        .where(eq(user.id, values.assigneeId))
+        .for("share")
 
-    if (
-      !assigneeRow ||
-      !isUsableTicketAssignee(assigneeRow, values.originDepartmentId)
-    ) {
-      return { status: "invalid_assignee" }
+      if (
+        !assigneeRow ||
+        !isUsableTicketAssignee(assigneeRow, values.originDepartmentId)
+      ) {
+        return { status: "invalid_assignee" }
+      }
     }
 
     const [created] = await tx
@@ -344,17 +346,19 @@ export async function updateTicketByAuthor(
       return { status: "invalid_tag" }
     }
 
-    const [chosenAssigneeRow] = await tx
-      .select({ departmentId: user.departmentId, isActive: user.isActive })
-      .from(user)
-      .where(eq(user.id, values.assigneeId))
-      .for("share")
+    if (values.assigneeId !== null) {
+      const [chosenAssigneeRow] = await tx
+        .select({ departmentId: user.departmentId, isActive: user.isActive })
+        .from(user)
+        .where(eq(user.id, values.assigneeId))
+        .for("share")
 
-    if (
-      !chosenAssigneeRow ||
-      !isUsableTicketAssignee(chosenAssigneeRow, editor.departmentId)
-    ) {
-      return { status: "invalid_assignee" }
+      if (
+        !chosenAssigneeRow ||
+        !isUsableTicketAssignee(chosenAssigneeRow, editor.departmentId)
+      ) {
+        return { status: "invalid_assignee" }
+      }
     }
 
     const changes = diffTicketEdit(
@@ -426,6 +430,9 @@ export async function updateTicketByAuthor(
         event: "atribuicao",
         fromAssigneeId: changes.assignee.fromAssigneeId,
         toAssigneeId: changes.assignee.toAssigneeId,
+        ...(changes.assignee.toAssigneeId === null
+          ? { toDepartmentId: ticketRow.currentDepartmentId }
+          : {}),
         changedAt,
       })
     }

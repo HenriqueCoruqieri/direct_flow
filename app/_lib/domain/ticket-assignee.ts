@@ -10,8 +10,13 @@ export const TICKET_ASSIGNEE_LABEL = "Destinatário"
 export const UNAVAILABLE_ASSIGNEE_HINT =
   "O destinatário atual não está disponível. Escolha uma pessoa ativa do seu setor."
 
-export const MISSING_ASSIGNEE_HINT =
-  "Este chamado ainda não tem destinatário. Escolha uma pessoa ativa do seu setor."
+export const queueAssigneeLabel = (departmentName: string): string =>
+  `Fila de ${departmentName}`
+
+export const describeTicketAssignee = (
+  assigneeName: string | null,
+  departmentName: string,
+): string => assigneeName ?? queueAssigneeLabel(departmentName)
 
 export const isUsableTicketAssignee = (
   person: TicketAssigneeFacts,
@@ -26,17 +31,15 @@ const isListedAssignee = (
 export const preselectedAssigneeId = (
   assigneeId: number | null,
   assignees: readonly AssigneeOption[],
-): number | undefined =>
-  assigneeId !== null && isListedAssignee(assigneeId, assignees)
-    ? assigneeId
-    : undefined
+): number | null | undefined => {
+  if (assigneeId === null) return null
+  return isListedAssignee(assigneeId, assignees) ? assigneeId : undefined
+}
 
 export const assigneeEditHintFor = (
   assigneeId: number | null,
   assignees: readonly AssigneeOption[],
-): string | undefined => {
-  if (assigneeId === null) return MISSING_ASSIGNEE_HINT
-  return isListedAssignee(assigneeId, assignees)
-    ? undefined
-    : UNAVAILABLE_ASSIGNEE_HINT
-}
+): string | undefined =>
+  preselectedAssigneeId(assigneeId, assignees) === undefined
+    ? UNAVAILABLE_ASSIGNEE_HINT
+    : undefined

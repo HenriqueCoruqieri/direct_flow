@@ -58,7 +58,7 @@ export interface InsertTicketValues {
   description: string
   type: TicketType
   tagId: number
-  assigneeId: number
+  assigneeId: number | null
   createdBy: number
   originDepartmentId: number
 }
@@ -82,7 +82,7 @@ export type InsertTicketOutcome =
 export interface NewTicketFormDefaults {
   title: string
   description: string
-  assigneeId?: number
+  assigneeId: number | null
 }
 
 export interface NewTicketFormAvailable {
@@ -90,6 +90,7 @@ export interface NewTicketFormAvailable {
   tags: TagOption[]
   assignees: AssigneeOption[]
   creatorName: string
+  queueLabel: string
   defaults: NewTicketFormDefaults
 }
 

@@ -912,7 +912,9 @@ A publica `[QA] Público do admin`. Anotar os ids das três mensagens (`m1`,
 ## Checklist de encerramento
 
 - [ ] Etapa 1 — `DataTable` com coluna oculta; Fila sem Criador e Destinatário (`df-ui`)
-- [ ] Etapa 2 — tipos, `queueAssigneeLabel`, `describeTicketAssignee`, `preselectedAssigneeId`/`assigneeEditHintFor` com nulo, `buildNewTicketFormOptions` com setor, `queueLabel` na edição, textos do "Enviar", `assigneeId` nulo-ável (`df-architect`); `findDepartmentName`, `insertTicket` e `updateTicketByAuthor` com fila (`df-data`); `AppTopBar`, campo, formulários e detalhe (`df-ui`)
+- [x] Etapa 2 — tipos, `queueAssigneeLabel`, `describeTicketAssignee`, `preselectedAssigneeId`/`assigneeEditHintFor` com nulo, `buildNewTicketFormOptions` com setor, `queueLabel` na edição, textos do "Enviar", `assigneeId` nulo-ável (`df-architect`)
+- [x] Etapa 2 — `findDepartmentName`, `insertTicket` e `updateTicketByAuthor` com fila (`df-data`)
+- [x] Etapa 2 — `AppTopBar`, campo, formulários e detalhe (`df-ui`)
 - [ ] Etapa 3 — `isTicketTaken` (`df-architect`)
 - [ ] Etapa 4 — `TicketAssigneeTarget` e regra de status; sai `INITIAL_TICKET_STATUS` (`df-architect`); status e `mudanca_status` em `insertTicket`, `updateTicketByAuthor` e `assignTicket` (`df-data`)
 - [ ] Etapa 5 — `changedByDepartmentName`, frases, `historyEntryNamesActor` (`df-architect`); `findTicketDetail` (`df-data`); linha do tempo (`df-ui`)
