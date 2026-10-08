@@ -15,12 +15,6 @@ import type { TicketListRow } from "./ticket-list-row"
 
 export const NONE_FILTER_VALUE = "none"
 
-export const TICKET_LIST_SEARCH = {
-  columnId: "search",
-  label: "Buscar chamado por número ou título",
-  placeholder: "Buscar por # ou título",
-}
-
 export const TICKET_TYPE_FILTER: DataTableFilter = {
   columnId: "type",
   label: "Tipo",

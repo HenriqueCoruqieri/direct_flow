@@ -9,7 +9,7 @@ import { listTicketAssigneeOptions } from "@/app/_lib/data/people"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
-import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
+import { todayKey } from "@/app/_lib/date"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
 import {
   canEditTicketComment,
@@ -23,6 +23,10 @@ import {
 import { ticketConclusionStateFor } from "@/app/_lib/domain/ticket-resolution"
 import type { TicketActorFacts } from "@/app/_lib/types/ticket"
 import { parseTicketIdParam } from "@/app/_lib/validation/ticket"
+import {
+  parseTicketDetailOrigin,
+  ticketDetailBackLinkFor,
+} from "@/app/_lib/validation/ticket-detail-origin"
 
 import AppTopBar from "../../_components/app-top-bar"
 import EditTicketBlockedButton from "./_components/edit-ticket-blocked-button"
@@ -45,7 +49,10 @@ export const generateMetadata = async ({
   }
 }
 
-const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
+const TicketDetailPage = async ({
+  params,
+  searchParams,
+}: PageProps<"/tickets/[id]">) => {
   const session = await requireSession()
   const id = parseTicketIdParam((await params).id)
   if (id === null) notFound()
@@ -67,6 +74,9 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   if (!canViewTicket(actor, ticket)) notFound()
 
   const now = new Date()
+  const backLink = ticketDetailBackLinkFor(
+    parseTicketDetailOrigin(await searchParams, todayKey(now)),
+  )
   const editButton = ticketEditButtonStateFor(actor, ticket, now)
   const conclusion = ticketConclusionStateFor(actor, ticket, now)
   const commentForm = ticketCommentFormStateFor(actor, ticket, now)
@@ -92,11 +102,11 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
     <div className="flex flex-col gap-5.5 px-5 pt-5 pb-8 lg:px-6">
       <div className="flex flex-col gap-3.5">
         <Link
-          href={MY_TICKETS_PATH}
+          href={backLink.href}
           className="inline-flex w-fit items-center gap-1.5 rounded-md text-caption font-semibold text-text-tertiary transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <ArrowLeftIcon aria-hidden="true" className="size-4" />
-          {MY_TICKETS_LABEL}
+          {backLink.label}
         </Link>
         <TicketDetailHeader
           id={ticket.id}

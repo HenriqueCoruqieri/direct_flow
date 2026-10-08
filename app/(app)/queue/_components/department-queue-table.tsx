@@ -13,17 +13,17 @@ import {
 } from "@/app/_lib/domain/department-queue"
 import type {
   DepartmentQueueListItem,
+  DepartmentQueueLocation,
   DepartmentQueueTab,
 } from "@/app/_lib/types/department-queue"
 import type { AssigneeOption, TicketActorFacts } from "@/app/_lib/types/ticket"
+import { queueTicketDetailHref } from "@/app/_lib/validation/ticket-detail-origin"
 
 import createTicketListColumns from "../../_components/ticket-list-columns"
 import {
   idNameFiltersFor,
   NONE_FILTER_VALUE,
-  TICKET_LIST_SEARCH,
   TICKET_TYPE_FILTER,
-  ticketRowHref,
   ticketStatusFiltersFor,
   ticketTagFiltersFor,
 } from "../../_components/ticket-list-filters"
@@ -34,18 +34,22 @@ const columnHelper = createColumnHelper<
   DataTableFeatures,
   DepartmentQueueListItem
 >()
-const shared = createTicketListColumns<DepartmentQueueListItem>()
 
 const ASSIGNEE_COLUMN_ID = "assignee"
 const HIDDEN_COLUMNS = [ASSIGNEE_COLUMN_ID] as const
 
 const buildColumns = (
   viewer: TicketActorFacts,
+  location: DepartmentQueueLocation,
   onSend: (ticket: DepartmentQueueListItem) => void,
-) =>
-  columnHelper.columns([
+) => {
+  const shared = createTicketListColumns<DepartmentQueueListItem>((ticketId) =>
+    queueTicketDetailHref(location, ticketId),
+  )
+
+  return columnHelper.columns([
     shared.number,
-    shared.search,
+    shared.title,
     shared.type,
     shared.tag,
     columnHelper.accessor(
@@ -70,6 +74,7 @@ const buildColumns = (
       ),
     }),
   ])
+}
 
 const sendDialogKey = (ticket: DepartmentQueueListItem): string =>
   `${ticket.id}:${ticket.assignedTo ?? NONE_FILTER_VALUE}`
@@ -93,6 +98,7 @@ interface DepartmentQueueTableProps {
   viewer: TicketActorFacts
   assignees: AssigneeOption[]
   toolbarFooter: React.ReactNode
+  location: DepartmentQueueLocation
 }
 
 const DepartmentQueueTable = ({
@@ -101,6 +107,7 @@ const DepartmentQueueTable = ({
   viewer,
   assignees,
   toolbarFooter,
+  location,
 }: DepartmentQueueTableProps) => {
   const [sendTarget, setSendTarget] = useState<DepartmentQueueListItem | null>(
     null,
@@ -113,8 +120,13 @@ const DepartmentQueueTable = ({
   }, [])
 
   const columns = useMemo(
-    () => buildColumns(viewer, openSendDialog),
-    [viewer, openSendDialog],
+    () => buildColumns(viewer, location, openSendDialog),
+    [viewer, location, openSendDialog],
+  )
+
+  const rowHref = useCallback(
+    (row: DepartmentQueueListItem) => queueTicketDetailHref(location, row.id),
+    [location],
   )
 
   const filters = useMemo<DataTableFilter[]>(
@@ -133,9 +145,8 @@ const DepartmentQueueTable = ({
         columns={columns}
         data={tickets}
         emptyMessage={DEPARTMENT_QUEUE_TAB_RULES[tab].emptyTitle}
-        search={TICKET_LIST_SEARCH}
         filters={filters}
-        rowHref={ticketRowHref}
+        rowHref={rowHref}
         toolbarFooter={toolbarFooter}
         hiddenColumns={HIDDEN_COLUMNS}
       />

@@ -147,6 +147,7 @@ const DepartmentQueuePage = async ({ searchParams }: PageProps<"/queue">) => {
             viewer={viewer}
             assignees={assignees}
             toolbarFooter={toolbarFooter}
+            location={location}
           />
         )}
       </div>

@@ -84,6 +84,20 @@ contrato próprio: `docs/contracts/ticket-edit.md`.
 > tabela ficam superadas. Demais eventos e rótulos não mudam. As frases são
 > montadas na leitura e valem também para eventos antigos.
 
+> Revisão de 2026-10-08 (`docs/contracts/ticket-search-and-queue-back-link.md`,
+> que prevalece no que diverge): a tabela **perde o campo de busca**
+> (`TICKET_LIST_SEARCH` sai; o `DataTable` não recebe `search`); a busca por
+> número ou título passa a ser a do topo, com sugestões, sobre todos os
+> chamados visíveis. Filtros e período não mudam. O `#` da coluna número usa a
+> função recebida por `createTicketListColumns(detailHref)` (aqui,
+> `ticketDetailPath`). No detalhe, o link de voltar sai de
+> `ticketDetailBackLinkFor(parseTicketDetailOrigin(searchParams, today))`:
+> sem `?from=queue` continua `Meus chamados` → `/tickets` (o que vale para
+> quem abre por esta tela e pela busca do topo); com `?from=queue`, `Fila do
+setor` com aba, período e setor. Ficam superados: o item "Busca" da tabela,
+> os riscos 1 e 4 e os cenários 9, 11 (parte da busca), 23 (posição do
+> seletor "abaixo do campo de busca") e 29 (parte da busca).
+
 ## Adendo — filtro por data de abertura
 
 Acrescentado em 2026-10-01. Decisões no plano (`docs/plans/my-tickets.md`, seção
@@ -980,19 +994,19 @@ Props: `tab: MyTicketsTab`, `tickets: MyTicketListItem[]`.
 Colunas (`createColumnHelper<DataTableFeatures, MyTicketListItem>`), **em escopo
 de módulo**, nesta ordem:
 
-| Coluna      | `id`        | Valor / célula                                                                                                                          |
-| ----------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| #           | `id`        | `Link` para `ticketDetailPath(id)` com texto `formatTicketNumber(id)`, `tabular-nums`. É o alvo de teclado e leitor de tela da linha    |
-| Título      | `search`    | accessorFn `` `${formatTicketNumber(row.id)} ${row.title}` `` com `filterFn: "includesString"`; célula mostra só `row.title` (truncado) |
-| Tipo        | `type`      | `TICKET_TYPE_LABELS[type]`, `filterFn: "inValues"`                                                                                      |
-| Tag         | `tag`       | accessorFn `row.tagId === null ? "none" : String(row.tagId)`, `filterFn: "inValues"`; célula `row.tagName ?? EMPTY_VALUE_LABEL`         |
-| Setor atual | —           | `row.currentDepartmentName`                                                                                                             |
-| Status      | `status`    | `<TicketStatusBadge status={...} />`, `filterFn: "inValues"`                                                                            |
-| Aberto em   | `createdAt` | `formatDate(createdAt)` de `@/app/_lib/date`, `tabular-nums`                                                                            |
+| Coluna      | `id`        | Valor / célula                                                                                                                       |
+| ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| #           | `id`        | `Link` para `ticketDetailPath(id)` com texto `formatTicketNumber(id)`, `tabular-nums`. É o alvo de teclado e leitor de tela da linha |
+| Título      | `title`     | accessor `row.title`, sem `filterFn`; célula `row.title` (truncado). Até 2026-10-08 era `search` (`#id título`, `includesString`)    |
+| Tipo        | `type`      | `TICKET_TYPE_LABELS[type]`, `filterFn: "inValues"`                                                                                   |
+| Tag         | `tag`       | accessorFn `row.tagId === null ? "none" : String(row.tagId)`, `filterFn: "inValues"`; célula `row.tagName ?? EMPTY_VALUE_LABEL`      |
+| Setor atual | —           | `row.currentDepartmentName`                                                                                                          |
+| Status      | `status`    | `<TicketStatusBadge status={...} />`, `filterFn: "inValues"`                                                                         |
+| Aberto em   | `createdAt` | `formatDate(createdAt)` de `@/app/_lib/date`, `tabular-nums`                                                                         |
 
-- **Busca**: `search={{ columnId: "search", label: "Buscar chamado por número ou título", placeholder: "Buscar por # ou título" }}`.
-  `includesString` não diferencia maiúsculas. `66` e `#66` acham o #66 (e
-  também #166, #660 e títulos com "66": aceito).
+- **Busca**: removida em 2026-10-08 (revisão no topo). Antes:
+  `search={{ columnId: "search", ... }}` com `includesString`; a busca agora é
+  a do topo (`docs/contracts/ticket-search-and-queue-back-link.md`).
 - **Filtros** (`filters`, `DataTableFilters`), nesta ordem:
   - **Status** — opções `MY_TICKETS_TAB_RULES[tab].statuses` com
     `TICKET_STATUS_LABELS`. **Só quando a aba tem mais de um status** (em
@@ -1080,7 +1094,10 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
   `not-found.tsx` futuro pode trocar esse título, desde que não inclua o id
   pedido nem nada do chamado.
 - `<AppTopBar />` no topo, como em `/tickets` (continuidade ao abrir a linha).
-- Link de volta `MY_TICKETS_LABEL` → `MY_TICKETS_PATH`.
+- Link de volta: `ticketDetailBackLinkFor(parseTicketDetailOrigin(searchParams, today))`
+  (revisão de 2026-10-08). Sem `?from=queue`, `MY_TICKETS_LABEL` →
+  `MY_TICKETS_PATH`, como antes; com `?from=queue`, `DEPARTMENT_QUEUE_LABEL`
+  → `departmentQueueHref(location)`.
 - **Cabeçalho**: `formatTicketNumber(id)`, `title` (`h1`), `TicketStatusBadge`,
   prioridade `TICKET_PRIORITY_LABELS[priority]`.
 - **Aviso de aprovação** (`pending-transfer-notice.tsx`), só quando
@@ -1128,17 +1145,16 @@ const TicketDetailPage = async ({ params }: PageProps<"/tickets/[id]">) => {
 
 ## Riscos
 
-1. **Dois campos de busca na mesma tela.** A barra superior tem "Buscar por #,
-   título ou tag" (sem função) e a tabela tem "Buscar por # ou título". Quem
-   digitar na barra não vê efeito. Mitigação: rótulos e placeholders
-   diferentes; a busca global é feature própria, que decide se absorve a da
-   tabela.
+1. ~~**Dois campos de busca na mesma tela.**~~ Resolvido em 2026-10-08: a
+   busca do topo passou a funcionar e a da tabela saiu
+   (`docs/contracts/ticket-search-and-queue-back-link.md`).
 2. **Abas quase vazias.** "Atribuídos a mim" fica em `0` para todo mundo até
    existir atribuição; Fechados e Cancelados só têm dados do seed demo (autor:
    o diretor). Para os usuários QA, só "Abertos por mim" tem linhas.
 3. **Autor e responsável ao mesmo tempo** → o chamado aparece em duas abas;
    contagens não somam o total.
-4. **Busca por número é por trecho**: `66` também acha #166 e #660.
+4. ~~**Busca por número é por trecho**~~: superado em 2026-10-08. A busca do
+   topo casa número por **prefixo** (`66` acha #66, #660…, não #166).
 5. **Visibilidade larga dentro do setor.** Qualquer pessoa do setor atual vê o
    detalhe (descrição inclusive) de qualquer chamado do setor. Decidido.
 6. **Admin do destino não vê chamado aguardando aprovação** até a feature de

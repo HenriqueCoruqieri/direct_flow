@@ -7,14 +7,15 @@ import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import {
   formatTicketNumber,
   TICKET_TYPE_LABELS,
-  ticketDetailPath,
 } from "@/app/_lib/domain/ticket"
 
 import { NONE_FILTER_VALUE } from "./ticket-list-filters"
 import type { TicketListRow } from "./ticket-list-row"
 import TicketStatusBadge from "./ticket-status-badge"
 
-const createTicketListColumns = <TRow extends TicketListRow>() => {
+const createTicketListColumns = <TRow extends TicketListRow>(
+  detailHref: (ticketId: number) => string,
+) => {
   const columnHelper = createColumnHelper<DataTableFeatures, TRow>()
 
   return {
@@ -28,29 +29,25 @@ const createTicketListColumns = <TRow extends TicketListRow>() => {
       ),
       cell: ({ getValue }) => (
         <Link
-          href={ticketDetailPath(getValue())}
+          href={detailHref(getValue())}
           className="rounded-sm font-semibold text-primary tabular-nums underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {formatTicketNumber(getValue())}
         </Link>
       ),
     }),
-    search: columnHelper.accessor(
-      (row) => `${formatTicketNumber(row.id)} ${row.title}`,
-      {
-        id: "search",
-        header: "Título",
-        filterFn: "includesString",
-        cell: ({ row }) => (
-          <span
-            title={row.original.title}
-            className="block max-w-96 truncate font-medium"
-          >
-            {row.original.title}
-          </span>
-        ),
-      },
-    ),
+    title: columnHelper.accessor((row) => row.title, {
+      id: "title",
+      header: "Título",
+      cell: ({ getValue }) => (
+        <span
+          title={getValue()}
+          className="block max-w-96 truncate font-medium"
+        >
+          {getValue()}
+        </span>
+      ),
+    }),
     type: columnHelper.accessor((row) => row.type, {
       id: "type",
       header: "Tipo",

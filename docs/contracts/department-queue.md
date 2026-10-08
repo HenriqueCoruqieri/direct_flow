@@ -46,6 +46,17 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > ("status inalterado") e Q18 (frase). Os cenários válidos estão no contrato
 > novo.
 
+> Revisão de 2026-10-08 (`docs/contracts/ticket-search-and-queue-back-link.md`,
+> que prevalece no que diverge): a tabela **perde o campo de busca**
+> (`TICKET_LIST_SEARCH` sai); a busca por número ou título é a do topo.
+> Filtros (Status, Tipo, Tag, Destinatário), período e setor não mudam. O
+> detalhe aberto pela Fila (clique na linha ou no `#`) leva a origem:
+> `queueTicketDetailHref(location, id)` →
+> `/tickets/{id}?from=queue&tab=…&setor=…&periodo=…` (com a `location`
+> **aplicada** pela página, que `DepartmentQueueTable` passa a receber), e o
+> detalhe mostra `Fila do setor` → `departmentQueueHref(location)` no link de
+> voltar. As linhas `#`, Título e `rowHref` da tabela abaixo foram atualizadas.
+
 ## Escopo técnico em uma frase
 
 Uma tela nova (`/queue`), duas leituras e uma escrita: a escrita troca só
@@ -815,19 +826,20 @@ scroll: false })`. Fica na mesma faixa do período (no `toolbarFooter`) e
 ### Tabela — `department-queue-table.tsx` (`"use client"`)
 
 Props: `tab`, `tickets: DepartmentQueueListItem[]`, `viewer: TicketActorFacts`,
-`assignees: AssigneeOption[]`, `toolbarFooter: React.ReactNode`.
+`assignees: AssigneeOption[]`, `toolbarFooter: React.ReactNode` e, desde
+2026-10-08, `location: DepartmentQueueLocation` (a aplicada pela página).
 
-| Coluna       | `id`        | Valor / célula                                                                                                       |
-| ------------ | ----------- | -------------------------------------------------------------------------------------------------------------------- |
-| #            | `id`        | `Link` para `ticketDetailPath(id)`, `formatTicketNumber(id)` (igual a Meus chamados)                                 |
-| Título       | `search`    | igual a Meus chamados (busca por `#` e título)                                                                       |
-| Tipo         | `type`      | `TICKET_TYPE_LABELS[type]`, `inValues`                                                                               |
-| Tag          | `tag`       | igual a Meus chamados (`"none"` para nulo, célula `tagName ?? EMPTY_VALUE_LABEL`)                                    |
-| Criador      | —           | `creatorName`                                                                                                        |
-| Destinatário | `assignee`  | accessor `assignedTo === null ? "none" : String(assignedTo)`, `inValues`; célula `assigneeName ?? EMPTY_VALUE_LABEL` |
-| Status       | `status`    | `<TicketStatusBadge />`, `inValues`                                                                                  |
-| Aberto em    | `createdAt` | `formatDate(createdAt)`                                                                                              |
-| Ações        | `actions`   | cabeçalho `sr-only` "Ações"; `queueRowActionsFor(viewer, row)` decide os botões; nenhum → célula vazia               |
+| Coluna       | `id`        | Valor / célula                                                                                                               |
+| ------------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| #            | `id`        | `Link` para `queueTicketDetailHref(location, id)` (desde 2026-10-08; antes `ticketDetailPath(id)`), `formatTicketNumber(id)` |
+| Título       | `title`     | igual a Meus chamados: accessor `row.title`, sem `filterFn` (até 2026-10-08 era `search`, com `includesString`)              |
+| Tipo         | `type`      | `TICKET_TYPE_LABELS[type]`, `inValues`                                                                                       |
+| Tag          | `tag`       | igual a Meus chamados (`"none"` para nulo, célula `tagName ?? EMPTY_VALUE_LABEL`)                                            |
+| Criador      | —           | `creatorName`                                                                                                                |
+| Destinatário | `assignee`  | accessor `assignedTo === null ? "none" : String(assignedTo)`, `inValues`; célula `assigneeName ?? EMPTY_VALUE_LABEL`         |
+| Status       | `status`    | `<TicketStatusBadge />`, `inValues`                                                                                          |
+| Aberto em    | `createdAt` | `formatDate(createdAt)`                                                                                                      |
+| Ações        | `actions`   | cabeçalho `sr-only` "Ações"; `queueRowActionsFor(viewer, row)` decide os botões; nenhum → célula vazia                       |
 
 - **Filtros**, nesta ordem: Status (só com mais de um status na aba, opções
   `DEPARTMENT_QUEUE_TAB_RULES[tab].statuses`), Tipo (`TICKET_TYPES`), Tag (das
@@ -835,7 +847,8 @@ Props: `tab`, `tickets: DepartmentQueueListItem[]`, `viewer: TicketActorFacts`,
   repetir id, ordenadas pelo nome, `value: String(assignedTo)`; mais
   `{ value: "none", label: NO_ASSIGNEE_LABEL }` no fim, só se alguma linha tiver
   `assignedTo === null`; grupo omitido sem opção).
-- `rowHref={(row) => ticketDetailPath(row.id)}`; sem paginação.
+- `rowHref={(row) => queueTicketDetailHref(location, row.id)}` (desde
+  2026-10-08; antes `ticketDetailPath(row.id)`); sem paginação.
 - **Botões**: "Assumir" (`ASSUME_TICKET_LABEL`) e "Enviar" (`SEND_TICKET_LABEL`),
   pequenos, lado a lado. São `button`: o `DataTable` já ignora o clique que
   nasce num `button`.
