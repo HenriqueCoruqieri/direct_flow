@@ -11,6 +11,8 @@ import TicketCommentItem, {
   type TicketCommentEntry,
 } from "./ticket-comment-item"
 
+const HEADING_ID = "ticket-comments-heading"
+
 interface TicketCommentsProps {
   ticketId: number
   entries: TicketCommentEntry[]
@@ -26,15 +28,16 @@ const TicketComments = ({
 }: TicketCommentsProps) => {
   return (
     <section
-      aria-labelledby="ticket-comments-heading"
+      aria-labelledby={HEADING_ID}
       className={cn(
         "flex min-w-0 flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-5",
         className,
       )}
     >
       <h2
-        id="ticket-comments-heading"
-        className="flex items-center gap-2 font-heading text-base font-semibold"
+        id={HEADING_ID}
+        tabIndex={-1}
+        className="flex items-center gap-2 font-heading text-base font-semibold outline-none"
       >
         Comentários
         <span className="text-sm font-medium text-muted-foreground tabular-nums">
@@ -57,6 +60,7 @@ const TicketComments = ({
                   key={entry.message.id}
                   ticketId={ticketId}
                   entry={entry}
+                  focusAfterDeleteId={HEADING_ID}
                 />
               ))}
             </ol>

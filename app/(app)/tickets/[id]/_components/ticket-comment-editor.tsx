@@ -22,15 +22,19 @@ import {
   editTicketCommentSchema,
 } from "@/app/_lib/validation/ticket-comments"
 
+import TicketCommentBody from "./ticket-comment-body"
+
 interface TicketCommentEditorProps {
   defaults: EditTicketCommentFormDefaults
   editAriaLabel: string
+  actions?: React.ReactNode
   children: React.ReactNode
 }
 
 const TicketCommentEditor = ({
   defaults,
   editAriaLabel,
+  actions,
   children,
 }: TicketCommentEditorProps) => {
   const contentId = useId()
@@ -104,21 +108,27 @@ const TicketCommentEditor = ({
 
   if (!isEditing) {
     return (
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">{children}</div>
-        <Button
-          ref={editButtonRef}
-          type="button"
-          variant="ghost"
-          size="xs"
-          className="shrink-0 text-muted-foreground"
-          aria-label={editAriaLabel}
-          onClick={startEditing}
-        >
-          <PencilIcon aria-hidden="true" data-icon="inline-start" />
-          {EDIT_COMMENT_LABEL}
-        </Button>
-      </div>
+      <TicketCommentBody
+        actions={
+          <>
+            <Button
+              ref={editButtonRef}
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground"
+              aria-label={editAriaLabel}
+              onClick={startEditing}
+            >
+              <PencilIcon aria-hidden="true" data-icon="inline-start" />
+              {EDIT_COMMENT_LABEL}
+            </Button>
+            {actions}
+          </>
+        }
+      >
+        {children}
+      </TicketCommentBody>
     )
   }
 

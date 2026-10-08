@@ -38,3 +38,10 @@ export const editTicketCommentSchema = z.object({
 })
 
 export type EditTicketCommentInput = z.infer<typeof editTicketCommentSchema>
+
+export const deleteTicketCommentSchema = z.object({
+  ticketId: ticketIdSchema,
+  messageId: messageIdSchema,
+})
+
+export type DeleteTicketCommentInput = z.infer<typeof deleteTicketCommentSchema>

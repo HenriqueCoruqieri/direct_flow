@@ -110,3 +110,29 @@ export interface EditTicketCommentFormDefaults {
   messageId: number
   content: string
 }
+
+export type TicketCommentDeleteBlockReason = TicketCommentEditBlockReason
+
+export interface DeleteTicketMessageValues {
+  ticketId: number
+  messageId: number
+  actorId: number
+}
+
+export interface TicketMessageDeleted {
+  status: "deleted"
+  ticketId: number
+  messageId: number
+}
+
+export interface TicketMessageNotDeletable {
+  status: "not_deletable"
+}
+
+export type DeleteTicketMessageOutcome =
+  TicketMessageDeleted | TicketNotFound | TicketMessageNotDeletable
+
+export interface DeleteTicketCommentTarget {
+  ticketId: number
+  messageId: number
+}

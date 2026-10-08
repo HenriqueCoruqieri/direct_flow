@@ -3,11 +3,14 @@ import { and, asc, eq, or } from "drizzle-orm"
 import { canViewTicket } from "@/app/_lib/domain/ticket"
 import {
   canCommentOnTicket,
+  canDeleteTicketComment,
   canSeeTicketMessage,
   ticketCommentEditBlockFor,
 } from "@/app/_lib/domain/ticket-comments"
 import type { TicketActorFacts } from "@/app/_lib/types/ticket"
 import type {
+  DeleteTicketMessageOutcome,
+  DeleteTicketMessageValues,
   InsertTicketMessageOutcome,
   InsertTicketMessageValues,
   TicketMessageItem,
@@ -186,5 +189,84 @@ export async function updateTicketMessage(
       .where(eq(message.id, messageId))
 
     return { status: "saved", ticketId, messageId }
+  })
+}
+
+export async function deleteTicketMessage(
+  values: DeleteTicketMessageValues,
+): Promise<DeleteTicketMessageOutcome> {
+  const { ticketId, messageId, actorId } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+        resolvedAt: ticket.resolvedAt,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("share")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const now = new Date()
+
+    const [actorRow] = await tx
+      .select({
+        departmentId: user.departmentId,
+        role: user.role,
+        isActive: user.isActive,
+        mustChangePassword: user.mustChangePassword,
+        isBoard: department.isBoard,
+      })
+      .from(user)
+      .innerJoin(department, eq(department.id, user.departmentId))
+      .where(eq(user.id, actorId))
+      .for("share", { of: user })
+
+    if (!actorRow) return { status: "not_deletable" }
+
+    const actor: TicketActorFacts = {
+      userId: actorId,
+      departmentId: actorRow.departmentId,
+      isBoard: actorRow.isBoard,
+      role: actorRow.role,
+      isActive: actorRow.isActive,
+      mustChangePassword: actorRow.mustChangePassword,
+    }
+
+    if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
+
+    const [messageRow] = await tx
+      .select({ userId: message.userId, visibility: message.visibility })
+      .from(message)
+      .where(and(eq(message.id, messageId), eq(message.ticketId, ticketId)))
+      .for("update")
+
+    if (!messageRow) return { status: "not_found" }
+
+    const author = { authorId: messageRow.userId }
+
+    if (
+      !canSeeTicketMessage(actor, ticketRow, {
+        ...author,
+        visibility: messageRow.visibility,
+      })
+    ) {
+      return { status: "not_found" }
+    }
+
+    if (!canDeleteTicketComment(actor, ticketRow, author, now)) {
+      return { status: "not_deletable" }
+    }
+
+    await tx
+      .delete(message)
+      .where(and(eq(message.id, messageId), eq(message.ticketId, ticketId)))
+
+    return { status: "deleted", ticketId, messageId }
   })
 }

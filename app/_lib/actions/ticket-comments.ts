@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { getSession } from "@/app/_lib/auth/session"
 import {
+  deleteTicketMessage,
   insertTicketMessage,
   updateTicketMessage,
 } from "@/app/_lib/data/ticket-messages"
@@ -14,15 +15,20 @@ import {
 import {
   messageVisibilityFor,
   TICKET_COMMENT_ADDED_MESSAGE,
+  TICKET_COMMENT_DELETED_MESSAGE,
   TICKET_COMMENT_EDITED_MESSAGE,
+  TICKET_COMMENT_GONE_MESSAGE,
 } from "@/app/_lib/domain/ticket-comments"
 import type {
+  DeleteTicketMessageOutcome,
   InsertTicketMessageOutcome,
   UpdateTicketMessageOutcome,
 } from "@/app/_lib/types/ticket-comments"
 import {
   type CreateTicketCommentInput,
   createTicketCommentSchema,
+  type DeleteTicketCommentInput,
+  deleteTicketCommentSchema,
   type EditTicketCommentInput,
   editTicketCommentSchema,
 } from "@/app/_lib/validation/ticket-comments"
@@ -61,6 +67,23 @@ export interface EditTicketCommentFailure {
 export type EditTicketCommentResult =
   EditTicketCommentSuccess | EditTicketCommentFailure
 
+export type DeleteTicketCommentErrorCode =
+  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND"
+
+export interface DeleteTicketCommentSuccess {
+  ok: true
+  message: string
+}
+
+export interface DeleteTicketCommentFailure {
+  ok: false
+  message: string
+  code?: DeleteTicketCommentErrorCode
+}
+
+export type DeleteTicketCommentResult =
+  DeleteTicketCommentSuccess | DeleteTicketCommentFailure
+
 type InsertTicketMessageFailureStatus = Exclude<
   InsertTicketMessageOutcome["status"],
   "saved"
@@ -69,6 +92,11 @@ type InsertTicketMessageFailureStatus = Exclude<
 type UpdateTicketMessageFailureStatus = Exclude<
   UpdateTicketMessageOutcome["status"],
   "saved"
+>
+
+type DeleteTicketMessageFailureStatus = Exclude<
+  DeleteTicketMessageOutcome["status"],
+  "deleted"
 >
 
 const ADD_UNEXPECTED_ERROR_MESSAGE =
@@ -129,6 +157,33 @@ const EDIT_OUTCOME_FAILURES = {
     message: "Nenhuma alteração para salvar.",
   },
 } satisfies Record<UpdateTicketMessageFailureStatus, EditTicketCommentFailure>
+
+const DELETE_UNEXPECTED_ERROR_MESSAGE =
+  "Não foi possível excluir o comentário agora. Tente novamente."
+
+const DELETE_FORBIDDEN_FAILURE: DeleteTicketCommentFailure = {
+  ok: false,
+  code: "FORBIDDEN",
+  message: "Você não tem permissão para excluir este comentário.",
+}
+
+const DELETE_UNEXPECTED_FAILURE: DeleteTicketCommentFailure = {
+  ok: false,
+  message: DELETE_UNEXPECTED_ERROR_MESSAGE,
+}
+
+const DELETE_OUTCOME_FAILURES = {
+  not_found: {
+    ok: false,
+    code: "NOT_FOUND",
+    message: TICKET_COMMENT_GONE_MESSAGE,
+  },
+  not_deletable: {
+    ok: false,
+    code: "FORBIDDEN",
+    message: "Você não pode excluir este comentário.",
+  },
+} satisfies Record<DeleteTicketMessageFailureStatus, DeleteTicketCommentFailure>
 
 interface InvalidInputFailure {
   ok: false
@@ -218,5 +273,44 @@ export const editTicketComment = async (
   return {
     ok: true,
     message: TICKET_COMMENT_EDITED_MESSAGE,
+  }
+}
+
+export const deleteTicketComment = async (
+  input: DeleteTicketCommentInput,
+): Promise<DeleteTicketCommentResult> => {
+  const actor = await getSession()
+  if (!actor) return DELETE_FORBIDDEN_FAILURE
+
+  const parsed = deleteTicketCommentSchema.safeParse(input)
+  if (!parsed.success) {
+    return invalidInput(
+      parsed.error.issues[0]?.message,
+      DELETE_UNEXPECTED_ERROR_MESSAGE,
+    )
+  }
+
+  let outcome: DeleteTicketMessageOutcome
+
+  try {
+    outcome = await deleteTicketMessage({
+      ticketId: parsed.data.ticketId,
+      messageId: parsed.data.messageId,
+      actorId: actor.id,
+    })
+  } catch (error) {
+    console.error("[deleteTicketComment]", error)
+    return DELETE_UNEXPECTED_FAILURE
+  }
+
+  if (outcome.status !== "deleted") {
+    return DELETE_OUTCOME_FAILURES[outcome.status]
+  }
+
+  revalidatePath(ticketDetailPath(outcome.ticketId))
+
+  return {
+    ok: true,
+    message: TICKET_COMMENT_DELETED_MESSAGE,
   }
 }

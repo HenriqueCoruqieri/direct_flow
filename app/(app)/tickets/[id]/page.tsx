@@ -12,6 +12,7 @@ import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { todayKey } from "@/app/_lib/date"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
 import {
+  canDeleteTicketComment,
   canEditTicketComment,
   ticketCommentFormStateFor,
   ticketMessageScopeFor,
@@ -96,6 +97,7 @@ const TicketDetailPage = async ({
   const commentEntries = messages.map((message) => ({
     message,
     canEdit: canEditTicketComment(actor, ticket, message, now),
+    canDelete: canDeleteTicketComment(actor, ticket, message, now),
   }))
 
   const content = (

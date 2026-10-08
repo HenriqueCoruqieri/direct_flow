@@ -6,9 +6,11 @@ import type {
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
 import type {
+  DeleteTicketCommentTarget,
   EditTicketCommentFormDefaults,
   MessageVisibility,
   TicketCommentBlockReason,
+  TicketCommentDeleteBlockReason,
   TicketCommentEditBlockReason,
   TicketCommentFacts,
   TicketCommentFormDefaults,
@@ -129,6 +131,40 @@ export const canEditTicketComment = (
   message: TicketMessageAuthorFacts,
   now: Date,
 ): boolean => ticketCommentEditBlockFor(editor, ticket, message, now) === null
+
+export const DELETE_COMMENT_LABEL = "Excluir"
+
+export const DELETE_COMMENT_PENDING_LABEL = "Excluindo…"
+
+export const DELETE_COMMENT_DIALOG_TITLE = "Excluir comentário?"
+
+export const DELETE_COMMENT_DIALOG_DESCRIPTION =
+  "O comentário será removido do chamado para todos que o veem. Esta ação não pode ser desfeita."
+
+export const TICKET_COMMENT_DELETED_MESSAGE = "Comentário excluído."
+
+export const TICKET_COMMENT_GONE_MESSAGE =
+  "Este comentário não existe mais. Confira a lista atualizada."
+
+export const ticketCommentDeleteBlockFor = (
+  actor: TicketActorFacts,
+  ticket: TicketCommentFacts,
+  message: TicketMessageAuthorFacts,
+  now: Date,
+): TicketCommentDeleteBlockReason | null =>
+  ticketCommentEditBlockFor(actor, ticket, message, now)
+
+export const canDeleteTicketComment = (
+  actor: TicketActorFacts,
+  ticket: TicketCommentFacts,
+  message: TicketMessageAuthorFacts,
+  now: Date,
+): boolean => ticketCommentDeleteBlockFor(actor, ticket, message, now) === null
+
+export const buildDeleteTicketCommentTarget = (
+  ticketId: number,
+  message: Pick<TicketMessageItem, "id">,
+): DeleteTicketCommentTarget => ({ ticketId, messageId: message.id })
 
 export const isTicketMessageEdited = (
   message: TicketMessageTimestamps,
