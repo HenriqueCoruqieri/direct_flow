@@ -37,3 +37,9 @@ export const sendTicketSchema = z
   })
 
 export type SendTicketInput = z.infer<typeof sendTicketSchema>
+
+export const attendTicketSchema = z.object({
+  ticketId: ticketIdSchema,
+})
+
+export type AttendTicketInput = z.infer<typeof attendTicketSchema>

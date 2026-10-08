@@ -6,6 +6,7 @@ import type { TicketPriority, TicketStatus } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
 
 import TicketStatusBadge from "../../../_components/ticket-status-badge"
+import AttendTicketButton from "./attend-ticket-button"
 import TicketEditHeading from "./ticket-edit-heading"
 
 const PRIORITY_DOT_CLASSES = {
@@ -22,6 +23,7 @@ interface TicketDetailHeaderProps {
   priority: TicketPriority
   action?: React.ReactNode
   editable?: boolean
+  canAttend?: boolean
 }
 
 const TicketDetailHeader = ({
@@ -31,12 +33,14 @@ const TicketDetailHeader = ({
   priority,
   action,
   editable = false,
+  canAttend = false,
 }: TicketDetailHeaderProps) => {
   const heading = (
     <h1 className="min-w-0 font-heading text-title font-semibold wrap-break-word">
       {title}
     </h1>
   )
+  const attendAction = canAttend ? <AttendTicketButton ticketId={id} /> : null
 
   return (
     <header className="flex flex-col gap-2">
@@ -45,12 +49,15 @@ const TicketDetailHeader = ({
       </span>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         {editable ? (
-          <TicketEditHeading heading={heading} />
+          <TicketEditHeading heading={heading} attendAction={attendAction} />
         ) : (
           <>
             {heading}
-            {action !== undefined ? (
-              <div className="shrink-0">{action}</div>
+            {attendAction !== null || action !== undefined ? (
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {attendAction}
+                {action}
+              </div>
             ) : null}
           </>
         )}

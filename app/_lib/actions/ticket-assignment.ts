@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { getSession } from "@/app/_lib/auth/session"
-import { assignTicket } from "@/app/_lib/data/tickets"
+import { assignTicket, startTicketWork } from "@/app/_lib/data/tickets"
 import { DEPARTMENT_QUEUE_PATH } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import {
@@ -13,19 +13,26 @@ import {
 import {
   describeTicketAssignmentConflict,
   describeTicketAssumed,
+  describeTicketAttendConflict,
+  describeTicketAttended,
   describeTicketSent,
   TICKET_NOT_ASSUMABLE_MESSAGE,
+  TICKET_NOT_ATTENDABLE_MESSAGE,
   TICKET_NOT_SENDABLE_MESSAGE,
   UNAVAILABLE_SEND_TARGET_MESSAGE,
 } from "@/app/_lib/domain/ticket-assignment"
 import type {
   AssignTicketOutcome,
   AssignTicketValues,
+  StartTicketWorkOutcome,
   TicketAssignmentSaved,
+  TicketWorkStarted,
 } from "@/app/_lib/types/ticket-assignment"
 import {
   type AssumeTicketInput,
   assumeTicketSchema,
+  type AttendTicketInput,
+  attendTicketSchema,
   type SendTicketInput,
   sendTicketSchema,
 } from "@/app/_lib/validation/ticket-assignment"
@@ -45,6 +52,32 @@ export interface AssignTicketFailure {
 }
 
 export type AssignTicketResult = AssignTicketSuccess | AssignTicketFailure
+
+export type AttendTicketErrorCode =
+  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT"
+
+export interface AttendTicketSuccess {
+  ok: true
+  message: string
+}
+
+export interface AttendTicketFailure {
+  ok: false
+  message: string
+  code?: AttendTicketErrorCode
+}
+
+export type AttendTicketResult = AttendTicketSuccess | AttendTicketFailure
+
+type StartTicketWorkFailureOutcome = Exclude<
+  StartTicketWorkOutcome,
+  TicketWorkStarted
+>
+
+type AttendStaticFailureStatus = Exclude<
+  StartTicketWorkFailureOutcome["status"],
+  "conflict"
+>
 
 type AssignTicketMode = AssignTicketValues["mode"]
 
@@ -108,13 +141,61 @@ const LOG_PREFIXES = {
   send: "[sendTicket]",
 } satisfies Record<AssignTicketMode, string>
 
+const ATTEND_UNEXPECTED_ERROR_MESSAGE =
+  "Não foi possível atender o chamado agora. Tente novamente."
+
+const ATTEND_FORBIDDEN_FAILURE: AttendTicketFailure = {
+  ok: false,
+  code: "FORBIDDEN",
+  message: "Você não tem permissão para atender este chamado.",
+}
+
+const ATTEND_UNEXPECTED_FAILURE: AttendTicketFailure = {
+  ok: false,
+  message: ATTEND_UNEXPECTED_ERROR_MESSAGE,
+}
+
+const ATTEND_STATIC_OUTCOME_FAILURES = {
+  not_found: {
+    ok: false,
+    code: "NOT_FOUND",
+    message: TICKET_NOT_FOUND_MESSAGE,
+  },
+  not_attendable: {
+    ok: false,
+    code: "FORBIDDEN",
+    message: TICKET_NOT_ATTENDABLE_MESSAGE,
+  },
+} satisfies Record<AttendStaticFailureStatus, AttendTicketFailure>
+
+interface InvalidInputFailure {
+  ok: false
+  code: "INVALID_INPUT"
+  message: string
+}
+
 const invalidInput = (
   firstIssueMessage: string | undefined,
-): AssignTicketFailure => ({
+  fallbackMessage: string = UNEXPECTED_ERROR_MESSAGE,
+): InvalidInputFailure => ({
   ok: false,
   code: "INVALID_INPUT",
-  message: firstIssueMessage ?? UNEXPECTED_ERROR_MESSAGE,
+  message: firstIssueMessage ?? fallbackMessage,
 })
+
+const attendFailureFor = (
+  outcome: StartTicketWorkFailureOutcome,
+  actorId: number,
+): AttendTicketFailure => {
+  if (outcome.status === "conflict") {
+    return {
+      ok: false,
+      code: "CONFLICT",
+      message: describeTicketAttendConflict(outcome, actorId),
+    }
+  }
+  return ATTEND_STATIC_OUTCOME_FAILURES[outcome.status]
+}
 
 const failureFor = (
   outcome: AssignTicketFailureOutcome,
@@ -191,4 +272,42 @@ export const sendTicket = async (
     assigneeId: parsed.data.assigneeId,
     expectedAssigneeId: parsed.data.expectedAssigneeId,
   })
+}
+
+export const attendTicket = async (
+  input: AttendTicketInput,
+): Promise<AttendTicketResult> => {
+  const actor = await getSession()
+  if (!actor) return ATTEND_FORBIDDEN_FAILURE
+
+  const parsed = attendTicketSchema.safeParse(input)
+  if (!parsed.success) {
+    return invalidInput(
+      parsed.error.issues[0]?.message,
+      ATTEND_UNEXPECTED_ERROR_MESSAGE,
+    )
+  }
+
+  let outcome: StartTicketWorkOutcome
+
+  try {
+    outcome = await startTicketWork({
+      ticketId: parsed.data.ticketId,
+      actorId: actor.id,
+    })
+  } catch (error) {
+    console.error("[attendTicket]", error)
+    return ATTEND_UNEXPECTED_FAILURE
+  }
+
+  if (outcome.status !== "saved") return attendFailureFor(outcome, actor.id)
+
+  revalidatePath(ticketDetailPath(outcome.ticketId))
+  revalidatePath(DEPARTMENT_QUEUE_PATH)
+  revalidatePath(MY_TICKETS_PATH)
+
+  return {
+    ok: true,
+    message: describeTicketAttended(outcome.ticketId),
+  }
 }

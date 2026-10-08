@@ -11,6 +11,7 @@ import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { todayKey } from "@/app/_lib/date"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
+import { canAttendTicketDetail } from "@/app/_lib/domain/ticket-assignment"
 import {
   canDeleteTicketComment,
   canEditTicketComment,
@@ -116,6 +117,7 @@ const TicketDetailPage = async ({
           status={ticket.status}
           priority={ticket.priority}
           editable={editable}
+          canAttend={canAttendTicketDetail(actor, ticket)}
           action={
             editButton.state === "blocked" ? (
               <EditTicketBlockedButton message={editButton.message} />

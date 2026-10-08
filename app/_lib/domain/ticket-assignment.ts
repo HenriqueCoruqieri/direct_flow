@@ -1,6 +1,7 @@
 import {
   formatTicketNumber,
   isNonFinalTicketStatus,
+  TICKET_STATUS_LABELS,
 } from "@/app/_lib/domain/ticket"
 import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import type {
@@ -18,6 +19,9 @@ import type {
   TicketAssignmentSource,
   TicketAssignmentStateBlockReason,
   TicketAssumeBlockReason,
+  TicketAttendBlockReason,
+  TicketAttendConflict,
+  TicketAttendDetailFacts,
   TicketSendBlockReason,
 } from "@/app/_lib/types/ticket-assignment"
 
@@ -194,6 +198,86 @@ export const describeTicketSent = (
   assigneeName: string,
 ): string =>
   `Chamado ${formatTicketNumber(ticketId)} enviado para ${assigneeName}.`
+
+export const ATTENDABLE_TICKET_STATUS =
+  "encaminhado" as const satisfies TicketStatus
+
+export const ATTENDED_TICKET_STATUS =
+  "em_andamento" as const satisfies TicketStatus
+
+export const ATTEND_TICKET_LABEL = "Atender"
+
+export const ATTEND_TICKET_PENDING_LABEL = "Atendendo…"
+
+export const TICKET_NOT_ATTENDABLE_MESSAGE =
+  "Não é possível atender este chamado agora."
+
+const TICKET_ATTEND_BLOCK_IS_CONFLICT = {
+  ACTOR_INACTIVE: false,
+  PASSWORD_CHANGE_REQUIRED: false,
+  NOT_ASSIGNEE: true,
+  AWAITING_APPROVAL: true,
+  STATUS_NOT_ATTENDABLE: true,
+} as const satisfies Record<TicketAttendBlockReason, boolean>
+
+export const ticketAttendBlockFor = (
+  actor: TicketActorFacts,
+  ticket: TicketAssignmentFacts,
+): TicketAttendBlockReason | null => {
+  const actorBlock = actorBlockFor(actor)
+  if (actorBlock !== null) return actorBlock
+  if (ticket.assignedTo !== actor.userId) return "NOT_ASSIGNEE"
+  if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"
+  if (ticket.status !== ATTENDABLE_TICKET_STATUS) {
+    return "STATUS_NOT_ATTENDABLE"
+  }
+  return null
+}
+
+export const canAttendTicket = (
+  actor: TicketActorFacts,
+  ticket: TicketAssignmentFacts,
+): boolean => ticketAttendBlockFor(actor, ticket) === null
+
+export const canAttendTicketDetail = (
+  actor: TicketActorFacts,
+  ticket: TicketAttendDetailFacts,
+): boolean =>
+  canAttendTicket(actor, {
+    createdBy: ticket.createdBy,
+    assignedTo: ticket.assignedTo,
+    currentDepartmentId: ticket.currentDepartmentId,
+    status: ticket.status,
+    hasPendingTransfer: ticket.pendingTransfer !== null,
+  })
+
+export const isTicketAttendConflict = (
+  reason: TicketAttendBlockReason,
+): boolean => TICKET_ATTEND_BLOCK_IS_CONFLICT[reason]
+
+export const describeTicketAttended = (ticketId: number): string =>
+  `Você começou a atender o chamado ${formatTicketNumber(ticketId)}.`
+
+export const describeTicketAttendConflict = (
+  conflict: TicketAttendConflict,
+  actorId: number,
+): string => {
+  if (conflict.currentAssigneeId === null) {
+    return "Este chamado voltou para a fila do setor. Confira a página atualizada."
+  }
+  if (conflict.currentAssigneeId !== actorId) {
+    return conflict.currentAssigneeName === null
+      ? "Este chamado não está mais com você. Confira a página atualizada."
+      : `Este chamado agora está com ${conflict.currentAssigneeName}.`
+  }
+  if (conflict.hasPendingTransfer) {
+    return "Este chamado aguarda a aprovação de uma transferência."
+  }
+  if (conflict.currentStatus === ATTENDED_TICKET_STATUS) {
+    return "Você já está atendendo este chamado."
+  }
+  return `O status deste chamado mudou para ${TICKET_STATUS_LABELS[conflict.currentStatus]}.`
+}
 
 export const describeTicketAssignmentConflict = (
   conflict: TicketAssignmentConflict,

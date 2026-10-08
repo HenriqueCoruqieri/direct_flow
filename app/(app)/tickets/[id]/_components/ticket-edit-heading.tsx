@@ -12,9 +12,13 @@ import EditTicketButton from "./edit-ticket-button"
 
 interface TicketEditHeadingProps {
   heading: React.ReactNode
+  attendAction?: React.ReactNode
 }
 
-const TicketEditHeading = ({ heading }: TicketEditHeadingProps) => {
+const TicketEditHeading = ({
+  heading,
+  attendAction,
+}: TicketEditHeadingProps) => {
   const titleId = useId()
   const editButtonRef = useRef<HTMLButtonElement>(null)
   const wasEditingRef = useRef(false)
@@ -79,7 +83,10 @@ const TicketEditHeading = ({ heading }: TicketEditHeadingProps) => {
             </Button>
           </>
         ) : (
-          <EditTicketButton ref={editButtonRef} onClick={startEditing} />
+          <>
+            {attendAction}
+            <EditTicketButton ref={editButtonRef} onClick={startEditing} />
+          </>
         )}
       </div>
     </>

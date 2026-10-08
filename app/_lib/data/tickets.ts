@@ -11,9 +11,12 @@ import {
 import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import {
   assigneeTargetFor,
+  ATTENDED_TICKET_STATUS,
   creationStatusFor,
+  isTicketAttendConflict,
   statusAfterReassignment,
   ticketAssumeBlockFor,
+  ticketAttendBlockFor,
   ticketSendBlockFor,
 } from "@/app/_lib/domain/ticket-assignment"
 import { AUTO_CLOSE_NOTE } from "@/app/_lib/domain/ticket-closure"
@@ -34,6 +37,8 @@ import type {
 import type {
   AssignTicketOutcome,
   AssignTicketValues,
+  StartTicketWorkOutcome,
+  StartTicketWorkValues,
   TicketAssignmentFacts,
 } from "@/app/_lib/types/ticket-assignment"
 import type { CloseExpiredResolvedTicketsOutcome } from "@/app/_lib/types/ticket-closure"
@@ -715,6 +720,114 @@ export async function assignTicket(
     }
 
     return { status: "saved", ticketId, assigneeName: newAssigneeName }
+  })
+}
+
+export async function startTicketWork(
+  values: StartTicketWorkValues,
+): Promise<StartTicketWorkOutcome> {
+  const { ticketId, actorId } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("update")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const [actorRow] = await tx
+      .select({
+        departmentId: user.departmentId,
+        role: user.role,
+        isActive: user.isActive,
+        mustChangePassword: user.mustChangePassword,
+        isBoard: department.isBoard,
+      })
+      .from(user)
+      .innerJoin(department, eq(department.id, user.departmentId))
+      .where(eq(user.id, actorId))
+      .for("share", { of: user })
+
+    if (!actorRow) return { status: "not_attendable" }
+
+    const actor: TicketActorFacts = {
+      userId: actorId,
+      departmentId: actorRow.departmentId,
+      isBoard: actorRow.isBoard,
+      role: actorRow.role,
+      isActive: actorRow.isActive,
+      mustChangePassword: actorRow.mustChangePassword,
+    }
+
+    if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
+
+    const [pendingTransfer] = await tx
+      .select({ id: ticketTransfer.id })
+      .from(ticketTransfer)
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1)
+
+    const hasPendingTransfer = pendingTransfer !== undefined
+
+    const blockReason = ticketAttendBlockFor(actor, {
+      ...ticketRow,
+      hasPendingTransfer,
+    })
+
+    if (blockReason !== null) {
+      if (!isTicketAttendConflict(blockReason)) {
+        return { status: "not_attendable" }
+      }
+
+      let currentAssigneeName: string | null = null
+
+      if (ticketRow.assignedTo !== null && ticketRow.assignedTo !== actorId) {
+        const [currentAssigneeRow] = await tx
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, ticketRow.assignedTo))
+
+        currentAssigneeName = currentAssigneeRow?.name ?? null
+      }
+
+      return {
+        status: "conflict",
+        currentStatus: ticketRow.status,
+        currentAssigneeId: ticketRow.assignedTo,
+        currentAssigneeName,
+        hasPendingTransfer,
+      }
+    }
+
+    const changedAt = new Date()
+
+    await tx
+      .update(ticket)
+      .set({ status: ATTENDED_TICKET_STATUS, updatedAt: changedAt })
+      .where(eq(ticket.id, ticketId))
+
+    await tx.insert(ticketHistory).values({
+      ticketId,
+      changedBy: actorId,
+      event: "mudanca_status",
+      fromStatus: ticketRow.status,
+      toStatus: ATTENDED_TICKET_STATUS,
+      changedAt,
+    })
+
+    return { status: "saved", ticketId }
   })
 }
 

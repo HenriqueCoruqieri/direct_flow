@@ -3,7 +3,10 @@ import type {
   TicketStatus,
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
-import type { TicketNotFound } from "@/app/_lib/types/ticket-edit"
+import type {
+  TicketNotFound,
+  TicketPendingTransferTarget,
+} from "@/app/_lib/types/ticket-edit"
 
 export type TicketAssigneeTarget = "queue" | "actor" | "colleague"
 
@@ -69,6 +72,45 @@ export type AssignTicketOutcome =
   | TicketNotAssignable
   | TicketAssignmentConflict
   | TicketInvalidAssignee
+
+export type TicketAttendStateBlockReason =
+  "NOT_ASSIGNEE" | "AWAITING_APPROVAL" | "STATUS_NOT_ATTENDABLE"
+
+export type TicketAttendBlockReason =
+  TicketAssignmentActorBlockReason | TicketAttendStateBlockReason
+
+export interface TicketAttendDetailFacts extends TicketVisibilityFacts {
+  status: TicketStatus
+  pendingTransfer: TicketPendingTransferTarget | null
+}
+
+export interface StartTicketWorkValues {
+  ticketId: number
+  actorId: number
+}
+
+export interface TicketWorkStarted {
+  status: "saved"
+  ticketId: number
+}
+
+export interface TicketNotAttendable {
+  status: "not_attendable"
+}
+
+export interface TicketAttendConflict {
+  status: "conflict"
+  currentStatus: TicketStatus
+  currentAssigneeId: number | null
+  currentAssigneeName: string | null
+  hasPendingTransfer: boolean
+}
+
+export type StartTicketWorkOutcome =
+  | TicketWorkStarted
+  | TicketNotFound
+  | TicketNotAttendable
+  | TicketAttendConflict
 
 export interface TicketAssignmentSource {
   id: number
