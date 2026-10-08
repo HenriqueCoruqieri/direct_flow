@@ -50,6 +50,17 @@ usuário. Não existe "segunda biblioteca para a mesma coisa" neste projeto.
 outro arquivo que precise formatar data importa de `@/app/_lib/date`. Isso é o que
 garante formatação consistente em toda a aplicação — não é preferência de estilo.
 
+**Bibliotecas por baixo dos primitivos do shadcn.** O que um primitivo de
+`app/_components/ui/` já envolve (`radix-ui`, `cmdk`) não é segunda biblioteca.
+Código fora de `ui/` pode importá-la direto quando o primitivo não expõe o que
+a tela precisa sem ser editado à mão — editar tiraria dele a isenção de arquivo
+gerado (seção 5). Primeiro tente o primitivo; importe direto só o pedaço que
+falta, e diga na resposta do agente por que o primitivo não serviu, com arquivo
+e linha. Precedentes: `Slot` de `radix-ui` em
+`app/_components/blocked-action-trigger.tsx` e `Command.Input` de `cmdk` em
+`app/(app)/_components/ticket-search.tsx`. Instalar pacote novo continua
+seguindo a seção 4.
+
 **TanStack Query:** desligado por padrão. Busca de dados é Server Component +
 recursos nativos do Next. Só entra quando houver necessidade real e comprovada
 de cache no cliente, sincronização entre abas, refetch, polling ou orquestração
@@ -85,6 +96,11 @@ As setas são de mão única. Em particular:
   cliente chega a elas pela action ou por props vindas do Server Component.
   Ler direto não dispensa autorizar: a página decide o que mostrar aplicando
   `app/_lib/domain/` sobre a sessão que carregou.
+  **Exceção única — busca enquanto se digita (ADR 015).** A busca de chamados
+  do topo (`searchTickets`) é uma Server Action de **leitura**, chamada pelo
+  cliente: valida, autentica, chama `app/_lib/data/` e devolve, sem revalidar.
+  A exceção não se estende: qualquer outra leitura iniciada pelo cliente
+  precisa de ADR próprio.
 - **Server Actions nunca escrevem query.** Uma action valida, autoriza, chama
   `app/_lib/data/`, revalida e devolve. O SQL vive em `app/_lib/data/`.
 - **Arquivo só entra e sai por `app/_lib/storage/`.** É o único lugar que
