@@ -1,5 +1,7 @@
 import Link from "next/link"
 
+import ActiveTabNav from "@/app/_components/active-tab-nav"
+
 export interface TicketListTabItem {
   value: string
   label: string
@@ -16,7 +18,11 @@ interface TicketListTabsProps {
 const TicketListTabs = ({ ariaLabel, items, current }: TicketListTabsProps) => {
   return (
     <div className="border-b border-border-subtle">
-      <nav aria-label={ariaLabel} className="-mb-px flex gap-1 overflow-x-auto">
+      <ActiveTabNav
+        activeKey={current}
+        aria-label={ariaLabel}
+        className="-mb-px flex gap-1 overflow-x-auto"
+      >
         {items.map((item) => (
           <Link
             key={item.value}
@@ -31,7 +37,7 @@ const TicketListTabs = ({ ariaLabel, items, current }: TicketListTabsProps) => {
             </span>
           </Link>
         ))}
-      </nav>
+      </ActiveTabNav>
     </div>
   )
 }

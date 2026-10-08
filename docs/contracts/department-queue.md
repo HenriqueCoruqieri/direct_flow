@@ -57,6 +57,26 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > detalhe mostra `Fila do setor` → `departmentQueueHref(location)` no link de
 > voltar. As linhas `#`, Título e `rowHref` da tabela abaixo foram atualizadas.
 
+> Revisão de 2026-10-08 (`docs/contracts/queue-tabs-comment-delete-and-attend.md`,
+> que prevalece no que diverge): as abas passam a ser **Todos · Em aberto ·
+> Encaminhados · Em andamento · Resolvidos · Fechados · Cancelados** (`all`,
+> `open`, `forwarded`, `in_progress`, `resolved`, `closed`, `cancelled`); o
+> padrão continua `open`. Cada regra ganha `assignee: "any" | "unassigned" |
+"assigned"` (`DepartmentQueueAssigneeCriterion`). **"Em aberto" muda de
+> sentido**: era "todo status ativo"; passa a ser status ativo **e sem
+> destinatário** ("pendente de atendimento na fila"). Encaminhados =
+> `encaminhado` com destinatário; Em andamento = `em_andamento` com qualquer
+> destinatário; Todos = os oito status. As abas **deixam de particionar** os
+> chamados do setor (Todos contém as demais; dados antigos podem ficar só em
+> Todos ou em duas abas, riscos 1 e 2 do contrato novo). As contagens passam a
+> ser montadas por `mapDepartmentQueueTabs` (sem objeto literal). Tipos,
+> domínio, tabela de abas, `queueTabCondition` e contagem abaixo já estão
+> atualizados. Ficam superados: Q2 (abas e colunas), Q3 (quatro contagens; a
+> referência é a QT2 do contrato novo), Q6 (Em aberto: o filtro Destinatário só
+> tem `Sem destinatário`), Q33 e Q35 (ordem e conteúdo de Em aberto), e a frase
+> "as quatro abas particionam" da revisão de 2026-10-06. Q16 também: depois de
+> "Assumir", o chamado sai de Em aberto e vai para Em andamento.
+
 ## Escopo técnico em uma frase
 
 Uma tela nova (`/queue`), duas leituras e uma escrita: a escrita troca só
@@ -79,7 +99,7 @@ sem migration, sem e-mail.
 | `isTicketLocked`                             | Não entra. Os status atribuíveis excluem `resolvido`, o único em que a janela de 7 dias faz diferença; `isNonFinalTicketStatus` dá o motivo `TICKET_FINISHED` e a tabela de atribuíveis dá `STATUS_NOT_ASSIGNABLE`                                                                                                                                             |
 | `isUsableTicketAssignee` em "Assumir"        | É a checagem de setor de quem assume: quem assume vira destinatário, então precisa ser destinatário válido (ativo e do setor do chamado). A atividade já foi conferida antes, com motivo próprio                                                                                                                                                               |
 | Status atribuíveis × resolvíveis             | Hoje os valores coincidem com `TICKET_STATUS_IS_RESOLVABLE`, mas são tabelas separadas: são decisões diferentes e podem divergir (ex.: Aprovações)                                                                                                                                                                                                             |
-| Valor das abas na URL                        | `open`, `resolved`, `closed`, `cancelled` (`?tab=open`), em inglês como as de Meus chamados                                                                                                                                                                                                                                                                    |
+| Valor das abas na URL                        | `all`, `open`, `forwarded`, `in_progress`, `resolved`, `closed`, `cancelled` (`?tab=open`), em inglês como as de Meus chamados (revisão de 2026-10-08)                                                                                                                                                                                                         |
 | `setor` igual ao próprio setor               | Tratado como ausente (`queueDepartmentParamFor` → `null`): o link canônico da Diretoria para o Diretor é sem `setor`                                                                                                                                                                                                                                           |
 | Período no estado vazio                      | Reaproveita `MY_TICKETS_EMPTY_PERIOD` e o tipo `MyTicketsEmptyCopy`: o texto não cita a tela                                                                                                                                                                                                                                                                   |
 | Presets e schema de período                  | `ALL_TIME_PERIOD_PRESETS` (`domain/period.ts`) e `allTimePeriodSchema(today)` (`validation/period.ts`) passam a ser a fonte; `MY_TICKETS_PERIOD_PRESETS` e `myTicketsPeriodSchema` viraram aliases, sem mudar valor nem tipo                                                                                                                                   |
@@ -195,11 +215,14 @@ export interface SendTicketFormDefaults {
 ### `app/_lib/types/department-queue.ts` (novo)
 
 ```ts
-export type DepartmentQueueTab = (typeof DEPARTMENT_QUEUE_TABS)[number] // "open" | "closed" | "cancelled"
+export type DepartmentQueueTab = (typeof DEPARTMENT_QUEUE_TABS)[number] // "all" | "open" | "forwarded" | "in_progress" | "resolved" | "closed" | "cancelled"
+
+export type DepartmentQueueAssigneeCriterion = "any" | "unassigned" | "assigned" // desde 2026-10-08
 
 export interface DepartmentQueueTabRule {
   label: string
   statuses: readonly TicketStatus[]
+  assignee: DepartmentQueueAssigneeCriterion // desde 2026-10-08
   emptyTitle: string
   emptyDescription: string
 }
@@ -249,7 +272,10 @@ export interface DepartmentQueueRowActions {
 
 ```ts
 export const DEPARTMENT_QUEUE_TABS = [
+  "all",
   "open",
+  "forwarded",
+  "in_progress",
   "resolved",
   "closed",
   "cancelled",
@@ -380,6 +406,9 @@ export const DEFAULT_DEPARTMENT_QUEUE_TAB: DepartmentQueueTab // "open"
 export const DEPARTMENT_QUEUE_PERIOD_PRESETS // = ALL_TIME_PERIOD_PRESETS: ["todos", "hoje", "semana", "mes"]
 export const DEFAULT_DEPARTMENT_QUEUE_PERIOD: PeriodFilterSelection // { periodo: "todos" }
 export const DEPARTMENT_QUEUE_TAB_RULES // satisfies Record<DepartmentQueueTab, DepartmentQueueTabRule>
+export const mapDepartmentQueueTabs: <T>(
+  map: (tab: DepartmentQueueTab) => T,
+) => Record<DepartmentQueueTab, T> // desde 2026-10-08
 
 export const hasDepartmentQueue: (
   facts: DepartmentQueueAccessFacts | null,
@@ -413,16 +442,21 @@ export const queueRowActionsFor: (
 
 Abas (`DEPARTMENT_QUEUE_TAB_RULES`; a relação é sempre "setor atual"):
 
-| Aba (`?tab=`) | `label`    | `statuses`                 | `emptyTitle`             | `emptyDescription`                                                                                                                                  |
-| ------------- | ---------- | -------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `open`        | Em aberto  | `ACTIVE_TICKET_STATUSES`   | Nenhum chamado em aberto | Os chamados que estiverem no setor aparecem aqui até serem resolvidos ou cancelados.                                                                |
-| `resolved`    | Resolvidos | `[RESOLVED_TICKET_STATUS]` | Nenhum chamado resolvido | Os chamados do setor que foram resolvidos aparecem aqui até o fechamento automático, 7 dias após a resolução. (`7` = `RESOLUTION_EDIT_WINDOW_DAYS`) |
-| `closed`      | Fechados   | `["fechado"]`              | Nenhum chamado fechado   | Os chamados do setor que foram fechados aparecem aqui.                                                                                              |
-| `cancelled`   | Cancelados | `["cancelado"]`            | Nenhum chamado cancelado | Os chamados do setor que foram cancelados aparecem aqui.                                                                                            |
+| Aba (`?tab=`) | `label`      | `statuses`                   | `assignee`   | `emptyTitle`                | `emptyDescription`                                                                                                                                  |
+| ------------- | ------------ | ---------------------------- | ------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `all`         | Todos        | `TICKET_STATUSES`            | `any`        | Nenhum chamado no setor     | Os chamados que estiverem no setor aparecem aqui, em qualquer status.                                                                               |
+| `open`        | Em aberto    | `ACTIVE_TICKET_STATUSES`     | `unassigned` | Nenhum chamado em aberto    | Os chamados na fila do setor, ainda sem destinatário, aparecem aqui até alguém assumir ou recebê-los.                                               |
+| `forwarded`   | Encaminhados | `[ATTENDABLE_TICKET_STATUS]` | `assigned`   | Nenhum chamado encaminhado  | Os chamados do setor encaminhados para alguém aparecem aqui até o destinatário começar o atendimento.                                               |
+| `in_progress` | Em andamento | `[ATTENDED_TICKET_STATUS]`   | `any`        | Nenhum chamado em andamento | Os chamados do setor em atendimento aparecem aqui até serem resolvidos.                                                                             |
+| `resolved`    | Resolvidos   | `[RESOLVED_TICKET_STATUS]`   | `any`        | Nenhum chamado resolvido    | Os chamados do setor que foram resolvidos aparecem aqui até o fechamento automático, 7 dias após a resolução. (`7` = `RESOLUTION_EDIT_WINDOW_DAYS`) |
+| `closed`      | Fechados     | `["fechado"]`                | `any`        | Nenhum chamado fechado      | Os chamados do setor que foram fechados aparecem aqui.                                                                                              |
+| `cancelled`   | Cancelados   | `["cancelado"]`              | `any`        | Nenhum chamado cancelado    | Os chamados do setor que foram cancelados aparecem aqui.                                                                                            |
 
-As quatro abas particionam os chamados do setor: todo chamado está em exatamente
-uma. Todo chamado listado passa em `canViewTicket` para quem vê (está no setor
-atual, ou é o Diretor): nenhuma linha leva a 404.
+Desde 2026-10-08 as abas **não** particionam: Todos contém as demais, e o
+mapeamento de cada estado para uma aba (com as exceções de dados antigos) está
+em `queue-tabs-comment-delete-and-attend.md`. Todo chamado listado passa em
+`canViewTicket` para quem vê (está no setor atual, ou é o Diretor): nenhuma
+linha leva a 404.
 
 | Nome                          | Semântica                                                                                                                                                                                                       |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -557,10 +591,12 @@ const queueTabCondition = (
   departmentId: number,
   tab: DepartmentQueueTab,
 ): SQL =>
-  sql`(${eq(ticket.currentDepartmentId, departmentId)} and ${inArray(ticket.status, [...DEPARTMENT_QUEUE_TAB_RULES[tab].statuses])})`
+  sql`(${eq(ticket.currentDepartmentId, departmentId)} and ${inArray(ticket.status, [...DEPARTMENT_QUEUE_TAB_RULES[tab].statuses])} and <condição de DEPARTMENT_QUEUE_TAB_RULES[tab].assignee>)`
 ```
 
-Status vêm **só** de `DEPARTMENT_QUEUE_TAB_RULES`. O helper de período
+Status e critério de destinatário (desde 2026-10-08: `any` → nenhuma condição,
+`unassigned` → `assigned_to is null`, `assigned` → `assigned_to is not null`)
+vêm **só** de `DEPARTMENT_QUEUE_TAB_RULES`. O helper de período
 (`created_at >= start and created_at < end`, `null` → sem condição) é o mesmo de
 Meus chamados; se for extraído para um módulo interno de `app/_lib/data/` para
 não existir duas vezes, melhor (decisão do `df-data`).
@@ -584,16 +620,20 @@ ticket.id and status = 'pendente')`, tipado `sql<boolean>` (o `pg` devolve
 
 ```sql
 select
-  count(*) filter (where <queueTabCondition(d, 'open')>)::int      as open,
-  count(*) filter (where <queueTabCondition(d, 'resolved')>)::int  as resolved,
-  count(*) filter (where <queueTabCondition(d, 'closed')>)::int    as closed,
-  count(*) filter (where <queueTabCondition(d, 'cancelled')>)::int as cancelled
+  count(*) filter (where <queueTabCondition(d, 'all')>)::int         as all,
+  count(*) filter (where <queueTabCondition(d, 'open')>)::int        as open,
+  count(*) filter (where <queueTabCondition(d, 'forwarded')>)::int   as forwarded,
+  count(*) filter (where <queueTabCondition(d, 'in_progress')>)::int as in_progress,
+  count(*) filter (where <queueTabCondition(d, 'resolved')>)::int    as resolved,
+  count(*) filter (where <queueTabCondition(d, 'closed')>)::int      as closed,
+  count(*) filter (where <queueTabCondition(d, 'cancelled')>)::int   as cancelled
 from ticket
 where current_department_id = $1 and <período>
 ```
 
-Montada iterando `DEPARTMENT_QUEUE_TABS`; sempre devolve uma chave por aba (setor
-sem chamado → `0`). Cada contagem é exatamente o tamanho da lista da aba no
+Montada por `mapDepartmentQueueTabs` (desde 2026-10-08; antes, iterando
+`DEPARTMENT_QUEUE_TABS` com um objeto literal de zeros); sempre devolve uma
+chave por aba (setor sem chamado → `mapDepartmentQueueTabs(() => 0)`). Cada contagem é exatamente o tamanho da lista da aba no
 mesmo período.
 
 ### `app/_lib/data/tickets.ts` — `assignTicket` (novo)
@@ -715,13 +755,14 @@ expectedAssigneeId })` ou `{ mode: "send", …, assigneeId }`, em `try/catch`.
 Toda escrita que muda o que a Fila mostra (status, aba, título, tipo, tag ou
 destinatário) chama `revalidatePath(DEPARTMENT_QUEUE_PATH)` ao salvar:
 
-| Origem                                                        | Quando            | Contrato                |
-| ------------------------------------------------------------- | ----------------- | ----------------------- |
-| `assumeTicket`, `sendTicket` (`actions/ticket-assignment.ts`) | `saved`           | este documento          |
-| `resolveTicket` (`actions/ticket-resolution.ts`)              | `saved`           | `ticket-resolution.md`  |
-| `createTicket` (`actions/tickets.ts`)                         | `saved`           | `ticket-assignee.md`    |
-| `editTicket` (`actions/tickets.ts`)                           | `saved`, sempre   | `ticket-edit.md`        |
-| cron `close-resolved-tickets` (`app/api/cron/.../route.ts`)   | `closedCount > 0` | `ticket-edit-window.md` |
+| Origem                                                        | Quando            | Contrato                                  |
+| ------------------------------------------------------------- | ----------------- | ----------------------------------------- |
+| `assumeTicket`, `sendTicket` (`actions/ticket-assignment.ts`) | `saved`           | este documento                            |
+| `resolveTicket` (`actions/ticket-resolution.ts`)              | `saved`           | `ticket-resolution.md`                    |
+| `createTicket` (`actions/tickets.ts`)                         | `saved`           | `ticket-assignee.md`                      |
+| `editTicket` (`actions/tickets.ts`)                           | `saved`, sempre   | `ticket-edit.md`                          |
+| cron `close-resolved-tickets` (`app/api/cron/.../route.ts`)   | `closedCount > 0` | `ticket-edit-window.md`                   |
+| `attendTicket` (`actions/ticket-assignment.ts`)               | `saved`           | `queue-tabs-comment-delete-and-attend.md` |
 
 Escrita nova que mude qualquer um desses campos entra nesta tabela.
 
@@ -904,7 +945,7 @@ shouldFocus: true })` e `router.refresh()`; continua aberto.
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Menu / título                 | `Fila do setor`                                                                                                                                |
 | Não alocado                   | `Seu perfil não está associado a nenhum setor, informe sua liderança.`                                                                         |
-| Abas                          | `Em aberto`, `Resolvidos`, `Fechados`, `Cancelados`                                                                                            |
+| Abas                          | `Todos`, `Em aberto`, `Encaminhados`, `Em andamento`, `Resolvidos`, `Fechados`, `Cancelados` (desde 2026-10-08)                                |
 | Filtros                       | `Setor` (Diretor), `Destinatário` com `Sem destinatário`                                                                                       |
 | Botões                        | `Assumir` / `Assumindo…`, `Enviar` / `Enviando…`, `Cancelar`                                                                                   |
 | Dialog                        | `Enviar chamado #12`; `Escolha quem do setor do chamado vai cuidar dele.`                                                                      |
@@ -1053,3 +1094,10 @@ Revisão de 2026-10-06 (aba Resolvidos):
 - [ ] `resolved: 0` na contagem inicial de `countQueueTicketsByTab` (`df-data`)
 - [ ] nada no `df-ui`: abas, estado vazio e filtro Status saem das regras
 - [ ] cenários Q33–Q40 do `df-qa`
+
+Revisão de 2026-10-08 (sete abas, `queue-tabs-comment-delete-and-attend.md`):
+
+- [x] `DEPARTMENT_QUEUE_TABS` com sete abas, `assignee` nas regras, textos, `mapDepartmentQueueTabs` (`df-architect`)
+- [ ] `queueTabCondition` com critério de destinatário; contagens por `mapDepartmentQueueTabs` (`df-data`)
+- [ ] nada obrigatório no `df-ui`: abas, estado vazio e filtro Status saem das regras
+- [ ] cenários QT1–QT12 do `df-qa`

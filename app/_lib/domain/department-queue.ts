@@ -5,8 +5,11 @@ import {
   ACTIVE_TICKET_STATUSES,
   RESOLVED_TICKET_STATUS,
   TICKET_CREATION_BLOCK_MESSAGES,
+  TICKET_STATUSES,
 } from "@/app/_lib/domain/ticket"
 import {
+  ATTENDABLE_TICKET_STATUS,
+  ATTENDED_TICKET_STATUS,
   canAssumeTicket,
   canSendTicket,
 } from "@/app/_lib/domain/ticket-assignment"
@@ -50,33 +53,73 @@ export const DEFAULT_DEPARTMENT_QUEUE_PERIOD: PeriodFilterSelection = {
 }
 
 export const DEPARTMENT_QUEUE_TAB_RULES = {
+  all: {
+    label: "Todos",
+    statuses: TICKET_STATUSES,
+    assignee: "any",
+    emptyTitle: "Nenhum chamado no setor",
+    emptyDescription:
+      "Os chamados que estiverem no setor aparecem aqui, em qualquer status.",
+  },
   open: {
     label: "Em aberto",
     statuses: ACTIVE_TICKET_STATUSES,
+    assignee: "unassigned",
     emptyTitle: "Nenhum chamado em aberto",
     emptyDescription:
-      "Os chamados que estiverem no setor aparecem aqui até serem resolvidos ou cancelados.",
+      "Os chamados na fila do setor, ainda sem destinatário, aparecem aqui até alguém assumir ou recebê-los.",
+  },
+  forwarded: {
+    label: "Encaminhados",
+    statuses: [ATTENDABLE_TICKET_STATUS],
+    assignee: "assigned",
+    emptyTitle: "Nenhum chamado encaminhado",
+    emptyDescription:
+      "Os chamados do setor encaminhados para alguém aparecem aqui até o destinatário começar o atendimento.",
+  },
+  in_progress: {
+    label: "Em andamento",
+    statuses: [ATTENDED_TICKET_STATUS],
+    assignee: "any",
+    emptyTitle: "Nenhum chamado em andamento",
+    emptyDescription:
+      "Os chamados do setor em atendimento aparecem aqui até serem resolvidos.",
   },
   resolved: {
     label: "Resolvidos",
     statuses: [RESOLVED_TICKET_STATUS],
+    assignee: "any",
     emptyTitle: "Nenhum chamado resolvido",
     emptyDescription: `Os chamados do setor que foram resolvidos aparecem aqui até o fechamento automático, ${RESOLUTION_EDIT_WINDOW_DAYS} dias após a resolução.`,
   },
   closed: {
     label: "Fechados",
     statuses: ["fechado"],
+    assignee: "any",
     emptyTitle: "Nenhum chamado fechado",
     emptyDescription: "Os chamados do setor que foram fechados aparecem aqui.",
   },
   cancelled: {
     label: "Cancelados",
     statuses: ["cancelado"],
+    assignee: "any",
     emptyTitle: "Nenhum chamado cancelado",
     emptyDescription:
       "Os chamados do setor que foram cancelados aparecem aqui.",
   },
 } satisfies Record<DepartmentQueueTab, DepartmentQueueTabRule>
+
+export const mapDepartmentQueueTabs = <T>(
+  map: (tab: DepartmentQueueTab) => T,
+): Record<DepartmentQueueTab, T> => ({
+  all: map("all"),
+  open: map("open"),
+  forwarded: map("forwarded"),
+  in_progress: map("in_progress"),
+  resolved: map("resolved"),
+  closed: map("closed"),
+  cancelled: map("cancelled"),
+})
 
 export const hasDepartmentQueue = (
   facts: DepartmentQueueAccessFacts | null,

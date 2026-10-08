@@ -1,12 +1,22 @@
-import { and, desc, eq, inArray, type SQL, sql } from "drizzle-orm"
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  type SQL,
+  sql,
+} from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { ticketPeriodCondition } from "@/app/_lib/data/period-condition"
 import {
   DEPARTMENT_QUEUE_TAB_RULES,
-  DEPARTMENT_QUEUE_TABS,
+  mapDepartmentQueueTabs,
 } from "@/app/_lib/domain/department-queue"
 import type {
+  DepartmentQueueAssigneeCriterion,
   DepartmentQueueListItem,
   DepartmentQueueTab,
   DepartmentQueueTabCounts,
@@ -15,11 +25,21 @@ import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { tag, ticket, ticketTag, ticketTransfer, user } from "@/db/schema"
 
+const ASSIGNEE_CONDITIONS = {
+  any: undefined,
+  unassigned: isNull(ticket.assignedTo),
+  assigned: isNotNull(ticket.assignedTo),
+} satisfies Record<DepartmentQueueAssigneeCriterion, SQL | undefined>
+
 const queueTabCondition = (
   departmentId: number,
   tab: DepartmentQueueTab,
-): SQL =>
-  sql`(${eq(ticket.currentDepartmentId, departmentId)} and ${inArray(ticket.status, [...DEPARTMENT_QUEUE_TAB_RULES[tab].statuses])})`
+): SQL => {
+  const rule = DEPARTMENT_QUEUE_TAB_RULES[tab]
+  const assigneeCondition = ASSIGNEE_CONDITIONS[rule.assignee]
+
+  return sql`(${eq(ticket.currentDepartmentId, departmentId)} and ${inArray(ticket.status, [...rule.statuses])}${assigneeCondition ? sql` and ${assigneeCondition}` : sql``})`
+}
 
 export async function listQueueTickets(
   departmentId: number,
@@ -60,13 +80,10 @@ export async function countQueueTicketsByTab(
   departmentId: number,
   range: DateRange | null = null,
 ): Promise<DepartmentQueueTabCounts> {
-  const columns = Object.fromEntries(
-    DEPARTMENT_QUEUE_TABS.map((tab) => [
-      tab,
-      sql<number>`(count(*) filter (where ${queueTabCondition(departmentId, tab)}))::int`.mapWith(
-        Number,
-      ),
-    ]),
+  const columns = mapDepartmentQueueTabs((tab) =>
+    sql<number>`(count(*) filter (where ${queueTabCondition(departmentId, tab)}))::int`.mapWith(
+      Number,
+    ),
   )
 
   const [row] = await db
@@ -79,14 +96,5 @@ export async function countQueueTicketsByTab(
       ),
     )
 
-  const counts: DepartmentQueueTabCounts = {
-    open: 0,
-    resolved: 0,
-    closed: 0,
-    cancelled: 0,
-  }
-  for (const tab of DEPARTMENT_QUEUE_TABS) {
-    counts[tab] = row?.[tab] ?? 0
-  }
-  return counts
+  return row ?? mapDepartmentQueueTabs(() => 0)
 }

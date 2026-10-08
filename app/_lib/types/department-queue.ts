@@ -5,9 +5,12 @@ import type { TicketAssignmentFacts } from "@/app/_lib/types/ticket-assignment"
 
 export type DepartmentQueueTab = (typeof DEPARTMENT_QUEUE_TABS)[number]
 
+export type DepartmentQueueAssigneeCriterion = "any" | "unassigned" | "assigned"
+
 export interface DepartmentQueueTabRule {
   label: string
   statuses: readonly TicketStatus[]
+  assignee: DepartmentQueueAssigneeCriterion
   emptyTitle: string
   emptyDescription: string
 }
