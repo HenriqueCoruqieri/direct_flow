@@ -21,7 +21,6 @@ import type {
   TicketAssumeBlockReason,
   TicketAttendBlockReason,
   TicketAttendConflict,
-  TicketAttendDetailFacts,
   TicketSendBlockReason,
 } from "@/app/_lib/types/ticket-assignment"
 
@@ -238,18 +237,6 @@ export const canAttendTicket = (
   actor: TicketActorFacts,
   ticket: TicketAssignmentFacts,
 ): boolean => ticketAttendBlockFor(actor, ticket) === null
-
-export const canAttendTicketDetail = (
-  actor: TicketActorFacts,
-  ticket: TicketAttendDetailFacts,
-): boolean =>
-  canAttendTicket(actor, {
-    createdBy: ticket.createdBy,
-    assignedTo: ticket.assignedTo,
-    currentDepartmentId: ticket.currentDepartmentId,
-    status: ticket.status,
-    hasPendingTransfer: ticket.pendingTransfer !== null,
-  })
 
 export const isTicketAttendConflict = (
   reason: TicketAttendBlockReason,

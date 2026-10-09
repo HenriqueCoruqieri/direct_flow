@@ -24,7 +24,10 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > `ticket-assignment.ts` passa a ser exportado como `ticketActorBlockFor`, sem
 > mudar o comportamento. Na Etapa 2, o botão "Atender" passa a ter dois casos
 > (`ticketAttendKindFor`: `start_work` → `attendTicket`, como aqui;
-> `accept_transfer` → `acceptTicketTransfer`). Na Etapa 3,
+> `accept_transfer` → `acceptTicketTransfer`). Na Etapa 2 (2026-10-09),
+> `canAttendTicketDetail` foi removido e o detalhe passa a usar
+> `ticketAttendTargetFor` (`department-transfer.md`, Etapa 2); as citações
+> abaixo ficam como registro. Na Etapa 3,
 > `ATTENDABLE_TICKET_STATUS` dá lugar a `isAttendableStatus` /
 > `ATTENDABLE_TICKET_STATUSES` (`encaminhado`, `recusado`) e a aba
 > Encaminhados usa a lista.
