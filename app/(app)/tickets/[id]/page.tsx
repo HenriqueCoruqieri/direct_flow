@@ -12,7 +12,6 @@ import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { todayKey } from "@/app/_lib/date"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
-import { canAttendTicketDetail } from "@/app/_lib/domain/ticket-assignment"
 import {
   canDeleteTicketComment,
   canEditTicketComment,
@@ -27,6 +26,7 @@ import { ticketConclusionStateFor } from "@/app/_lib/domain/ticket-resolution"
 import {
   buildSendToDepartmentFormDefaults,
   canSendTicketToDepartmentDetail,
+  ticketAttendTargetFor,
   transferTargetOptions,
 } from "@/app/_lib/domain/ticket-transfer"
 import type { TicketActorFacts } from "@/app/_lib/types/ticket"
@@ -92,6 +92,7 @@ const TicketDetailPage = async ({
 
   const isEditable = editButton.state === "editable"
   const canSendToDepartment = canSendTicketToDepartmentDetail(actor, ticket)
+  const attendTarget = ticketAttendTargetFor(actor, ticket)
   const [messages, editTags, editAssignees, departmentOptions] =
     await Promise.all([
       listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
@@ -139,7 +140,7 @@ const TicketDetailPage = async ({
           status={ticket.status}
           priority={ticket.priority}
           editable={editable}
-          canAttend={canAttendTicketDetail(actor, ticket)}
+          attendTarget={attendTarget}
           action={
             editButton.state === "blocked" ? (
               <EditTicketBlockedButton message={editButton.message} />

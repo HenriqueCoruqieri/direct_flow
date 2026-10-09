@@ -124,7 +124,7 @@ const HISTORY_EVENT_DESCRIBERS = {
   atribuicao: describeAssignment,
   transferencia_solicitada: describeTransferRequest,
   transferencia_aprovada: (entry) =>
-    `Aprovou a transferência${fromTo(entry.fromDepartmentName, entry.toDepartmentName)}.`,
+    `${describeActorWithDepartment(entry)} aceitou o chamado e começou a atendê-lo.`,
   transferencia_rejeitada: (entry) =>
     `Recusou a transferência${fromTo(entry.fromDepartmentName, entry.toDepartmentName)}.`,
   reabertura: (entry) => `Reabriu o chamado${withStatus(entry.toStatus)}.`,
@@ -149,7 +149,7 @@ const HISTORY_EVENT_NAMES_ACTOR = {
   mudanca_prioridade: false,
   atribuicao: true,
   transferencia_solicitada: true,
-  transferencia_aprovada: false,
+  transferencia_aprovada: true,
   transferencia_rejeitada: false,
   reabertura: false,
   encerramento: false,

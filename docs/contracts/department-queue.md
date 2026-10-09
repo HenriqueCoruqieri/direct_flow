@@ -778,6 +778,7 @@ destinatário) chama `revalidatePath(DEPARTMENT_QUEUE_PATH)` ao salvar:
 | cron `close-resolved-tickets` (`app/api/cron/.../route.ts`)   | `closedCount > 0`            | `ticket-edit-window.md`                   |
 | `attendTicket` (`actions/ticket-assignment.ts`)               | `saved`                      | `queue-tabs-comment-delete-and-attend.md` |
 | `sendTicketToDepartment` (`actions/ticket-transfer.ts`)       | `saved` e `actorKeepsAccess` | `department-transfer.md`                  |
+| `acceptTicketTransfer` (`actions/ticket-transfer.ts`)         | `saved`, sempre              | `department-transfer.md`                  |
 
 Exceção: escrita depois da qual quem agiu perde o acesso ao detalhe não chama
 `revalidatePath` nenhum, nem `/queue`. No Next 16 qualquer revalidação na

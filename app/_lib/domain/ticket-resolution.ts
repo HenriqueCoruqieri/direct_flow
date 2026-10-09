@@ -30,9 +30,6 @@ export const NO_SOLUTION_LABEL = "Nenhuma solução registrada."
 export const TICKET_ATTACHMENTS_SOON_MESSAGE =
   "Anexos estarão disponíveis em breve."
 
-export const TICKET_TRANSFER_SOON_MESSAGE =
-  "O envio para outro setor estará disponível em breve."
-
 const TICKET_STATUS_IS_RESOLVABLE = {
   aberto: true,
   em_analise: true,

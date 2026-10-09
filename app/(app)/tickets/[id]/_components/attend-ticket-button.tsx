@@ -9,23 +9,40 @@ import { Button } from "@/app/_components/ui/button"
 import {
   attendTicket,
   type AttendTicketErrorCode,
+  type AttendTicketResult,
 } from "@/app/_lib/actions/ticket-assignment"
+import {
+  acceptTicketTransfer,
+  type AcceptTicketTransferErrorCode,
+  type AcceptTicketTransferResult,
+} from "@/app/_lib/actions/ticket-transfer"
 import {
   ATTEND_TICKET_LABEL,
   ATTEND_TICKET_PENDING_LABEL,
 } from "@/app/_lib/domain/ticket-assignment"
+import type { TicketAttendTarget } from "@/app/_lib/types/ticket-transfer"
 
-const STALE_TICKET_CODES: ReadonlySet<AttendTicketErrorCode> = new Set([
-  "CONFLICT",
-  "NOT_FOUND",
-  "FORBIDDEN",
-])
+type AttendTargetResult = AttendTicketResult | AcceptTicketTransferResult
+
+const STALE_TICKET_CODES: ReadonlySet<
+  AttendTicketErrorCode | AcceptTicketTransferErrorCode
+> = new Set(["CONFLICT", "NOT_FOUND", "FORBIDDEN"])
+
+const runAttendTarget = (
+  target: TicketAttendTarget,
+): Promise<AttendTargetResult> =>
+  target.kind === "start_work"
+    ? attendTicket({ ticketId: target.ticketId })
+    : acceptTicketTransfer({
+        ticketId: target.ticketId,
+        transferId: target.transferId,
+      })
 
 interface AttendTicketButtonProps {
-  ticketId: number
+  target: TicketAttendTarget
 }
 
-const AttendTicketButton = ({ ticketId }: AttendTicketButtonProps) => {
+const AttendTicketButton = ({ target }: AttendTicketButtonProps) => {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -33,7 +50,7 @@ const AttendTicketButton = ({ ticketId }: AttendTicketButtonProps) => {
     if (isPending) return
 
     startTransition(async () => {
-      const result = await attendTicket({ ticketId })
+      const result = await runAttendTarget(target)
 
       if (result.ok) {
         toast.success(result.message)

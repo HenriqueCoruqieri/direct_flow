@@ -59,6 +59,13 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > `for update`) e a action `editTicketComment`. O formulário de novo
 > comentário e a regra de quem comenta não mudam.
 
+> Revisão de 2026-10-09 (`docs/contracts/department-transfer.md`, Etapa 2):
+> `TICKET_TRANSFER_SOON_MESSAGE` foi **removido** de
+> `domain/ticket-resolution.ts`. Desde a Etapa 1 o "Enviar para outro setor"
+> bloqueado deu lugar ao botão real (ou some), e nada mais importa a
+> constante. O "Anexar" bloqueado com `TICKET_ATTACHMENTS_SOON_MESSAGE`
+> continua como descrito abaixo.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

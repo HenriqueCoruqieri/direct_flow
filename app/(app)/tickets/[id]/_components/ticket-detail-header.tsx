@@ -3,6 +3,7 @@ import {
   TICKET_PRIORITY_LABELS,
 } from "@/app/_lib/domain/ticket"
 import type { TicketPriority, TicketStatus } from "@/app/_lib/types/ticket"
+import type { TicketAttendTarget } from "@/app/_lib/types/ticket-transfer"
 import { cn } from "@/app/_lib/utils"
 
 import TicketStatusBadge from "../../../_components/ticket-status-badge"
@@ -23,7 +24,7 @@ interface TicketDetailHeaderProps {
   priority: TicketPriority
   action?: React.ReactNode
   editable?: boolean
-  canAttend?: boolean
+  attendTarget?: TicketAttendTarget | null
 }
 
 const TicketDetailHeader = ({
@@ -33,14 +34,15 @@ const TicketDetailHeader = ({
   priority,
   action,
   editable = false,
-  canAttend = false,
+  attendTarget = null,
 }: TicketDetailHeaderProps) => {
   const heading = (
     <h1 className="min-w-0 font-heading text-title font-semibold wrap-break-word">
       {title}
     </h1>
   )
-  const attendAction = canAttend ? <AttendTicketButton ticketId={id} /> : null
+  const attendAction =
+    attendTarget !== null ? <AttendTicketButton target={attendTarget} /> : null
 
   return (
     <header className="flex flex-col gap-2">

@@ -10,6 +10,8 @@ import {
   TICKET_STATUS_LABELS,
 } from "@/app/_lib/domain/ticket"
 import {
+  ATTENDED_TICKET_STATUS,
+  canAttendTicket,
   isTicketDispatcher,
   ticketActorBlockFor,
 } from "@/app/_lib/domain/ticket-assignment"
@@ -22,11 +24,19 @@ import type {
 } from "@/app/_lib/types/ticket"
 import type { TicketAssignmentFacts } from "@/app/_lib/types/ticket-assignment"
 import type {
+  AcceptTicketTransferTarget,
   SendToDepartmentFormDefaults,
+  TicketAttendKind,
+  TicketAttendTarget,
   TicketDepartmentSendBlockReason,
   TicketDepartmentSendDetailFacts,
   TicketDepartmentSendStateBlockReason,
   TicketTransferConflict,
+  TicketTransferReviewBlockReason,
+  TicketTransferReviewConflict,
+  TicketTransferReviewFacts,
+  TicketTransferReviewSource,
+  TicketTransferReviewStateBlockReason,
   TicketTransferSource,
   TransferTargetFacts,
 } from "@/app/_lib/types/ticket-transfer"
@@ -174,4 +184,93 @@ export const describeTicketTransferConflict = (
     return `Este chamado agora está no setor ${conflict.currentDepartmentName}. Confira a página atualizada.`
   }
   return "Você não pode mais enviar este chamado para outro setor. Confira a página atualizada."
+}
+
+const TICKET_TRANSFER_REVIEW_BLOCK_IS_CONFLICT = {
+  ACTOR_INACTIVE: false,
+  PASSWORD_CHANGE_REQUIRED: false,
+  NO_PENDING_TRANSFER: true,
+  OUTSIDE_TARGET_DEPARTMENT: false,
+  STATUS_NOT_AWAITING: true,
+} as const satisfies Record<TicketTransferReviewBlockReason, boolean>
+
+export const ticketTransferReviewBlockFor = (
+  actor: TicketActorFacts,
+  ticket: TicketTransferReviewFacts,
+): TicketTransferReviewBlockReason | null => {
+  const actorBlock = ticketActorBlockFor(actor)
+  if (actorBlock !== null) return actorBlock
+  const pending = ticket.pendingTransfer
+  if (pending === null) return "NO_PENDING_TRANSFER"
+  if (
+    actor.departmentId !== pending.toDepartmentId ||
+    actor.departmentId !== ticket.currentDepartmentId
+  ) {
+    return "OUTSIDE_TARGET_DEPARTMENT"
+  }
+  if (ticket.status !== AWAITING_APPROVAL_TICKET_STATUS) {
+    return "STATUS_NOT_AWAITING"
+  }
+  return null
+}
+
+export const canAcceptTicketTransfer = (
+  actor: TicketActorFacts,
+  ticket: TicketTransferReviewFacts,
+): boolean => ticketTransferReviewBlockFor(actor, ticket) === null
+
+export const isTicketTransferReviewConflict = (
+  reason: TicketTransferReviewBlockReason,
+): reason is TicketTransferReviewStateBlockReason =>
+  TICKET_TRANSFER_REVIEW_BLOCK_IS_CONFLICT[reason]
+
+export const ticketAttendKindFor = (
+  actor: TicketActorFacts,
+  ticket: TicketTransferReviewFacts,
+): TicketAttendKind | null => {
+  if (canAcceptTicketTransfer(actor, ticket)) return "accept_transfer"
+  const canStartWork = canAttendTicket(actor, {
+    createdBy: ticket.createdBy,
+    assignedTo: ticket.assignedTo,
+    currentDepartmentId: ticket.currentDepartmentId,
+    status: ticket.status,
+    hasPendingTransfer: ticket.pendingTransfer !== null,
+  })
+  return canStartWork ? "start_work" : null
+}
+
+export const buildAcceptTicketTransferTarget = (
+  ticket: TicketTransferReviewSource,
+): AcceptTicketTransferTarget | null =>
+  ticket.pendingTransfer === null
+    ? null
+    : { ticketId: ticket.id, transferId: ticket.pendingTransfer.id }
+
+export const ticketAttendTargetFor = (
+  actor: TicketActorFacts,
+  ticket: TicketTransferReviewSource,
+): TicketAttendTarget | null => {
+  const kind = ticketAttendKindFor(actor, ticket)
+  if (kind === "start_work") return { kind, ticketId: ticket.id }
+  if (kind === null) return null
+  const target = buildAcceptTicketTransferTarget(ticket)
+  return target === null ? null : { kind, ...target }
+}
+
+export const describeTicketTransferReviewConflict = (
+  conflict: TicketTransferReviewConflict,
+  actorId: number,
+): string => {
+  if (conflict.currentAssigneeId === actorId) {
+    return conflict.currentStatus === ATTENDED_TICKET_STATUS
+      ? "Você já está atendendo este chamado."
+      : "Este chamado já está com você. Confira a página atualizada."
+  }
+  if (conflict.reason === "TRANSFER_CHANGED") {
+    return "O envio deste chamado mudou. Confira a página atualizada."
+  }
+  if (conflict.currentAssigneeName !== null) {
+    return `Este chamado já foi aceito e agora está com ${conflict.currentAssigneeName}.`
+  }
+  return "Este chamado não aguarda mais aprovação. Confira a página atualizada."
 }

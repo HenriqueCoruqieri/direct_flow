@@ -31,3 +31,20 @@ export const sendTicketToDepartmentSchema = z
 export type SendTicketToDepartmentInput = z.infer<
   typeof sendTicketToDepartmentSchema
 >
+
+const STALE_TRANSFER_MESSAGE =
+  "Não foi possível conferir o envio deste chamado. Recarregue a página."
+
+const transferIdSchema = registryIdSchema(STALE_TRANSFER_MESSAGE).max(
+  POSTGRES_INTEGER_MAX,
+  { error: STALE_TRANSFER_MESSAGE },
+)
+
+export const acceptTicketTransferSchema = z.object({
+  ticketId: ticketIdSchema,
+  transferId: transferIdSchema,
+})
+
+export type AcceptTicketTransferInput = z.infer<
+  typeof acceptTicketTransferSchema
+>

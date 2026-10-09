@@ -2,10 +2,10 @@
 
 Regras aprovadas pelo usuário em 2026-10-08, entregues em **três etapas**, cada
 uma um commit. Este documento cobre as três de uma vez para que não se
-contradigam; cada etapa tem sua seção com as assinaturas de cada agente. Só a
-Etapa 1 tem código publicado hoje (`df-architect`); as seções das Etapas 2 e 3
-são o contrato que a Onda 0 de cada uma vai codar, e podem ganhar revisão
-datada se a etapa anterior revelar algo.
+contradigam; cada etapa tem sua seção com as assinaturas de cada agente. As
+Etapas 1 e 2 têm código publicado (`df-architect`; a Etapa 2 desde
+2026-10-09); a seção da Etapa 3 é o contrato que a Onda 0 dela vai codar, e
+pode ganhar revisão datada se a etapa anterior revelar algo.
 
 Decisão de desenho: `docs/adr/016-transfer-moves-ticket-before-acceptance.md`.
 
@@ -70,9 +70,9 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 | Recusa: para onde volta                    | `from_department_id` da transferência (o setor que enviou), que é o de origem do chamado no caso comum                                                                                                                                                                                                                                                                                                             |
 | Recusa: nota no histórico                  | `note` nula. O motivo fica no comentário público e em `ticket_transfer.review_note`; repetir na linha do tempo duplicaria o texto na tela                                                                                                                                                                                                                                                                          |
 | `recusado` no enum (Etapa 3)               | Logo depois de `encaminhado` na lista do `pgEnum` (`ADD VALUE … BEFORE 'aguardando_aprovacao'`). Não destrutivo                                                                                                                                                                                                                                                                                                    |
-| Revalidação                                | Envio e recusa mudam o setor do chamado: `/queue`, `/tickets`, `/dashboard` (o Início conta por setor atual) e o detalhe se quem agiu mantém acesso. Aceite: detalhe, `/queue`, `/tickets` (como `attendTicket`)                                                                                                                                                                                                   |
+| Revalidação                                | Envio e recusa mudam o setor do chamado: `/queue`, `/tickets`, `/dashboard` (o Início conta por setor atual) e o detalhe se quem agiu mantém acesso. Aceite (revisão de 2026-10-09): quem aceita **sempre** mantém acesso (vira destinatário), então revalida sempre detalhe, `/queue`, `/tickets` e `/dashboard`                                                                                                  |
 | E-mail                                     | Nenhum, em nenhuma etapa                                                                                                                                                                                                                                                                                                                                                                                           |
-| Placeholder `TICKET_TRANSFER_SOON_MESSAGE` | Continua exportado na Etapa 1 só para não quebrar o `df-ui` no meio da onda. Na Onda 0 da Etapa 2 o `df-architect` o remove de `domain/ticket-resolution.ts` (o `df-ui` já terá parado de usá-lo)                                                                                                                                                                                                                  |
+| Placeholder `TICKET_TRANSFER_SOON_MESSAGE` | Continuou exportado na Etapa 1 só para não quebrar o `df-ui` no meio da onda. **Removido** de `domain/ticket-resolution.ts` na Onda 0 da Etapa 2 (2026-10-09; nenhum arquivo fora de `docs/` o citava)                                                                                                                                                                                                             |
 
 ## Tabelas, enums e migration
 
@@ -789,14 +789,44 @@ Ao final: M e A ativos em QA Suporte.
 
 ## Etapa 2 — Atender no destino (aceite)
 
-Código na Onda 0 da Etapa 2. Sem migration.
+Código publicado pelo `df-architect` em 2026-10-09 (Onda 0 da Etapa 2). Sem
+schema e sem migration.
+
+> Revisão de 2026-10-09, ao codar (prevalece sobre o texto anterior desta
+> seção):
+>
+> 1. `OUTSIDE_TARGET_DEPARTMENT` também vale quando quem age não é do setor
+>    atual do chamado (o `currentDepartmentId` dele), mesmo sendo do destino
+>    da pendente. Depois da `0011` toda pendente aponta para o
+>    setor atual (ADR 016), então a checagem não muda nenhum caso real; ela só
+>    impede que um dado fora da invariante faça o aceite atribuir o chamado a
+>    alguém de fora do setor dele (`isUsableTicketAssignee`).
+> 2. `describeTicketTransferReviewConflict`: com destinatário que não é quem
+>    age, o texto passa a `Este chamado já foi aceito e agora está com Ana.`
+>    (era `já foi atendido por Ana`: depois do aceite o chamado pode ter sido
+>    reenviado a outra pessoa, e "agora está com" continua verdadeiro). Novo
+>    caso: destinatário é quem age mas o status não é `em_andamento` →
+>    `Este chamado já está com você. Confira a página atualizada.`
+> 3. Revalidação do aceite: detalhe, `/queue`, `/tickets` **e `/dashboard`**,
+>    sempre (quem aceita vira destinatário, logo mantém acesso). Hoje o Início
+>    conta por setor atual e período de criação, que o aceite não muda; o
+>    `/dashboard` entra para que a regra seja a mesma de todo ato de
+>    transferência e não precise ser revista quando o Início passar a contar
+>    por status.
+> 4. `canAttendTicketDetail` foi removido: o detalhe passou a
+>    `ticketAttendTargetFor` e a função ficou sem uso. `TicketAttendDetailFacts`
+>    continua, base de `TicketDepartmentSendDetailFacts`.
+> 5. Acréscimo: `ticketAttendTargetFor` e o tipo `TicketAttendTarget` (união
+>    discriminada por `kind`), para o botão receber uma prop só.
 
 ### Regra
 
-- **Quem**: pessoa **do setor de destino** da transferência pendente
-  (`actor.departmentId === pendingTransfer.toDepartmentId`), ativa, sem troca
-  de senha. Diretoria só quando o destino é a própria Diretoria (decisão
-  acima).
+- **Quem**: pessoa **do setor de destino** da transferência pendente, que é
+  também o setor atual do chamado (`actor.departmentId ===
+pendingTransfer.toDepartmentId === ticket.currentDepartmentId`), ativa, sem
+  troca de senha. Membro ou admin, indiferente. Diretoria só quando o destino
+  é a própria Diretoria (decisão acima): a regra é por setor, não por
+  `isBoard`, então não há caso especial no código.
 - **Quando**: há transferência pendente e o status é `aguardando_aprovacao`.
 - **Efeito** (uma transação): `assigned_to` = quem aceitou, `status` =
   `em_andamento` (`ATTENDED_TICKET_STATUS`), transferência `aprovado` com
@@ -836,6 +866,18 @@ export interface AcceptTicketTransferTarget {
   ticketId: number
   transferId: number
 }
+
+export interface TicketStartWorkAttendTarget {
+  kind: "start_work"
+  ticketId: number
+}
+
+export interface TicketAcceptTransferAttendTarget extends AcceptTicketTransferTarget {
+  kind: "accept_transfer"
+}
+
+export type TicketAttendTarget =
+  TicketStartWorkAttendTarget | TicketAcceptTransferAttendTarget
 
 export interface ApproveTicketTransferValues {
   ticketId: number
@@ -895,6 +937,10 @@ export const ticketAttendKindFor: (
 export const buildAcceptTicketTransferTarget: (
   ticket: TicketTransferReviewSource,
 ) => AcceptTicketTransferTarget | null
+export const ticketAttendTargetFor: (
+  actor: TicketActorFacts,
+  ticket: TicketTransferReviewSource,
+) => TicketAttendTarget | null
 export const describeTicketTransferReviewConflict: (
   conflict: TicketTransferReviewConflict,
   actorId: number,
@@ -905,20 +951,51 @@ export const describeTicketTransferReviewConflict: (
 
 **`ticketTransferReviewBlockFor`** — primeiro motivo que vale:
 
-| #   | Motivo                      | Condição                                                | Conflito? |
-| --- | --------------------------- | ------------------------------------------------------- | --------- |
-| 1   | `ACTOR_INACTIVE`            | `!actor.isActive`                                       | não       |
-| 2   | `PASSWORD_CHANGE_REQUIRED`  | `actor.mustChangePassword`                              | não       |
-| 3   | `NO_PENDING_TRANSFER`       | `pendingTransfer === null`                              | sim       |
-| 4   | `OUTSIDE_TARGET_DEPARTMENT` | `actor.departmentId !== pendingTransfer.toDepartmentId` | não       |
-| 5   | `STATUS_NOT_AWAITING`       | `status !== AWAITING_APPROVAL_TICKET_STATUS`            | sim       |
+| #   | Motivo                      | Condição                                                                                                | Conflito? |
+| --- | --------------------------- | ------------------------------------------------------------------------------------------------------- | --------- |
+| 1   | `ACTOR_INACTIVE`            | `!actor.isActive`                                                                                       | não       |
+| 2   | `PASSWORD_CHANGE_REQUIRED`  | `actor.mustChangePassword`                                                                              | não       |
+| 3   | `NO_PENDING_TRANSFER`       | `pendingTransfer === null`                                                                              | sim       |
+| 4   | `OUTSIDE_TARGET_DEPARTMENT` | `actor.departmentId !== pendingTransfer.toDepartmentId \|\| actor.departmentId !== currentDepartmentId` | não       |
+| 5   | `STATUS_NOT_AWAITING`       | `status !== AWAITING_APPROVAL_TICKET_STATUS`                                                            | sim       |
 
-| Nome                                   | Semântica                                                                                                                                                                                                                                                                                                                                                                                           |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `canAcceptTicketTransfer`              | `ticketTransferReviewBlockFor(...) === null`. **A** regra do botão e da transação                                                                                                                                                                                                                                                                                                                   |
-| `ticketAttendKindFor`                  | `canAcceptTicketTransfer` → `"accept_transfer"`; senão `canAttendTicket(actor, { …, hasPendingTransfer: pendingTransfer !== null })` → `"start_work"`; senão `null`                                                                                                                                                                                                                                 |
-| `buildAcceptTicketTransferTarget`      | `{ ticketId, transferId: pendingTransfer.id }`, ou `null` sem pendente                                                                                                                                                                                                                                                                                                                              |
-| `describeTicketTransferReviewConflict` | primeira que vale: assignee = quem age e `em_andamento` → `Você já está atendendo este chamado.`; `TRANSFER_CHANGED` → `O envio deste chamado mudou. Confira a página atualizada.`; com destinatário → `Este chamado já foi atendido por Ana.`; senão → `Este chamado não aguarda mais aprovação. Confira a página atualizada.` (a Etapa 3 acrescenta o caso `recusado` antes do "já foi atendido") |
+A coluna "Conflito?" é a tabela privada de `isTicketTransferReviewConflict`
+(`satisfies Record<TicketTransferReviewBlockReason, boolean>`), type guard como
+o do envio: no ramo verdadeiro o motivo já é
+`TicketTransferReviewStateBlockReason`, pronto para o outcome.
+
+`NO_PENDING_TRANSFER` vem antes do setor de propósito: quem perde a corrida do
+aceite (a pendente já virou `aprovado`) recebe conflito com texto ("Você já
+está atendendo…", "já foi aceito…"), não a recusa genérica.
+
+| Nome                                   | Semântica                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `canAcceptTicketTransfer`              | `ticketTransferReviewBlockFor(...) === null`. **A** regra do botão e da transação                                                                                                                                                                                                                                                                            |
+| `ticketAttendKindFor`                  | `canAcceptTicketTransfer` → `"accept_transfer"`; senão `canAttendTicket(actor, { …, hasPendingTransfer: pendingTransfer !== null })` → `"start_work"`; senão `null`                                                                                                                                                                                          |
+| `buildAcceptTicketTransferTarget`      | `{ ticketId, transferId: pendingTransfer.id }`, ou `null` sem pendente                                                                                                                                                                                                                                                                                       |
+| `ticketAttendTargetFor`                | `ticketAttendKindFor` já com o alvo da action: `{ kind: "start_work", ticketId }`, `{ kind: "accept_transfer", ticketId, transferId }` ou `null`. **A** entrada do botão no detalhe: uma prop só, discriminada por `kind`, sem o caso impossível "aceite sem pendente" que `attendKind` + `target \| null` deixaria aberto no tipo (acréscimo de 2026-10-09) |
+| `describeTicketTransferReviewConflict` | primeira que vale, tabela abaixo                                                                                                                                                                                                                                                                                                                             |
+
+`ticketAttendKindFor` checa o aceite primeiro: o botão "Atender" de quem é do
+setor de destino nunca cai no `attendTicket` com pendência (o "Atender" antigo
+exige destinatário, e o chamado pendente não tem).
+
+**`describeTicketTransferReviewConflict(conflict, actorId)`** — primeira
+linha que vale:
+
+| #   | Condição                                                           | Texto                                                                   |
+| --- | ------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| 1   | `currentAssigneeId === actorId` e `currentStatus === em_andamento` | `Você já está atendendo este chamado.`                                  |
+| 2   | `currentAssigneeId === actorId` (outro status)                     | `Este chamado já está com você. Confira a página atualizada.`           |
+| 3   | `reason === "TRANSFER_CHANGED"`                                    | `O envio deste chamado mudou. Confira a página atualizada.`             |
+| 4   | `currentAssigneeName !== null`                                     | `Este chamado já foi aceito e agora está com Ana.`                      |
+| 5   | outro                                                              | `Este chamado não aguarda mais aprovação. Confira a página atualizada.` |
+
+A Etapa 3 acrescenta `currentStatus === "recusado"` →
+`Este chamado foi recusado e voltou para QA Suporte.` entre as linhas 3 e 4
+(a recusa devolve com destinatário, que a linha 4 descreveria errado). Na
+Etapa 2 não há como o chamado ser recusado: o único desfecho de uma pendente é
+o aceite.
 
 Sucesso e recusa genérica **reaproveitam** os textos do "Atender":
 `describeTicketAttended(ticketId)` e `TICKET_NOT_ATTENDABLE_MESSAGE`. O botão
@@ -926,10 +1003,13 @@ continua `Atender` / `Atendendo…`.
 
 Linha do tempo (`ticket-history.ts`): `transferencia_aprovada` passa a
 `{usuário} do setor {setor} aceitou o chamado e começou a atendê-lo.`
-(`describeActorWithDepartment`), `historyEntryNamesActor` → `true`.
+(`describeActorWithDepartment`, setor **atual** de quem agiu, como no envio),
+`historyEntryNamesActor` → `true` (a meta mostra só a data). Sem setor:
+`QA Admin Infra aceitou…`; linha de sistema: `Sistema aceitou…`. O rótulo do
+item continua `Transferência aprovada`.
 
-Remove `TICKET_TRANSFER_SOON_MESSAGE` de `ticket-resolution.ts` (sem uso depois
-da Etapa 1).
+`TICKET_TRANSFER_SOON_MESSAGE` saiu de `ticket-resolution.ts` (grep em
+2026-10-09: nenhum uso fora de `docs/`).
 
 ### Validação — `app/_lib/validation/ticket-transfer.ts` (acrescido)
 
@@ -957,14 +1037,23 @@ export async function approveTicketTransfer(
 2. `lockActorFacts`. Sem linha → `not_reviewable`.
 3. `!canViewTicket` → `not_found`.
 4. **Pendente** — `select id, from_department_id, to_department_id from
-ticket_transfer where ticket_id = $1 and status = 'pendente' for update`.
-5. **Regra** — `reason = ticketTransferReviewBlockFor(actor, { ...ticketRow,
-pendingTransfer })`:
-   - motivo que não é conflito → `not_reviewable`;
-   - motivo de conflito → `conflict` com esse `reason`;
-   - `pendente.id !== values.transferId` → `conflict` `TRANSFER_CHANGED`.
-   - Conflito: `currentStatus`, `currentDepartmentName`, `currentAssigneeId`,
-     `currentAssigneeName` (nome só se não nulo).
+ticket_transfer where ticket_id = $1 and status = 'pendente' limit 1 for
+update`. Sem linha → `pendingTransfer = null`; com linha →
+   `{ id, toDepartmentId }` (a linha inteira serve: `TicketPendingTransferReview`
+   é estrutural e `fromDepartmentId` sobra para o passo 6).
+5. **Regra** — `reason = ticketTransferReviewBlockFor(actor, { createdBy,
+assignedTo, currentDepartmentId, status, pendingTransfer })`, nesta ordem:
+   - `reason !== null && !isTicketTransferReviewConflict(reason)` →
+     `not_reviewable`;
+   - `reason !== null` (conflito; o type guard já estreitou para
+     `TicketTransferReviewStateBlockReason`) → `conflict` com esse `reason`;
+   - `pendente.id !== values.transferId` → `conflict` com
+     `reason: "TRANSFER_CHANGED"`.
+   - Conflito: `{ status: "conflict", reason, currentStatus: ticketRow.status,
+currentDepartmentName (select name from department where id =
+ticketRow.currentDepartmentId), currentAssigneeId: ticketRow.assignedTo,
+currentAssigneeName (select name from users where id = assignedTo, só se
+não nulo; senão null) }`.
 6. **Grava** (`changedAt` uma vez):
    - `update ticket set assigned_to = actorId, status = ATTENDED_TICKET_STATUS,
 updated_at = changedAt`;
@@ -976,11 +1065,20 @@ pendente.fromDepartmentId, toDepartmentId: pendente.toDepartmentId,
 fromAssigneeId: ticketRow.assignedTo, toAssigneeId: actorId, changedAt }`.
 7. `{ status: "saved", ticketId }`.
 
+- **Precedência**: `not_found` (chamado) → `not_reviewable` (sem linha de quem
+  age) → `not_found` (invisível) → `not_reviewable` (inativo, troca de senha,
+  fora do setor de destino) → `conflict` (sem pendente, status) → `conflict`
+  (`TRANSFER_CHANGED`).
 - **Travas**: `ticket` (`for update`) → `users` (`for share`) →
   `ticket_transfer` (`for update`). Dois aceites simultâneos: o segundo espera o
   passo 1 e, depois do commit do primeiro, não acha pendente →
-  `NO_PENDING_TRANSFER` → `Este chamado já foi atendido por {nome}.`
-- `first_response_at` não é gravado (como no "Atender").
+  `NO_PENDING_TRANSFER` → `Este chamado já foi aceito e agora está com {nome}.`
+  (ou `Você já está atendendo este chamado.` se for a mesma pessoa em duas
+  abas).
+- Nada além de `ticket` (`assigned_to`, `status`, `updated_at`), a
+  `ticket_transfer` pendente e uma `ticket_history`: setor, prioridade, origem,
+  `resolved_at`, `solution` e `first_response_at` intactos (como no "Atender").
+- Sem `mudanca_status` nem `atribuicao` extra (ADR 016).
 
 ### `df-actions` — `app/_lib/actions/ticket-transfer.ts` (acrescido)
 
@@ -1015,21 +1113,63 @@ export const acceptTicketTransfer: (
 | `not_reviewable` | `FORBIDDEN`     | `TICKET_NOT_ATTENDABLE_MESSAGE`                                                                                 |
 | `conflict`       | `CONFLICT`      | `describeTicketTransferReviewConflict(outcome, actor.id)`                                                       |
 | exceção          | —               | `Não foi possível atender o chamado agora. Tente novamente.` (`console.error("[acceptTicketTransfer]", error)`) |
-| `saved`          | —               | `describeTicketAttended(ticketId)`; revalida detalhe, `/queue`, `/tickets`                                      |
+| `saved`          | —               | `describeTicketAttended(ticketId)`; revalida sempre detalhe, `/queue`, `/tickets` e `/dashboard`                |
+
+1. `getSession()`; sem sessão → falha `FORBIDDEN` da tabela.
+2. `acceptTicketTransferSchema.safeParse(input)`; falha → `INVALID_INPUT`.
+3. `approveTicketTransfer({ ...parsed.data, actorId: actor.id })` em
+   `try/catch`.
+4. Mapeamento: tabela estática `satisfies Record<…, AcceptTicketTransferFailure>`
+   para `not_found` e `not_reviewable`; `conflict` pelo texto do domínio.
+5. `saved` → `revalidatePath(ticketDetailPath(id))`,
+   `revalidatePath(DEPARTMENT_QUEUE_PATH)`, `revalidatePath(MY_TICKETS_PATH)`,
+   `revalidatePath(DASHBOARD_PATH)` (de `@/app/_lib/domain/dashboard`). **Sem**
+   `keepsAccess`: quem aceita vira destinatário e `canViewTicket` passa por
+   `assignedTo`, então a re-renderização do detalhe na resposta é a desejada
+   (ao contrário do envio).
+
+- `TICKET_NOT_FOUND_MESSAGE`, `TICKET_NOT_ATTENDABLE_MESSAGE` e
+  `describeTicketAttended` vêm do domínio. A mensagem de sem sessão e a de
+  erro inesperado têm o mesmo texto das do `attendTicket`, mas são declaradas
+  em `actions/ticket-transfer.ts`, como as do envio: arquivo `"use server"` só
+  exporta função assíncrona, então as constantes de
+  `actions/ticket-assignment.ts` não são importáveis.
+- Sem e-mail, sem `redirect()`. A action não decide permissão: a transação
+  decide.
+- Entra na tabela "Quem revalida `/queue`" de `department-queue.md`.
 
 ### `df-ui` — Etapa 2
 
-- `page.tsx`: `const attendKind = ticketAttendKindFor(actor, ticket)` no lugar
-  de `canAttendTicketDetail`; o cabeçalho recebe `attendKind` e, para o aceite,
-  `buildAcceptTicketTransferTarget(ticket)`.
-- `AttendTicketButton`: mesmo rótulo, mesmo lugar; `start_work` →
-  `attendTicket({ ticketId })`, `accept_transfer` →
-  `acceptTicketTransfer(target)`. Tratamento de resultado igual ao de hoje.
+- **Detalhe (`page.tsx`)**: `const attendTarget = ticketAttendTargetFor(actor,
+ticket)` no lugar de `canAttendTicketDetail(actor, ticket)`. `TicketDetail`
+  satisfaz `TicketTransferReviewSource` sem conversão (conferido no `tsc`).
+- **Cabeçalho**: `canAttend?: boolean` dá lugar a
+  `attendTarget?: TicketAttendTarget | null`; o botão aparece quando não é
+  nulo, no mesmo lugar de hoje (inclusive dentro de `TicketEditHeading`).
+- **`AttendTicketButton`**: recebe `target: TicketAttendTarget`. Mesmo rótulo
+  (`ATTEND_TICKET_LABEL` / `ATTEND_TICKET_PENDING_LABEL`), mesmo ícone.
+  `target.kind === "start_work"` → `attendTicket({ ticketId: target.ticketId })`;
+  `"accept_transfer"` → `acceptTicketTransfer({ ticketId: target.ticketId,
+transferId: target.transferId })`. Tratamento de resultado igual ao de hoje
+  (sucesso → toast; `CONFLICT`/`NOT_FOUND`/`FORBIDDEN` → toast e
+  `router.refresh()`). Os dois tipos de resultado têm a mesma forma
+  (`ok`, `message`, `code?`); os códigos do aceite são subconjunto dos do
+  "Atender".
+- **Depois do aceite**, sem código novo: a revalidação traz o selo
+  `Em andamento`, o destinatário, o fim do aviso de pendência, a Conclusão com
+  o formulário de resolver (agora destinatário) e a linha do tempo com a frase
+  nova.
+- **Meus chamados do autor**: nada a codar. O chamado aceito sai de
+  "Aguardando aprovação" (status deixou de ser `aguardando_aprovacao`) e não
+  entra em "Abertos por mim" (`departmentScope: "origin"`, e ele está no setor
+  de destino). Continua acessível pela busca e por link (risco 2). A action
+  revalida `/tickets`.
 - Com transferência pendente, o "Editar" bloqueado (autor) e o "Atender"
   (destino) nunca aparecem para a mesma pessoa, a não ser autor que é do setor
   de destino; nesse caso os dois ficam lado a lado.
 - Fila: nada (o aceite é só pelo detalhe; a linha do destino continua sem
   botão).
+- Componente cliente importa `TicketAttendTarget` só como `import type`.
 
 ### Cenários para o `df-qa` — Etapa 2
 
@@ -1038,20 +1178,21 @@ Usa os chamados enviados na Etapa 1 (`#T1` em QA Infra). Recomendação ao
 (`QA Membro Infra`, `member`, QA Infra) para testar aceite por membro; sem
 ele, os cenários usam I.
 
-| #    | Quem      | Ação                                                                         | Esperado                                                                                                                                                                                                                                                                                                        |
-| ---- | --------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AC1  | I         | `/tickets/T1`                                                                | botão `Atender`                                                                                                                                                                                                                                                                                                 |
-| AC2  | I         | "Atender" no `#T1`                                                           | toast `Você começou a atender o chamado #T1.`; selo `Em andamento`; destinatário I; aviso de pendência some; linha do tempo `QA Admin Infra do setor QA Infra aceitou o chamado e começou a atendê-lo.`                                                                                                         |
-| AC3  | banco     | depois do AC2                                                                | `#T1`: `assigned_to = I`, `status = 'em_andamento'`, `current_department_id = F`; transferência `aprovado`, `reviewed_by = I`, `reviewed_at` = `changed_at` da linha nova; **uma** linha `transferencia_aprovada` com de/para de setor `S/F`, status `aguardando_aprovacao/em_andamento`, destinatário `null/I` |
-| AC4  | M         | `/tickets` com Todos                                                         | `#T1` não está em Aguardando aprovação nem em Abertos por mim; consulta MT bate                                                                                                                                                                                                                                 |
-| AC5  | I         | `/tickets` e `/queue`                                                        | `#T1` em Atribuídos a mim; na Fila de QA Infra, em Em andamento                                                                                                                                                                                                                                                 |
-| AC6  | D         | `/tickets/T5` (pendente para QA Infra)                                       | sem "Atender" (D não é de QA Infra)                                                                                                                                                                                                                                                                             |
-| AC7  | D         | aceitar o chamado enviado para a Diretoria no TR10                           | sucesso; D vira destinatário                                                                                                                                                                                                                                                                                    |
-| AC8  | I, 2 abas | as duas em `/tickets/T5`; "Atender" na aba 1; depois na aba 2 sem recarregar | aba 2: `Você já está atendendo este chamado.`; **uma** `transferencia_aprovada`                                                                                                                                                                                                                                 |
-| AC9  | M         | request de `acceptTicketTransfer` para `#T3` (M autor, setor de origem)      | `FORBIDDEN`, `Não é possível atender este chamado agora.`; nada gravado                                                                                                                                                                                                                                         |
-| AC10 | I         | request com `transferId` de outra transferência; com `"abc"`, `0`            | `CONFLICT` `O envio deste chamado mudou. Confira a página atualizada.`; `INVALID_INPUT`; nada gravado                                                                                                                                                                                                           |
-| AC11 | A         | o "Atender" antigo (destinatário em `encaminhado`) num chamado novo          | continua funcionando (`AT2` de `queue-tabs-comment-delete-and-attend.md`)                                                                                                                                                                                                                                       |
-| AC12 | qualquer  | toda a bateria                                                               | sem e-mail; sem erro de hidratação                                                                                                                                                                                                                                                                              |
+| #    | Quem      | Ação                                                                                                                     | Esperado                                                                                                                                                                                                                                                                                                        |
+| ---- | --------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC1  | I         | `/tickets/T1`                                                                                                            | botão `Atender`                                                                                                                                                                                                                                                                                                 |
+| AC2  | I         | "Atender" no `#T1`                                                                                                       | toast `Você começou a atender o chamado #T1.`; selo `Em andamento`; destinatário I; aviso de pendência some; linha do tempo `QA Admin Infra do setor QA Infra aceitou o chamado e começou a atendê-lo.`                                                                                                         |
+| AC3  | banco     | depois do AC2                                                                                                            | `#T1`: `assigned_to = I`, `status = 'em_andamento'`, `current_department_id = F`; transferência `aprovado`, `reviewed_by = I`, `reviewed_at` = `changed_at` da linha nova; **uma** linha `transferencia_aprovada` com de/para de setor `S/F`, status `aguardando_aprovacao/em_andamento`, destinatário `null/I` |
+| AC4  | M         | `/tickets` com Todos                                                                                                     | `#T1` não está em Aguardando aprovação nem em Abertos por mim; consulta MT bate                                                                                                                                                                                                                                 |
+| AC5  | I         | `/tickets` e `/queue`                                                                                                    | `#T1` em Atribuídos a mim; na Fila de QA Infra, em Em andamento                                                                                                                                                                                                                                                 |
+| AC6  | D         | `/tickets/T5` (pendente para QA Infra)                                                                                   | sem "Atender" (D não é de QA Infra)                                                                                                                                                                                                                                                                             |
+| AC7  | D         | aceitar o chamado enviado para a Diretoria no TR10                                                                       | sucesso; D vira destinatário                                                                                                                                                                                                                                                                                    |
+| AC8  | I, 2 abas | as duas em `/tickets/T5`; "Atender" na aba 1; depois na aba 2 sem recarregar                                             | aba 2: `Você já está atendendo este chamado.`; **uma** `transferencia_aprovada`                                                                                                                                                                                                                                 |
+| AC8b | I e MI    | só com `QA Membro Infra` (MI) no seed: os dois num chamado novo pendente em QA Infra; I aceita; MI aceita sem recarregar | MI: `Este chamado já foi aceito e agora está com QA Admin Infra.`; a página de MI atualiza; **uma** `transferencia_aprovada`                                                                                                                                                                                    |
+| AC9  | M         | request de `acceptTicketTransfer` para `#T3` (M autor, setor de origem)                                                  | `FORBIDDEN`, `Não é possível atender este chamado agora.`; nada gravado                                                                                                                                                                                                                                         |
+| AC10 | I         | request com `transferId` de outra transferência; com `"abc"`, `0`                                                        | `CONFLICT` `O envio deste chamado mudou. Confira a página atualizada.`; `INVALID_INPUT`; nada gravado                                                                                                                                                                                                           |
+| AC11 | A         | o "Atender" antigo (destinatário em `encaminhado`) num chamado novo                                                      | continua funcionando (`AT2` de `queue-tabs-comment-delete-and-attend.md`)                                                                                                                                                                                                                                       |
+| AC12 | qualquer  | toda a bateria                                                                                                           | sem e-mail; sem erro de hidratação                                                                                                                                                                                                                                                                              |
 
 ---
 
@@ -1178,15 +1319,15 @@ export const describeTicketTransferDeclined: (
 ) => string
 ```
 
-| Constante / função                                             | Texto                                                                                                               |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `DECLINE_TRANSFER_LABEL`                                       | `Recusar`                                                                                                           |
-| `DECLINE_TRANSFER_PENDING_LABEL`                               | `Recusando…`                                                                                                        |
-| `DECLINE_REASON_LABEL`                                         | `Motivo da recusa`                                                                                                  |
-| `describeDeclineDestination`                                   | `O motivo vira um comentário público e o chamado volta para a fila de QA Suporte.`                                  |
-| `describeTicketTransferDeclined`                               | `Chamado #12 recusado e devolvido para QA Suporte.`                                                                 |
-| `TICKET_NOT_DECLINABLE_MESSAGE`                                | `Não é possível recusar este chamado agora.`                                                                        |
-| conflito (acréscimo em `describeTicketTransferReviewConflict`) | `currentStatus === "recusado"` → `Este chamado foi recusado e voltou para QA Suporte.` (antes do "já foi atendido") |
+| Constante / função                                             | Texto                                                                                                                                           |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DECLINE_TRANSFER_LABEL`                                       | `Recusar`                                                                                                                                       |
+| `DECLINE_TRANSFER_PENDING_LABEL`                               | `Recusando…`                                                                                                                                    |
+| `DECLINE_REASON_LABEL`                                         | `Motivo da recusa`                                                                                                                              |
+| `describeDeclineDestination`                                   | `O motivo vira um comentário público e o chamado volta para a fila de QA Suporte.`                                                              |
+| `describeTicketTransferDeclined`                               | `Chamado #12 recusado e devolvido para QA Suporte.`                                                                                             |
+| `TICKET_NOT_DECLINABLE_MESSAGE`                                | `Não é possível recusar este chamado agora.`                                                                                                    |
+| conflito (acréscimo em `describeTicketTransferReviewConflict`) | `currentStatus === "recusado"` → `Este chamado foi recusado e voltou para QA Suporte.` (antes do "já foi aceito", linha 4 da tabela da Etapa 2) |
 
 Linha do tempo: `transferencia_rejeitada` →
 `{fromDepartmentName} recusou o chamado.` (sem setor: `O setor de destino
@@ -1395,7 +1536,7 @@ Etapa 1:
 
 Etapa 2:
 
-- [ ] tipos, regra de revisão, `ticketAttendKindFor`, `acceptTicketTransferSchema`, frase de `transferencia_aprovada`, remover `TICKET_TRANSFER_SOON_MESSAGE` (`df-architect`)
+- [x] tipos, regra de revisão, `ticketAttendKindFor`, `ticketAttendTargetFor`, `acceptTicketTransferSchema`, frase de `transferencia_aprovada`, remover `TICKET_TRANSFER_SOON_MESSAGE` (`df-architect`, 2026-10-09)
 - [ ] `approveTicketTransfer` (`df-data`) · `acceptTicketTransfer` (`df-actions`) · "Atender" com os dois casos (`df-ui`) · cenários AC (`df-qa`)
 
 Etapa 3:
