@@ -78,6 +78,13 @@
       "when": 1791224111657,
       "tag": "0010_history_system_actor",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791511220757,
+      "tag": "0011_align_legacy_transfers",
+      "breakpoints": true
     }
   ]
 }
