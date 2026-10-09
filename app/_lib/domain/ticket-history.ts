@@ -30,12 +30,17 @@ export const describeHistoryActor = (
   entry: Pick<TicketHistoryEntry, "changedByName">,
 ): string => entry.changedByName ?? SYSTEM_ACTOR_LABEL
 
+const describeActorOfDepartment = (
+  entry: Pick<TicketHistoryEntry, "changedByName">,
+  departmentName: string | null,
+): string =>
+  departmentName
+    ? `${describeHistoryActor(entry)} do setor ${departmentName}`
+    : describeHistoryActor(entry)
+
 const describeActorWithDepartment = (
   entry: Pick<TicketHistoryEntry, "changedByName" | "changedByDepartmentName">,
-): string =>
-  entry.changedByDepartmentName
-    ? `${describeHistoryActor(entry)} do setor ${entry.changedByDepartmentName}`
-    : describeHistoryActor(entry)
+): string => describeActorOfDepartment(entry, entry.changedByDepartmentName)
 
 const isSelfAssignment = (
   entry: Pick<TicketHistoryEntry, "toAssigneeId" | "changedById">,
@@ -108,10 +113,12 @@ const describeAssignment = (entry: TicketHistoryEntry): string => {
   return `${describeHistoryActor(entry)} alterou o destinatário.`
 }
 
-const describeTransferRequest = (entry: TicketHistoryEntry): string =>
-  entry.toDepartmentName
-    ? `${describeActorWithDepartment(entry)} encaminhou o chamado para a fila de ${entry.toDepartmentName}.`
-    : `${describeActorWithDepartment(entry)} encaminhou o chamado para outro setor.`
+const describeTransferRequest = (entry: TicketHistoryEntry): string => {
+  const actor = describeActorOfDepartment(entry, entry.fromDepartmentName)
+  return entry.toDepartmentName
+    ? `${actor} encaminhou o chamado para a fila de ${entry.toDepartmentName}.`
+    : `${actor} encaminhou o chamado para outro setor.`
+}
 
 type HistoryEntryDescriber = (entry: TicketHistoryEntry) => string
 
