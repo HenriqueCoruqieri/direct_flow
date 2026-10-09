@@ -5,6 +5,7 @@ import { lockActorFacts } from "@/app/_lib/data/actor-facts"
 import {
   canViewTicket,
   CLOSED_TICKET_STATUS,
+  DECLINED_TICKET_STATUS,
   INITIAL_TICKET_PRIORITY,
   isUsableTicketTag,
   RESOLVED_TICKET_STATUS,
@@ -30,12 +31,18 @@ import {
 } from "@/app/_lib/domain/ticket-edit"
 import { canResolveTicket } from "@/app/_lib/domain/ticket-resolution"
 import {
+  canFollowTicketTransferReview,
+  canViewTicketAfterDecline,
   canViewTicketAfterTransfer,
+  declineReturnAssigneeFor,
   isTicketDepartmentSendConflict,
   isTicketTransferReviewConflict,
   isUsableTransferTarget,
+  REJECTED_TRANSFER_STATUS,
   ticketDepartmentSendBlockFor,
+  ticketTransferDeclineBlockFor,
   ticketTransferReviewBlockFor,
+  ticketTransferReviewConflictReasonFor,
   TRANSFER_REQUESTED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket-transfer"
 import type {
@@ -62,12 +69,16 @@ import type {
 import type {
   ApproveTicketTransferOutcome,
   ApproveTicketTransferValues,
+  RejectTicketTransferOutcome,
+  RejectTicketTransferValues,
   RequestTicketTransferOutcome,
   RequestTicketTransferValues,
+  TicketReviewedTransferFacts,
 } from "@/app/_lib/types/ticket-transfer"
-import { db } from "@/db"
+import { db, type Transaction } from "@/db"
 import {
   department,
+  message,
   tag,
   ticket,
   ticketHistory,
@@ -899,6 +910,27 @@ export async function requestTicketTransfer(
   })
 }
 
+async function findReviewedTransfer(
+  tx: Transaction,
+  ticketId: number,
+  transferId: number,
+): Promise<TicketReviewedTransferFacts | null> {
+  const [row] = await tx
+    .select({
+      toDepartmentId: ticketTransfer.toDepartmentId,
+      status: ticketTransfer.status,
+    })
+    .from(ticketTransfer)
+    .where(
+      and(
+        eq(ticketTransfer.id, transferId),
+        eq(ticketTransfer.ticketId, ticketId),
+      ),
+    )
+
+  return row ?? null
+}
+
 export async function approveTicketTransfer(
   values: ApproveTicketTransferValues,
 ): Promise<ApproveTicketTransferOutcome> {
@@ -922,7 +954,15 @@ export async function approveTicketTransfer(
 
     if (!actor) return { status: "not_reviewable" }
 
-    if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
+    const reviewedTransfer = await findReviewedTransfer(
+      tx,
+      ticketId,
+      transferId,
+    )
+
+    if (!canFollowTicketTransferReview(actor, ticketRow, reviewedTransfer)) {
+      return { status: "not_found" }
+    }
 
     const [pendingTransfer] = await tx
       .select({
@@ -950,10 +990,11 @@ export async function approveTicketTransfer(
     }
 
     const conflictReason =
-      reason ??
-      (pendingTransfer && pendingTransfer.id !== transferId
-        ? "TRANSFER_CHANGED"
-        : null)
+      reason !== null
+        ? ticketTransferReviewConflictReasonFor(reason, reviewedTransfer)
+        : pendingTransfer && pendingTransfer.id !== transferId
+          ? "TRANSFER_CHANGED"
+          : null
 
     if (conflictReason !== null || !pendingTransfer) {
       const [currentDepartmentRow] = await tx
@@ -1017,6 +1058,175 @@ export async function approveTicketTransfer(
     })
 
     return { status: "saved", ticketId }
+  })
+}
+
+export async function rejectTicketTransfer(
+  values: RejectTicketTransferValues,
+): Promise<RejectTicketTransferOutcome> {
+  const { ticketId, transferId, actorId, reason: declineReason } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("update")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const actor = await lockActorFacts(tx, actorId)
+
+    if (!actor) return { status: "not_reviewable" }
+
+    const reviewedTransfer = await findReviewedTransfer(
+      tx,
+      ticketId,
+      transferId,
+    )
+
+    if (!canFollowTicketTransferReview(actor, ticketRow, reviewedTransfer)) {
+      return { status: "not_found" }
+    }
+
+    const [pendingTransfer] = await tx
+      .select({
+        id: ticketTransfer.id,
+        fromDepartmentId: ticketTransfer.fromDepartmentId,
+        toDepartmentId: ticketTransfer.toDepartmentId,
+        requestedBy: ticketTransfer.requestedBy,
+      })
+      .from(ticketTransfer)
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1)
+      .for("update")
+
+    const reason = ticketTransferDeclineBlockFor(actor, {
+      ...ticketRow,
+      pendingTransfer: pendingTransfer ?? null,
+    })
+
+    if (reason !== null && !isTicketTransferReviewConflict(reason)) {
+      return { status: "not_reviewable" }
+    }
+
+    const conflictReason =
+      reason !== null
+        ? ticketTransferReviewConflictReasonFor(reason, reviewedTransfer)
+        : pendingTransfer && pendingTransfer.id !== transferId
+          ? "TRANSFER_CHANGED"
+          : null
+
+    if (conflictReason !== null || !pendingTransfer) {
+      const [currentDepartmentRow] = await tx
+        .select({ name: department.name })
+        .from(department)
+        .where(eq(department.id, ticketRow.currentDepartmentId))
+
+      let currentAssigneeName: string | null = null
+
+      if (ticketRow.assignedTo !== null) {
+        const [currentAssigneeRow] = await tx
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, ticketRow.assignedTo))
+
+        currentAssigneeName = currentAssigneeRow?.name ?? null
+      }
+
+      return {
+        status: "conflict",
+        reason: conflictReason ?? "NO_PENDING_TRANSFER",
+        currentStatus: ticketRow.status,
+        currentDepartmentName: currentDepartmentRow?.name ?? "",
+        currentAssigneeId: ticketRow.assignedTo,
+        currentAssigneeName,
+      }
+    }
+
+    const [requesterRow] = await tx
+      .select({ isActive: user.isActive, departmentId: user.departmentId })
+      .from(user)
+      .where(eq(user.id, pendingTransfer.requestedBy))
+      .for("share")
+
+    const returnAssigneeId = declineReturnAssigneeFor(
+      pendingTransfer,
+      requesterRow ?? null,
+    )
+
+    const [returnDepartmentRow] = await tx
+      .select({ name: department.name })
+      .from(department)
+      .where(eq(department.id, pendingTransfer.fromDepartmentId))
+
+    const changedAt = new Date()
+
+    await tx.insert(message).values({
+      ticketId,
+      userId: actorId,
+      content: declineReason,
+      visibility: "publica",
+      createdAt: changedAt,
+      updatedAt: changedAt,
+    })
+
+    await tx
+      .update(ticketTransfer)
+      .set({
+        status: REJECTED_TRANSFER_STATUS,
+        reviewedBy: actorId,
+        reviewedAt: changedAt,
+        reviewNote: declineReason,
+        updatedAt: changedAt,
+      })
+      .where(eq(ticketTransfer.id, pendingTransfer.id))
+
+    await tx
+      .update(ticket)
+      .set({
+        currentDepartmentId: pendingTransfer.fromDepartmentId,
+        assignedTo: returnAssigneeId,
+        status: DECLINED_TICKET_STATUS,
+        updatedAt: changedAt,
+      })
+      .where(eq(ticket.id, ticketId))
+
+    await tx.insert(ticketHistory).values({
+      ticketId,
+      changedBy: actorId,
+      event: "transferencia_rejeitada",
+      fromStatus: ticketRow.status,
+      toStatus: DECLINED_TICKET_STATUS,
+      fromDepartmentId: pendingTransfer.toDepartmentId,
+      toDepartmentId: pendingTransfer.fromDepartmentId,
+      fromAssigneeId: ticketRow.assignedTo,
+      toAssigneeId: returnAssigneeId,
+      note: null,
+      changedAt,
+    })
+
+    return {
+      status: "saved",
+      ticketId,
+      returnedToDepartmentName: returnDepartmentRow?.name ?? "",
+      actorKeepsAccess: canViewTicketAfterDecline(
+        actor,
+        ticketRow,
+        pendingTransfer,
+        returnAssigneeId,
+      ),
+    }
   })
 }
 

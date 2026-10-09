@@ -9,6 +9,7 @@ import {
   isNonFinalTicketStatus,
   TICKET_STATUS_LABELS,
 } from "@/app/_lib/domain/ticket"
+import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import {
   ATTENDED_TICKET_STATUS,
   canAttendTicket,
@@ -18,6 +19,7 @@ import {
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type {
   TicketActorFacts,
+  TicketAssigneeFacts,
   TicketStatus,
   TicketViewerFacts,
   TicketVisibilityFacts,
@@ -25,15 +27,23 @@ import type {
 import type { TicketAssignmentFacts } from "@/app/_lib/types/ticket-assignment"
 import type {
   AcceptTicketTransferTarget,
+  ApprovalStatus,
+  DeclineTicketTransferFormDefaults,
+  DeclineTicketTransferSource,
+  DeclineTicketTransferTarget,
   SendToDepartmentFormDefaults,
   TicketAttendKind,
   TicketAttendTarget,
+  TicketDeclineReturnFacts,
   TicketDepartmentSendBlockReason,
   TicketDepartmentSendDetailFacts,
   TicketDepartmentSendStateBlockReason,
+  TicketReviewedTransferFacts,
   TicketTransferConflict,
+  TicketTransferDeclineBlockReason,
   TicketTransferReviewBlockReason,
   TicketTransferReviewConflict,
+  TicketTransferReviewConflictReason,
   TicketTransferReviewFacts,
   TicketTransferReviewSource,
   TicketTransferReviewStateBlockReason,
@@ -225,6 +235,28 @@ export const isTicketTransferReviewConflict = (
 ): reason is TicketTransferReviewStateBlockReason =>
   TICKET_TRANSFER_REVIEW_BLOCK_IS_CONFLICT[reason]
 
+export const REJECTED_TRANSFER_STATUS =
+  "rejeitado" as const satisfies ApprovalStatus
+
+export const canFollowTicketTransferReview = (
+  viewer: TicketViewerFacts,
+  ticket: TicketVisibilityFacts,
+  reviewedTransfer: TicketReviewedTransferFacts | null,
+): boolean =>
+  canViewTicket(viewer, ticket) ||
+  (reviewedTransfer !== null &&
+    reviewedTransfer.status === REJECTED_TRANSFER_STATUS &&
+    reviewedTransfer.toDepartmentId === viewer.departmentId)
+
+export const ticketTransferReviewConflictReasonFor = (
+  stateBlock: TicketTransferReviewStateBlockReason,
+  reviewedTransfer: TicketReviewedTransferFacts | null,
+): TicketTransferReviewConflictReason =>
+  stateBlock === "NO_PENDING_TRANSFER" &&
+  reviewedTransfer?.status === REJECTED_TRANSFER_STATUS
+    ? "TRANSFER_DECLINED"
+    : stateBlock
+
 export const ticketAttendKindFor = (
   actor: TicketActorFacts,
   ticket: TicketTransferReviewFacts,
@@ -270,8 +302,90 @@ export const describeTicketTransferReviewConflict = (
   if (conflict.reason === "TRANSFER_CHANGED") {
     return "O envio deste chamado mudou. Confira a página atualizada."
   }
+  if (conflict.reason === "TRANSFER_DECLINED") {
+    return "Este chamado já foi recusado e devolvido ao setor que o enviou."
+  }
   if (conflict.currentAssigneeName !== null) {
     return `Este chamado já foi aceito e agora está com ${conflict.currentAssigneeName}.`
   }
   return "Este chamado não aguarda mais aprovação. Confira a página atualizada."
 }
+
+export const DECLINE_TRANSFER_LABEL = "Recusar"
+
+export const DECLINE_TRANSFER_PENDING_LABEL = "Recusando…"
+
+export const DECLINE_REASON_LABEL = "Motivo da recusa"
+
+export const DECLINE_REASON_PLACEHOLDER =
+  "Explique por que este setor não vai atender o chamado."
+
+export const TICKET_NOT_DECLINABLE_MESSAGE =
+  "Não é possível recusar este chamado agora."
+
+export const ticketTransferDeclineBlockFor = (
+  actor: TicketActorFacts,
+  ticket: TicketTransferReviewFacts,
+): TicketTransferDeclineBlockReason | null =>
+  ticketTransferReviewBlockFor(actor, ticket)
+
+export const canDeclineTicketTransfer = (
+  actor: TicketActorFacts,
+  ticket: TicketTransferReviewFacts,
+): boolean => ticketTransferDeclineBlockFor(actor, ticket) === null
+
+export const ticketDeclineTargetFor = (
+  actor: TicketActorFacts,
+  ticket: DeclineTicketTransferSource,
+): DeclineTicketTransferTarget | null => {
+  const pending = ticket.pendingTransfer
+  if (pending === null || !canDeclineTicketTransfer(actor, ticket)) return null
+  return {
+    ticketId: ticket.id,
+    transferId: pending.id,
+    fromDepartmentName: pending.fromDepartmentName,
+  }
+}
+
+export const buildDeclineTicketTransferFormDefaults = (
+  target: AcceptTicketTransferTarget,
+): DeclineTicketTransferFormDefaults => ({
+  ticketId: target.ticketId,
+  transferId: target.transferId,
+  reason: "",
+})
+
+export const declineReturnAssigneeFor = (
+  transfer: TicketDeclineReturnFacts,
+  requester: TicketAssigneeFacts | null,
+): number | null =>
+  requester !== null &&
+  isUsableTicketAssignee(requester, transfer.fromDepartmentId)
+    ? transfer.requestedBy
+    : null
+
+export const canViewTicketAfterDecline = (
+  viewer: TicketViewerFacts,
+  ticket: TicketVisibilityFacts,
+  transfer: TicketDeclineReturnFacts,
+  returnAssigneeId: number | null,
+): boolean =>
+  canViewTicket(viewer, {
+    createdBy: ticket.createdBy,
+    assignedTo: returnAssigneeId,
+    currentDepartmentId: transfer.fromDepartmentId,
+  })
+
+export const declineTicketTransferDialogTitle = (ticketId: number): string =>
+  `Recusar chamado ${formatTicketNumber(ticketId)}`
+
+export const describeDeclineDestination = (
+  fromDepartmentName: string,
+): string =>
+  `O motivo vira um comentário público e o chamado volta para ${fromDepartmentName}.`
+
+export const describeTicketTransferDeclined = (
+  ticketId: number,
+  departmentName: string,
+): string =>
+  `Chamado ${formatTicketNumber(ticketId)} recusado e devolvido para ${departmentName}.`

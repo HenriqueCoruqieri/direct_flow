@@ -50,6 +50,14 @@ na fila do destino e **qualquer pessoa do setor de destino** o aceita
   `action-handler.js`, `skipPageRendering`), e o detalhe chegaria como 404
   disputando com a navegação da UI. As listas são dinâmicas, então nada fica
   desatualizado.
+- A recusa (Etapa 3) devolve o chamado ao setor que o enviou como `recusado`
+  (status novo, ativo, que se comporta como `encaminhado`), e quem recusou
+  perde o acesso. Para que o clique atrasado de um colega (ou de outra aba)
+  receba "já foi recusado" em vez de "Chamado não encontrado.", aceite e
+  recusa usam `canFollowTicketTransferReview`: além de `canViewTicket`, passa
+  quem é do setor de destino da transferência que viu, só se ela estiver
+  `rejeitado`. É a única exceção a `canViewTicket` no fluxo, e o texto que ela
+  libera não cita setor nem pessoa.
 - `ticket.origin_department_id` passa a ter papel de leitura: as abas do autor
   em Meus chamados mostram só chamados em posse do setor de origem.
 - O desenho original de "admin do destino aprova numa caixa de aprovações"

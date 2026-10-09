@@ -8,6 +8,9 @@ import { cn } from "@/app/_lib/utils"
 
 import TicketStatusBadge from "../../../_components/ticket-status-badge"
 import AttendTicketButton from "./attend-ticket-button"
+import DeclineTransferDialog, {
+  type DeclineTransferDialogProps,
+} from "./decline-transfer-dialog"
 import TicketEditHeading from "./ticket-edit-heading"
 
 const PRIORITY_DOT_CLASSES = {
@@ -25,6 +28,7 @@ interface TicketDetailHeaderProps {
   action?: React.ReactNode
   editable?: boolean
   attendTarget?: TicketAttendTarget | null
+  decline?: DeclineTransferDialogProps | null
 }
 
 const TicketDetailHeader = ({
@@ -35,14 +39,22 @@ const TicketDetailHeader = ({
   action,
   editable = false,
   attendTarget = null,
+  decline = null,
 }: TicketDetailHeaderProps) => {
   const heading = (
     <h1 className="min-w-0 font-heading text-title font-semibold wrap-break-word">
       {title}
     </h1>
   )
-  const attendAction =
-    attendTarget !== null ? <AttendTicketButton target={attendTarget} /> : null
+  const hasAttendActions = attendTarget !== null || decline !== null
+  const attendActions = hasAttendActions ? (
+    <>
+      {attendTarget !== null ? (
+        <AttendTicketButton target={attendTarget} />
+      ) : null}
+      {decline !== null ? <DeclineTransferDialog {...decline} /> : null}
+    </>
+  ) : null
 
   return (
     <header className="flex flex-col gap-2">
@@ -51,13 +63,13 @@ const TicketDetailHeader = ({
       </span>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         {editable ? (
-          <TicketEditHeading heading={heading} attendAction={attendAction} />
+          <TicketEditHeading heading={heading} attendActions={attendActions} />
         ) : (
           <>
             {heading}
-            {attendAction !== null || action !== undefined ? (
+            {hasAttendActions || action !== undefined ? (
               <div className="flex shrink-0 flex-wrap gap-2">
-                {attendAction}
+                {attendActions}
                 {action}
               </div>
             ) : null}

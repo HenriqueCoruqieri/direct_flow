@@ -1,5 +1,9 @@
 import { z } from "zod"
 
+import {
+  TICKET_COMMENT_MAX_LENGTH,
+  TICKET_COMMENT_MIN_LENGTH,
+} from "@/app/_lib/domain/ticket-comments"
 import { registryIdSchema } from "@/app/_lib/validation/registry"
 import { POSTGRES_INTEGER_MAX } from "@/app/_lib/validation/search-params"
 import { ticketIdSchema } from "@/app/_lib/validation/ticket"
@@ -47,4 +51,22 @@ export const acceptTicketTransferSchema = z.object({
 
 export type AcceptTicketTransferInput = z.infer<
   typeof acceptTicketTransferSchema
+>
+
+const DECLINE_REASON_REQUIRED_MESSAGE = "Escreva o motivo da recusa."
+
+export const declineTicketTransferSchema = z.object({
+  ticketId: ticketIdSchema,
+  transferId: transferIdSchema,
+  reason: z
+    .string({ error: DECLINE_REASON_REQUIRED_MESSAGE })
+    .trim()
+    .min(TICKET_COMMENT_MIN_LENGTH, { error: DECLINE_REASON_REQUIRED_MESSAGE })
+    .max(TICKET_COMMENT_MAX_LENGTH, {
+      error: `O motivo precisa ter no máximo ${TICKET_COMMENT_MAX_LENGTH} caracteres.`,
+    }),
+})
+
+export type DeclineTicketTransferInput = z.infer<
+  typeof declineTicketTransferSchema
 >

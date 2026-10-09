@@ -8,6 +8,9 @@ import type {
   TicketAttendDetailFacts,
 } from "@/app/_lib/types/ticket-assignment"
 import type { TicketNotFound } from "@/app/_lib/types/ticket-edit"
+import type { ApprovalStatus } from "@/db/schema"
+
+export type { ApprovalStatus }
 
 export type TicketDepartmentSendStateBlockReason =
   "NOT_SENDER" | "TICKET_FINISHED" | "AWAITING_APPROVAL" | "STATUS_NOT_SENDABLE"
@@ -130,7 +133,9 @@ export interface TicketTransferNotReviewable {
 }
 
 export type TicketTransferReviewConflictReason =
-  TicketTransferReviewStateBlockReason | "TRANSFER_CHANGED"
+  | TicketTransferReviewStateBlockReason
+  | "TRANSFER_CHANGED"
+  | "TRANSFER_DECLINED"
 
 export interface TicketTransferReviewConflict {
   status: "conflict"
@@ -143,6 +148,56 @@ export interface TicketTransferReviewConflict {
 
 export type ApproveTicketTransferOutcome =
   | TicketTransferApproved
+  | TicketNotFound
+  | TicketTransferNotReviewable
+  | TicketTransferReviewConflict
+
+export interface TicketReviewedTransferFacts {
+  toDepartmentId: number
+  status: ApprovalStatus
+}
+
+export type TicketTransferDeclineBlockReason = TicketTransferReviewBlockReason
+
+export interface TicketPendingTransferDecline extends TicketPendingTransferReview {
+  fromDepartmentName: string
+}
+
+export interface DeclineTicketTransferSource extends TicketTransferReviewSource {
+  pendingTransfer: TicketPendingTransferDecline | null
+}
+
+export interface DeclineTicketTransferTarget extends AcceptTicketTransferTarget {
+  fromDepartmentName: string
+}
+
+export interface DeclineTicketTransferFormDefaults {
+  ticketId: number
+  transferId: number
+  reason: string
+}
+
+export interface TicketDeclineReturnFacts {
+  fromDepartmentId: number
+  requestedBy: number
+}
+
+export interface RejectTicketTransferValues {
+  ticketId: number
+  transferId: number
+  actorId: number
+  reason: string
+}
+
+export interface TicketTransferRejected {
+  status: "saved"
+  ticketId: number
+  returnedToDepartmentName: string
+  actorKeepsAccess: boolean
+}
+
+export type RejectTicketTransferOutcome =
+  | TicketTransferRejected
   | TicketNotFound
   | TicketTransferNotReviewable
   | TicketTransferReviewConflict

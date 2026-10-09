@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { getSession } from "@/app/_lib/auth/session"
 import {
   approveTicketTransfer,
+  rejectTicketTransfer,
   requestTicketTransfer,
 } from "@/app/_lib/data/tickets"
 import { DASHBOARD_PATH } from "@/app/_lib/domain/dashboard"
@@ -21,19 +22,25 @@ import {
 import {
   describeTicketSentToDepartment,
   describeTicketTransferConflict,
+  describeTicketTransferDeclined,
   describeTicketTransferReviewConflict,
+  TICKET_NOT_DECLINABLE_MESSAGE,
   TICKET_NOT_SENDABLE_TO_DEPARTMENT_MESSAGE,
   UNAVAILABLE_TRANSFER_TARGET_MESSAGE,
 } from "@/app/_lib/domain/ticket-transfer"
 import type {
   ApproveTicketTransferOutcome,
+  RejectTicketTransferOutcome,
   RequestTicketTransferOutcome,
   TicketTransferApproved,
+  TicketTransferRejected,
   TicketTransferRequested,
 } from "@/app/_lib/types/ticket-transfer"
 import {
   type AcceptTicketTransferInput,
   acceptTicketTransferSchema,
+  type DeclineTicketTransferInput,
+  declineTicketTransferSchema,
   type SendTicketToDepartmentInput,
   sendTicketToDepartmentSchema,
 } from "@/app/_lib/validation/ticket-transfer"
@@ -73,6 +80,24 @@ export interface AcceptTicketTransferFailure {
 export type AcceptTicketTransferResult =
   AcceptTicketTransferSuccess | AcceptTicketTransferFailure
 
+export type DeclineTicketTransferErrorCode =
+  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT"
+
+export interface DeclineTicketTransferSuccess {
+  ok: true
+  message: string
+  keepsAccess: boolean
+}
+
+export interface DeclineTicketTransferFailure {
+  ok: false
+  message: string
+  code?: DeclineTicketTransferErrorCode
+}
+
+export type DeclineTicketTransferResult =
+  DeclineTicketTransferSuccess | DeclineTicketTransferFailure
+
 type RequestTicketTransferFailureOutcome = Exclude<
   RequestTicketTransferOutcome,
   TicketTransferRequested
@@ -90,6 +115,16 @@ type ApproveTicketTransferFailureOutcome = Exclude<
 
 type AcceptStaticFailureStatus = Exclude<
   ApproveTicketTransferFailureOutcome["status"],
+  "conflict"
+>
+
+type RejectTicketTransferFailureOutcome = Exclude<
+  RejectTicketTransferOutcome,
+  TicketTransferRejected
+>
+
+type DeclineStaticFailureStatus = Exclude<
+  RejectTicketTransferFailureOutcome["status"],
   "conflict"
 >
 
@@ -152,6 +187,33 @@ const ACCEPT_STATIC_OUTCOME_FAILURES = {
   },
 } satisfies Record<AcceptStaticFailureStatus, AcceptTicketTransferFailure>
 
+const DECLINE_UNEXPECTED_ERROR_MESSAGE =
+  "Não foi possível recusar o chamado agora. Tente novamente."
+
+const DECLINE_FORBIDDEN_FAILURE: DeclineTicketTransferFailure = {
+  ok: false,
+  code: "FORBIDDEN",
+  message: "Você não tem permissão para recusar este chamado.",
+}
+
+const DECLINE_UNEXPECTED_FAILURE: DeclineTicketTransferFailure = {
+  ok: false,
+  message: DECLINE_UNEXPECTED_ERROR_MESSAGE,
+}
+
+const DECLINE_STATIC_OUTCOME_FAILURES = {
+  not_found: {
+    ok: false,
+    code: "NOT_FOUND",
+    message: TICKET_NOT_FOUND_MESSAGE,
+  },
+  not_reviewable: {
+    ok: false,
+    code: "FORBIDDEN",
+    message: TICKET_NOT_DECLINABLE_MESSAGE,
+  },
+} satisfies Record<DeclineStaticFailureStatus, DeclineTicketTransferFailure>
+
 interface InvalidInputFailure {
   ok: false
   code: "INVALID_INPUT"
@@ -192,6 +254,20 @@ const acceptFailureFor = (
     }
   }
   return ACCEPT_STATIC_OUTCOME_FAILURES[outcome.status]
+}
+
+const declineFailureFor = (
+  outcome: RejectTicketTransferFailureOutcome,
+  actorId: number,
+): DeclineTicketTransferFailure => {
+  if (outcome.status === "conflict") {
+    return {
+      ok: false,
+      code: "CONFLICT",
+      message: describeTicketTransferReviewConflict(outcome, actorId),
+    }
+  }
+  return DECLINE_STATIC_OUTCOME_FAILURES[outcome.status]
 }
 
 export const sendTicketToDepartment = async (
@@ -275,5 +351,50 @@ export const acceptTicketTransfer = async (
   return {
     ok: true,
     message: describeTicketAttended(outcome.ticketId),
+  }
+}
+
+export const declineTicketTransfer = async (
+  input: DeclineTicketTransferInput,
+): Promise<DeclineTicketTransferResult> => {
+  const actor = await getSession()
+  if (!actor) return DECLINE_FORBIDDEN_FAILURE
+
+  const parsed = declineTicketTransferSchema.safeParse(input)
+  if (!parsed.success) {
+    return invalidInput(
+      parsed.error.issues[0]?.message,
+      DECLINE_UNEXPECTED_ERROR_MESSAGE,
+    )
+  }
+
+  let outcome: RejectTicketTransferOutcome
+
+  try {
+    outcome = await rejectTicketTransfer({
+      ...parsed.data,
+      actorId: actor.id,
+    })
+  } catch (error) {
+    console.error("[declineTicketTransfer]", error)
+    return DECLINE_UNEXPECTED_FAILURE
+  }
+
+  if (outcome.status !== "saved") return declineFailureFor(outcome, actor.id)
+
+  if (outcome.actorKeepsAccess) {
+    revalidatePath(ticketDetailPath(outcome.ticketId))
+    revalidatePath(DEPARTMENT_QUEUE_PATH)
+    revalidatePath(MY_TICKETS_PATH)
+    revalidatePath(DASHBOARD_PATH)
+  }
+
+  return {
+    ok: true,
+    message: describeTicketTransferDeclined(
+      outcome.ticketId,
+      outcome.returnedToDepartmentName,
+    ),
+    keepsAccess: outcome.actorKeepsAccess,
   }
 }

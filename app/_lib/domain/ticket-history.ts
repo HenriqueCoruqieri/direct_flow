@@ -120,6 +120,11 @@ const describeTransferRequest = (entry: TicketHistoryEntry): string => {
     : `${actor} encaminhou o chamado para outro setor.`
 }
 
+const describeTransferRejection = (entry: TicketHistoryEntry): string =>
+  entry.fromDepartmentName
+    ? `${entry.fromDepartmentName} recusou o chamado.`
+    : "O setor de destino recusou o chamado."
+
 type HistoryEntryDescriber = (entry: TicketHistoryEntry) => string
 
 const HISTORY_EVENT_DESCRIBERS = {
@@ -132,8 +137,7 @@ const HISTORY_EVENT_DESCRIBERS = {
   transferencia_solicitada: describeTransferRequest,
   transferencia_aprovada: (entry) =>
     `${describeActorWithDepartment(entry)} aceitou o chamado e começou a atendê-lo.`,
-  transferencia_rejeitada: (entry) =>
-    `Recusou a transferência${fromTo(entry.fromDepartmentName, entry.toDepartmentName)}.`,
+  transferencia_rejeitada: describeTransferRejection,
   reabertura: (entry) => `Reabriu o chamado${withStatus(entry.toStatus)}.`,
   encerramento: (entry) => `Encerrou o chamado${withStatus(entry.toStatus)}.`,
   mudanca_tag: (entry) =>
