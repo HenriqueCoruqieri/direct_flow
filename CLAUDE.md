@@ -5,7 +5,7 @@
 
 Sistema de gestão de chamados: ciclo de vida documentado do ticket, resolução
 pelo próprio autor, encaminhamento dentro do setor ou para outro setor com
-aprovação de admin, tags de categoria por setor e classificação fixa
+aceite ou recusa (justificada) por qualquer pessoa do setor de destino, tags de categoria por setor e classificação fixa
 (`Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`
 — enum `ticket_type` em `db/schema.ts`).
 
