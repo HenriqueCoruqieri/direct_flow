@@ -14,14 +14,12 @@ import type {
   UpdatePersonValues,
 } from "@/app/_lib/types/person"
 import type { AssigneeOption } from "@/app/_lib/types/ticket"
-import { db } from "@/db"
+import { db, type Transaction } from "@/db"
 import { account } from "@/db/auth-schema"
 import { department, user } from "@/db/schema"
 
 const USER_EMAIL_LOWER_CONSTRAINT = "user_email_lower_idx"
 const CREDENTIAL_PROVIDER_ID = "credential"
-
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 export function isPersonEmailTakenError(error: unknown): boolean {
   return isUniqueViolation(error, USER_EMAIL_LOWER_CONSTRAINT)

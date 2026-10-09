@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
+import { lockActorFacts } from "@/app/_lib/data/actor-facts"
 import {
   canViewTicket,
   CLOSED_TICKET_STATUS,
@@ -31,7 +32,6 @@ import { canResolveTicket } from "@/app/_lib/domain/ticket-resolution"
 import type {
   InsertTicketOutcome,
   InsertTicketValues,
-  TicketActorFacts,
   TicketDetail,
 } from "@/app/_lib/types/ticket"
 import type {
@@ -43,7 +43,6 @@ import type {
 } from "@/app/_lib/types/ticket-assignment"
 import type { CloseExpiredResolvedTicketsOutcome } from "@/app/_lib/types/ticket-closure"
 import type {
-  TicketEditorFacts,
   UpdateTicketByAuthorOutcome,
   UpdateTicketByAuthorValues,
 } from "@/app/_lib/types/ticket-edit"
@@ -290,27 +289,9 @@ export async function updateTicketByAuthor(
 
     const now = new Date()
 
-    const [authorRow] = await tx
-      .select({
-        departmentId: user.departmentId,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        isBoard: department.isBoard,
-      })
-      .from(user)
-      .innerJoin(department, eq(department.id, user.departmentId))
-      .where(eq(user.id, authorId))
-      .for("share", { of: user })
+    const editor = await lockActorFacts(tx, authorId)
 
-    if (!authorRow) return { status: "not_editable" }
-
-    const editor: TicketEditorFacts = {
-      userId: authorId,
-      departmentId: authorRow.departmentId,
-      isBoard: authorRow.isBoard,
-      isActive: authorRow.isActive,
-      mustChangePassword: authorRow.mustChangePassword,
-    }
+    if (!editor) return { status: "not_editable" }
 
     if (!canViewTicket(editor, ticketRow)) return { status: "not_found" }
 
@@ -496,29 +477,9 @@ export async function updateTicketResolution(
 
     if (!ticketRow) return { status: "not_found" }
 
-    const [resolverRow] = await tx
-      .select({
-        departmentId: user.departmentId,
-        role: user.role,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        isBoard: department.isBoard,
-      })
-      .from(user)
-      .innerJoin(department, eq(department.id, user.departmentId))
-      .where(eq(user.id, resolverId))
-      .for("share", { of: user })
+    const resolver = await lockActorFacts(tx, resolverId)
 
-    if (!resolverRow) return { status: "not_resolvable" }
-
-    const resolver: TicketActorFacts = {
-      userId: resolverId,
-      departmentId: resolverRow.departmentId,
-      isBoard: resolverRow.isBoard,
-      role: resolverRow.role,
-      isActive: resolverRow.isActive,
-      mustChangePassword: resolverRow.mustChangePassword,
-    }
+    if (!resolver) return { status: "not_resolvable" }
 
     if (!canViewTicket(resolver, ticketRow)) return { status: "not_found" }
 
@@ -586,30 +547,9 @@ export async function assignTicket(
 
     if (!ticketRow) return { status: "not_found" }
 
-    const [actorRow] = await tx
-      .select({
-        departmentId: user.departmentId,
-        role: user.role,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        name: user.name,
-        isBoard: department.isBoard,
-      })
-      .from(user)
-      .innerJoin(department, eq(department.id, user.departmentId))
-      .where(eq(user.id, actorId))
-      .for("share", { of: user })
+    const actor = await lockActorFacts(tx, actorId)
 
-    if (!actorRow) return { status: "not_assignable" }
-
-    const actor: TicketActorFacts = {
-      userId: actorId,
-      departmentId: actorRow.departmentId,
-      isBoard: actorRow.isBoard,
-      role: actorRow.role,
-      isActive: actorRow.isActive,
-      mustChangePassword: actorRow.mustChangePassword,
-    }
+    if (!actor) return { status: "not_assignable" }
 
     if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
 
@@ -658,7 +598,7 @@ export async function assignTicket(
     if (blockReason !== null) return { status: "not_assignable" }
 
     let newAssigneeId = actorId
-    let newAssigneeName = actorRow.name
+    let newAssigneeName = actor.name
 
     if (values.mode === "send") {
       const [assigneeRow] = await tx
@@ -742,29 +682,9 @@ export async function startTicketWork(
 
     if (!ticketRow) return { status: "not_found" }
 
-    const [actorRow] = await tx
-      .select({
-        departmentId: user.departmentId,
-        role: user.role,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        isBoard: department.isBoard,
-      })
-      .from(user)
-      .innerJoin(department, eq(department.id, user.departmentId))
-      .where(eq(user.id, actorId))
-      .for("share", { of: user })
+    const actor = await lockActorFacts(tx, actorId)
 
-    if (!actorRow) return { status: "not_attendable" }
-
-    const actor: TicketActorFacts = {
-      userId: actorId,
-      departmentId: actorRow.departmentId,
-      isBoard: actorRow.isBoard,
-      role: actorRow.role,
-      isActive: actorRow.isActive,
-      mustChangePassword: actorRow.mustChangePassword,
-    }
+    if (!actor) return { status: "not_attendable" }
 
     if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
 

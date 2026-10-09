@@ -1,5 +1,6 @@
 import { and, asc, eq, or } from "drizzle-orm"
 
+import { lockActorFacts } from "@/app/_lib/data/actor-facts"
 import { canViewTicket } from "@/app/_lib/domain/ticket"
 import {
   canCommentOnTicket,
@@ -7,7 +8,6 @@ import {
   canSeeTicketMessage,
   ticketCommentEditBlockFor,
 } from "@/app/_lib/domain/ticket-comments"
-import type { TicketActorFacts } from "@/app/_lib/types/ticket"
 import type {
   DeleteTicketMessageOutcome,
   DeleteTicketMessageValues,
@@ -19,7 +19,7 @@ import type {
   UpdateTicketMessageValues,
 } from "@/app/_lib/types/ticket-comments"
 import { db } from "@/db"
-import { department, message, ticket, user } from "@/db/schema"
+import { message, ticket, user } from "@/db/schema"
 
 export async function listTicketMessages(
   ticketId: number,
@@ -67,29 +67,9 @@ export async function insertTicketMessage(
 
     const now = new Date()
 
-    const [commenterRow] = await tx
-      .select({
-        departmentId: user.departmentId,
-        role: user.role,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        isBoard: department.isBoard,
-      })
-      .from(user)
-      .innerJoin(department, eq(department.id, user.departmentId))
-      .where(eq(user.id, authorId))
-      .for("share", { of: user })
+    const commenter = await lockActorFacts(tx, authorId)
 
-    if (!commenterRow) return { status: "not_commentable" }
-
-    const commenter: TicketActorFacts = {
-      userId: authorId,
-      departmentId: commenterRow.departmentId,
-      isBoard: commenterRow.isBoard,
-      role: commenterRow.role,
-      isActive: commenterRow.isActive,
-      mustChangePassword: commenterRow.mustChangePassword,
-    }
+    if (!commenter) return { status: "not_commentable" }
 
     if (!canViewTicket(commenter, ticketRow)) return { status: "not_found" }
 
@@ -128,29 +108,9 @@ export async function updateTicketMessage(
 
     const now = new Date()
 
-    const [editorRow] = await tx
-      .select({
-        departmentId: user.departmentId,
-        role: user.role,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        isBoard: department.isBoard,
-      })
-      .from(user)
-      .innerJoin(department, eq(department.id, user.departmentId))
-      .where(eq(user.id, editorId))
-      .for("share", { of: user })
+    const editor = await lockActorFacts(tx, editorId)
 
-    if (!editorRow) return { status: "not_editable" }
-
-    const editor: TicketActorFacts = {
-      userId: editorId,
-      departmentId: editorRow.departmentId,
-      isBoard: editorRow.isBoard,
-      role: editorRow.role,
-      isActive: editorRow.isActive,
-      mustChangePassword: editorRow.mustChangePassword,
-    }
+    if (!editor) return { status: "not_editable" }
 
     if (!canViewTicket(editor, ticketRow)) return { status: "not_found" }
 
@@ -214,29 +174,9 @@ export async function deleteTicketMessage(
 
     const now = new Date()
 
-    const [actorRow] = await tx
-      .select({
-        departmentId: user.departmentId,
-        role: user.role,
-        isActive: user.isActive,
-        mustChangePassword: user.mustChangePassword,
-        isBoard: department.isBoard,
-      })
-      .from(user)
-      .innerJoin(department, eq(department.id, user.departmentId))
-      .where(eq(user.id, actorId))
-      .for("share", { of: user })
+    const actor = await lockActorFacts(tx, actorId)
 
-    if (!actorRow) return { status: "not_deletable" }
-
-    const actor: TicketActorFacts = {
-      userId: actorId,
-      departmentId: actorRow.departmentId,
-      isBoard: actorRow.isBoard,
-      role: actorRow.role,
-      isActive: actorRow.isActive,
-      mustChangePassword: actorRow.mustChangePassword,
-    }
+    if (!actor) return { status: "not_deletable" }
 
     if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
 

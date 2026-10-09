@@ -23,3 +23,5 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const db = drizzle(pool, { schema: schemaFull, casing: "snake_case" })
+
+export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
