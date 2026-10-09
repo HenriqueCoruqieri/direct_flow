@@ -32,6 +32,7 @@
   --status-resolvido: #217538;
   --status-fechado: #5b6778;
   --status-cancelado: #b53636;
+  --status-recusado: #c2410c;
 
   --prioridade-baixa: #5b6778;
   --prioridade-media: #2563c9;
@@ -118,6 +119,7 @@
   --status-resolvido: #86d993;
   --status-fechado: #8d9aae;
   --status-cancelado: #f07a7a;
+  --status-recusado: #fb923c;
 
   --prioridade-baixa: #8d9aae;
   --prioridade-media: #6aa8ff;
@@ -202,6 +204,7 @@
   --color-status-resolvido: var(--status-resolvido);
   --color-status-fechado: var(--status-fechado);
   --color-status-cancelado: var(--status-cancelado);
+  --color-status-recusado: var(--status-recusado);
 
   --color-prioridade-baixa: var(--prioridade-baixa);
   --color-prioridade-media: var(--prioridade-media);

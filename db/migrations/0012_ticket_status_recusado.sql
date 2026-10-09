@@ -1,0 +1,1 @@
+ALTER TYPE "public"."ticket_status" ADD VALUE 'recusado' BEFORE 'aguardando_aprovacao';

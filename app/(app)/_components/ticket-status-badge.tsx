@@ -8,6 +8,8 @@ const STATUS_CLASSES = {
     "border-status-em-analise/30 bg-status-em-analise/10 text-status-em-analise",
   encaminhado:
     "border-status-encaminhado/30 bg-status-encaminhado/10 text-status-encaminhado",
+  recusado:
+    "border-status-recusado/30 bg-status-recusado/10 text-status-recusado",
   aguardando_aprovacao:
     "border-status-aguardando-aprovacao/30 bg-status-aguardando-aprovacao/10 text-status-aguardando-aprovacao",
   em_andamento:

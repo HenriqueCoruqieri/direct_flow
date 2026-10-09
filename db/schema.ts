@@ -41,6 +41,7 @@ export const ticketStatusEnum = pgEnum("ticket_status", [
   "aberto",
   "em_analise",
   "encaminhado",
+  "recusado",
   "aguardando_aprovacao",
   "em_andamento",
   "resolvido",

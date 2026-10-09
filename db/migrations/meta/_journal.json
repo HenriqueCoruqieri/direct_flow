@@ -85,6 +85,13 @@
       "when": 1791511220757,
       "tag": "0011_align_legacy_transfers",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791528252050,
+      "tag": "0012_ticket_status_recusado",
+      "breakpoints": true
     }
   ]
 }

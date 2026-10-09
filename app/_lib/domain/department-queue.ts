@@ -8,7 +8,7 @@ import {
   TICKET_STATUSES,
 } from "@/app/_lib/domain/ticket"
 import {
-  ATTENDABLE_TICKET_STATUS,
+  ATTENDABLE_TICKET_STATUSES,
   ATTENDED_TICKET_STATUS,
   canAssumeTicket,
   canSendTicket,
@@ -71,11 +71,11 @@ export const DEPARTMENT_QUEUE_TAB_RULES = {
   },
   forwarded: {
     label: "Encaminhados",
-    statuses: [ATTENDABLE_TICKET_STATUS],
+    statuses: ATTENDABLE_TICKET_STATUSES,
     assignee: "assigned",
     emptyTitle: "Nenhum chamado encaminhado",
     emptyDescription:
-      "Os chamados do setor encaminhados para alguém aparecem aqui até o destinatário começar o atendimento.",
+      "Os chamados do setor encaminhados para alguém, ou recusados por outro setor e devolvidos, aparecem aqui até o destinatário começar o atendimento.",
   },
   in_progress: {
     label: "Em andamento",

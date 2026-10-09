@@ -20,6 +20,7 @@ export const TICKET_STATUS_LABELS = {
   aberto: "Aberto",
   em_analise: "Em análise",
   encaminhado: "Encaminhado",
+  recusado: "Recusado",
   aguardando_aprovacao: "Aguardando aprovação",
   em_andamento: "Em andamento",
   resolvido: "Resolvido",
@@ -46,6 +47,7 @@ const TICKET_STATUS_IS_OPEN = {
   aberto: true,
   em_analise: true,
   encaminhado: true,
+  recusado: true,
   aguardando_aprovacao: true,
   em_andamento: true,
   resolvido: false,
@@ -69,6 +71,7 @@ const TICKET_STATUS_IS_FINAL = {
   aberto: false,
   em_analise: false,
   encaminhado: false,
+  recusado: false,
   aguardando_aprovacao: false,
   em_andamento: false,
   resolvido: false,
@@ -127,6 +130,8 @@ export const CLOSED_TICKET_STATUS: TicketStatus = "fechado"
 
 export const AWAITING_APPROVAL_TICKET_STATUS =
   "aguardando_aprovacao" as const satisfies TicketStatus
+
+export const DECLINED_TICKET_STATUS = "recusado" as const satisfies TicketStatus
 
 export type ActiveTicketStatus = Exclude<
   NonFinalTicketStatus,

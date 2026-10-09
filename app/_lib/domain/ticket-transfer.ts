@@ -45,6 +45,7 @@ const TICKET_STATUS_IS_DEPARTMENT_SENDABLE = {
   aberto: true,
   em_analise: false,
   encaminhado: true,
+  recusado: true,
   aguardando_aprovacao: false,
   em_andamento: true,
   resolvido: false,

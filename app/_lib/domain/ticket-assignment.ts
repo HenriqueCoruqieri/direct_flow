@@ -2,6 +2,7 @@ import {
   formatTicketNumber,
   isNonFinalTicketStatus,
   TICKET_STATUS_LABELS,
+  TICKET_STATUSES,
 } from "@/app/_lib/domain/ticket"
 import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import type {
@@ -28,6 +29,7 @@ const TICKET_STATUS_IS_ASSIGNABLE = {
   aberto: true,
   em_analise: true,
   encaminhado: true,
+  recusado: true,
   aguardando_aprovacao: false,
   em_andamento: true,
   resolvido: false,
@@ -42,6 +44,7 @@ const TICKET_STATUS_IS_ASSIGNMENT_DRIVEN = {
   aberto: true,
   em_analise: false,
   encaminhado: true,
+  recusado: true,
   aguardando_aprovacao: false,
   em_andamento: true,
   resolvido: false,
@@ -198,8 +201,23 @@ export const describeTicketSent = (
 ): string =>
   `Chamado ${formatTicketNumber(ticketId)} enviado para ${assigneeName}.`
 
-export const ATTENDABLE_TICKET_STATUS =
-  "encaminhado" as const satisfies TicketStatus
+const TICKET_STATUS_IS_ATTENDABLE = {
+  aberto: false,
+  em_analise: false,
+  encaminhado: true,
+  recusado: true,
+  aguardando_aprovacao: false,
+  em_andamento: false,
+  resolvido: false,
+  fechado: false,
+  cancelado: false,
+} as const satisfies Record<TicketStatus, boolean>
+
+export const isAttendableStatus = (status: TicketStatus): boolean =>
+  TICKET_STATUS_IS_ATTENDABLE[status]
+
+export const ATTENDABLE_TICKET_STATUSES: readonly TicketStatus[] =
+  TICKET_STATUSES.filter(isAttendableStatus)
 
 export const ATTENDED_TICKET_STATUS =
   "em_andamento" as const satisfies TicketStatus
@@ -227,9 +245,7 @@ export const ticketAttendBlockFor = (
   if (actorBlock !== null) return actorBlock
   if (ticket.assignedTo !== actor.userId) return "NOT_ASSIGNEE"
   if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"
-  if (ticket.status !== ATTENDABLE_TICKET_STATUS) {
-    return "STATUS_NOT_ATTENDABLE"
-  }
+  if (!isAttendableStatus(ticket.status)) return "STATUS_NOT_ATTENDABLE"
   return null
 }
 
