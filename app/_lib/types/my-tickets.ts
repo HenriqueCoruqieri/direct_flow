@@ -5,10 +5,13 @@ export type MyTicketsTab = (typeof MY_TICKETS_TABS)[number]
 
 export type MyTicketsRelation = "author" | "assignee"
 
+export type MyTicketsDepartmentScope = "origin" | "any"
+
 export interface MyTicketsTabRule {
   label: string
   relation: MyTicketsRelation
   statuses: readonly TicketStatus[]
+  departmentScope: MyTicketsDepartmentScope
   emptyTitle: string
   emptyDescription: string
 }

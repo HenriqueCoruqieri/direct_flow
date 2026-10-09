@@ -2,11 +2,12 @@ import { and, desc, eq, inArray, or, type SQL, sql } from "drizzle-orm"
 
 import { ticketPeriodCondition } from "@/app/_lib/data/period-condition"
 import {
+  mapMyTicketsTabs,
   MY_TICKETS_TAB_RULES,
-  MY_TICKETS_TABS,
 } from "@/app/_lib/domain/my-tickets"
 import type {
   MyTicketListItem,
+  MyTicketsDepartmentScope,
   MyTicketsTab,
   MyTicketsTabCounts,
 } from "@/app/_lib/types/my-tickets"
@@ -14,11 +15,20 @@ import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { department, tag, ticket, ticketTag } from "@/db/schema"
 
-const tabCondition = (userId: number, tab: MyTicketsTab): SQL => {
+const DEPARTMENT_SCOPE_CONDITIONS = {
+  origin: eq(ticket.currentDepartmentId, ticket.originDepartmentId),
+  any: undefined,
+} satisfies Record<MyTicketsDepartmentScope, SQL | undefined>
+
+const tabCondition = (userId: number, tab: MyTicketsTab): SQL | undefined => {
   const rule = MY_TICKETS_TAB_RULES[tab]
   const column =
     rule.relation === "author" ? ticket.createdBy : ticket.assignedTo
-  return sql`(${eq(column, userId)} and ${inArray(ticket.status, [...rule.statuses])})`
+  return and(
+    eq(column, userId),
+    inArray(ticket.status, [...rule.statuses]),
+    DEPARTMENT_SCOPE_CONDITIONS[rule.departmentScope],
+  )
 }
 
 export async function listMyTickets(
@@ -50,13 +60,10 @@ export async function countMyTicketsByTab(
   userId: number,
   range: DateRange | null = null,
 ): Promise<MyTicketsTabCounts> {
-  const columns = Object.fromEntries(
-    MY_TICKETS_TABS.map((tab) => [
-      tab,
-      sql<number>`count(*) filter (where ${tabCondition(userId, tab)})`.mapWith(
-        Number,
-      ),
-    ]),
+  const columns = mapMyTicketsTabs((tab) =>
+    sql<number>`count(*) filter (where ${tabCondition(userId, tab)})`.mapWith(
+      Number,
+    ),
   )
 
   const [row] = await db
@@ -69,15 +76,5 @@ export async function countMyTicketsByTab(
       ),
     )
 
-  const counts: MyTicketsTabCounts = {
-    opened: 0,
-    assigned: 0,
-    resolved: 0,
-    closed: 0,
-    cancelled: 0,
-  }
-  for (const tab of MY_TICKETS_TABS) {
-    counts[tab] = row?.[tab] ?? 0
-  }
-  return counts
+  return row ?? mapMyTicketsTabs(() => 0)
 }

@@ -125,6 +125,9 @@ export const RESOLVED_TICKET_STATUS =
 
 export const CLOSED_TICKET_STATUS: TicketStatus = "fechado"
 
+export const AWAITING_APPROVAL_TICKET_STATUS =
+  "aguardando_aprovacao" as const satisfies TicketStatus
+
 export type ActiveTicketStatus = Exclude<
   NonFinalTicketStatus,
   typeof RESOLVED_TICKET_STATUS

@@ -98,6 +98,29 @@ setor` com aba, período e setor. Ficam superados: o item "Busca" da tabela,
 > os riscos 1 e 4 e os cenários 9, 11 (parte da busca), 23 (posição do
 > seletor "abaixo do campo de busca") e 29 (parte da busca).
 
+> Revisão de 2026-10-08 (`docs/contracts/department-transfer.md`, Etapa 1, que
+> prevalece no que diverge): as abas passam a ser **Abertos por mim ·
+> Aguardando aprovação · Atribuídos a mim · Resolvidos · Fechados ·
+> Cancelados** (`MY_TICKETS_TABS`, aba nova `awaiting`). `MyTicketsTabRule`
+> ganha `departmentScope: "origin" | "any"` (`MyTicketsDepartmentScope`):
+> `origin` exige `current_department_id = origin_department_id`. "Abertos por
+> mim" usa `ACTIVE_TICKET_STATUSES` **sem** `aguardando_aprovacao`, escopo
+> `origin`, e a descrição vazia passa a citar o setor em que o chamado foi
+> aberto; "Aguardando aprovação" é `author` + `["aguardando_aprovacao"]`,
+> escopo `any`; Resolvidos, Fechados e Cancelados ganham escopo `origin`;
+> "Atribuídos a mim" fica `any`. Contagens montadas por `mapMyTicketsTabs` (sem
+> objeto literal). **Ficam superados**: a propriedade "as quatro abas de
+> `author` particionam os chamados que a pessoa abriu" (agora são disjuntas,
+> mas chamado do autor em posse de outro setor e fora de
+> `aguardando_aprovacao` não aparece em aba nenhuma; continua acessível pela
+> busca do topo e por link), a tabela de abas e o `MY_TICKETS_TABS` da seção
+> de domínio abaixo. Continua valendo: todo chamado listado em qualquer aba
+> passa em `canViewTicket` (a pessoa é autora ou destinatária). Na linha do tempo,
+> `transferencia_solicitada` passa a
+> `{usuário} do setor {setor} encaminhou o chamado para a fila de {destino}.`,
+> com `historyEntryNamesActor` verdadeiro; a linha dela na tabela de
+> `ticket-history.ts` abaixo fica superada.
+
 ## Adendo — filtro por data de abertura
 
 Acrescentado em 2026-10-01. Decisões no plano (`docs/plans/my-tickets.md`, seção
