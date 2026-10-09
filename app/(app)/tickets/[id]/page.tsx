@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { requireSession } from "@/app/_lib/auth/session"
+import { listDepartmentOptions } from "@/app/_lib/data/departments"
 import { listTicketAssigneeOptions } from "@/app/_lib/data/people"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
@@ -23,6 +24,11 @@ import {
   ticketEditButtonStateFor,
 } from "@/app/_lib/domain/ticket-edit"
 import { ticketConclusionStateFor } from "@/app/_lib/domain/ticket-resolution"
+import {
+  buildSendToDepartmentFormDefaults,
+  canSendTicketToDepartmentDetail,
+  transferTargetOptions,
+} from "@/app/_lib/domain/ticket-transfer"
 import type { TicketActorFacts } from "@/app/_lib/types/ticket"
 import { parseTicketIdParam } from "@/app/_lib/validation/ticket"
 import {
@@ -33,6 +39,7 @@ import {
 import AppTopBar from "../../_components/app-top-bar"
 import EditTicketBlockedButton from "./_components/edit-ticket-blocked-button"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
+import type { SendToDepartmentSetup } from "./_components/send-to-department-dialog"
 import TicketComments from "./_components/ticket-comments"
 import TicketConclusion from "./_components/ticket-conclusion"
 import TicketDescription from "./_components/ticket-description"
@@ -84,11 +91,26 @@ const TicketDetailPage = async ({
   const commentForm = ticketCommentFormStateFor(actor, ticket, now)
 
   const isEditable = editButton.state === "editable"
-  const [messages, editTags, editAssignees] = await Promise.all([
-    listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
-    isEditable ? listActiveDepartmentTags(facts.departmentId) : null,
-    isEditable ? listTicketAssigneeOptions(facts.departmentId) : null,
-  ])
+  const canSendToDepartment = canSendTicketToDepartmentDetail(actor, ticket)
+  const [messages, editTags, editAssignees, departmentOptions] =
+    await Promise.all([
+      listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
+      isEditable ? listActiveDepartmentTags(facts.departmentId) : null,
+      isEditable ? listTicketAssigneeOptions(facts.departmentId) : null,
+      canSendToDepartment ? listDepartmentOptions() : null,
+    ])
+
+  const sendToDepartment: SendToDepartmentSetup | null =
+    departmentOptions !== null
+      ? {
+          defaults: buildSendToDepartmentFormDefaults(ticket),
+          options: transferTargetOptions(
+            departmentOptions,
+            ticket.currentDepartmentId,
+          ),
+          leaveHref: backLink.href,
+        }
+      : null
 
   const editOptions =
     editTags !== null && editAssignees !== null
@@ -140,6 +162,7 @@ const TicketDetailPage = async ({
           <TicketConclusion
             ticketId={ticket.id}
             state={conclusion}
+            sendToDepartment={sendToDepartment}
             editable={editable}
             className="lg:flex-1"
           />

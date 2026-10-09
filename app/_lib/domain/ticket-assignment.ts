@@ -114,7 +114,7 @@ export const isTicketDispatcher = (
 export const isTicketTaken = (ticket: TicketVisibilityFacts): boolean =>
   ticket.assignedTo !== null
 
-const actorBlockFor = (
+export const ticketActorBlockFor = (
   actor: TicketActorFacts,
 ): TicketAssignmentActorBlockReason | null => {
   if (!actor.isActive) return "ACTOR_INACTIVE"
@@ -135,7 +135,7 @@ export const ticketAssumeBlockFor = (
   actor: TicketActorFacts,
   ticket: TicketAssignmentFacts,
 ): TicketAssumeBlockReason | null => {
-  const actorBlock = actorBlockFor(actor)
+  const actorBlock = ticketActorBlockFor(actor)
   if (actorBlock !== null) return actorBlock
   if (!isUsableTicketAssignee(actor, ticket.currentDepartmentId)) {
     return "OUTSIDE_TICKET_DEPARTMENT"
@@ -156,7 +156,7 @@ export const ticketSendBlockFor = (
   actor: TicketActorFacts,
   ticket: TicketAssignmentFacts,
 ): TicketSendBlockReason | null => {
-  const actorBlock = actorBlockFor(actor)
+  const actorBlock = ticketActorBlockFor(actor)
   if (actorBlock !== null) return actorBlock
   if (!isTicketDispatcher(actor, ticket.currentDepartmentId)) {
     return "NOT_DISPATCHER"
@@ -224,7 +224,7 @@ export const ticketAttendBlockFor = (
   actor: TicketActorFacts,
   ticket: TicketAssignmentFacts,
 ): TicketAttendBlockReason | null => {
-  const actorBlock = actorBlockFor(actor)
+  const actorBlock = ticketActorBlockFor(actor)
   if (actorBlock !== null) return actorBlock
   if (ticket.assignedTo !== actor.userId) return "NOT_ASSIGNEE"
   if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"

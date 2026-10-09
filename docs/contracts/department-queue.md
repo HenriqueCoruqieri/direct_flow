@@ -77,6 +77,20 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > "as quatro abas particionam" da revisão de 2026-10-06. Q16 também: depois de
 > "Assumir", o chamado sai de Em aberto e vai para Em andamento.
 
+> Revisão de 2026-10-08 (`docs/contracts/department-transfer.md`, que
+> prevalece no que diverge): "Enviar para outro setor" (Etapa 1) torna
+> alcançável o estado `aguardando_aprovacao` **sem destinatário** no setor de
+> destino: o chamado sai de todas as abas da origem e aparece em **Em aberto**
+> (e em Todos) do destino, com o selo "Aguardando aprovação" e sem "Assumir"
+> nem "Enviar" (`AWAITING_APPROVAL` em `ticketAssumeBlockFor` e
+> `ticketSendBlockFor`, sem mudança). Nenhuma mudança de código nesta tela na
+> Etapa 1. Na Etapa 2 o aceite leva o chamado para Em andamento do destino. Na
+> Etapa 3 a aba **Encaminhados** passa a `statuses: ATTENDABLE_TICKET_STATUSES`
+> (`encaminhado`, `recusado`) e a consulta QT2 de referência muda junto
+> (`department-transfer.md`, RJ13). `sendTicketToDepartment` (Etapa 1),
+> `acceptTicketTransfer` (Etapa 2) e `declineTicketTransfer` (Etapa 3) entram
+> na tabela "Quem revalida `/queue`".
+
 ## Escopo técnico em uma frase
 
 Uma tela nova (`/queue`), duas leituras e uma escrita: a escrita troca só
@@ -755,14 +769,20 @@ expectedAssigneeId })` ou `{ mode: "send", …, assigneeId }`, em `try/catch`.
 Toda escrita que muda o que a Fila mostra (status, aba, título, tipo, tag ou
 destinatário) chama `revalidatePath(DEPARTMENT_QUEUE_PATH)` ao salvar:
 
-| Origem                                                        | Quando            | Contrato                                  |
-| ------------------------------------------------------------- | ----------------- | ----------------------------------------- |
-| `assumeTicket`, `sendTicket` (`actions/ticket-assignment.ts`) | `saved`           | este documento                            |
-| `resolveTicket` (`actions/ticket-resolution.ts`)              | `saved`           | `ticket-resolution.md`                    |
-| `createTicket` (`actions/tickets.ts`)                         | `saved`           | `ticket-assignee.md`                      |
-| `editTicket` (`actions/tickets.ts`)                           | `saved`, sempre   | `ticket-edit.md`                          |
-| cron `close-resolved-tickets` (`app/api/cron/.../route.ts`)   | `closedCount > 0` | `ticket-edit-window.md`                   |
-| `attendTicket` (`actions/ticket-assignment.ts`)               | `saved`           | `queue-tabs-comment-delete-and-attend.md` |
+| Origem                                                        | Quando                       | Contrato                                  |
+| ------------------------------------------------------------- | ---------------------------- | ----------------------------------------- |
+| `assumeTicket`, `sendTicket` (`actions/ticket-assignment.ts`) | `saved`                      | este documento                            |
+| `resolveTicket` (`actions/ticket-resolution.ts`)              | `saved`                      | `ticket-resolution.md`                    |
+| `createTicket` (`actions/tickets.ts`)                         | `saved`                      | `ticket-assignee.md`                      |
+| `editTicket` (`actions/tickets.ts`)                           | `saved`, sempre              | `ticket-edit.md`                          |
+| cron `close-resolved-tickets` (`app/api/cron/.../route.ts`)   | `closedCount > 0`            | `ticket-edit-window.md`                   |
+| `attendTicket` (`actions/ticket-assignment.ts`)               | `saved`                      | `queue-tabs-comment-delete-and-attend.md` |
+| `sendTicketToDepartment` (`actions/ticket-transfer.ts`)       | `saved` e `actorKeepsAccess` | `department-transfer.md`                  |
+
+Exceção: escrita depois da qual quem agiu perde o acesso ao detalhe não chama
+`revalidatePath` nenhum, nem `/queue`. No Next 16 qualquer revalidação na
+action re-renderiza a página atual na resposta (razão em
+`department-transfer.md`, passo 5 da action).
 
 Escrita nova que mude qualquer um desses campos entra nesta tabela.
 

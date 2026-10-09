@@ -9,11 +9,13 @@ import { cn } from "@/app/_lib/utils"
 import HiddenWhileEditing from "./hidden-while-editing"
 import LockedSolutionField from "./locked-solution-field"
 import ResolveTicketForm from "./resolve-ticket-form"
+import type { SendToDepartmentSetup } from "./send-to-department-dialog"
 import TicketEditSolution from "./ticket-edit-solution"
 
 interface TicketConclusionProps {
   ticketId: number
   state: TicketConclusionState
+  sendToDepartment: SendToDepartmentSetup | null
   editable?: boolean
   className?: string
 }
@@ -21,6 +23,7 @@ interface TicketConclusionProps {
 const TicketConclusion = ({
   ticketId,
   state,
+  sendToDepartment,
   editable = false,
   className,
 }: TicketConclusionProps) => {
@@ -35,6 +38,7 @@ const TicketConclusion = ({
       const resolveForm = (
         <ResolveTicketForm
           defaults={buildResolveTicketFormDefaults(ticketId)}
+          sendToDepartment={sendToDepartment}
         />
       )
       body = editable ? (

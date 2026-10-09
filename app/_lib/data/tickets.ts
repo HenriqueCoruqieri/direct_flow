@@ -29,6 +29,13 @@ import {
   hasTicketEditChanges,
 } from "@/app/_lib/domain/ticket-edit"
 import { canResolveTicket } from "@/app/_lib/domain/ticket-resolution"
+import {
+  canViewTicketAfterTransfer,
+  isTicketDepartmentSendConflict,
+  isUsableTransferTarget,
+  ticketDepartmentSendBlockFor,
+  TRANSFER_REQUESTED_TICKET_STATUS,
+} from "@/app/_lib/domain/ticket-transfer"
 import type {
   InsertTicketOutcome,
   InsertTicketValues,
@@ -50,6 +57,10 @@ import type {
   UpdateTicketResolutionOutcome,
   UpdateTicketResolutionValues,
 } from "@/app/_lib/types/ticket-resolution"
+import type {
+  RequestTicketTransferOutcome,
+  RequestTicketTransferValues,
+} from "@/app/_lib/types/ticket-transfer"
 import { db } from "@/db"
 import {
   department,
@@ -748,6 +759,139 @@ export async function startTicketWork(
     })
 
     return { status: "saved", ticketId }
+  })
+}
+
+export async function requestTicketTransfer(
+  values: RequestTicketTransferValues,
+): Promise<RequestTicketTransferOutcome> {
+  const { ticketId, actorId, toDepartmentId, expectedDepartmentId } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("update")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const actor = await lockActorFacts(tx, actorId)
+
+    if (!actor) return { status: "not_transferable" }
+
+    if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
+
+    const [pendingTransfer] = await tx
+      .select({ id: ticketTransfer.id, departmentName: department.name })
+      .from(ticketTransfer)
+      .innerJoin(department, eq(department.id, ticketTransfer.toDepartmentId))
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1)
+
+    const reason = ticketDepartmentSendBlockFor(actor, {
+      ...ticketRow,
+      hasPendingTransfer: pendingTransfer !== undefined,
+    })
+
+    if (reason !== null && !isTicketDepartmentSendConflict(reason)) {
+      return { status: "not_transferable" }
+    }
+
+    const conflictReason =
+      ticketRow.currentDepartmentId !== expectedDepartmentId
+        ? "DEPARTMENT_CHANGED"
+        : reason
+
+    if (conflictReason !== null) {
+      const [currentDepartmentRow] = await tx
+        .select({ name: department.name })
+        .from(department)
+        .where(eq(department.id, ticketRow.currentDepartmentId))
+
+      return {
+        status: "conflict",
+        reason: conflictReason,
+        currentStatus: ticketRow.status,
+        currentDepartmentName: currentDepartmentRow?.name ?? "",
+        pendingTransferDepartmentName: pendingTransfer?.departmentName ?? null,
+      }
+    }
+
+    const [targetRow] = await tx
+      .select({
+        id: department.id,
+        name: department.name,
+        isActive: department.isActive,
+        isUnassigned: department.isUnassigned,
+      })
+      .from(department)
+      .where(eq(department.id, toDepartmentId))
+      .for("share")
+
+    if (
+      !targetRow ||
+      !isUsableTransferTarget(targetRow, ticketRow.currentDepartmentId)
+    ) {
+      return { status: "invalid_target" }
+    }
+
+    const changedAt = new Date()
+
+    await tx
+      .update(ticket)
+      .set({
+        currentDepartmentId: toDepartmentId,
+        assignedTo: null,
+        status: TRANSFER_REQUESTED_TICKET_STATUS,
+        updatedAt: changedAt,
+      })
+      .where(eq(ticket.id, ticketId))
+
+    await tx.insert(ticketTransfer).values({
+      ticketId,
+      fromDepartmentId: ticketRow.currentDepartmentId,
+      toDepartmentId,
+      requestedBy: actorId,
+      requestReason: null,
+      status: "pendente",
+      createdAt: changedAt,
+      updatedAt: changedAt,
+    })
+
+    await tx.insert(ticketHistory).values({
+      ticketId,
+      changedBy: actorId,
+      event: "transferencia_solicitada",
+      fromStatus: ticketRow.status,
+      toStatus: TRANSFER_REQUESTED_TICKET_STATUS,
+      fromDepartmentId: ticketRow.currentDepartmentId,
+      toDepartmentId,
+      fromAssigneeId: ticketRow.assignedTo,
+      toAssigneeId: null,
+      changedAt,
+    })
+
+    return {
+      status: "saved",
+      ticketId,
+      toDepartmentName: targetRow.name,
+      actorKeepsAccess: canViewTicketAfterTransfer(
+        actor,
+        ticketRow,
+        toDepartmentId,
+      ),
+    }
   })
 }
 

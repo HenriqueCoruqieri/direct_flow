@@ -108,6 +108,11 @@ const describeAssignment = (entry: TicketHistoryEntry): string => {
   return `${describeHistoryActor(entry)} alterou o destinatário.`
 }
 
+const describeTransferRequest = (entry: TicketHistoryEntry): string =>
+  entry.toDepartmentName
+    ? `${describeActorWithDepartment(entry)} encaminhou o chamado para a fila de ${entry.toDepartmentName}.`
+    : `${describeActorWithDepartment(entry)} encaminhou o chamado para outro setor.`
+
 type HistoryEntryDescriber = (entry: TicketHistoryEntry) => string
 
 const HISTORY_EVENT_DESCRIBERS = {
@@ -117,8 +122,7 @@ const HISTORY_EVENT_DESCRIBERS = {
   mudanca_prioridade: (entry) =>
     `Alterou a prioridade${fromTo(priorityLabel(entry.fromPriority), priorityLabel(entry.toPriority))}.`,
   atribuicao: describeAssignment,
-  transferencia_solicitada: (entry) =>
-    `Solicitou a transferência${fromTo(entry.fromDepartmentName, entry.toDepartmentName)}.`,
+  transferencia_solicitada: describeTransferRequest,
   transferencia_aprovada: (entry) =>
     `Aprovou a transferência${fromTo(entry.fromDepartmentName, entry.toDepartmentName)}.`,
   transferencia_rejeitada: (entry) =>
@@ -144,7 +148,7 @@ const HISTORY_EVENT_NAMES_ACTOR = {
   mudanca_status: false,
   mudanca_prioridade: false,
   atribuicao: true,
-  transferencia_solicitada: false,
+  transferencia_solicitada: true,
   transferencia_aprovada: false,
   transferencia_rejeitada: false,
   reabertura: false,

@@ -19,6 +19,16 @@ Padrões de outcome, resultado de action, travas e conflito vêm de
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 
+> Revisão de 2026-10-08 (`docs/contracts/department-transfer.md`, que
+> prevalece no que diverge): o helper de motivos de quem age de
+> `ticket-assignment.ts` passa a ser exportado como `ticketActorBlockFor`, sem
+> mudar o comportamento. Na Etapa 2, o botão "Atender" passa a ter dois casos
+> (`ticketAttendKindFor`: `start_work` → `attendTicket`, como aqui;
+> `accept_transfer` → `acceptTicketTransfer`). Na Etapa 3,
+> `ATTENDABLE_TICKET_STATUS` dá lugar a `isAttendableStatus` /
+> `ATTENDABLE_TICKET_STATUSES` (`encaminhado`, `recusado`) e a aba
+> Encaminhados usa a lista.
+
 ## Escopo técnico em uma frase
 
 Sem schema e sem migration: a Fila passa a ter sete abas, cada uma definida por

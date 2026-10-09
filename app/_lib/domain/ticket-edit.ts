@@ -65,13 +65,13 @@ export const ticketEditBlockFor = (
   if (!editor.isActive) return "EDITOR_INACTIVE"
   if (editor.mustChangePassword) return "PASSWORD_CHANGE_REQUIRED"
   if (ticket.createdBy !== editor.userId) return "NOT_AUTHOR"
+  if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"
   if (ticket.currentDepartmentId !== editor.departmentId) {
     return "OUTSIDE_EDITOR_DEPARTMENT"
   }
   if (isTicketLocked(ticket.status, ticket.resolvedAt, now)) {
     return "TICKET_FINISHED"
   }
-  if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"
   if (!isAuthorEditableStatus(ticket.status)) return "STATUS_NOT_EDITABLE"
   return null
 }

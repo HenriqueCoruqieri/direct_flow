@@ -53,6 +53,14 @@ e-mail.
 > aqui" deixa de valer: `updateTicketByAuthor` grava `assigned_to` quando o
 > destinatário muda.
 
+> Revisão de 2026-10-08 (`docs/contracts/department-transfer.md`, Etapa 1):
+> `ticketEditBlockFor` passa a checar `AWAITING_APPROVAL` logo depois de
+> `NOT_AUTHOR`, **antes** de `OUTSIDE_EDITOR_DEPARTMENT` e `TICKET_FINISHED`.
+> Com o envio para outro setor, o chamado pendente já está no setor de
+> destino; sem a troca, o autor perderia o "Editar" bloqueado com
+> `Aguarde a solução ou devolutiva de {destino}`. O outcome da transação não
+> muda (`not_editable`).
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)
