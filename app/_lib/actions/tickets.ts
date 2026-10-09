@@ -6,6 +6,7 @@ import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getSession } from "@/app/_lib/auth/session"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { insertTicket, updateTicketByAuthor } from "@/app/_lib/data/tickets"
+import { DASHBOARD_PATH } from "@/app/_lib/domain/dashboard"
 import { DEPARTMENT_QUEUE_PATH } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import {
@@ -46,8 +47,6 @@ export interface TicketActionFailure {
 export type CreateTicketResult = CreateTicketSuccess | TicketActionFailure
 
 type InsertTicketFailureStatus = Exclude<InsertTicketOutcome["status"], "saved">
-
-const DASHBOARD_PATH = "/dashboard"
 
 const FORBIDDEN_MESSAGE = "Você não tem permissão para abrir chamados."
 const INVALID_TAG_MESSAGE =
