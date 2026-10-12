@@ -596,6 +596,11 @@ Campos, nesta ordem, todos obrigatórios, com `field` do shadcn:
 Sem campo de setor de destino e sem aviso de aprovação (revisão de
 2026-10-02). O chamado nasce no setor do autor.
 
+> Revisão de 2026-10-12 (`docs/contracts/new-ticket-attachments-placeholder.md`):
+> o dialog ganha, logo abaixo da Descrição, a seção `Anexos` com o "Anexar"
+> bloqueado (`AttachmentsSoonButton`) e o estado vazio `Nenhum anexo.`. Fica
+> fora do formulário: `createTicketSchema`, o envio e o `form.reset` não mudam.
+
 - **Por que `Combobox` na tag.** A lista cresce com o cadastro e pode ficar
   grande; o `Tipo` é fixo em 6 valores e continua `Select`. O `Combobox` (API em
   "Peças compartilhadas" de `docs/contracts/registry-people.md`) filtra pelo

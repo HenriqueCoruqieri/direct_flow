@@ -320,4 +320,7 @@
   html {
     @apply font-sans;
   }
+  [data-sonner-toast] {
+    pointer-events: auto;
+  }
 }

@@ -28,6 +28,7 @@ import {
   createTicketSchema,
 } from "@/app/_lib/validation/ticket"
 
+import NewTicketAttachments from "./new-ticket-attachments"
 import NewTicketButton from "./new-ticket-button"
 import TicketAssigneeField from "./ticket-assignee-field"
 import TicketDescriptionField from "./ticket-description-field"
@@ -70,6 +71,15 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
     setOpen(false)
   }
 
+  const keepOpenOnToast = (event: Event) => {
+    if (
+      event.target instanceof Element &&
+      event.target.closest("[data-sonner-toaster]") !== null
+    ) {
+      event.preventDefault()
+    }
+  }
+
   const onSubmit = async (values: CreateTicketInput) => {
     const result = await createTicket(values)
 
@@ -109,7 +119,10 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
         <NewTicketButton />
       </DialogTrigger>
 
-      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-lg">
+      <DialogContent
+        onInteractOutside={keepOpenOnToast}
+        className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-lg"
+      >
         <form
           noValidate
           onSubmit={form.handleSubmit(onSubmit)}
@@ -146,6 +159,8 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                 />
               )}
             />
+
+            <NewTicketAttachments />
 
             <Controller
               name="type"

@@ -347,6 +347,13 @@ export const buildResolveTicketFormDefaults: (
 export const describeTicketResolved: (ticketId: number) => string
 ```
 
+> Revisão de 2026-10-12 (`docs/contracts/new-ticket-attachments-placeholder.md`):
+> `TICKET_ATTACHMENTS_SOON_MESSAGE` saiu deste arquivo para
+> `app/_lib/domain/ticket.ts` (passa a servir a criação e a Conclusão), sem
+> re-export aqui. O "Anexar" bloqueado da Conclusão passa a ser o componente
+> `AttachmentsSoonButton` (`app/(app)/_components/attachments-soon-button.tsx`,
+> era `ConclusionBlockedActions`), com o mesmo comportamento.
+
 | Nome                                 | Semântica                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `isResolvableStatus`                 | Tabela de flags `satisfies Record<TicketStatus, boolean>` (abaixo)                                                                                                                                                                                                                                                                                                                                                              |

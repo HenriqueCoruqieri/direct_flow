@@ -154,6 +154,15 @@ export const ticketDetailPath = (ticketId: number): string =>
 
 export const TICKET_NOT_FOUND_MESSAGE = "Chamado não encontrado."
 
+export const TICKET_ATTACHMENTS_LABEL = "Anexos"
+
+export const ATTACH_FILE_LABEL = "Anexar"
+
+export const NO_ATTACHMENTS_LABEL = "Nenhum anexo."
+
+export const TICKET_ATTACHMENTS_SOON_MESSAGE =
+  "Anexos estarão disponíveis em breve."
+
 const STALE_TICKET_CODES = [
   "CONFLICT",
   "NOT_FOUND",

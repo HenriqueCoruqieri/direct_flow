@@ -16,7 +16,7 @@ import {
   resolveTicketSchema,
 } from "@/app/_lib/validation/ticket-resolution"
 
-import ConclusionBlockedActions from "./conclusion-blocked-actions"
+import AttachmentsSoonButton from "../../../_components/attachments-soon-button"
 import SendToDepartmentDialog, {
   type SendToDepartmentSetup,
 } from "./send-to-department-dialog"
@@ -86,7 +86,7 @@ const ResolveTicketForm = ({
         />
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <ConclusionBlockedActions />
+          <AttachmentsSoonButton />
           {sendToDepartment !== null ? (
             <Button
               type="button"
