@@ -3,6 +3,7 @@ import type { TagOption } from "@/app/_lib/types/tag"
 import type {
   AssigneeOption,
   NewTicketFormOptions,
+  StaleTicketCode,
   TicketAuthorFacts,
   TicketCreationBlockReason,
   TicketCreationCheck,
@@ -152,6 +153,15 @@ export const ticketDetailPath = (ticketId: number): string =>
   `/tickets/${ticketId}`
 
 export const TICKET_NOT_FOUND_MESSAGE = "Chamado não encontrado."
+
+const STALE_TICKET_CODES = [
+  "CONFLICT",
+  "NOT_FOUND",
+  "FORBIDDEN",
+] as const satisfies readonly StaleTicketCode[]
+
+export const isStaleTicketCode = (code: string | undefined): boolean =>
+  code !== undefined && STALE_TICKET_CODES.some((stale) => stale === code)
 
 export const canViewTicket = (
   viewer: TicketViewerFacts,

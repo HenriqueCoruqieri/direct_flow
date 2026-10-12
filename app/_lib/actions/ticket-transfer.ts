@@ -28,6 +28,7 @@ import {
   TICKET_NOT_SENDABLE_TO_DEPARTMENT_MESSAGE,
   UNAVAILABLE_TRANSFER_TARGET_MESSAGE,
 } from "@/app/_lib/domain/ticket-transfer"
+import type { StaleTicketCode } from "@/app/_lib/types/ticket"
 import type {
   ApproveTicketTransferOutcome,
   RejectTicketTransferOutcome,
@@ -46,7 +47,7 @@ import {
 } from "@/app/_lib/validation/ticket-transfer"
 
 export type SendTicketToDepartmentErrorCode =
-  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_TARGET"
+  "INVALID_INPUT" | "INVALID_TARGET" | StaleTicketCode
 
 export interface SendTicketToDepartmentSuccess {
   ok: true
@@ -63,8 +64,7 @@ export interface SendTicketToDepartmentFailure {
 export type SendTicketToDepartmentResult =
   SendTicketToDepartmentSuccess | SendTicketToDepartmentFailure
 
-export type AcceptTicketTransferErrorCode =
-  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT"
+export type AcceptTicketTransferErrorCode = "INVALID_INPUT" | StaleTicketCode
 
 export interface AcceptTicketTransferSuccess {
   ok: true
@@ -80,8 +80,7 @@ export interface AcceptTicketTransferFailure {
 export type AcceptTicketTransferResult =
   AcceptTicketTransferSuccess | AcceptTicketTransferFailure
 
-export type DeclineTicketTransferErrorCode =
-  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT"
+export type DeclineTicketTransferErrorCode = "INVALID_INPUT" | StaleTicketCode
 
 export interface DeclineTicketTransferSuccess {
   ok: true

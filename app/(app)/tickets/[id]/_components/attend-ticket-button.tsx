@@ -1,19 +1,14 @@
 "use client"
 
 import { Loader2Icon, PlayIcon } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useTransition } from "react"
-import { toast } from "sonner"
 
 import { Button } from "@/app/_components/ui/button"
 import {
   attendTicket,
-  type AttendTicketErrorCode,
   type AttendTicketResult,
 } from "@/app/_lib/actions/ticket-assignment"
 import {
   acceptTicketTransfer,
-  type AcceptTicketTransferErrorCode,
   type AcceptTicketTransferResult,
 } from "@/app/_lib/actions/ticket-transfer"
 import {
@@ -22,11 +17,9 @@ import {
 } from "@/app/_lib/domain/ticket-assignment"
 import type { TicketAttendTarget } from "@/app/_lib/types/ticket-transfer"
 
-type AttendTargetResult = AttendTicketResult | AcceptTicketTransferResult
+import { useTicketAction } from "../../../_hooks/use-ticket-action"
 
-const STALE_TICKET_CODES: ReadonlySet<
-  AttendTicketErrorCode | AcceptTicketTransferErrorCode
-> = new Set(["CONFLICT", "NOT_FOUND", "FORBIDDEN"])
+type AttendTargetResult = AttendTicketResult | AcceptTicketTransferResult
 
 const runAttendTarget = (
   target: TicketAttendTarget,
@@ -43,34 +36,14 @@ interface AttendTicketButtonProps {
 }
 
 const AttendTicketButton = ({ target }: AttendTicketButtonProps) => {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-
-  const handleAttend = () => {
-    if (isPending) return
-
-    startTransition(async () => {
-      const result = await runAttendTarget(target)
-
-      if (result.ok) {
-        toast.success(result.message)
-        return
-      }
-
-      toast.error(result.message)
-
-      if (result.code !== undefined && STALE_TICKET_CODES.has(result.code)) {
-        router.refresh()
-      }
-    })
-  }
+  const { isPending, run } = useTicketAction()
 
   return (
     <Button
       type="button"
       disabled={isPending}
       aria-busy={isPending || undefined}
-      onClick={handleAttend}
+      onClick={() => run(() => runAttendTarget(target))}
     >
       {isPending ? (
         <Loader2Icon

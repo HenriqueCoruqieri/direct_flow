@@ -31,6 +31,27 @@ aqui e trazem uma revisão de 2026-10-12 apontando para cá:
 > comentário do AE16 e o envio sem comentário do AE17 (preencher `[QA] …`);
 > AE8–AE10 e AE20 continuam sem comentário.
 
+> Revisão de 2026-10-12, refatoração pós-Etapa 3 (sem mudança de
+> comportamento): o hook `app/(app)/_hooks/use-assume-ticket.ts`
+> (`useAssumeTicket`) deu lugar ao genérico
+> `app/(app)/_hooks/use-ticket-action.ts` (`useTicketAction`), usado pelo
+> "Assumir" (detalhe e Fila) e pelo "Atender". A lista de códigos que pedem
+> `router.refresh()` (`CONFLICT`, `NOT_FOUND`, `FORBIDDEN`) passou ao domínio:
+> `isStaleTicketCode(code: string | undefined): boolean` em
+> `app/_lib/domain/ticket.ts`, sobre a constante privada `STALE_TICKET_CODES`
+> (`satisfies readonly StaleTicketCode[]`). O tipo
+> `StaleTicketCode = "CONFLICT" | "NOT_FOUND" | "FORBIDDEN"` mora em
+> `app/_lib/types/ticket.ts`. Para que renomear um desses códigos numa action
+> vire erro de `tsc` (como era com os `ReadonlySet<XErrorCode>` locais), as
+> uniões de erro das actions desses fluxos **compõem `StaleTicketCode`** em vez
+> de repetir os literais (`df-actions`): `AssignTicketErrorCode` ("Assumir" e
+> "Enviar" da Fila) e `AttendTicketErrorCode` em
+> `app/_lib/actions/ticket-assignment.ts`; `SendTicketToDepartmentErrorCode`,
+> `AcceptTicketTransferErrorCode` e `DeclineTicketTransferErrorCode` em
+> `app/_lib/actions/ticket-transfer.ts`. Exemplo:
+> `type AttendTicketErrorCode = "INVALID_INPUT" | StaleTicketCode`. Toasts,
+> `router.refresh()` e cenários AE8–AE12 não mudam.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 
@@ -526,7 +547,7 @@ de um formulário legítimo aberto em outro chamado.
 - [x] `TicketEditabilityFacts.assignedTo`, `NOT_ASSIGNEE`, `TicketEditDetailFacts`, `UpdateTicketByAssignee*`, `canEditTicketDetail`, `isEditableStatus`; removidos `ticketEditButtonStateFor`, `TicketEditButtonState` e afins, `describeTicketAwaitingApproval`; `TicketAssumeDetailSource`, `AssumeTicketTarget`, `ticketAssumeTargetFor`; `resolutionAssigneeFor`; ADR 017 (`df-architect`)
 - [x] `updateTicketByAssignee` (renomeada, `editorId`, `assignedTo` na regra); `updateTicketResolution` com `resolutionAssigneeFor` e `atribuicao`; `seedQa` com destinatário nos chamados da janela (`df-data`)
 - [x] `editTicket` chamando `updateTicketByAssignee` com `editorId` (`df-actions`)
-- [x] `page.tsx` com `canEditTicketDetail` e `ticketAssumeTargetFor`; `AssumeTicketButton` (`app/(app)/tickets/[id]/_components/assume-ticket-button.tsx`); hook `app/(app)/_hooks/use-assume-ticket.ts`, usado também por `queue-row-actions.tsx`; `TicketDetailHeader` com `assumeTarget` e sem `action`; `edit-ticket-blocked-button.tsx` removido (`df-ui`)
+- [x] `page.tsx` com `canEditTicketDetail` e `ticketAssumeTargetFor`; `AssumeTicketButton` (`app/(app)/tickets/[id]/_components/assume-ticket-button.tsx`); hook `app/(app)/_hooks/use-ticket-action.ts` (`useTicketAction`; era `use-assume-ticket.ts`, revisão de 2026-10-12), usado também por `queue-row-actions.tsx` e pelo "Atender"; `TicketDetailHeader` com `assumeTarget` e sem `action`; `edit-ticket-blocked-button.tsx` removido (`df-ui`)
 - [ ] seed QA rodado de novo pelo usuário (`SEED_QA=true`)
 - [ ] cenários do `df-qa`
 - [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`

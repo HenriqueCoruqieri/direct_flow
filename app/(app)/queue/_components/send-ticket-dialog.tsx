@@ -21,6 +21,7 @@ import {
   type AssignTicketErrorCode,
   sendTicket,
 } from "@/app/_lib/actions/ticket-assignment"
+import { isStaleTicketCode } from "@/app/_lib/domain/ticket"
 import {
   buildSendTicketFormDefaults,
   describeCurrentAssignee,
@@ -45,11 +46,6 @@ const FIELD_ERROR_CODES: ReadonlySet<AssignTicketErrorCode> = new Set([
   "INVALID_INPUT",
 ])
 
-const STALE_TICKET_CODES: ReadonlySet<AssignTicketErrorCode> = new Set([
-  "CONFLICT",
-  "NOT_FOUND",
-  "FORBIDDEN",
-])
 interface SendTicketDialogProps {
   ticket: DepartmentQueueListItem
   assignees: readonly AssigneeOption[]
@@ -110,7 +106,7 @@ const SendTicketDialog = ({
 
     toast.error(result.message)
 
-    if (result.code !== undefined && STALE_TICKET_CODES.has(result.code)) {
+    if (isStaleTicketCode(result.code)) {
       close()
       router.refresh()
     }

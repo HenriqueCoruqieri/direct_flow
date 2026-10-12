@@ -18,10 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/app/_components/ui/dialog"
-import {
-  sendTicketToDepartment,
-  type SendTicketToDepartmentErrorCode,
-} from "@/app/_lib/actions/ticket-transfer"
+import { sendTicketToDepartment } from "@/app/_lib/actions/ticket-transfer"
+import { isStaleTicketCode } from "@/app/_lib/domain/ticket"
 import {
   NO_TRANSFER_TARGETS_MESSAGE,
   SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION,
@@ -40,8 +38,6 @@ import {
 
 import HandoffCommentField from "../../../_components/handoff-comment-field"
 
-const STALE_TICKET_CODES: ReadonlySet<SendTicketToDepartmentErrorCode> =
-  new Set(["CONFLICT", "NOT_FOUND", "FORBIDDEN"])
 export interface SendToDepartmentSetup {
   defaults: SendToDepartmentFormDefaults
   options: DepartmentOption[]
@@ -113,7 +109,7 @@ const SendToDepartmentDialog = ({
 
     toast.error(result.message)
 
-    if (result.code !== undefined && STALE_TICKET_CODES.has(result.code)) {
+    if (isStaleTicketCode(result.code)) {
       close()
       router.refresh()
     }

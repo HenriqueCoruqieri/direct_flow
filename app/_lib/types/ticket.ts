@@ -9,6 +9,8 @@ import type {
 
 export type { HistoryEvent, TicketPriority, TicketStatus, TicketType }
 
+export type StaleTicketCode = "CONFLICT" | "NOT_FOUND" | "FORBIDDEN"
+
 export interface TicketAuthorFacts {
   isActive: boolean
   mustChangePassword: boolean

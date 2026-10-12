@@ -21,6 +21,7 @@ import {
   TICKET_NOT_SENDABLE_MESSAGE,
   UNAVAILABLE_SEND_TARGET_MESSAGE,
 } from "@/app/_lib/domain/ticket-assignment"
+import type { StaleTicketCode } from "@/app/_lib/types/ticket"
 import type {
   AssignTicketOutcome,
   AssignTicketValues,
@@ -38,7 +39,7 @@ import {
 } from "@/app/_lib/validation/ticket-assignment"
 
 export type AssignTicketErrorCode =
-  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "INVALID_ASSIGNEE"
+  "INVALID_INPUT" | "INVALID_ASSIGNEE" | StaleTicketCode
 
 export interface AssignTicketSuccess {
   ok: true
@@ -53,8 +54,7 @@ export interface AssignTicketFailure {
 
 export type AssignTicketResult = AssignTicketSuccess | AssignTicketFailure
 
-export type AttendTicketErrorCode =
-  "INVALID_INPUT" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT"
+export type AttendTicketErrorCode = "INVALID_INPUT" | StaleTicketCode
 
 export interface AttendTicketSuccess {
   ok: true

@@ -20,10 +20,8 @@ import {
 } from "@/app/_components/ui/dialog"
 import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
 import { Textarea } from "@/app/_components/ui/textarea"
-import {
-  declineTicketTransfer,
-  type DeclineTicketTransferErrorCode,
-} from "@/app/_lib/actions/ticket-transfer"
+import { declineTicketTransfer } from "@/app/_lib/actions/ticket-transfer"
+import { isStaleTicketCode } from "@/app/_lib/domain/ticket"
 import {
   buildDeclineTicketTransferFormDefaults,
   DECLINE_REASON_LABEL,
@@ -38,10 +36,6 @@ import {
   type DeclineTicketTransferInput,
   declineTicketTransferSchema,
 } from "@/app/_lib/validation/ticket-transfer"
-
-const STALE_TICKET_CODES: ReadonlySet<DeclineTicketTransferErrorCode> = new Set(
-  ["CONFLICT", "NOT_FOUND", "FORBIDDEN"],
-)
 
 const isReasonIssue = (reason: string): boolean =>
   !declineTicketTransferSchema.shape.reason.safeParse(reason).success
@@ -109,7 +103,7 @@ const DeclineTransferDialog = ({
 
     toast.error(result.message)
 
-    if (result.code !== undefined && STALE_TICKET_CODES.has(result.code)) {
+    if (isStaleTicketCode(result.code)) {
       close()
       router.refresh()
     }
