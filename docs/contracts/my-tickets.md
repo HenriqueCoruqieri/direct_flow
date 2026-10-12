@@ -121,6 +121,28 @@ setor` com aba, período e setor. Ficam superados: o item "Busca" da tabela,
 > com `historyEntryNamesActor` verdadeiro; a linha dela na tabela de
 > `ticket-history.ts` abaixo fica superada.
 
+> Revisão de 2026-10-12 (`docs/plans/assignee-edit-and-handoff-comment.md`,
+> Etapa 1): "Atribuídos a mim" passa a ser a **primeira** aba e a aba
+> **padrão**. Ordem: **Atribuídos a mim · Abertos por mim · Aguardando
+> aprovação · Resolvidos · Fechados · Cancelados** (`MY_TICKETS_TABS`, com
+> `assigned` no início e as demais na mesma ordem relativa).
+> `DEFAULT_MY_TICKETS_TAB` passa de `opened` para **`assigned`**: `/tickets`
+> sem `?tab=`, ou com valor inválido, mostra "Atribuídos a mim". Regras das
+> abas, contagens, período, `myTicketsTabHref` e `parseMyTicketsTab` não mudam
+> (a aba padrão continua sendo escrita na URL ao trocar de período, agora como
+> `tab=assigned`). `MY_TICKETS_TAB_RULES` e `mapMyTicketsTabs` são `Record` e
+> não dão ordem; a tela itera `MY_TICKETS_TABS`. Link do menu e "voltar" do
+> detalhe (`MY_TICKETS_BACK_LINK`) continuam em `/tickets` e, por isso, passam
+> a abrir em "Atribuídos a mim". Os trechos de domínio e validação abaixo já
+> estão atualizados. **Ficam superados**: a aba ativa "Abertos por mim" e a
+> ordem do cenário 2; o "Abertos por mim" dos cenários 8, 32 e 53 (passa a
+> "Atribuídos a mim"); o `tab=opened` dos cenários 23 e 24 (passa a
+> `tab=assigned`); a ordem do cenário 45. Em outros contratos: a ordem das abas
+> do cenário **TR5** de `department-transfer.md` e o `tab=opened` do cenário 24
+> de `ticket-edit-window.md` (os dois anotados no próprio cenário). Cenários
+> que já trazem `?tab=opened` explícito continuam valendo. Cenários novos em
+> "Cenários da aba padrão".
+
 ## Adendo — filtro por data de abertura
 
 Acrescentado em 2026-10-01. Decisões no plano (`docs/plans/my-tickets.md`, seção
@@ -672,13 +694,16 @@ Rótulos:
 
 ```ts
 export const MY_TICKETS_TABS = [
-  "opened",
   "assigned",
+  "opened",
+  "awaiting",
   "resolved",
   "closed",
   "cancelled",
 ] as const
 ```
+
+Ordem desde 2026-10-12 (`assigned` primeiro); `awaiting` entrou em 2026-10-08.
 
 Arquivo-folha, sem import. Existe separado para que `app/_lib/types/my-tickets.ts`
 derive `MyTicketsTab` dele (`import type`) sem ciclo: `types/my-tickets.ts` →
@@ -693,7 +718,7 @@ enums do banco. Consumidores continuam importando `MY_TICKETS_TABS` de
 export { MY_TICKETS_TABS } from "@/app/_lib/domain/my-tickets-tabs"
 export const MY_TICKETS_PATH = "/tickets"
 export const MY_TICKETS_LABEL = "Meus chamados"
-export const DEFAULT_MY_TICKETS_TAB: MyTicketsTab = "opened"
+export const DEFAULT_MY_TICKETS_TAB: MyTicketsTab = "assigned" // era "opened" até 2026-10-12
 export const MY_TICKETS_TAB_RULES = {
   /* uma entrada por aba, tabela abaixo */
 } satisfies Record<MyTicketsTab, MyTicketsTabRule>
@@ -816,11 +841,12 @@ export const myTicketsTabHref: (tab: MyTicketsTab) => string
 
 - **`parseMyTicketsTab` nunca lança.** Primeiro valor de `tab`; ausente,
   desconhecido ou com caixa diferente (`Closed`) → `DEFAULT_MY_TICKETS_TAB`
-  (`opened`), sem erro e sem redirecionar. Mesmo padrão do `periodo` do
-  dashboard: URL velha ou digitada errado mostra a aba padrão em vez de quebrar.
+  (`assigned` desde 2026-10-12; era `opened`), sem erro e sem redirecionar.
+  Mesmo padrão do `periodo` do dashboard: URL velha ou digitada errado mostra
+  a aba padrão em vez de quebrar.
   A URL continua como está (não há `redirect` para a canônica).
 - **`myTicketsTabHref`** é a única forma de montar o link de aba:
-  `/tickets?tab=opened`. Sempre com o parâmetro, inclusive na aba padrão.
+  `/tickets?tab=assigned`. Sempre com o parâmetro, inclusive na aba padrão.
   Ganhou o segundo argumento `period` no adendo do filtro por data.
 
 ### `app/_lib/validation/ticket.ts` (acrescido)
@@ -1210,7 +1236,7 @@ continuam sendo os chamados de referência para o detalhe (cenários 12 a 18).
 | #   | Quem              | Ação                                                                                                                                                                                                                                                                                                                                                                                                                                   | Esperado                                                                                                                                                                                                                                                                                                                                         |
 | --- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1   | QA Membro Suporte | abrir o Início                                                                                                                                                                                                                                                                                                                                                                                                                         | sidebar com "Meus chamados" (ícone de ticket) logo abaixo de "Início"; clicar leva a `/tickets`, item ativo                                                                                                                                                                                                                                      |
-| 2   | QA Membro Suporte | `/tickets`                                                                                                                                                                                                                                                                                                                                                                                                                             | barra superior presente; título "Meus chamados"; aba "Abertos por mim" ativa (`aria-current="page"`); cinco abas na ordem Abertos por mim, Atribuídos a mim, Resolvidos, Fechados, Cancelados, cada uma com contagem                                                                                                                             |
+| 2   | QA Membro Suporte | `/tickets`                                                                                                                                                                                                                                                                                                                                                                                                                             | barra superior presente; título "Meus chamados"; aba "Abertos por mim" ativa (`aria-current="page"`); cinco abas na ordem Abertos por mim, Atribuídos a mim, Resolvidos, Fechados, Cancelados, cada uma com contagem (aba ativa e ordem superadas em 2026-10-12: ver cenário 55)                                                                 |
 | 3   | banco, só leitura | para o id de QA Membro Suporte: `select count(*) filter (where created_by=$1 and status not in ('resolvido','fechado','cancelado')), count(*) filter (where assigned_to=$1 and status not in ('resolvido','fechado','cancelado')), count(*) filter (where created_by=$1 and status='resolvido'), count(*) filter (where created_by=$1 and status='fechado'), count(*) filter (where created_by=$1 and status='cancelado') from ticket` | os cinco números batem com as contagens das abas; repetir para o diretor (que tem resolvidos, fechados e cancelados do seed demo)                                                                                                                                                                                                                |
 | 4   | QA Membro Suporte | aba Abertos por mim                                                                                                                                                                                                                                                                                                                                                                                                                    | os chamados em andamento do membro (sem `resolvido`), os mesmos da consulta do cenário 3 (inclui #65 e #66, e hoje também #67 e #68), mais novo primeiro; colunas #, Título, Tipo, Tag, Setor atual, Status (badge), Aberto em; #66 com status "Aguardando aprovação" e setor atual QA Suporte; nenhuma paginação                                |
 | 5   | QA Membro Suporte | clicar "Atribuídos a mim"                                                                                                                                                                                                                                                                                                                                                                                                              | URL `/tickets?tab=assigned`; contagem 0; estado vazio "Nenhum chamado atribuído a você" com a descrição do contrato; sem tabela, sem botão                                                                                                                                                                                                       |
@@ -1283,7 +1309,7 @@ Consulta de referência = cenário 3 (cinco contagens). Escrita só nos cenário
 
 | #   | Quem              | Ação                                                                                                                                                | Esperado                                                                                                                                                                                                                                                   |
 | --- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 45  | M e Diretor       | `/tickets?tab=opened&periodo=todos`                                                                                                                 | cinco abas na ordem Abertos por mim, Atribuídos a mim, Resolvidos, Fechados, Cancelados; as cinco contagens batem com a consulta do cenário 3                                                                                                              |
+| 45  | M e Diretor       | `/tickets?tab=opened&periodo=todos`                                                                                                                 | cinco abas na ordem Abertos por mim, Atribuídos a mim, Resolvidos, Fechados, Cancelados; as cinco contagens batem com a consulta do cenário 3 (ordem superada em 2026-10-12: ver cenário 55)                                                               |
 | 46  | M e Diretor       | clicar Resolvidos                                                                                                                                   | URL `/tickets?tab=resolved&periodo=todos`; lista = `select id from ticket where created_by = $1 and status = 'resolvido' order by created_at desc, id desc`; todas as linhas com badge "Resolvido"; **sem** grupo Status nos filtros; Tipo e Tag presentes |
 | 47  | M e Diretor       | Abertos por mim e Atribuídos a mim (Todos)                                                                                                          | nenhuma linha com badge "Resolvido"; grupo Status com 5 opções (Aberto, Em análise, Encaminhado, Aguardando aprovação, Em andamento), **sem** "Resolvido"                                                                                                  |
 | 48  | banco, só leitura | para M e para o Diretor: `select count(*) from ticket where created_by = $1`                                                                        | igual à soma das contagens de Abertos por mim, Resolvidos, Fechados e Cancelados com Todos (partição das abas de autor)                                                                                                                                    |
@@ -1294,10 +1320,22 @@ Consulta de referência = cenário 3 (cinco contagens). Escrita só nos cenário
 | 53  | qualquer          | `/tickets?tab=resolved`, `/tickets?tab=Resolved`, `/tickets?tab=resolvido`                                                                          | o primeiro: Resolvidos com Hoje; os outros dois: Abertos por mim com Hoje; nenhum erro                                                                                                                                                                     |
 | 54  | qualquer          | navegar por 45–53                                                                                                                                   | nenhum erro nem aviso de hidratação no dev server; nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer` além das de 49 e 50                                                                                                                 |
 
+### Cenários da aba padrão (revisão de 2026-10-12)
+
+`M` = QA Membro Suporte (`docs/contracts/qa-seed.md`). Só leitura.
+
+| #   | Quem        | Ação                                                                        | Esperado                                                                                                                                                                                  |
+| --- | ----------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 55  | M e Diretor | `/tickets` (pelo menu "Meus chamados")                                      | seis abas na ordem Atribuídos a mim, Abertos por mim, Aguardando aprovação, Resolvidos, Fechados, Cancelados; **Atribuídos a mim** ativa (`aria-current="page"`); período Hoje            |
+| 56  | M           | em `/tickets`, clicar Todos                                                 | URL `/tickets?tab=assigned&periodo=todos`; lista = `select id from ticket where assigned_to = $1 and status not in ('resolvido','fechado','cancelado') order by created_at desc, id desc` |
+| 57  | qualquer    | `/tickets?tab=xyz`, `/tickets?tab=Assigned`, `/tickets?tab=opened`          | os dois primeiros: Atribuídos a mim, sem erro; o terceiro: Abertos por mim                                                                                                                |
+| 58  | M           | abrir um chamado pela lista e clicar em "Meus chamados" (voltar do detalhe) | volta a `/tickets`, com Atribuídos a mim ativa                                                                                                                                            |
+| 59  | qualquer    | navegar por 55–58                                                           | nenhum erro nem aviso de hidratação no dev server; nenhuma linha nova em `ticket`, `ticket_history`, `ticket_transfer`                                                                    |
+
 ## Critério de pronto
 
 1. Cenários 1–22 aprovados pelo `df-qa`. Do adendo, cenários 23–36. Da revisão
-   de 2026-10-06, cenários 45–54.
+   de 2026-10-06, cenários 45–54. Da revisão de 2026-10-12, cenários 55–59.
 2. Contagens das abas iguais à consulta do cenário 3 para pelo menos duas
    pessoas.
 3. Nenhuma linha gravada pela feature; nenhuma migration; nenhuma action.
@@ -1331,3 +1369,9 @@ Revisão de 2026-10-06 (aba Resolvidos):
 - [ ] `resolved: 0` na contagem inicial de `countMyTicketsByTab` (`df-data`)
 - [ ] nada no `df-ui`: abas, estado vazio e filtro Status saem das regras
 - [ ] cenários 45–54 do `df-qa`
+
+Revisão de 2026-10-12 (aba padrão Atribuídos a mim):
+
+- [x] `assigned` primeiro em `MY_TICKETS_TABS`; `DEFAULT_MY_TICKETS_TAB = "assigned"` (`df-architect`)
+- [ ] nada no `df-data`, `df-actions` nem `df-ui`: ordem e padrão saem do domínio
+- [ ] cenários 55–59 do `df-qa`

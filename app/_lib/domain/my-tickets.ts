@@ -18,7 +18,7 @@ export const MY_TICKETS_LABEL = "Meus chamados"
 
 export { MY_TICKETS_TABS } from "@/app/_lib/domain/my-tickets-tabs"
 
-export const DEFAULT_MY_TICKETS_TAB: MyTicketsTab = "opened"
+export const DEFAULT_MY_TICKETS_TAB: MyTicketsTab = "assigned"
 
 export const MY_TICKETS_PERIOD_PRESETS = ALL_TIME_PERIOD_PRESETS
 
