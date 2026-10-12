@@ -46,6 +46,7 @@ export interface SendTicketValues {
   actorId: number
   assigneeId: number
   expectedAssigneeId: number | null
+  comment: string
 }
 
 export type AssignTicketValues = AssumeTicketValues | SendTicketValues
@@ -130,4 +131,5 @@ export interface SendTicketFormDefaults {
   ticketId: number
   expectedAssigneeId: number | null
   assigneeId?: number
+  comment: string
 }

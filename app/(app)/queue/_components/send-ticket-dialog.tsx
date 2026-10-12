@@ -37,6 +37,7 @@ import {
   sendTicketSchema,
 } from "@/app/_lib/validation/ticket-assignment"
 
+import HandoffCommentField from "../../_components/handoff-comment-field"
 import TicketAssigneeField from "../../_components/ticket-assignee-field"
 
 const FIELD_ERROR_CODES: ReadonlySet<AssignTicketErrorCode> = new Set([
@@ -49,7 +50,6 @@ const STALE_TICKET_CODES: ReadonlySet<AssignTicketErrorCode> = new Set([
   "NOT_FOUND",
   "FORBIDDEN",
 ])
-
 interface SendTicketDialogProps {
   ticket: DepartmentQueueListItem
   assignees: readonly AssigneeOption[]
@@ -64,6 +64,7 @@ const SendTicketDialog = ({
   onOpenChange,
 }: SendTicketDialogProps) => {
   const assigneeFieldId = useId()
+  const commentFieldId = useId()
   const router = useRouter()
   const defaults = buildSendTicketFormDefaults(ticket)
 
@@ -140,6 +141,19 @@ const SendTicketDialog = ({
                 fieldState={fieldState}
                 assignees={sendTargetOptions(assignees, ticket.assignedTo)}
                 hint={describeCurrentAssignee(ticket.assigneeName)}
+              />
+            )}
+          />
+
+          <Controller
+            name="comment"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <HandoffCommentField
+                id={commentFieldId}
+                {...field}
+                disabled={isSubmitting}
+                fieldState={fieldState}
               />
             )}
           />

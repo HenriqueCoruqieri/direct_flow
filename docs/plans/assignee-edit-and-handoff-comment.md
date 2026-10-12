@@ -9,7 +9,7 @@ Contratos técnicos:
 - Etapa 1 — revisão de 2026-10-12 em `docs/contracts/my-tickets.md`.
 - Etapa 2 — `docs/contracts/assignee-edit-and-assume.md` e
   `docs/adr/017-ticket-edit-belongs-to-assignee.md`.
-- Etapa 3 — contrato próprio (a escrever).
+- Etapa 3 — `docs/contracts/handoff-comment.md`.
 
 ---
 

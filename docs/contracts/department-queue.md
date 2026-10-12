@@ -100,6 +100,17 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > assume ou recebe o chamado), e o "'Editar' presente" do cenário Q18 também
 > (M não é destinatário do `#F1`).
 
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`,
+> que prevalece no que diverge): o **"Enviar"** passa a exigir um comentário
+> (`comment` em `sendTicketSchema` e em `SendTicketValues`; o diálogo ganha o
+> campo depois do Destinatário), gravado por `assignTicket` (`mode: "send"`)
+> como `message` `publica` de quem enviou, na mesma transação e com o mesmo
+> instante da `atribuicao`. O "Assumir" não muda. `SEND_TICKET_DIALOG_DESCRIPTION`
+> passou a `Escolha quem do setor do chamado vai cuidar dele. O comentário fica
+público no chamado.` **Ficam superados**: o texto do diálogo no Q19; o envio
+> sem comentário do Q20, Q22, Q30 e do terceiro request do Q26 (preencher
+> `comment`); o Q23 passa a mostrar também o erro do comentário.
+
 ## Escopo técnico em uma frase
 
 Uma tela nova (`/queue`), duas leituras e uma escrita: a escrita troca só

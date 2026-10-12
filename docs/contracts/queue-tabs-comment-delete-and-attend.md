@@ -44,6 +44,11 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > destinatário, pelo AT11) e a menção ao "Editar" bloqueado na composição do
 > cabeçalho (seção de UI do "Atender"). AT5, AT6 e AT14 continuam valendo.
 
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`,
+> que prevalece no que diverge): o "Enviar" da Fila passa a exigir um
+> comentário público; "Atender" não. **Fica superado** o envio sem comentário
+> do AT11 (D preenche `[QA] …`); o conflito esperado não muda.
+
 ## Escopo técnico em uma frase
 
 Sem schema e sem migration: a Fila passa a ter sete abas, cada uma definida por

@@ -17,6 +17,7 @@ import {
   ticketDetailPath,
 } from "@/app/_lib/domain/ticket"
 import { describeTicketEdited } from "@/app/_lib/domain/ticket-edit"
+import { HANDOFF_COMMENT_REQUIRED_MESSAGE } from "@/app/_lib/domain/ticket-handoff"
 import type {
   InsertTicketOutcome,
   TicketCreationBlockReason,
@@ -147,6 +148,7 @@ export type EditTicketErrorCode =
   | "INVALID_TAG"
   | "INVALID_ASSIGNEE"
   | "NO_CHANGES"
+  | "HANDOFF_COMMENT_REQUIRED"
 
 export interface EditTicketSuccess {
   ok: true
@@ -207,6 +209,11 @@ const EDIT_OUTCOME_FAILURES = {
     ok: false,
     code: "NO_CHANGES",
     message: "Nenhuma alteração para salvar.",
+  },
+  comment_required: {
+    ok: false,
+    code: "HANDOFF_COMMENT_REQUIRED",
+    message: HANDOFF_COMMENT_REQUIRED_MESSAGE,
   },
 } satisfies Record<UpdateTicketByAssigneeFailureStatus, EditTicketFailure>
 

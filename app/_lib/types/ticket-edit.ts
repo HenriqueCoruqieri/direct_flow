@@ -92,6 +92,7 @@ export interface TicketEditChanges {
 export interface UpdateTicketByAssigneeValues extends TicketEditValues {
   ticketId: number
   editorId: number
+  handoffComment?: string
 }
 
 export interface TicketEditSaved {
@@ -112,6 +113,10 @@ export interface TicketNoChanges {
   status: "no_changes"
 }
 
+export interface TicketHandoffCommentRequired {
+  status: "comment_required"
+}
+
 export type UpdateTicketByAssigneeOutcome =
   | TicketEditSaved
   | TicketNotFound
@@ -119,6 +124,7 @@ export type UpdateTicketByAssigneeOutcome =
   | TicketInvalidTag
   | TicketInvalidAssignee
   | TicketNoChanges
+  | TicketHandoffCommentRequired
 
 export interface EditTicketFormDefaults {
   ticketId: number

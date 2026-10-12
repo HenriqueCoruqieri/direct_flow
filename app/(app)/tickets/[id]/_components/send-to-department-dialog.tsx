@@ -38,9 +38,10 @@ import {
   sendTicketToDepartmentSchema,
 } from "@/app/_lib/validation/ticket-transfer"
 
+import HandoffCommentField from "../../../_components/handoff-comment-field"
+
 const STALE_TICKET_CODES: ReadonlySet<SendTicketToDepartmentErrorCode> =
   new Set(["CONFLICT", "NOT_FOUND", "FORBIDDEN"])
-
 export interface SendToDepartmentSetup {
   defaults: SendToDepartmentFormDefaults
   options: DepartmentOption[]
@@ -60,6 +61,7 @@ const SendToDepartmentDialog = ({
   onOpenChange,
 }: SendToDepartmentDialogProps) => {
   const targetFieldId = useId()
+  const commentFieldId = useId()
   const router = useRouter()
   const [isLeaving, setIsLeaving] = useState(false)
 
@@ -135,26 +137,40 @@ const SendToDepartmentDialog = ({
           </DialogHeader>
 
           {hasTargets ? (
-            <Controller
-              name="toDepartmentId"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <ComboboxField
-                  id={targetFieldId}
-                  {...field}
-                  disabled={isBusy}
-                  fieldState={fieldState}
-                  label={TRANSFER_TARGET_LABEL}
-                  options={options.map((option) => ({
-                    value: option.id,
-                    label: option.name,
-                  }))}
-                  placeholder={TRANSFER_TARGET_PLACEHOLDER}
-                  searchPlaceholder="Buscar setor…"
-                  className="min-w-0"
-                />
-              )}
-            />
+            <>
+              <Controller
+                name="toDepartmentId"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <ComboboxField
+                    id={targetFieldId}
+                    {...field}
+                    disabled={isBusy}
+                    fieldState={fieldState}
+                    label={TRANSFER_TARGET_LABEL}
+                    options={options.map((option) => ({
+                      value: option.id,
+                      label: option.name,
+                    }))}
+                    placeholder={TRANSFER_TARGET_PLACEHOLDER}
+                    searchPlaceholder="Buscar setor…"
+                    className="min-w-0"
+                  />
+                )}
+              />
+              <Controller
+                name="comment"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <HandoffCommentField
+                    id={commentFieldId}
+                    {...field}
+                    disabled={isBusy}
+                    fieldState={fieldState}
+                  />
+                )}
+              />
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">
               {NO_TRANSFER_TARGETS_MESSAGE}

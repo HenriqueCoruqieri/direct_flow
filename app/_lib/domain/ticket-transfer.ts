@@ -16,6 +16,7 @@ import {
   isTicketDispatcher,
   ticketActorBlockFor,
 } from "@/app/_lib/domain/ticket-assignment"
+import { EMPTY_HANDOFF_COMMENT } from "@/app/_lib/domain/ticket-handoff"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type {
   TicketActorFacts,
@@ -75,7 +76,7 @@ export const SEND_TO_DEPARTMENT_SUBMIT_LABEL = "Enviar"
 export const SEND_TO_DEPARTMENT_PENDING_LABEL = "Enviando…"
 
 export const SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION =
-  "O chamado sai da fila deste setor e vai para a fila do setor escolhido, aguardando aprovação até alguém de lá atendê-lo."
+  "O chamado sai da fila deste setor e vai para a fila do setor escolhido, aguardando aprovação até alguém de lá atendê-lo. O comentário fica público no chamado e aparece no aviso de aprovação."
 
 export const TRANSFER_TARGET_LABEL = "Setor de destino"
 
@@ -171,6 +172,7 @@ export const buildSendToDepartmentFormDefaults = (
 ): SendToDepartmentFormDefaults => ({
   ticketId: ticket.id,
   expectedDepartmentId: ticket.currentDepartmentId,
+  comment: EMPTY_HANDOFF_COMMENT,
 })
 
 export const sendToDepartmentDialogTitle = (ticketId: number): string =>

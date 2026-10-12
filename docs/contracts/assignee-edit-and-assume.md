@@ -22,6 +22,15 @@ aqui e trazem uma revisão de 2026-10-12 apontando para cá:
   edição feitos por quem não é destinatário
 - `docs/contracts/qa-seed.md` — chamados da janela com destinatário
 
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`,
+> Etapa 3 do mesmo plano, que prevalece no que diverge): trocar o destinatário
+> pelo "Editar", o "Enviar" da Fila e o "Enviar para outro setor" passam a
+> exigir um comentário público; "Assumir" (inclusive o do detalhe) e
+> "Atender" não. `UpdateTicketByAssigneeOutcome` ganha `comment_required`
+> (depois de `no_changes` na precedência). **Ficam superados** a troca sem
+> comentário do AE16 e o envio sem comentário do AE17 (preencher `[QA] …`);
+> AE8–AE10 e AE20 continuam sem comentário.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 

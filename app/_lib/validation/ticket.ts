@@ -11,6 +11,7 @@ import {
   TICKET_SOLUTION_MAX_LENGTH,
   TICKET_SOLUTION_MIN_LENGTH,
 } from "@/app/_lib/domain/ticket-resolution"
+import { handoffCommentSchema } from "@/app/_lib/validation/comment-text"
 import { registryIdSchema } from "@/app/_lib/validation/registry"
 import {
   idSearchParamSchema,
@@ -87,6 +88,7 @@ export const parseTicketIdParam = (value: string): number | null => {
 export const editTicketSchema = createTicketSchema.extend({
   ticketId: ticketIdSchema,
   solution: ticketSolutionSchema.optional(),
+  handoffComment: handoffCommentSchema.optional(),
 })
 
 export type EditTicketInput = z.infer<typeof editTicketSchema>

@@ -87,6 +87,17 @@ e-mail.
 > em chamado de que é destinatário) e 21–26 (botão esmaecido). Cobertura nova
 > em AE1–AE34 de `assignee-edit-and-assume.md`.
 
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`,
+> que prevalece no que diverge): `editTicketSchema` ganha `handoffComment`
+> opcional (mesmos limites do comentário); `UpdateTicketByAssigneeValues`
+> ganha `handoffComment?`; `UpdateTicketByAssigneeOutcome` ganha
+> `TicketHandoffCommentRequired` (`comment_required`), devolvido quando o
+> destinatário muda sem comentário (`requiresHandoffComment`), depois de
+> `no_changes` na precedência; `editTicket` o mapeia para
+> `HANDOFF_COMMENT_REQUIRED`. Com comentário, a edição grava também uma
+> `message` `publica`. Os cenários deste contrato não trocam destinatário e
+> continuam valendo.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

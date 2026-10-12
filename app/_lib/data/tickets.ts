@@ -29,6 +29,7 @@ import {
   diffTicketEdit,
   hasTicketEditChanges,
 } from "@/app/_lib/domain/ticket-edit"
+import { requiresHandoffComment } from "@/app/_lib/domain/ticket-handoff"
 import {
   canResolveTicket,
   resolutionAssigneeFor,
@@ -402,7 +403,26 @@ export async function updateTicketByAssignee(
 
     if (!hasTicketEditChanges(changes)) return { status: "no_changes" }
 
+    const handoffComment = requiresHandoffComment(changes)
+      ? (values.handoffComment ?? null)
+      : null
+
+    if (requiresHandoffComment(changes) && handoffComment === null) {
+      return { status: "comment_required" }
+    }
+
     const changedAt = now
+
+    if (handoffComment !== null) {
+      await tx.insert(message).values({
+        ticketId,
+        userId: editorId,
+        content: handoffComment,
+        visibility: "publica",
+        createdAt: changedAt,
+        updatedAt: changedAt,
+      })
+    }
 
     const nextStatus = changes.assignee
       ? statusAfterReassignment(
@@ -669,6 +689,17 @@ export async function assignTicket(
 
     const changedAt = new Date()
 
+    if (values.mode === "send") {
+      await tx.insert(message).values({
+        ticketId,
+        userId: actorId,
+        content: values.comment,
+        visibility: "publica",
+        createdAt: changedAt,
+        updatedAt: changedAt,
+      })
+    }
+
     const nextStatus = statusAfterReassignment(
       ticketRow.status,
       assigneeTargetFor(actorId, newAssigneeId),
@@ -798,7 +829,8 @@ export async function startTicketWork(
 export async function requestTicketTransfer(
   values: RequestTicketTransferValues,
 ): Promise<RequestTicketTransferOutcome> {
-  const { ticketId, actorId, toDepartmentId, expectedDepartmentId } = values
+  const { ticketId, actorId, toDepartmentId, expectedDepartmentId, comment } =
+    values
 
   return db.transaction(async (tx) => {
     const [ticketRow] = await tx
@@ -881,6 +913,15 @@ export async function requestTicketTransfer(
 
     const changedAt = new Date()
 
+    await tx.insert(message).values({
+      ticketId,
+      userId: actorId,
+      content: comment,
+      visibility: "publica",
+      createdAt: changedAt,
+      updatedAt: changedAt,
+    })
+
     await tx
       .update(ticket)
       .set({
@@ -896,7 +937,7 @@ export async function requestTicketTransfer(
       fromDepartmentId: ticketRow.currentDepartmentId,
       toDepartmentId,
       requestedBy: actorId,
-      requestReason: null,
+      requestReason: comment,
       status: "pendente",
       createdAt: changedAt,
       updatedAt: changedAt,

@@ -40,6 +40,22 @@ Padrões de outcome, trava, conflito e resultado de action vêm de
 > mesmos valores). O "`Editar` (A é autor)" do RJ7 continua valendo pelo
 > motivo novo: A é o destinatário devolvido.
 
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`,
+> que prevalece no que diverge): o envio para outro setor passa a exigir um
+> **comentário** (`comment` em `sendTicketToDepartmentSchema` e em
+> `RequestTicketTransferValues`), gravado como `message` `publica` de quem
+> enviou e em `ticket_transfer.request_reason`, na mesma transação e com o
+> mesmo instante. Com isso o card Conclusão do chamado aguardando aprovação
+> mostra o comentário (`describeTransferAwaitingConclusion`, sem mudança de
+> código) e o aviso amarelo o mostra abaixo de `Solicitada por …`.
+> `SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION` ganhou a frase sobre o comentário. O
+> `reason` da recusa passou a usar o mesmo schema-base (`commentTextSchema`),
+> com as mesmas mensagens. **Ficam superados**: a linha `request_reason`
+> ("Nulo: o envio não pede motivo") da tabela de decisões, o
+> `request_reason` nulo do TR4 (agora é o comentário) e, em todo cenário que
+> envia para outro setor (TR3, TR9–TR11, TR16, RJ16 e as preparações de
+> aceite e recusa), o envio sem comentário: preencher um comentário `[QA] …`.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 

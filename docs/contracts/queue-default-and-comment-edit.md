@@ -56,6 +56,16 @@ aberta` na fila), E2.16 (`#N3` é de A), E4.7 (`#S3` é de A), E4.9 (depois do
 > E3.6 (`#T2` de M), E4.5 (`#S1` de M depois do E4.4), E4.8 e E5.4 (`#L1` de M
 > depois do E5.3).
 
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`,
+> que prevalece no que diverge): trocar o destinatário pelo "Editar" (para um
+> colega ou para a fila) e o "Enviar" da Fila passam a exigir um comentário,
+> gravado como `message` `publica` de quem agiu; o "Assumir" não. **Ficam
+> superados**, nos cenários que continuam valendo, a troca sem comentário do
+> E2.9, E3.6, E4.5, E4.8 e E5.4 e o envio sem comentário do E4.6 e E5.6
+> (preencher um comentário `[QA] …`; as linhas de `ticket_history` esperadas
+> não mudam, só se soma uma `message`). O comentário dessas trocas é editável e
+> apagável pelo autor como qualquer comentário (etapa 6).
+
 ## Decisões do arquiteto (não fixadas no plano)
 
 | Etapa | Tema                                     | Decisão                                                                                                                                                                                                                                                              |

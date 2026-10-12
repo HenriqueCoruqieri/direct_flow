@@ -10,6 +10,7 @@ import { useTicketEdit } from "../_hooks/use-ticket-edit"
 import TicketDetailFieldList, {
   TICKET_DETAIL_FIELD_GRID_CLASS,
 } from "./ticket-detail-field-list"
+import TicketEditHandoffComment from "./ticket-edit-handoff-comment"
 
 interface TicketEditAssigneeProps {
   creatorName: string
@@ -46,6 +47,7 @@ const TicketEditAssignee = ({
           />
         )}
       />
+      <TicketEditHandoffComment />
     </div>
   )
 }

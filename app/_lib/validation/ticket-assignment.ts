@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { handoffCommentSchema } from "@/app/_lib/validation/comment-text"
 import { registryIdSchema } from "@/app/_lib/validation/registry"
 import { POSTGRES_INTEGER_MAX } from "@/app/_lib/validation/search-params"
 import { ticketIdSchema } from "@/app/_lib/validation/ticket"
@@ -30,6 +31,7 @@ export const sendTicketSchema = z
     ticketId: ticketIdSchema,
     assigneeId: assigneeIdSchema,
     expectedAssigneeId: expectedAssigneeIdSchema,
+    comment: handoffCommentSchema,
   })
   .refine((data) => data.assigneeId !== data.expectedAssigneeId, {
     error: "Escolha um destinatário diferente do atual.",

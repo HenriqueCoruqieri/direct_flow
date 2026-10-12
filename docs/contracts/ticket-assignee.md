@@ -47,6 +47,17 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > (M não edita o `#C`, que é de A). Continuam valendo 12, 14, 16 e 17 (M é
 > destinatário do `#P`).
 
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`,
+> que prevalece no que diverge): trocar o destinatário pelo "Editar" passa a
+> exigir um **comentário** (`handoffComment`, opcional no schema e exigido por
+> `updateTicketByAssignee`, que devolve `comment_required` sem ele). O campo
+> aparece abaixo do Destinatário quando a escolha difere da inicial e some ao
+> voltar. O comentário vira `message` `publica` de quem editou, com o mesmo
+> instante das linhas `edicao`/`atribuicao`. A precedência ganha
+> `comment_required` depois de `no_changes`. **Ficam superados**: a troca sem
+> comentário do cenário 13 (preencher `[QA] …`) e o "duas linhas novas" do 14
+> (continuam duas em `ticket_history`, mais uma em `message`).
+
 ## Escopo técnico em uma frase
 
 Todo chamado novo nasce com destinatário (`ticket.assigned_to`), escolhido entre

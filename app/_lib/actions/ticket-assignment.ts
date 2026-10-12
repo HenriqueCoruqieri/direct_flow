@@ -271,6 +271,7 @@ export const sendTicket = async (
     actorId: actor.id,
     assigneeId: parsed.data.assigneeId,
     expectedAssigneeId: parsed.data.expectedAssigneeId,
+    comment: parsed.data.comment,
   })
 }
 

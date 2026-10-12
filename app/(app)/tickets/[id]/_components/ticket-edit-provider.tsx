@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import { editTicket } from "@/app/_lib/actions/tickets"
+import { isHandoffAssigneeChange } from "@/app/_lib/domain/ticket-handoff"
 import type { TicketEditFormOptions } from "@/app/_lib/types/ticket-edit"
 import {
   type EditTicketInput,
@@ -73,6 +74,25 @@ const TicketEditProvider = ({ options, children }: TicketEditProviderProps) => {
       return
     }
 
+    if (result.code === "HANDOFF_COMMENT_REQUIRED") {
+      if (
+        isHandoffAssigneeChange(
+          options.defaults.assigneeId,
+          form.getValues("assigneeId"),
+        )
+      ) {
+        form.setError(
+          "handoffComment",
+          { message: result.message },
+          { shouldFocus: true },
+        )
+        return
+      }
+      toast.error(result.message)
+      router.refresh()
+      return
+    }
+
     toast.error(result.message)
 
     if (result.code === "FORBIDDEN" || result.code === "NOT_FOUND") {
@@ -89,6 +109,7 @@ const TicketEditProvider = ({ options, children }: TicketEditProviderProps) => {
         tagHint: options.tagHint,
         assignees: options.assignees,
         assigneeHint: options.assigneeHint,
+        initialAssigneeId: options.defaults.assigneeId,
         queueLabel: options.queueLabel,
         includesSolution: options.includesSolution,
         isEditing,

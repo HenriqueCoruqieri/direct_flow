@@ -5,6 +5,7 @@ import {
   TICKET_STATUSES,
 } from "@/app/_lib/domain/ticket"
 import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
+import { EMPTY_HANDOFF_COMMENT } from "@/app/_lib/domain/ticket-handoff"
 import type {
   AssigneeOption,
   TicketActorFacts,
@@ -97,7 +98,7 @@ export const SEND_TICKET_LABEL = "Enviar"
 export const SEND_TICKET_PENDING_LABEL = "Enviando…"
 
 export const SEND_TICKET_DIALOG_DESCRIPTION =
-  "Escolha quem do setor do chamado vai cuidar dele."
+  "Escolha quem do setor do chamado vai cuidar dele. O comentário fica público no chamado."
 
 export const TICKET_NOT_ASSUMABLE_MESSAGE =
   "Não é possível assumir este chamado agora."
@@ -198,6 +199,7 @@ export const buildSendTicketFormDefaults = (
 ): SendTicketFormDefaults => ({
   ticketId: ticket.id,
   expectedAssigneeId: ticket.assignedTo,
+  comment: EMPTY_HANDOFF_COMMENT,
 })
 
 export const sendTicketDialogTitle = (ticketId: number): string =>

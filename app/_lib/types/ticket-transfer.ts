@@ -29,6 +29,7 @@ export interface RequestTicketTransferValues {
   actorId: number
   toDepartmentId: number
   expectedDepartmentId: number
+  comment: string
 }
 
 export interface TicketTransferRequested {
@@ -73,6 +74,7 @@ export interface SendToDepartmentFormDefaults {
   ticketId: number
   expectedDepartmentId: number
   toDepartmentId?: number
+  comment: string
 }
 
 export interface TicketPendingTransferReview {

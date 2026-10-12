@@ -73,6 +73,15 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > `resolutionAssigneeFor`), com uma linha `atribuicao` (de nulo para ele,
 > `changed_by` = ele) **antes** da `resolucao`, mesmo `changed_at`. Diretoria
 > de outro setor resolve sem virar destinatária. Quem pode resolver não muda.
+
+> Revisão de 2026-10-12, comentário na troca (`docs/contracts/handoff-comment.md`):
+> o envio para outro setor passa a gravar o comentário obrigatório em
+> `ticket_transfer.request_reason`. O ramo "texto" de
+> `describeTransferAwaitingConclusion` (até aqui só alcançado por dados
+> legados) passa a ser o caso comum: o card Conclusão de um chamado aguardando
+> aprovação mostra o comentário do envio. Confirmado como desejado; nenhum
+> código muda. O cenário 14 (`#66`, `request_reason` nulo) continua valendo
+> para transferências antigas.
 > `updateTicketResolution` mantém assinatura e outcomes. A página deixa de
 > usar `ticketEditButtonStateFor` (removido; agora `canEditTicketDetail`).
 > **Ficam superados**: no cenário 6, "`assigned_to` inalterado" e "uma linha
