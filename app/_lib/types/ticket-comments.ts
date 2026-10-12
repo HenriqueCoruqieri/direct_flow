@@ -47,6 +47,7 @@ export interface TicketMessageItem {
   id: number
   authorId: number
   authorName: string
+  authorDepartmentName: string
   content: string
   visibility: MessageVisibility
   createdAt: Date

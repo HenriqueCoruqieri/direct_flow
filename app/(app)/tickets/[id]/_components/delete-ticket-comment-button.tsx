@@ -17,6 +17,11 @@ import {
 } from "@/app/_components/ui/alert-dialog"
 import { Button } from "@/app/_components/ui/button"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/app/_components/ui/tooltip"
+import {
   deleteTicketComment,
   type DeleteTicketCommentErrorCode,
 } from "@/app/_lib/actions/ticket-comments"
@@ -27,6 +32,8 @@ import {
   DELETE_COMMENT_PENDING_LABEL,
 } from "@/app/_lib/domain/ticket-comments"
 import type { DeleteTicketCommentTarget } from "@/app/_lib/types/ticket-comments"
+
+import { useFocusReturnTooltip } from "../_hooks/use-focus-return-tooltip"
 
 const STALE_COMMENT_CODES: ReadonlySet<DeleteTicketCommentErrorCode> = new Set([
   "NOT_FOUND",
@@ -48,6 +55,8 @@ const DeleteTicketCommentButton = ({
   const [open, setOpen] = useState(false)
   const leftItemRef = useRef(false)
   const [isPending, startTransition] = useTransition()
+  const { tooltipProps, triggerProps, markFocusReturn } =
+    useFocusReturnTooltip()
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isPending) return
@@ -78,7 +87,10 @@ const DeleteTicketCommentButton = ({
   }
 
   const handleCloseAutoFocus = (event: Event) => {
-    if (!leftItemRef.current) return
+    if (!leftItemRef.current) {
+      markFocusReturn()
+      return
+    }
 
     event.preventDefault()
     leftItemRef.current = false
@@ -87,19 +99,23 @@ const DeleteTicketCommentButton = ({
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          disabled={isPending}
-          aria-label={ariaLabel}
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <Trash2Icon aria-hidden="true" data-icon="inline-start" />
-          {DELETE_COMMENT_LABEL}
-        </Button>
-      </AlertDialogTrigger>
+      <Tooltip {...tooltipProps}>
+        <TooltipTrigger asChild {...triggerProps}>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              disabled={isPending}
+              aria-label={ariaLabel}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive aria-expanded:bg-destructive/10 aria-expanded:text-destructive dark:hover:bg-destructive/20"
+            >
+              <Trash2Icon aria-hidden="true" className="size-3.5" />
+            </Button>
+          </AlertDialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent hideWhenDetached>{DELETE_COMMENT_LABEL}</TooltipContent>
+      </Tooltip>
 
       <AlertDialogContent onCloseAutoFocus={handleCloseAutoFocus}>
         <AlertDialogHeader>

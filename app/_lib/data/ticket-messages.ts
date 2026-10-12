@@ -19,7 +19,7 @@ import type {
   UpdateTicketMessageValues,
 } from "@/app/_lib/types/ticket-comments"
 import { db } from "@/db"
-import { message, ticket, user } from "@/db/schema"
+import { department, message, ticket, user } from "@/db/schema"
 
 export async function listTicketMessages(
   ticketId: number,
@@ -34,6 +34,7 @@ export async function listTicketMessages(
       id: message.id,
       authorId: message.userId,
       authorName: user.name,
+      authorDepartmentName: department.name,
       content: message.content,
       visibility: message.visibility,
       createdAt: message.createdAt,
@@ -41,6 +42,7 @@ export async function listTicketMessages(
     })
     .from(message)
     .innerJoin(user, eq(user.id, message.userId))
+    .innerJoin(department, eq(department.id, user.departmentId))
     .where(and(eq(message.ticketId, ticketId), visibleToViewer))
     .orderBy(asc(message.createdAt), asc(message.id))
 }

@@ -90,6 +90,13 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > `{nome} assumiu o chamado.` antes de `Resolveu o chamado.` no 5 e no 9 (o 10,
 > do Diretor, continua sem destinatário e com uma linha só).
 
+> Revisão de 2026-10-12, card de comentário
+> (`docs/contracts/comment-card-department-and-actions.md`, que prevalece no
+> que diverge): `TicketMessageItem` ganha `authorDepartmentName` (setor
+> **atual** do autor) e `listTicketMessages` faz `inner join department` em
+> `department.id = users.department_id`. Escopo, ordem e as demais funções de
+> `ticket-messages.ts` não mudam. Sem migration.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

@@ -10,6 +10,11 @@ import { toast } from "sonner"
 import { Button } from "@/app/_components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
 import { Textarea } from "@/app/_components/ui/textarea"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/app/_components/ui/tooltip"
 import { editTicketComment } from "@/app/_lib/actions/ticket-comments"
 import {
   EDIT_COMMENT_LABEL,
@@ -22,6 +27,7 @@ import {
   editTicketCommentSchema,
 } from "@/app/_lib/validation/ticket-comments"
 
+import { useFocusReturnTooltip } from "../_hooks/use-focus-return-tooltip"
 import TicketCommentBody from "./ticket-comment-body"
 
 interface TicketCommentEditorProps {
@@ -43,6 +49,8 @@ const TicketCommentEditor = ({
   const editButtonRef = useRef<HTMLButtonElement>(null)
   const wasEditingRef = useRef(false)
   const [isEditing, setIsEditing] = useState(false)
+  const { tooltipProps, triggerProps, markFocusReturn } =
+    useFocusReturnTooltip()
 
   const form = useForm<EditTicketCommentInput>({
     resolver: zodResolver(editTicketCommentSchema),
@@ -59,9 +67,12 @@ const TicketCommentEditor = ({
     }
     if (wasEditingRef.current) {
       wasEditingRef.current = false
-      editButtonRef.current?.focus()
+      const editButton = editButtonRef.current
+      if (editButton === null) return
+      markFocusReturn()
+      editButton.focus()
     }
-  }, [isEditing, form])
+  }, [isEditing, form, markFocusReturn])
 
   const startEditing = () => {
     form.reset(defaults)
@@ -111,18 +122,24 @@ const TicketCommentEditor = ({
       <TicketCommentBody
         actions={
           <>
-            <Button
-              ref={editButtonRef}
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="text-muted-foreground"
-              aria-label={editAriaLabel}
-              onClick={startEditing}
-            >
-              <PencilIcon aria-hidden="true" data-icon="inline-start" />
-              {EDIT_COMMENT_LABEL}
-            </Button>
+            <Tooltip {...tooltipProps}>
+              <TooltipTrigger asChild {...triggerProps}>
+                <Button
+                  ref={editButtonRef}
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground"
+                  aria-label={editAriaLabel}
+                  onClick={startEditing}
+                >
+                  <PencilIcon aria-hidden="true" className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent hideWhenDetached>
+                {EDIT_COMMENT_LABEL}
+              </TooltipContent>
+            </Tooltip>
             {actions}
           </>
         }

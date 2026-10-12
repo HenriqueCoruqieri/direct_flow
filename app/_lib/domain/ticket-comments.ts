@@ -30,6 +30,8 @@ export const PRIVATE_COMMENT_LABEL = "Comentário privado"
 
 export const PRIVATE_COMMENT_BADGE = "Privado"
 
+export const COMMENT_AUTHOR_DEPARTMENT_LABEL = "Setor"
+
 export const NO_COMMENTS_LABEL = "Nenhum comentário ainda."
 
 export const TICKET_COMMENTS_CLOSED_MESSAGE =

@@ -5,6 +5,7 @@ import { formatDateTime, toISO } from "@/app/_lib/date"
 import {
   buildDeleteTicketCommentTarget,
   buildEditTicketCommentFormDefaults,
+  COMMENT_AUTHOR_DEPARTMENT_LABEL,
   DELETE_COMMENT_LABEL,
   EDIT_COMMENT_LABEL,
   EDITED_COMMENT_LABEL,
@@ -54,7 +55,7 @@ const TicketCommentItem = ({
   ) : null
 
   return (
-    <li className="flex flex-col gap-1 rounded-lg bg-surface-muted px-3 py-2.5">
+    <li className="flex flex-col gap-2 rounded-lg bg-surface-muted px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="text-sm font-bold wrap-break-word">
           {message.authorName}
@@ -76,6 +77,13 @@ const TicketCommentItem = ({
             {PRIVATE_COMMENT_BADGE}
           </Badge>
         ) : null}
+        <Badge
+          variant="outline"
+          className="ml-auto max-w-full bg-white font-bold text-black"
+        >
+          <span className="sr-only">{COMMENT_AUTHOR_DEPARTMENT_LABEL}: </span>
+          <span className="truncate">{message.authorDepartmentName}</span>
+        </Badge>
       </div>
       {entry.canEdit ? (
         <TicketCommentEditor

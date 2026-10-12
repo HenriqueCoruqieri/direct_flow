@@ -69,7 +69,9 @@ permissão.
   `app/_lib/domain/ticket-resolution.ts` para `app/_lib/domain/ticket.ts`
   (passa a servir criação e conclusão); nasce
   `NO_ATTACHMENTS_LABEL = "Nenhum anexo."` em `app/_lib/domain/ticket.ts`
-  (Etapa 2). Nenhuma regra de domínio muda.
+  (Etapa 2); nasce `COMMENT_AUTHOR_DEPARTMENT_LABEL = "Setor"` em
+  `app/_lib/domain/ticket-comments.ts`, prefixo só para leitor de tela do badge
+  do setor (Etapa 3). Nenhuma regra de domínio muda.
 - **Validação**: nada.
 - **Schema / migration**: nada.
 

@@ -66,6 +66,15 @@ aberta` na fila), E2.16 (`#N3` é de A), E4.7 (`#S3` é de A), E4.9 (depois do
 > não mudam, só se soma uma `message`). O comentário dessas trocas é editável e
 > apagável pelo autor como qualquer comentário (etapa 6).
 
+> Revisão de 2026-10-12, card de comentário
+> (`docs/contracts/comment-card-department-and-actions.md`, que prevalece no
+> que diverge): na etapa 6, o "Editar" do comentário passa a ser só ícone
+> (`PencilIcon` 14px, `Button` `ghost` `icon-sm`) com tooltip
+> `EDIT_COMMENT_LABEL`, numa linha própria abaixo do texto, alinhada à direita;
+> o `aria-label` e o modo de edição não mudam. Foco devolvido ao lápis depois
+> da edição não abre o tooltip. `TicketMessageItem` ganha
+> `authorDepartmentName`, exibido num badge no fim do cabeçalho do comentário.
+
 ## Decisões do arquiteto (não fixadas no plano)
 
 | Etapa | Tema                                     | Decisão                                                                                                                                                                                                                                                              |

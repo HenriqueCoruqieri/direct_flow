@@ -49,6 +49,15 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > comentário público; "Atender" não. **Fica superado** o envio sem comentário
 > do AT11 (D preenche `[QA] …`); o conflito esperado não muda.
 
+> Revisão de 2026-10-12, card de comentário
+> (`docs/contracts/comment-card-department-and-actions.md`, que prevalece no
+> que diverge): o "Excluir" do comentário passa a ser só ícone (`Trash2Icon`
+> 14px, `Button` `ghost` `icon-sm`, sempre `text-destructive`) com tooltip
+> `DELETE_COMMENT_LABEL`, na linha de ações abaixo do texto, depois do lápis.
+> Fica superado o "ao lado do 'Editar'" com texto da seção 2 (`df-ui`). O
+> `AlertDialog`, o `aria-label` e a volta do foco (heading depois de excluir,
+> lixeira ao cancelar) não mudam; foco devolvido à lixeira não abre o tooltip.
+
 ## Escopo técnico em uma frase
 
 Sem schema e sem migration: a Fila passa a ter sete abas, cada uma definida por
