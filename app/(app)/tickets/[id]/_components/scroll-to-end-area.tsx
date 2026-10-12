@@ -4,19 +4,19 @@ import { useEffect, useRef } from "react"
 
 import { cn } from "@/app/_lib/utils"
 
-interface CommentsScrollAreaProps {
+interface ScrollToEndAreaProps {
   itemCount: number
   label: string
   className?: string
   children: React.ReactNode
 }
 
-const CommentsScrollArea = ({
+const ScrollToEndArea = ({
   itemCount,
   label,
   className,
   children,
-}: CommentsScrollAreaProps) => {
+}: ScrollToEndAreaProps) => {
   const areaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -41,4 +41,4 @@ const CommentsScrollArea = ({
   )
 }
 
-export default CommentsScrollArea
+export default ScrollToEndArea

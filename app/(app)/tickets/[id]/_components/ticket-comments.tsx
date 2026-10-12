@@ -5,7 +5,7 @@ import {
 import type { TicketCommentFormState } from "@/app/_lib/types/ticket-comments"
 import { cn } from "@/app/_lib/utils"
 
-import CommentsScrollArea from "./comments-scroll-area"
+import ScrollToEndArea from "./scroll-to-end-area"
 import TicketCommentForm from "./ticket-comment-form"
 import TicketCommentItem, {
   type TicketCommentEntry,
@@ -49,7 +49,7 @@ const TicketComments = ({
         {entries.length === 0 ? (
           <p className="text-sm text-muted-foreground">{NO_COMMENTS_LABEL}</p>
         ) : (
-          <CommentsScrollArea
+          <ScrollToEndArea
             itemCount={entries.length}
             label="Lista de comentários"
             className="max-h-96 lg:absolute lg:inset-0 lg:max-h-none"
@@ -64,7 +64,7 @@ const TicketComments = ({
                 />
               ))}
             </ol>
-          </CommentsScrollArea>
+          </ScrollToEndArea>
         )}
       </div>
 

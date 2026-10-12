@@ -805,6 +805,14 @@ const messages = await listTicketMessages(
 - O aviso amarelo de transferência pendente (`PendingTransferNotice`) continua
   acima do grid, como hoje.
 
+> Revisão de 2026-10-12 (`docs/contracts/ticket-timeline-scroll.md`): a Linha
+> do tempo passa a ter altura máxima (cerca de 5 eventos simples) e rola por
+> dentro, abrindo no último evento, em todas as larguras. Com isso ela deixa de
+> esticar a coluna larga e, por consequência, os Comentários. A área de rolagem
+> dos comentários (`CommentsScrollArea`) foi renomeada para `ScrollToEndArea`
+> (`scroll-to-end-area.tsx`) e é a mesma usada pela linha do tempo; o
+> comportamento dos comentários não muda.
+
 ### `TicketConclusion` (Server)
 
 Props: `ticketId: number`, `state: TicketConclusionState`. Card com título

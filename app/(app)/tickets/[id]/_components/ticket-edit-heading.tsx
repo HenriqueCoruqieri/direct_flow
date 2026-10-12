@@ -56,7 +56,7 @@ const TicketEditHeading = ({
       ) : (
         heading
       )}
-      <div className="flex shrink-0 flex-wrap gap-2">
+      <div className="mt-6 flex shrink-0 flex-wrap gap-2">
         {isEditing ? (
           <>
             <Button
