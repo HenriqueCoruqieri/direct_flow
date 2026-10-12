@@ -22,6 +22,24 @@ Padrões de outcome, trava, conflito e resultado de action vêm de
 `department-queue.md` (`assignTicket`) e
 `queue-tabs-comment-delete-and-attend.md` (`startTicketWork`, `attendTicket`).
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017, que prevalece no que diverge): a edição passou a ser **do destinatário
+> atual**. Com o envio pendente, o chamado está na fila do destino sem
+> destinatário: **ninguém** vê "Editar" (nem esmaecido; o botão bloqueado e
+> `describeTicketAwaitingApproval` saíram). Quem aceita vira destinatário e
+> passa a editar; no destino, a primeira edição exige uma tag do setor de
+> destino (recategoriza). Na recusa, quem recebe o chamado de volta (o
+> solicitante, se válido) edita. **Ficam superados**: a linha "Edição pelo
+> autor com envio pendente" da tabela de decisões, a seção
+> "`app/_lib/domain/ticket-edit.ts` (alterado)" da Etapa 1 (a ordem de
+> `ticketEditBlockFor` agora põe `AWAITING_APPROVAL` depois do setor), o
+> "'Editar' **bloqueado**" dos cenários TR6 e TR11 (sem "Editar" nenhum), o
+> item "o 'Editar' bloqueado (autor) e o 'Atender' (destino)" das notas de UI
+> da Etapa 2 e o nome `TICKET_STATUS_IS_EDITABLE_BY_AUTHOR` da tabela de mapas
+> da Etapa 3 (agora `TICKET_STATUS_IS_EDITABLE`, "Editar" do destinatário,
+> mesmos valores). O "`Editar` (A é autor)" do RJ7 continua valendo pelo
+> motivo novo: A é o destinatário devolvido.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 

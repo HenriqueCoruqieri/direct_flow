@@ -91,6 +91,15 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > `acceptTicketTransfer` (Etapa 2) e `declineTicketTransfer` (Etapa 3) entram
 > na tabela "Quem revalida `/queue`".
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017): o **"Assumir" chega também ao detalhe** `/tickets/[id]`, com a mesma
+> regra (`canAssumeTicket`, via `ticketAssumeTargetFor`) e a mesma action
+> (`assumeTicket`, que já revalida o detalhe). A linha da Fila não muda. A
+> edição passou a ser do destinatário: o risco 3 ("o autor … continua com
+> 'Editar'") fica superado (o autor perde também o "Editar" quando alguém
+> assume ou recebe o chamado), e o "'Editar' presente" do cenário Q18 também
+> (M não é destinatário do `#F1`).
+
 ## Escopo técnico em uma frase
 
 Uma tela nova (`/queue`), duas leituras e uma escrita: a escrita troca só

@@ -3,10 +3,12 @@ import {
   TICKET_PRIORITY_LABELS,
 } from "@/app/_lib/domain/ticket"
 import type { TicketPriority, TicketStatus } from "@/app/_lib/types/ticket"
+import type { AssumeTicketTarget } from "@/app/_lib/types/ticket-assignment"
 import type { TicketAttendTarget } from "@/app/_lib/types/ticket-transfer"
 import { cn } from "@/app/_lib/utils"
 
 import TicketStatusBadge from "../../../_components/ticket-status-badge"
+import AssumeTicketButton from "./assume-ticket-button"
 import AttendTicketButton from "./attend-ticket-button"
 import DeclineTransferDialog, {
   type DeclineTransferDialogProps,
@@ -25,8 +27,8 @@ interface TicketDetailHeaderProps {
   title: string
   status: TicketStatus
   priority: TicketPriority
-  action?: React.ReactNode
   editable?: boolean
+  assumeTarget?: AssumeTicketTarget | null
   attendTarget?: TicketAttendTarget | null
   decline?: DeclineTransferDialogProps | null
 }
@@ -36,8 +38,8 @@ const TicketDetailHeader = ({
   title,
   status,
   priority,
-  action,
   editable = false,
+  assumeTarget = null,
   attendTarget = null,
   decline = null,
 }: TicketDetailHeaderProps) => {
@@ -46,9 +48,13 @@ const TicketDetailHeader = ({
       {title}
     </h1>
   )
-  const hasAttendActions = attendTarget !== null || decline !== null
+  const hasAttendActions =
+    assumeTarget !== null || attendTarget !== null || decline !== null
   const attendActions = hasAttendActions ? (
     <>
+      {assumeTarget !== null ? (
+        <AssumeTicketButton target={assumeTarget} />
+      ) : null}
       {attendTarget !== null ? (
         <AttendTicketButton target={attendTarget} />
       ) : null}
@@ -67,10 +73,9 @@ const TicketDetailHeader = ({
         ) : (
           <>
             {heading}
-            {hasAttendActions || action !== undefined ? (
+            {hasAttendActions ? (
               <div className="flex shrink-0 flex-wrap gap-2">
                 {attendActions}
-                {action}
               </div>
             ) : null}
           </>

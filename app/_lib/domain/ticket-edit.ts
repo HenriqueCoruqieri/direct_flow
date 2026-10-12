@@ -15,9 +15,8 @@ import type {
   EditTicketFormDefaults,
   TicketEditabilityFacts,
   TicketEditBlockReason,
-  TicketEditButtonFacts,
-  TicketEditButtonState,
   TicketEditChanges,
+  TicketEditDetailFacts,
   TicketEditFormOptions,
   TicketEditorFacts,
   TicketEditSnapshot,
@@ -25,7 +24,7 @@ import type {
   TicketEditValues,
 } from "@/app/_lib/types/ticket-edit"
 
-const TICKET_STATUS_IS_EDITABLE_BY_AUTHOR = {
+const TICKET_STATUS_IS_EDITABLE = {
   aberto: true,
   em_analise: true,
   encaminhado: true,
@@ -52,8 +51,8 @@ export const tagEditHintFor = (
 ): string | undefined =>
   preselectedTagId(tagId, tags) === undefined ? UNAVAILABLE_TAG_HINT : undefined
 
-export const isAuthorEditableStatus = (status: TicketStatus): boolean =>
-  TICKET_STATUS_IS_EDITABLE_BY_AUTHOR[status]
+export const isEditableStatus = (status: TicketStatus): boolean =>
+  TICKET_STATUS_IS_EDITABLE[status]
 
 export const canEditSolution = (status: TicketStatus): boolean =>
   status === RESOLVED_TICKET_STATUS
@@ -65,15 +64,15 @@ export const ticketEditBlockFor = (
 ): TicketEditBlockReason | null => {
   if (!editor.isActive) return "EDITOR_INACTIVE"
   if (editor.mustChangePassword) return "PASSWORD_CHANGE_REQUIRED"
-  if (ticket.createdBy !== editor.userId) return "NOT_AUTHOR"
-  if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"
+  if (ticket.assignedTo !== editor.userId) return "NOT_ASSIGNEE"
   if (ticket.currentDepartmentId !== editor.departmentId) {
     return "OUTSIDE_EDITOR_DEPARTMENT"
   }
+  if (ticket.hasPendingTransfer) return "AWAITING_APPROVAL"
   if (isTicketLocked(ticket.status, ticket.resolvedAt, now)) {
     return "TICKET_FINISHED"
   }
-  if (!isAuthorEditableStatus(ticket.status)) return "STATUS_NOT_EDITABLE"
+  if (!isEditableStatus(ticket.status)) return "STATUS_NOT_EDITABLE"
   return null
 }
 
@@ -83,19 +82,15 @@ export const canEditTicket = (
   now: Date,
 ): boolean => ticketEditBlockFor(editor, ticket, now) === null
 
-export const describeTicketAwaitingApproval = (
-  toDepartmentName: string,
-): string => `Aguarde a solução ou devolutiva de ${toDepartmentName}`
-
-export const ticketEditButtonStateFor = (
+export const canEditTicketDetail = (
   editor: TicketEditorFacts,
-  ticket: TicketEditButtonFacts,
+  ticket: TicketEditDetailFacts,
   now: Date,
-): TicketEditButtonState => {
-  const reason = ticketEditBlockFor(
+): boolean =>
+  canEditTicket(
     editor,
     {
-      createdBy: ticket.createdBy,
+      assignedTo: ticket.assignedTo,
       currentDepartmentId: ticket.currentDepartmentId,
       status: ticket.status,
       resolvedAt: ticket.resolvedAt,
@@ -103,18 +98,6 @@ export const ticketEditButtonStateFor = (
     },
     now,
   )
-
-  if (reason === null) return { state: "editable" }
-  if (reason === "AWAITING_APPROVAL" && ticket.pendingTransfer !== null) {
-    return {
-      state: "blocked",
-      message: describeTicketAwaitingApproval(
-        ticket.pendingTransfer.toDepartmentName,
-      ),
-    }
-  }
-  return { state: "hidden" }
-}
 
 export const buildTicketEditFormOptions = (
   ticket: TicketEditSource,

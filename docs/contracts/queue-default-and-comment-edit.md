@@ -40,6 +40,22 @@ status e grava `mudanca_status` logo depois da `atribuicao`; as frases de
 abertura e atribuição passam a nomear quem agiu e o setor dele; o autor de um
 comentário edita o texto, gravando só `message`.
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017, que prevalece no que diverge): a edição do **chamado** passou a ser do
+> destinatário atual (a do comentário continua do autor do comentário, sem
+> mudança). Chamado na fila não é editável por ninguém; quem troca o
+> destinatário pelo "Editar" perde a edição ao salvar. `updateTicketByAuthor`
+> passou a `updateTicketByAssignee` (`editorId`), com a mesma sequência.
+> **Ficam superados** os cenários em que M edita chamado de que não é
+> destinatário naquele momento: E2.11, E2.12 e E2.13 (`#N1` e `[QA] Janela
+aberta` na fila), E2.16 (`#N3` é de A), E4.7 (`#S3` é de A), E4.9 (depois do
+> E4.8 o `#S2` é de A), E4.10 (a `[QA] Janela aberta` do seed novo já nasce com
+> M; o outro passo devolve à fila e M perde a edição) e E5.5 (`#L3` é de A).
+> O E2.5 passa a mostrar `QA Membro Suporte` (não a fila) na
+> `[QA] Janela aberta` do seed novo. Continuam valendo E2.8–E2.10 (`#N2` de M),
+> E3.6 (`#T2` de M), E4.5 (`#S1` de M depois do E4.4), E4.8 e E5.4 (`#L1` de M
+> depois do E5.3).
+
 ## Decisões do arquiteto (não fixadas no plano)
 
 | Etapa | Tema                                     | Decisão                                                                                                                                                                                                                                                              |

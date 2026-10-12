@@ -66,6 +66,21 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > constante. O "Anexar" bloqueado com `TICKET_ATTACHMENTS_SOON_MESSAGE`
 > continua como descrito abaixo.
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017, que prevalece no que diverge): resolver um chamado **sem
+> destinatário** grava o resolvedor como destinatário quando ele é
+> destinatário válido (ativo e do setor atual do chamado; regra
+> `resolutionAssigneeFor`), com uma linha `atribuicao` (de nulo para ele,
+> `changed_by` = ele) **antes** da `resolucao`, mesmo `changed_at`. Diretoria
+> de outro setor resolve sem virar destinatária. Quem pode resolver não muda.
+> `updateTicketResolution` mantém assinatura e outcomes. A página deixa de
+> usar `ticketEditButtonStateFor` (removido; agora `canEditTicketDetail`).
+> **Ficam superados**: no cenário 6, "`assigned_to` inalterado" e "uma linha
+> nova" (o `#R1` estava na fila: passa a `assigned_to` = membro, com
+> `atribuicao` + `resolucao`); nos cenários 5, 9 e 10, a linha do tempo ganha
+> `{nome} assumiu o chamado.` antes de `Resolveu o chamado.` no 5 e no 9 (o 10,
+> do Diretor, continua sem destinatário e com uma linha só).
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

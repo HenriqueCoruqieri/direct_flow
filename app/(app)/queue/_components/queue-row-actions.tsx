@@ -1,15 +1,8 @@
 "use client"
 
 import { Loader2Icon } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useTransition } from "react"
-import { toast } from "sonner"
 
 import { Button } from "@/app/_components/ui/button"
-import {
-  type AssignTicketErrorCode,
-  assumeTicket,
-} from "@/app/_lib/actions/ticket-assignment"
 import { formatTicketNumber } from "@/app/_lib/domain/ticket"
 import {
   ASSUME_TICKET_LABEL,
@@ -21,11 +14,7 @@ import type {
   DepartmentQueueRowActions,
 } from "@/app/_lib/types/department-queue"
 
-const STALE_ROW_CODES: ReadonlySet<AssignTicketErrorCode> = new Set([
-  "CONFLICT",
-  "NOT_FOUND",
-  "FORBIDDEN",
-])
+import { useAssumeTicket } from "../../_hooks/use-assume-ticket"
 
 interface QueueRowActionsProps {
   ticket: DepartmentQueueListItem
@@ -34,34 +23,14 @@ interface QueueRowActionsProps {
 }
 
 const QueueRowActions = ({ ticket, actions, onSend }: QueueRowActionsProps) => {
-  const router = useRouter()
-  const [isAssuming, startAssuming] = useTransition()
+  const { isAssuming, assume } = useAssumeTicket()
 
   if (!actions.assume && !actions.send) return null
 
   const ticketNumber = formatTicketNumber(ticket.id)
 
-  const handleAssume = () => {
-    if (isAssuming) return
-
-    startAssuming(async () => {
-      const result = await assumeTicket({
-        ticketId: ticket.id,
-        expectedAssigneeId: ticket.assignedTo,
-      })
-
-      if (result.ok) {
-        toast.success(result.message)
-        return
-      }
-
-      toast.error(result.message)
-
-      if (result.code !== undefined && STALE_ROW_CODES.has(result.code)) {
-        router.refresh()
-      }
-    })
-  }
+  const handleAssume = () =>
+    assume({ ticketId: ticket.id, expectedAssigneeId: ticket.assignedTo })
 
   return (
     <div className="flex items-center justify-end gap-2">

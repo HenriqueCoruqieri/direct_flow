@@ -6,6 +6,7 @@ import {
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_DESCRIPTION_MIN_LENGTH,
 } from "@/app/_lib/domain/ticket"
+import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import { resolutionEditableUntil } from "@/app/_lib/domain/ticket-closure"
 import type {
   TicketActorFacts,
@@ -96,6 +97,16 @@ export const canResolveTicket = (
   resolver: TicketActorFacts,
   ticket: TicketResolutionFacts,
 ): boolean => ticketResolutionBlockFor(resolver, ticket) === null
+
+export const resolutionAssigneeFor = (
+  resolver: TicketActorFacts,
+  ticket: TicketVisibilityFacts,
+): number | null => {
+  if (ticket.assignedTo !== null) return ticket.assignedTo
+  return isUsableTicketAssignee(resolver, ticket.currentDepartmentId)
+    ? resolver.userId
+    : null
+}
 
 export const describeTransferAwaitingConclusion = (
   transfer: TicketPendingTransfer,

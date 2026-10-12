@@ -61,6 +61,32 @@ e-mail.
 > `Aguarde a solução ou devolutiva de {destino}`. O outcome da transação não
 > muda (`not_editable`).
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017, que prevalece no que diverge): a edição passa a ser **do destinatário
+> atual** (`assigned_to`), não do autor, sem exceção para admin ou diretoria;
+> chamado na fila não é editável por ninguém. `TicketEditabilityFacts` troca
+> `createdBy` por `assignedTo`; `NOT_AUTHOR` vira `NOT_ASSIGNEE`; a ordem de
+> `ticketEditBlockFor` passa a inativo → troca de senha → `NOT_ASSIGNEE` →
+> `OUTSIDE_EDITOR_DEPARTMENT` → `AWAITING_APPROVAL` → `TICKET_FINISHED` →
+> `STATUS_NOT_EDITABLE`. O botão **esmaecido sai**: `ticketEditButtonStateFor`,
+> `TicketEditButtonState` (e `Editable`/`Blocked`/`Hidden`),
+> `TicketEditButtonFacts` e `describeTicketAwaitingApproval` foram removidos;
+> entra `canEditTicketDetail` (booleano, recebe `TicketEditDetailFacts`).
+> `isAuthorEditableStatus` → `isEditableStatus` (mapa
+> `TICKET_STATUS_IS_EDITABLE`, mesmos valores). `updateTicketByAuthor` →
+> `updateTicketByAssignee`, `UpdateTicketByAuthorValues`/`Outcome` →
+> `UpdateTicketByAssigneeValues`/`Outcome`, `authorId` → `editorId`; sequência e
+> outcomes iguais. **Ficam superados**: a seção "`EditTicketBlockedButton`", a
+> linha `blocked` da tabela de estados do botão, o parágrafo "Por que só a
+> transferência pendente vira botão esmaecido" e a coluna "Por quê" da tabela
+> de status editáveis (o dono agora é o destinatário). Cenários: a preparação
+> passa a criar `#E` com destinatário **QA Membro Suporte** (com a fila, M não
+> editaria); com isso 1–11, 12, 13, 15, 17 e 18 continuam valendo (12 e 13
+> pelo motivo novo: A não é destinatário). **Superados**: 14 (no `#66` não há
+> "Editar" nenhum; a action continua recusando), 16 (o Diretor só vê "Editar"
+> em chamado de que é destinatário) e 21–26 (botão esmaecido). Cobertura nova
+> em AE1–AE34 de `assignee-edit-and-assume.md`.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

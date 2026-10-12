@@ -34,6 +34,19 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > abaixo são substituídas. Ficam superados os cenários 1, 3, 4 e 5 (padrão =
 > autor), 6 e 13 (frases), 21 e 22 (`—` e dica de chamado sem destinatário).
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017, que prevalece no que diverge): quem troca o destinatário pelo "Editar"
+> é o **destinatário atual**, não o autor (a regra de edição inteira mudou de
+> dono). Quem passa o chamado a outra pessoa pelo "Editar" perde a edição ao
+> salvar. `updateTicketByAuthor` passou a `updateTicketByAssignee`
+> (`editorId`); validação do destinatário, ordem das linhas e outcomes não
+> mudam. **Ficam superados**, além dos já listados: o "Editar presente" do
+> cenário 6 (M é autor, destinatário A), o "sem Editar" dos cenários 10 e 11
+> (agora A e M, destinatários, veem "Editar"), o "Editar continua" do 13 (M
+> perde a edição ao passar o chamado a A), o 15 (depende do 13) e os 18 e 19
+> (M não edita o `#C`, que é de A). Continuam valendo 12, 14, 16 e 17 (M é
+> destinatário do `#P`).
+
 ## Escopo técnico em uma frase
 
 Todo chamado novo nasce com destinatário (`ticket.assigned_to`), escolhido entre

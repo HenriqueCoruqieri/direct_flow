@@ -12,6 +12,7 @@ import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { todayKey } from "@/app/_lib/date"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
+import { ticketAssumeTargetFor } from "@/app/_lib/domain/ticket-assignment"
 import {
   canDeleteTicketComment,
   canEditTicketComment,
@@ -20,7 +21,7 @@ import {
 } from "@/app/_lib/domain/ticket-comments"
 import {
   buildTicketEditFormOptions,
-  ticketEditButtonStateFor,
+  canEditTicketDetail,
 } from "@/app/_lib/domain/ticket-edit"
 import { ticketConclusionStateFor } from "@/app/_lib/domain/ticket-resolution"
 import {
@@ -39,7 +40,6 @@ import {
 
 import AppTopBar from "../../_components/app-top-bar"
 import type { DeclineTransferDialogProps } from "./_components/decline-transfer-dialog"
-import EditTicketBlockedButton from "./_components/edit-ticket-blocked-button"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
 import type { SendToDepartmentSetup } from "./_components/send-to-department-dialog"
 import TicketComments from "./_components/ticket-comments"
@@ -88,12 +88,12 @@ const TicketDetailPage = async ({
   const backLink = ticketDetailBackLinkFor(
     parseTicketDetailOrigin(await searchParams, todayKey(now)),
   )
-  const editButton = ticketEditButtonStateFor(actor, ticket, now)
   const conclusion = ticketConclusionStateFor(actor, ticket, now)
   const commentForm = ticketCommentFormStateFor(actor, ticket, now)
 
-  const isEditable = editButton.state === "editable"
+  const isEditable = canEditTicketDetail(actor, ticket, now)
   const canSendToDepartment = canSendTicketToDepartmentDetail(actor, ticket)
+  const assumeTarget = ticketAssumeTargetFor(actor, ticket)
   const attendTarget = ticketAttendTargetFor(actor, ticket)
   const declineTarget = ticketDeclineTargetFor(actor, ticket)
   const decline: DeclineTransferDialogProps | null =
@@ -147,13 +147,9 @@ const TicketDetailPage = async ({
           status={ticket.status}
           priority={ticket.priority}
           editable={editable}
+          assumeTarget={assumeTarget}
           attendTarget={attendTarget}
           decline={decline}
-          action={
-            editButton.state === "blocked" ? (
-              <EditTicketBlockedButton message={editButton.message} />
-            ) : undefined
-          }
         />
       </div>
 

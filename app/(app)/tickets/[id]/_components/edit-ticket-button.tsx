@@ -1,20 +1,18 @@
 import { PencilIcon } from "lucide-react"
 
-import BlockableOutlineButton from "@/app/_components/blockable-outline-button"
+import { Button } from "@/app/_components/ui/button"
 
-interface EditTicketButtonProps extends Omit<
-  React.ComponentProps<typeof BlockableOutlineButton>,
-  "children" | "size"
-> {
-  blocked?: boolean
+interface EditTicketButtonProps {
+  ref?: React.Ref<HTMLButtonElement>
+  onClick: () => void
 }
 
-const EditTicketButton = (props: EditTicketButtonProps) => {
+const EditTicketButton = ({ ref, onClick }: EditTicketButtonProps) => {
   return (
-    <BlockableOutlineButton {...props}>
+    <Button ref={ref} type="button" variant="outline" onClick={onClick}>
       <PencilIcon aria-hidden="true" className="size-4" />
       Editar
-    </BlockableOutlineButton>
+    </Button>
   )
 }
 

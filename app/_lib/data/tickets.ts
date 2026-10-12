@@ -29,7 +29,10 @@ import {
   diffTicketEdit,
   hasTicketEditChanges,
 } from "@/app/_lib/domain/ticket-edit"
-import { canResolveTicket } from "@/app/_lib/domain/ticket-resolution"
+import {
+  canResolveTicket,
+  resolutionAssigneeFor,
+} from "@/app/_lib/domain/ticket-resolution"
 import {
   canFollowTicketTransferReview,
   canViewTicketAfterDecline,
@@ -59,8 +62,8 @@ import type {
 } from "@/app/_lib/types/ticket-assignment"
 import type { CloseExpiredResolvedTicketsOutcome } from "@/app/_lib/types/ticket-closure"
 import type {
-  UpdateTicketByAuthorOutcome,
-  UpdateTicketByAuthorValues,
+  UpdateTicketByAssigneeOutcome,
+  UpdateTicketByAssigneeValues,
 } from "@/app/_lib/types/ticket-edit"
 import type {
   UpdateTicketResolutionOutcome,
@@ -289,10 +292,10 @@ export async function insertTicket(
   })
 }
 
-export async function updateTicketByAuthor(
-  values: UpdateTicketByAuthorValues,
-): Promise<UpdateTicketByAuthorOutcome> {
-  const { ticketId, authorId } = values
+export async function updateTicketByAssignee(
+  values: UpdateTicketByAssigneeValues,
+): Promise<UpdateTicketByAssigneeOutcome> {
+  const { ticketId, editorId } = values
 
   return db.transaction(async (tx) => {
     const [ticketRow] = await tx
@@ -315,7 +318,7 @@ export async function updateTicketByAuthor(
 
     const now = new Date()
 
-    const editor = await lockActorFacts(tx, authorId)
+    const editor = await lockActorFacts(tx, editorId)
 
     if (!editor) return { status: "not_editable" }
 
@@ -336,7 +339,7 @@ export async function updateTicketByAuthor(
       !canEditTicket(
         editor,
         {
-          createdBy: ticketRow.createdBy,
+          assignedTo: ticketRow.assignedTo,
           currentDepartmentId: ticketRow.currentDepartmentId,
           status: ticketRow.status,
           resolvedAt: ticketRow.resolvedAt,
@@ -404,7 +407,7 @@ export async function updateTicketByAuthor(
     const nextStatus = changes.assignee
       ? statusAfterReassignment(
           ticketRow.status,
-          assigneeTargetFor(authorId, values.assigneeId),
+          assigneeTargetFor(editorId, values.assigneeId),
         )
       : ticketRow.status
 
@@ -438,7 +441,7 @@ export async function updateTicketByAuthor(
 
     await tx.insert(ticketHistory).values({
       ticketId,
-      changedBy: authorId,
+      changedBy: editorId,
       event: "edicao",
       note: describeTicketEditNote(changes),
       changedAt,
@@ -447,7 +450,7 @@ export async function updateTicketByAuthor(
     if (changes.tag) {
       await tx.insert(ticketHistory).values({
         ticketId,
-        changedBy: authorId,
+        changedBy: editorId,
         event: "mudanca_tag",
         fromTagId: changes.tag.fromTagId,
         toTagId: changes.tag.toTagId,
@@ -458,7 +461,7 @@ export async function updateTicketByAuthor(
     if (changes.assignee) {
       await tx.insert(ticketHistory).values({
         ticketId,
-        changedBy: authorId,
+        changedBy: editorId,
         event: "atribuicao",
         fromAssigneeId: changes.assignee.fromAssigneeId,
         toAssigneeId: changes.assignee.toAssigneeId,
@@ -472,7 +475,7 @@ export async function updateTicketByAuthor(
     if (nextStatus !== ticketRow.status) {
       await tx.insert(ticketHistory).values({
         ticketId,
-        changedBy: authorId,
+        changedBy: editorId,
         event: "mudanca_status",
         fromStatus: ticketRow.status,
         toStatus: nextStatus,
@@ -531,6 +534,9 @@ export async function updateTicketResolution(
 
     const changedAt = new Date()
 
+    const assigneeId = resolutionAssigneeFor(resolver, ticketRow)
+    const assigneeChanged = assigneeId !== ticketRow.assignedTo
+
     await tx
       .update(ticket)
       .set({
@@ -538,8 +544,20 @@ export async function updateTicketResolution(
         solution,
         resolvedAt: changedAt,
         updatedAt: changedAt,
+        ...(assigneeChanged ? { assignedTo: assigneeId } : {}),
       })
       .where(eq(ticket.id, ticketId))
+
+    if (assigneeChanged) {
+      await tx.insert(ticketHistory).values({
+        ticketId,
+        changedBy: resolverId,
+        event: "atribuicao",
+        fromAssigneeId: ticketRow.assignedTo,
+        toAssigneeId: assigneeId,
+        changedAt,
+      })
+    }
 
     await tx.insert(ticketHistory).values({
       ticketId,

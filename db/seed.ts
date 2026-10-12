@@ -254,6 +254,7 @@ async function seedQaWindowTickets(
       .where(
         and(
           eq(ticket.createdBy, member.id),
+          eq(ticket.assignedTo, member.id),
           eq(ticket.title, blueprint.title),
           eq(ticket.status, RESOLVED_TICKET_STATUS),
         ),
@@ -287,6 +288,7 @@ async function seedQaWindowTickets(
         status: RESOLVED_TICKET_STATUS,
         priority: "media",
         createdBy: member.id,
+        assignedTo: member.id,
         originDepartmentId: departmentId,
         currentDepartmentId: departmentId,
         solution: QA_WINDOW_SOLUTION,
@@ -309,6 +311,13 @@ async function seedQaWindowTickets(
         toPriority: "media",
         toDepartmentId: departmentId,
         changedAt: createdAt,
+      },
+      {
+        ticketId: created.id,
+        changedBy: member.id,
+        event: "atribuicao",
+        toAssigneeId: member.id,
+        changedAt: resolvedAt,
       },
       {
         ticketId: created.id,

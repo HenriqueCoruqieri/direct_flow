@@ -7,8 +7,8 @@ próprio commit, nesta ordem. Este documento é registro do plano; as etapas 2 e
 Contratos técnicos:
 
 - Etapa 1 — revisão de 2026-10-12 em `docs/contracts/my-tickets.md`.
-- Etapa 2 — contrato próprio (a escrever) e ADR 017 "Edição pertence ao
-  destinatário".
+- Etapa 2 — `docs/contracts/assignee-edit-and-assume.md` e
+  `docs/adr/017-ticket-edit-belongs-to-assignee.md`.
 - Etapa 3 — contrato próprio (a escrever).
 
 ---

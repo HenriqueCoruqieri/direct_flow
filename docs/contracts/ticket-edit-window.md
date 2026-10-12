@@ -48,6 +48,21 @@ Decisão de arquitetura: `docs/adr/014-scheduled-close-of-resolved-tickets.md`.
 > passam a ser editáveis pelo autor enquanto `canCommentOnTicket` for
 > verdadeiro.
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017, que prevalece no que diverge): onde este documento diz "o autor edita"
+> (inclusive a solução na janela), leia **o destinatário atual edita**.
+> `ticketEditButtonStateFor` foi removido (a página usa `canEditTicketDetail`,
+> booleano, com o mesmo `now`); `updateTicketByAuthor` passou a
+> `updateTicketByAssignee` (`editorId`). Resolver um chamado sem destinatário
+> grava o resolvedor como destinatário (quando é do setor do chamado), para
+> que ele edite a solução na janela. Cenários: a preparação passa a criar `#T`
+> com destinatário **QA Membro Suporte**; 1–7 continuam valendo. 8–12 valem
+> com o seed novo (`[QA] Janela aberta` com `assigned_to` = M,
+> `docs/contracts/qa-seed.md`, revisão de 2026-10-12); `[QA] Janela aberta`
+> antigo, sem destinatário, não tem "Editar" para ninguém (risco 2 do contrato
+> novo). 13 continua valendo pelo motivo novo (A não é destinatário). 14, 16 e
+> 20 não mudam.
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`, `react-hook-form@7.88`.
 

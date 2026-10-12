@@ -14,7 +14,7 @@ export interface TicketEditorFacts extends TicketViewerFacts {
 }
 
 export interface TicketEditabilityFacts {
-  createdBy: number
+  assignedTo: number | null
   currentDepartmentId: number
   status: TicketStatus
   resolvedAt: Date | null
@@ -24,38 +24,22 @@ export interface TicketEditabilityFacts {
 export type TicketEditBlockReason =
   | "EDITOR_INACTIVE"
   | "PASSWORD_CHANGE_REQUIRED"
-  | "NOT_AUTHOR"
+  | "NOT_ASSIGNEE"
   | "OUTSIDE_EDITOR_DEPARTMENT"
-  | "TICKET_FINISHED"
   | "AWAITING_APPROVAL"
+  | "TICKET_FINISHED"
   | "STATUS_NOT_EDITABLE"
 
 export interface TicketPendingTransferTarget {
   toDepartmentName: string
 }
 
-export interface TicketEditButtonFacts extends Omit<
+export interface TicketEditDetailFacts extends Omit<
   TicketEditabilityFacts,
   "hasPendingTransfer"
 > {
   pendingTransfer: TicketPendingTransferTarget | null
 }
-
-export interface TicketEditButtonEditable {
-  state: "editable"
-}
-
-export interface TicketEditButtonBlocked {
-  state: "blocked"
-  message: string
-}
-
-export interface TicketEditButtonHidden {
-  state: "hidden"
-}
-
-export type TicketEditButtonState =
-  TicketEditButtonEditable | TicketEditButtonBlocked | TicketEditButtonHidden
 
 export interface TicketEditSnapshot {
   title: string
@@ -105,9 +89,9 @@ export interface TicketEditChanges {
   solution: boolean
 }
 
-export interface UpdateTicketByAuthorValues extends TicketEditValues {
+export interface UpdateTicketByAssigneeValues extends TicketEditValues {
   ticketId: number
-  authorId: number
+  editorId: number
 }
 
 export interface TicketEditSaved {
@@ -128,7 +112,7 @@ export interface TicketNoChanges {
   status: "no_changes"
 }
 
-export type UpdateTicketByAuthorOutcome =
+export type UpdateTicketByAssigneeOutcome =
   | TicketEditSaved
   | TicketNotFound
   | TicketNotEditable

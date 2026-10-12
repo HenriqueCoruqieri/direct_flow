@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getSession } from "@/app/_lib/auth/session"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
-import { insertTicket, updateTicketByAuthor } from "@/app/_lib/data/tickets"
+import { insertTicket, updateTicketByAssignee } from "@/app/_lib/data/tickets"
 import { DASHBOARD_PATH } from "@/app/_lib/domain/dashboard"
 import { DEPARTMENT_QUEUE_PATH } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
@@ -21,7 +21,7 @@ import type {
   InsertTicketOutcome,
   TicketCreationBlockReason,
 } from "@/app/_lib/types/ticket"
-import type { UpdateTicketByAuthorOutcome } from "@/app/_lib/types/ticket-edit"
+import type { UpdateTicketByAssigneeOutcome } from "@/app/_lib/types/ticket-edit"
 import {
   type CreateTicketInput,
   createTicketSchema,
@@ -161,8 +161,8 @@ export interface EditTicketFailure {
 
 export type EditTicketResult = EditTicketSuccess | EditTicketFailure
 
-type UpdateTicketByAuthorFailureStatus = Exclude<
-  UpdateTicketByAuthorOutcome["status"],
+type UpdateTicketByAssigneeFailureStatus = Exclude<
+  UpdateTicketByAssigneeOutcome["status"],
   "saved"
 >
 
@@ -208,7 +208,7 @@ const EDIT_OUTCOME_FAILURES = {
     code: "NO_CHANGES",
     message: "Nenhuma alteração para salvar.",
   },
-} satisfies Record<UpdateTicketByAuthorFailureStatus, EditTicketFailure>
+} satisfies Record<UpdateTicketByAssigneeFailureStatus, EditTicketFailure>
 
 const editInvalidInput = (
   firstIssueMessage: string | undefined,
@@ -227,12 +227,12 @@ export const editTicket = async (
   const parsed = editTicketSchema.safeParse(input)
   if (!parsed.success) return editInvalidInput(parsed.error.issues[0]?.message)
 
-  let outcome: UpdateTicketByAuthorOutcome
+  let outcome: UpdateTicketByAssigneeOutcome
 
   try {
-    outcome = await updateTicketByAuthor({
+    outcome = await updateTicketByAssignee({
       ...parsed.data,
-      authorId: actor.id,
+      editorId: actor.id,
     })
   } catch (error) {
     console.error("[editTicket]", error)

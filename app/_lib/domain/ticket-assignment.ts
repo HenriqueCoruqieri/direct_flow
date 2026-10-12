@@ -12,6 +12,7 @@ import type {
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
 import type {
+  AssumeTicketTarget,
   SendTicketFormDefaults,
   TicketAssigneeTarget,
   TicketAssignmentActorBlockReason,
@@ -20,6 +21,7 @@ import type {
   TicketAssignmentSource,
   TicketAssignmentStateBlockReason,
   TicketAssumeBlockReason,
+  TicketAssumeDetailSource,
   TicketAttendBlockReason,
   TicketAttendConflict,
   TicketSendBlockReason,
@@ -153,6 +155,20 @@ export const canAssumeTicket = (
   actor: TicketActorFacts,
   ticket: TicketAssignmentFacts,
 ): boolean => ticketAssumeBlockFor(actor, ticket) === null
+
+export const ticketAssumeTargetFor = (
+  actor: TicketActorFacts,
+  ticket: TicketAssumeDetailSource,
+): AssumeTicketTarget | null =>
+  canAssumeTicket(actor, {
+    createdBy: ticket.createdBy,
+    assignedTo: ticket.assignedTo,
+    currentDepartmentId: ticket.currentDepartmentId,
+    status: ticket.status,
+    hasPendingTransfer: ticket.pendingTransfer !== null,
+  })
+    ? { ticketId: ticket.id, expectedAssigneeId: ticket.assignedTo }
+    : null
 
 export const ticketSendBlockFor = (
   actor: TicketActorFacts,

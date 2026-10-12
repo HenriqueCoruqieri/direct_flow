@@ -32,6 +32,18 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > `ATTENDABLE_TICKET_STATUSES` (`encaminhado`, `recusado`) e a aba
 > Encaminhados usa a lista.
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017, que prevalece no que diverge): a edição passou a ser **do destinatário
+> atual**, então "Atender" e "Editar" aparecem juntos para o destinatário de um
+> chamado `encaminhado`/`recusado`, seja ou não o autor. O cabeçalho do
+> detalhe não recebe mais o "Editar" bloqueado pela prop `action` (removida) e
+> ganha "Assumir" para chamado na fila. **Ficam superados**: o "sem 'Editar'
+> (A não é autor)" do AT1 (A, destinatário, vê "Editar"), o AT10 (M, autor,
+> não devolve à fila pelo "Editar" um chamado que é de A; o conflito "voltou
+> para a fila" segue coberto pela regra e o conflito por troca de
+> destinatário, pelo AT11) e a menção ao "Editar" bloqueado na composição do
+> cabeçalho (seção de UI do "Atender"). AT5, AT6 e AT14 continuam valendo.
+
 ## Escopo técnico em uma frase
 
 Sem schema e sem migration: a Fila passa a ter sete abas, cada uma definida por

@@ -114,6 +114,27 @@ para "aberta"), o seed não faz nada (log). Senão, cria um novo. Assim:
 Os antigos ficam como estão (o histórico é append-only). O `df-qa` usa o de
 maior `id` de cada título que ainda esteja `resolvido`.
 
+> Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
+> 017): a edição passou a ser só do destinatário, e resolver um chamado sem
+> destinatário grava o resolvedor como destinatário. Para os dois chamados da
+> janela continuarem testáveis (e coerentes com a regra nova):
+>
+> - `assigned_to` = **QA Membro Suporte** (era nulo). `closed_at` continua
+>   nulo.
+> - Histórico, em ordem: `criacao` (como antes, `to_assignee_id` nulo: o
+>   chamado nasceu na fila) → **`atribuicao`** (`changed_by` = QA Membro
+>   Suporte, `from_assignee_id` nulo, `to_assignee_id` = QA Membro Suporte,
+>   demais colunas nulas, `changed_at` = `resolved_at`) → `resolucao` (como
+>   antes, `changed_at` = `resolved_at`, inserida **depois** da `atribuicao`,
+>   `id` maior).
+> - Idempotência: além de título, `status = resolvido` e lado da janela, o
+>   chamado existente só é reaproveitado se `assigned_to` = QA Membro Suporte.
+>   Os antigos com `assigned_to` nulo ficam como estão e o próximo seed cria um
+>   novo (que passa a ser o de maior `id`).
+>
+> Nenhum usuário, setor ou tag novo. A tabela "Campos comuns" acima vale com
+> essa troca em `assigned_to`; a tabela "Histórico" ganha a linha do meio.
+
 ## Variáveis de ambiente
 
 | Variável           | Para quê                                                                                              |
