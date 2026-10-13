@@ -81,6 +81,7 @@ import type {
 } from "@/app/_lib/types/ticket-transfer"
 import { db, type Transaction } from "@/db"
 import {
+  attachment,
   department,
   message,
   tag,
@@ -288,6 +289,21 @@ export async function insertTicket(
       toAssigneeId: values.assigneeId,
       changedAt: created.createdAt,
     })
+
+    if (values.attachments && values.attachments.length > 0) {
+      await tx.insert(attachment).values(
+        values.attachments.map((item) => ({
+          ticketId: created.id,
+          messageId: null,
+          uploadedBy: values.createdBy,
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          sizeBytes: item.sizeBytes,
+          storageKey: item.storageKey,
+          createdAt: created.createdAt,
+        })),
+      )
+    }
 
     return { status: "saved", ticketId: created.id }
   })

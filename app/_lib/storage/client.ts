@@ -5,6 +5,7 @@ type StorageEnvName =
   | "R2_ACCESS_KEY_ID"
   | "R2_SECRET_ACCESS_KEY"
   | "R2_AVATARS_BUCKET"
+  | "R2_ATTACHMENTS_BUCKET"
   | "R2_AVATARS_PUBLIC_URL"
 
 export const readStorageEnv = (name: StorageEnvName): string => {
@@ -23,6 +24,8 @@ export const r2Client = (): S3Client => {
   if (!client) {
     client = new S3Client({
       region: "auto",
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
       endpoint: `https://${readStorageEnv("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: readStorageEnv("R2_ACCESS_KEY_ID"),
