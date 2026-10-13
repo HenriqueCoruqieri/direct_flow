@@ -23,12 +23,17 @@ import { Input } from "@/app/_components/ui/input"
 import { createTicket } from "@/app/_lib/actions/tickets"
 import { TICKET_CREATOR_LABEL } from "@/app/_lib/domain/ticket-assignee"
 import type { NewTicketFormAvailable } from "@/app/_lib/types/ticket"
+import { cn } from "@/app/_lib/utils"
 import {
   type CreateTicketInput,
   createTicketSchema,
 } from "@/app/_lib/validation/ticket"
 
-import NewTicketAttachments from "./new-ticket-attachments"
+import {
+  type AttachmentUploaderBusy,
+  attachmentUploadsBlockMessage,
+} from "../_hooks/use-attachment-uploads"
+import AttachmentUploader from "./attachment-uploader"
 import NewTicketButton from "./new-ticket-button"
 import TicketAssigneeField from "./ticket-assignee-field"
 import TicketDescriptionField from "./ticket-description-field"
@@ -50,8 +55,10 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
   const tagId = useId()
   const creatorId = useId()
   const assigneeId = useId()
+  const submitBlockId = useId()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [uploadsBusy, setUploadsBusy] = useState<AttachmentUploaderBusy>("idle")
 
   const form = useForm<CreateTicketInput>({
     resolver: zodResolver(createTicketSchema),
@@ -59,15 +66,21 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
   })
 
   const isSubmitting = form.formState.isSubmitting
+  const submitBlockMessage = attachmentUploadsBlockMessage(uploadsBusy)
+
+  const discard = () => {
+    form.reset(options.defaults)
+    setUploadsBusy("idle")
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting) return
-    if (!nextOpen) form.reset(options.defaults)
+    if (!nextOpen) discard()
     setOpen(nextOpen)
   }
 
   const closeAndDiscard = () => {
-    form.reset(options.defaults)
+    discard()
     setOpen(false)
   }
 
@@ -113,6 +126,18 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
     }
   }
 
+  const submitWhenValid = form.handleSubmit(onSubmit)
+
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (submitBlockMessage !== null) {
+      event.preventDefault()
+      toast.info(submitBlockMessage, { id: submitBlockId })
+      return
+    }
+
+    return submitWhenValid(event)
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -125,8 +150,8 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
       >
         <form
           noValidate
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
+          onSubmit={handleFormSubmit}
+          className="flex min-w-0 flex-col gap-6"
         >
           <DialogHeader>
             <DialogTitle>Novo chamado</DialogTitle>
@@ -160,7 +185,19 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               )}
             />
 
-            <NewTicketAttachments />
+            <Controller
+              name="attachments"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <AttachmentUploader
+                  ref={field.ref}
+                  onChange={field.onChange}
+                  onBusyChange={setUploadsBusy}
+                  disabled={isSubmitting}
+                  fieldState={fieldState}
+                />
+              )}
+            />
 
             <Controller
               name="type"
@@ -223,6 +260,14 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               type="submit"
               disabled={isSubmitting}
               aria-busy={isSubmitting || undefined}
+              aria-disabled={submitBlockMessage !== null || undefined}
+              aria-describedby={
+                submitBlockMessage !== null ? submitBlockId : undefined
+              }
+              className={cn(
+                submitBlockMessage !== null &&
+                  "cursor-not-allowed opacity-50 hover:bg-primary",
+              )}
             >
               {isSubmitting ? (
                 <Loader2Icon
@@ -232,6 +277,11 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               ) : null}
               {isSubmitting ? "Enviando…" : "Abrir chamado"}
             </Button>
+            {submitBlockMessage !== null ? (
+              <span id={submitBlockId} className="sr-only">
+                {submitBlockMessage}
+              </span>
+            ) : null}
           </DialogFooter>
         </form>
       </DialogContent>

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { requireSession } from "@/app/_lib/auth/session"
+import { listTicketAttachments } from "@/app/_lib/data/attachments"
 import { listDepartmentOptions } from "@/app/_lib/data/departments"
 import { listTicketAssigneeOptions } from "@/app/_lib/data/people"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
@@ -42,6 +43,7 @@ import AppTopBar from "../../_components/app-top-bar"
 import type { DeclineTransferDialogProps } from "./_components/decline-transfer-dialog"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
 import type { SendToDepartmentSetup } from "./_components/send-to-department-dialog"
+import TicketAttachments from "./_components/ticket-attachments"
 import TicketComments from "./_components/ticket-comments"
 import TicketConclusion from "./_components/ticket-conclusion"
 import TicketDescription from "./_components/ticket-description"
@@ -100,9 +102,10 @@ const TicketDetailPage = async ({
     declineTarget !== null
       ? { target: declineTarget, leaveHref: backLink.href }
       : null
-  const [messages, editTags, editAssignees, departmentOptions] =
+  const [messages, attachments, editTags, editAssignees, departmentOptions] =
     await Promise.all([
       listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
+      listTicketAttachments(ticket.id),
       isEditable ? listActiveDepartmentTags(facts.departmentId) : null,
       isEditable ? listTicketAssigneeOptions(facts.departmentId) : null,
       canSendToDepartment ? listDepartmentOptions() : null,
@@ -174,6 +177,7 @@ const TicketDetailPage = async ({
         </div>
         <div className="flex min-w-0 flex-col gap-5.5">
           <TicketDetailFields ticket={ticket} editable={editable} />
+          <TicketAttachments attachments={attachments} />
           <TicketComments
             ticketId={ticket.id}
             entries={commentEntries}
