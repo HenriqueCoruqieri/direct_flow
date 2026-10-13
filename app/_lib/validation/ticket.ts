@@ -11,6 +11,7 @@ import {
   TICKET_SOLUTION_MAX_LENGTH,
   TICKET_SOLUTION_MIN_LENGTH,
 } from "@/app/_lib/domain/ticket-resolution"
+import { uploadedAttachmentsSchema } from "@/app/_lib/validation/attachment"
 import { handoffCommentSchema } from "@/app/_lib/validation/comment-text"
 import { registryIdSchema } from "@/app/_lib/validation/registry"
 import {
@@ -57,7 +58,7 @@ export const ticketSolutionSchema = z
 
 const SELECT_ASSIGNEE_MESSAGE = "Selecione o destinatário."
 
-export const createTicketSchema = z.object({
+const ticketFieldsSchema = z.object({
   title: ticketTitleSchema,
   description: ticketDescriptionSchema,
   type: ticketTypeSchema,
@@ -65,6 +66,10 @@ export const createTicketSchema = z.object({
   assigneeId: registryIdSchema(SELECT_ASSIGNEE_MESSAGE)
     .max(POSTGRES_INTEGER_MAX, { error: SELECT_ASSIGNEE_MESSAGE })
     .nullable(),
+})
+
+export const createTicketSchema = ticketFieldsSchema.extend({
+  attachments: uploadedAttachmentsSchema.optional(),
 })
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>
@@ -85,7 +90,7 @@ export const parseTicketIdParam = (value: string): number | null => {
   return result.success ? result.data : null
 }
 
-export const editTicketSchema = createTicketSchema.extend({
+export const editTicketSchema = ticketFieldsSchema.extend({
   ticketId: ticketIdSchema,
   solution: ticketSolutionSchema.optional(),
   handoffComment: handoffCommentSchema.optional(),

@@ -84,6 +84,25 @@ prevalece sobre este documento no que diverge. Resumo:
 > As tabelas e checklists das revisões anteriores continuam como registro
 > histórico.
 
+## Revisão de 2026-10-13 — anexos na criação
+
+Especificada em `docs/contracts/ticket-attachments-create-and-download.md`
+(ADR 018), que prevalece sobre este documento no que diverge. Resumo:
+
+- `createTicketSchema` ganha `attachments` **opcional** (lista de
+  `{ key, fileName }`, máx. 5). `editTicketSchema` passa a estender um
+  `ticketFieldsSchema` interno e **não** herda o campo.
+- `InsertTicketValues` ganha `attachments?: readonly StoredAttachmentValues[]`;
+  `insertTicket` grava as linhas de `attachment` na mesma transação, depois da
+  `criacao`. Outcomes sem mudança.
+- `NewTicketFormDefaults` ganha `attachments: []`.
+- `createTicket` ganha o código `INVALID_ATTACHMENT` e, quando há anexos,
+  confere cada objeto no R2, copia para `tickets/` antes da transação e apaga as
+  cópias se a transação falhar ou recusar tag/destinatário.
+- O diálogo troca o "Anexar" bloqueado por um seletor real
+  (`AttachmentUploader`) e bloqueia "Abrir chamado" enquanto houver envio em
+  curso ou com falha.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

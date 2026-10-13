@@ -53,3 +53,15 @@ Alternativas rejeitadas:
   cookie). Custo aceito; não muda o resultado da busca.
 - A linha da seção 2 do `stack.md` que aponta para este ADR é responsabilidade
   do orquestrador, com aprovação do usuário.
+
+## Relação com o ADR 018 (anexos)
+
+Os anexos de chamado trouxeram duas peças que **não** usam esta exceção:
+
+- `requestAttachmentUpload` é Server Action chamada pelo cliente, mas não é
+  leitura: prepara uma escrita (emite a URL assinada de envio ao R2). Segue a
+  forma de action de mutação.
+- `GET /api/attachments/[id]` é exceção da **seção 3** do `stack.md` (rota de
+  API), com ADR próprio. Não é leitura iniciada pelo cliente por action.
+
+A exceção deste ADR continua restrita à busca enquanto se digita.

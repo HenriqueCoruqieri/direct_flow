@@ -13,6 +13,14 @@ revisão de 2026-10-12 apontando para cá.
 
 Versões observadas: `next@16.3.5`, Tailwind v4.
 
+> Revisão de 2026-10-13: no diálogo de novo chamado, a seção `Anexos` deixa de
+> ser placeholder — `docs/contracts/ticket-attachments-create-and-download.md`
+> prevalece (seletor real, `createTicketSchema.attachments`);
+> `new-ticket-attachments.tsx` (`NewTicketAttachments`) foi apagado e a seção
+> vive em `app/(app)/_components/attachment-uploader.tsx`. Na Conclusão, o
+> `AttachmentsSoonButton` e `TICKET_ATTACHMENTS_SOON_MESSAGE` continuam como
+> descritos aqui até a Etapa 2 do plano `docs/plans/ticket-attachments.md`.
+
 ## Escopo técnico em uma frase
 
 O "Anexar" bloqueado da Conclusão sobe para o `_components` do grupo `(app)`

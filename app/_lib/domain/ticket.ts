@@ -245,6 +245,7 @@ export const buildNewTicketFormOptions = (
       title: "",
       description: "",
       assigneeId: null,
+      attachments: [],
     },
   }
 }

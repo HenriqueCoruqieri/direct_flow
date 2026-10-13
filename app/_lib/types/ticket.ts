@@ -1,4 +1,8 @@
 import type { Role } from "@/app/_lib/types/actor"
+import type {
+  StoredAttachmentValues,
+  UploadedAttachmentRef,
+} from "@/app/_lib/types/attachment"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
   HistoryEvent,
@@ -63,6 +67,7 @@ export interface InsertTicketValues {
   assigneeId: number | null
   createdBy: number
   originDepartmentId: number
+  attachments?: readonly StoredAttachmentValues[]
 }
 
 export interface TicketSaved {
@@ -85,6 +90,7 @@ export interface NewTicketFormDefaults {
   title: string
   description: string
   assigneeId: number | null
+  attachments: UploadedAttachmentRef[]
 }
 
 export interface NewTicketFormAvailable {
