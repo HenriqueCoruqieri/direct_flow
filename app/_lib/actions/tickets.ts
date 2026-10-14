@@ -2,16 +2,16 @@
 
 import { revalidatePath } from "next/cache"
 
+import {
+  discardPendingAttachments,
+  discardStoredAttachments,
+  storePendingAttachments,
+} from "@/app/_lib/actions/attachment-intake"
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getSession } from "@/app/_lib/auth/session"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import { insertTicket, updateTicketByAssignee } from "@/app/_lib/data/tickets"
-import {
-  describeInvalidAttachment,
-  detectAttachmentType,
-  isPendingAttachmentKeyOf,
-  parsePendingAttachmentKey,
-} from "@/app/_lib/domain/attachment"
+import { describeInvalidAttachment } from "@/app/_lib/domain/attachment"
 import { DASHBOARD_PATH } from "@/app/_lib/domain/dashboard"
 import { DEPARTMENT_QUEUE_PATH } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
@@ -24,26 +24,13 @@ import {
 } from "@/app/_lib/domain/ticket"
 import { describeTicketEdited } from "@/app/_lib/domain/ticket-edit"
 import { HANDOFF_COMMENT_REQUIRED_MESSAGE } from "@/app/_lib/domain/ticket-handoff"
-import {
-  copyPendingAttachment,
-  deleteAttachmentObject,
-  headPendingAttachment,
-  readPendingAttachmentHeader,
-} from "@/app/_lib/storage/attachments"
-import type {
-  AttachmentTypeMatch,
-  StoredAttachmentObject,
-  StoredAttachmentValues,
-} from "@/app/_lib/types/attachment"
+import type { StoredAttachmentValues } from "@/app/_lib/types/attachment"
 import type {
   InsertTicketOutcome,
   TicketCreationBlockReason,
 } from "@/app/_lib/types/ticket"
 import type { UpdateTicketByAssigneeOutcome } from "@/app/_lib/types/ticket-edit"
-import {
-  attachmentSizeSchema,
-  type UploadedAttachmentInput,
-} from "@/app/_lib/validation/attachment"
+import type { UploadedAttachmentInput } from "@/app/_lib/validation/attachment"
 import {
   type CreateTicketInput,
   createTicketSchema,
@@ -126,160 +113,7 @@ const invalidAttachment = (fileName: string): TicketActionFailure => ({
   message: describeInvalidAttachment(fileName),
 })
 
-interface VerifiedAttachment {
-  status: "verified"
-  key: string
-  fileName: string
-  etag: string
-  sizeBytes: number
-  match: AttachmentTypeMatch
-}
-
-interface CopiedAttachment {
-  status: "copied"
-  values: StoredAttachmentValues
-}
-
-interface AttachmentCopyFailed {
-  status: "failed"
-  error: unknown
-}
-
-interface AttachmentRejected {
-  status: "rejected"
-  fileName: string
-}
-
-interface AttachmentsStored {
-  status: "stored"
-  attachments: StoredAttachmentValues[]
-}
-
-type AttachmentCheck = VerifiedAttachment | AttachmentRejected
-
-type AttachmentCopy =
-  CopiedAttachment | AttachmentRejected | AttachmentCopyFailed
-
-type AttachmentCopyFailure = Exclude<AttachmentCopy, CopiedAttachment>
-
-type AttachmentsIntake = AttachmentsStored | AttachmentRejected
-
-const ROLLBACK_LOG_PREFIX = "[createTicket] rollback"
-
-const rejectAttachment = (fileName: string): AttachmentRejected => ({
-  status: "rejected",
-  fileName,
-})
-
-const isVerified = (check: AttachmentCheck): check is VerifiedAttachment =>
-  check.status === "verified"
-
-const deleteAttachmentObjectsQuietly = async (
-  keys: readonly string[],
-  logPrefix: string,
-): Promise<void> => {
-  const results = await Promise.allSettled(keys.map(deleteAttachmentObject))
-
-  results.forEach((result, index) => {
-    if (result.status === "rejected") {
-      console.error(logPrefix, keys[index], result.reason)
-    }
-  })
-}
-
-const verifyPendingAttachment = async (
-  ref: UploadedAttachmentInput,
-  userId: number,
-): Promise<AttachmentCheck> => {
-  const parts = parsePendingAttachmentKey(ref.key)
-  if (!parts || !isPendingAttachmentKeyOf(ref.key, userId)) {
-    return rejectAttachment(ref.fileName)
-  }
-
-  const head = await headPendingAttachment(ref.key)
-  if (!head || !attachmentSizeSchema.safeParse(head.sizeBytes).success) {
-    return rejectAttachment(ref.fileName)
-  }
-
-  const bytes = await readPendingAttachmentHeader(ref.key, head.etag)
-  if (!bytes) return rejectAttachment(ref.fileName)
-
-  const match = detectAttachmentType(ref.fileName, bytes)
-  if (!match || match.extension !== parts.extension) {
-    return rejectAttachment(ref.fileName)
-  }
-
-  return {
-    status: "verified",
-    key: ref.key,
-    fileName: ref.fileName,
-    etag: head.etag,
-    sizeBytes: head.sizeBytes,
-    match,
-  }
-}
-
-const copyVerifiedAttachment = async (
-  item: VerifiedAttachment,
-): Promise<AttachmentCopy> => {
-  let stored: StoredAttachmentObject | null
-
-  try {
-    stored = await copyPendingAttachment(item.key, item.etag, item.match)
-  } catch (error) {
-    return { status: "failed", error }
-  }
-
-  if (!stored) return rejectAttachment(item.fileName)
-
-  return {
-    status: "copied",
-    values: {
-      fileName: item.fileName,
-      mimeType: item.match.contentType,
-      sizeBytes: item.sizeBytes,
-      storageKey: stored.storageKey,
-    },
-  }
-}
-
-const storePendingAttachments = async (
-  refs: readonly UploadedAttachmentInput[],
-  userId: number,
-): Promise<AttachmentsIntake> => {
-  if (refs.length === 0) return { status: "stored", attachments: [] }
-
-  const checks = await Promise.all(
-    refs.map((ref) => verifyPendingAttachment(ref, userId)),
-  )
-
-  const verified: VerifiedAttachment[] = []
-  for (const check of checks) {
-    if (!isVerified(check)) return check
-    verified.push(check)
-  }
-
-  const copies = await Promise.all(verified.map(copyVerifiedAttachment))
-
-  const attachments: StoredAttachmentValues[] = []
-  let failure: AttachmentCopyFailure | null = null
-
-  for (const copy of copies) {
-    if (copy.status === "copied") attachments.push(copy.values)
-    else failure ??= copy
-  }
-
-  if (failure === null) return { status: "stored", attachments }
-
-  await deleteAttachmentObjectsQuietly(
-    attachments.map(({ storageKey }) => storageKey),
-    ROLLBACK_LOG_PREFIX,
-  )
-
-  if (failure.status === "failed") throw failure.error
-
-  return failure
-}
+const CREATE_LOG_SCOPE = "[createTicket]"
 
 export const createTicket = async (
   input: CreateTicketInput,
@@ -288,8 +122,8 @@ export const createTicket = async (
   if (!actor) return FORBIDDEN_FAILURE
 
   let outcome: InsertTicketOutcome
-  let pendingKeys: string[] = []
-  let storedKeys: string[] = []
+  let refs: UploadedAttachmentInput[] = []
+  let stored: StoredAttachmentValues[] = []
 
   try {
     const facts = await getAccountFacts()
@@ -302,12 +136,16 @@ export const createTicket = async (
     const parsed = createTicketSchema.safeParse(input)
     if (!parsed.success) return invalidInput(parsed.error.issues[0]?.message)
 
-    const refs = parsed.data.attachments ?? []
-    const intake = await storePendingAttachments(refs, actor.id)
+    const pending = parsed.data.attachments ?? []
+    const intake = await storePendingAttachments(
+      pending,
+      actor.id,
+      CREATE_LOG_SCOPE,
+    )
     if (intake.status === "rejected") return invalidAttachment(intake.fileName)
 
-    pendingKeys = refs.map(({ key }) => key)
-    storedKeys = intake.attachments.map(({ storageKey }) => storageKey)
+    refs = pending
+    stored = intake.attachments
 
     outcome = await insertTicket({
       title: parsed.data.title,
@@ -320,17 +158,17 @@ export const createTicket = async (
       attachments: intake.attachments,
     })
   } catch (error) {
-    console.error("[createTicket]", error)
-    await deleteAttachmentObjectsQuietly(storedKeys, ROLLBACK_LOG_PREFIX)
+    console.error(CREATE_LOG_SCOPE, error)
+    await discardStoredAttachments(stored, CREATE_LOG_SCOPE)
     return UNEXPECTED_FAILURE
   }
 
   if (outcome.status !== "saved") {
-    await deleteAttachmentObjectsQuietly(storedKeys, ROLLBACK_LOG_PREFIX)
+    await discardStoredAttachments(stored, CREATE_LOG_SCOPE)
     return OUTCOME_FAILURES[outcome.status]
   }
 
-  await deleteAttachmentObjectsQuietly(pendingKeys, "[createTicket] cleanup")
+  await discardPendingAttachments(refs, CREATE_LOG_SCOPE)
 
   revalidatePath(DASHBOARD_PATH)
   revalidatePath(MY_TICKETS_PATH)

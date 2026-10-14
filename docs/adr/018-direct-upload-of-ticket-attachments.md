@@ -203,3 +203,20 @@ revalida nada. Segue a forma de qualquer action de mutação.
   e a rota de download só consideram anexos com `message_id` nulo, para que
   um anexo de comentário interno, se um dia existir, não vaze por aqui.
 - Sem migration: a tabela `attachment` já tinha as colunas necessárias.
+
+## Revisão de 2026-10-13 — download e card removidos
+
+Por decisão do usuário ("vou seguir sem ela por enquanto"), saíram o card
+"Anexos" do detalhe, `listTicketAttachments`, `findAttachmentForDownload`,
+`createAttachmentDownloadUrl`, `canDownloadAttachment`,
+`attachmentContentDisposition` e a rota `GET /api/attachments/[id]`, com a
+exceção dela na seção 3 do `stack.md`
+(`docs/contracts/attachments-card-removal.md`). As decisões 1 a 4 continuam:
+criação e Conclusão gravam no R2 e em `attachment`, mas nada exibe nem baixa os
+anexos. A decisão 5 e as consequências sobre leitura ficam registradas aqui e
+em `docs/contracts/ticket-attachments-create-and-download.md` para quando a
+leitura voltar; voltar exige de novo a exceção da rota no `stack.md`.
+
+Os riscos "Linha sem objeto" e "conteúdo de ZIP/RAR" deixam de alcançar quem
+usa o app enquanto não houver download. O passo 2 da configuração (CORS) já
+liberava só `PUT` e não muda.

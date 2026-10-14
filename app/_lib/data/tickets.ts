@@ -21,6 +21,7 @@ import {
   ticketAttendBlockFor,
   ticketSendBlockFor,
 } from "@/app/_lib/domain/ticket-assignment"
+import { canAttachToTicket } from "@/app/_lib/domain/ticket-attachment"
 import { AUTO_CLOSE_NOTE } from "@/app/_lib/domain/ticket-closure"
 import {
   canEditSolution,
@@ -49,6 +50,7 @@ import {
   ticketTransferReviewConflictReasonFor,
   TRANSFER_REQUESTED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket-transfer"
+import type { TicketAttachmentFacts } from "@/app/_lib/types/attachment"
 import type {
   InsertTicketOutcome,
   InsertTicketValues,
@@ -523,18 +525,52 @@ export async function updateTicketByAssignee(
   })
 }
 
+export async function findTicketAttachmentFacts(
+  ticketId: number,
+): Promise<TicketAttachmentFacts | null> {
+  const [[ticketRow], [pendingTransfer]] = await Promise.all([
+    db
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+        resolvedAt: ticket.resolvedAt,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId)),
+    db
+      .select({ id: ticketTransfer.id })
+      .from(ticketTransfer)
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1),
+  ])
+
+  if (!ticketRow) return null
+
+  return { ...ticketRow, hasPendingTransfer: pendingTransfer !== undefined }
+}
+
 export async function updateTicketResolution(
   values: UpdateTicketResolutionValues,
 ): Promise<UpdateTicketResolutionOutcome> {
   const { ticketId, solution, resolverId } = values
 
   return db.transaction(async (tx) => {
+    const changedAt = new Date()
+
     const [ticketRow] = await tx
       .select({
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
         status: ticket.status,
+        resolvedAt: ticket.resolvedAt,
       })
       .from(ticket)
       .where(eq(ticket.id, ticketId))
@@ -568,7 +604,18 @@ export async function updateTicketResolution(
       return { status: "not_resolvable" }
     }
 
-    const changedAt = new Date()
+    const attachments = values.attachments ?? []
+
+    if (
+      attachments.length > 0 &&
+      !canAttachToTicket(
+        resolver,
+        { ...ticketRow, hasPendingTransfer: pendingTransfer !== undefined },
+        changedAt,
+      )
+    ) {
+      return { status: "not_resolvable", reason: "attachments_not_allowed" }
+    }
 
     const assigneeId = resolutionAssigneeFor(resolver, ticketRow)
     const assigneeChanged = assigneeId !== ticketRow.assignedTo
@@ -603,6 +650,21 @@ export async function updateTicketResolution(
       toStatus: RESOLVED_TICKET_STATUS,
       changedAt,
     })
+
+    if (attachments.length > 0) {
+      await tx.insert(attachment).values(
+        attachments.map((item) => ({
+          ticketId,
+          messageId: null,
+          uploadedBy: resolverId,
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          sizeBytes: item.sizeBytes,
+          storageKey: item.storageKey,
+          createdAt: changedAt,
+        })),
+      )
+    }
 
     return { status: "saved", ticketId }
   })

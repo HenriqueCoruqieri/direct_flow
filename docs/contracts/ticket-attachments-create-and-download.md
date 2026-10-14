@@ -13,6 +13,19 @@ Ele **altera** `docs/contracts/ticket-creation.md` (entrada de `createTicket`,
 seção "Anexos" de `docs/contracts/new-ticket-attachments-placeholder.md`. Os
 dois trazem uma revisão de 2026-10-13 apontando para cá.
 
+> **Revisão de 2026-10-13 — leitura removida.** Por decisão do usuário, o card
+> `TicketAttachments`, `listTicketAttachments`, `findAttachmentForDownload`,
+> `createAttachmentDownloadUrl`, a rota `app/api/attachments/[id]/route.ts` e,
+> no domínio/tipos/validação, `canDownloadAttachment`,
+> `attachmentDownloadPath`, `attachmentContentDisposition`,
+> `downloadAttachmentLabel`, `ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS`,
+> `ATTACHMENT_DOWNLOAD_FAILED_MESSAGE`, `TicketAttachmentItem`,
+> `AttachmentDownloadTarget` e `parseAttachmentIdParam` saem
+> (`docs/contracts/attachments-card-removal.md`). O que este documento diz
+> sobre **envio e gravação** continua valendo; as seções sobre download, o
+> card e os cenários AT3–AT6, AT16–AT18 e AT23 ficam como registro do desenho,
+> para quando a leitura voltar.
+
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `@aws-sdk/client-s3@^3.1140`, Node 24.
 
@@ -573,6 +586,15 @@ compartilhado **sem** `"use server"` em `app/_lib/actions/` (dono
 `df-actions`), para não virar endpoint público. A decisão — nome do arquivo e
 assinatura exportada — fica registrada no contrato da Etapa 2.
 
+> Revisão de 2026-10-13: decidido em
+> `docs/contracts/ticket-attachments-on-resolution.md` — módulo
+> `app/_lib/actions/attachment-intake.ts` (`import "server-only"`), com
+> `storePendingAttachments(refs, userId, logScope)`,
+> `discardStoredAttachments` e `discardPendingAttachments`. O comportamento de
+> `createTicket` descrito acima não muda. Na Etapa 2 o `AttachmentsSoonButton`
+> e `TICKET_ATTACHMENTS_SOON_MESSAGE` saem (tabela "O que não muda" e seção
+> "Textos" acima ficam superadas nesse ponto).
+
 ### `app/api/attachments/[id]/route.ts` (novo)
 
 `export const GET = async (request: NextRequest, ctx: RouteContext<"/api/attachments/[id]">): Promise<Response>`
@@ -770,6 +792,11 @@ aria-label={downloadAttachmentLabel(fileName)}>` com o nome (link comum,
 - Vazio: `<p>` `NO_ATTACHMENTS_LABEL` (sem `<ul>`).
 - `page.tsx`: `listTicketAttachments(ticket.id)` entra no `Promise.all` da
   linha 103, **depois** do `canViewTicket` (linha 85).
+
+> Revisão de 2026-10-13: a forma da lista (uploader e card) passou a ser a de
+> `docs/contracts/attachment-tiles.md` — blocos em grade, ícone por categoria,
+> bloco inteiro como link no detalhe. Conteúdo, textos e comportamento acima
+> continuam valendo.
 
 ## Riscos
 

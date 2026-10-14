@@ -65,3 +65,7 @@ Os anexos de chamado trouxeram duas peças que **não** usam esta exceção:
   API), com ADR próprio. Não é leitura iniciada pelo cliente por action.
 
 A exceção deste ADR continua restrita à busca enquanto se digita.
+
+> Revisão de 2026-10-13: a rota `GET /api/attachments/[id]` foi removida por
+> decisão do usuário (ADR 018, revisão; `docs/contracts/attachments-card-removal.md`).
+> Sobra só `requestAttachmentUpload`, e o que se diz dela acima continua valendo.

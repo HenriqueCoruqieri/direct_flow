@@ -97,6 +97,21 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > `department.id = users.department_id`. Escopo, ordem e as demais funções de
 > `ticket-messages.ts` não mudam. Sem migration.
 
+> Revisão de 2026-10-13, anexos na Conclusão
+> (`docs/contracts/ticket-attachments-on-resolution.md`, que prevalece no que
+> diverge): o "Anexar" bloqueado (`AttachmentsSoonButton`,
+> `TICKET_ATTACHMENTS_SOON_MESSAGE`) sai; o `ResolveTicketForm` ganha o
+> `AttachmentUploader` entre a Solução e os botões, e "Resolver" fica
+> bloqueado durante envio. `resolveTicketSchema` ganha `attachments`
+> opcional, `ResolveTicketFormDefaults` ganha `attachments: []`,
+> `UpdateTicketResolutionValues` ganha `attachments?` e
+> `updateTicketResolution` grava `attachment` depois da linha `resolucao`, na
+> mesma transação. `ResolveTicketErrorCode` ganha `INVALID_ATTACHMENT`. Quem
+> resolve, outcomes, mensagens e revalidações não mudam. **Ficam superados**:
+> no cenário 3 e no 16 (#5), os "botões bloqueados" (agora só "Anexar" do
+> uploader, ativo); os cenários 17–19 para o "Anexar" (o "Enviar para outro
+> setor" já tinha deixado de ser bloqueado).
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)
@@ -360,6 +375,17 @@ export const describeTicketResolved: (ticketId: number) => string
 > re-export aqui. O "Anexar" bloqueado da Conclusão passa a ser o componente
 > `AttachmentsSoonButton` (`app/(app)/_components/attachments-soon-button.tsx`,
 > era `ConclusionBlockedActions`), com o mesmo comportamento.
+
+> Revisão de 2026-10-13, fechamento da Etapa 2 de
+> `docs/plans/ticket-attachments.md`
+> (`docs/contracts/ticket-attachments-on-resolution.md`): o
+> `AttachmentsSoonButton` foi apagado e `TICKET_ATTACHMENTS_SOON_MESSAGE` foi
+> **removida** de `app/_lib/domain/ticket.ts`. Nada mais importa a constante.
+> As linhas `TICKET_ATTACHMENTS_SOON_MESSAGE` e `TICKET_TRANSFER_SOON_MESSAGE`
+> do bloco acima e o parágrafo "Os botões bloqueados" de `TicketConclusion`
+> ficam só como registro histórico. O domínio ganhou
+> `RESOLUTION_ATTACHMENTS_NOTICE`, e `buildResolveTicketFormDefaults` devolve
+> `attachments: []`.
 
 | Nome                                 | Semântica                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

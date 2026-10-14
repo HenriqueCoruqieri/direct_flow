@@ -21,6 +21,17 @@ Versões observadas: `next@16.3.5`, Tailwind v4.
 > `AttachmentsSoonButton` e `TICKET_ATTACHMENTS_SOON_MESSAGE` continuam como
 > descritos aqui até a Etapa 2 do plano `docs/plans/ticket-attachments.md`.
 
+> Revisão de 2026-10-13, fechamento da Etapa 2 de
+> `docs/plans/ticket-attachments.md`
+> (`docs/contracts/ticket-attachments-on-resolution.md`, que prevalece): o
+> placeholder deixou de existir. `app/(app)/_components/attachments-soon-button.tsx`
+> (`AttachmentsSoonButton`) foi apagado e `TICKET_ATTACHMENTS_SOON_MESSAGE` foi
+> removida de `app/_lib/domain/ticket.ts`. O "Anexar" da Conclusão é o do
+> `AttachmentUploader`, ativo. `TICKET_ATTACHMENTS_LABEL`, `ATTACH_FILE_LABEL` e
+> `NO_ATTACHMENTS_LABEL` continuam (uploader e card `Anexos`). As seções
+> `AttachmentsSoonButton`, Estrutura e os cenários deste documento sobre o botão
+> bloqueado ficam só como registro histórico.
+
 ## Escopo técnico em uma frase
 
 O "Anexar" bloqueado da Conclusão sobe para o `_components` do grupo `(app)`

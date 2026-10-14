@@ -8,8 +8,25 @@ dela. Decisão técnica em `docs/adr/018-direct-upload-of-ticket-attachments.md`
 Contratos técnicos:
 
 - Etapa 1 — `docs/contracts/ticket-attachments-create-and-download.md`.
-- Etapa 2 — `docs/contracts/ticket-attachments-on-resolution.md` (a escrever na
-  Onda 0 da Etapa 2).
+- Etapa 2 — `docs/contracts/ticket-attachments-on-resolution.md` (escrito em
+  2026-10-13, Onda 0 da Etapa 2).
+- Ajuste visual — `docs/contracts/attachment-tiles.md` (2026-10-13, pedido do
+  usuário sobre a Etapa 2 ainda não comitada): anexos em blocos lado a lado,
+  com ícone por categoria, no upload.
+- Só o destinatário anexa — `docs/contracts/attachments-assignee-only.md`
+  (2026-10-13, pedido do usuário): na Conclusão, anexar exige poder "Editar" e
+  ser o destinatário (`canAttachToTicket`); a criação não muda.
+- Card e download removidos — `docs/contracts/attachments-card-removal.md`
+  (2026-10-13, pedido do usuário): saem o card "Anexos" do detalhe, a
+  listagem e a rota de download. O envio continua gravando; nada exibe os
+  anexos por enquanto.
+
+> **Revisão de 2026-10-13.** Os itens 4 e 6 do escopo, a decisão P4, a rota
+> em "Impacto no contrato" e os critérios de download/card das Etapas 1 e 2
+> ficam como registro: foram removidos por decisão do usuário
+> (`attachments-card-removal.md`; ADR 018, revisão). "Quem vê o chamado vê
+> todos os anexos" deixa de valer enquanto não houver leitura. Na Conclusão,
+> só o destinatário que pode "Editar" anexa (`attachments-assignee-only.md`).
 
 ---
 
@@ -87,16 +104,60 @@ variável `R2_ATTACHMENTS_BUCKET` no `.env` e na Vercel.
 
 ## Etapas
 
-| Etapa | Entrega                                                                                           | Ondas                                                                                                   | Contrato                                                   |
-| ----- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| 1     | Infraestrutura (storage, URL de envio, verificação), anexos na criação, download, card no detalhe | `df-architect` → `df-data` ‖ `df-ui` (card) → `df-actions` ‖ `df-ui` (upload) → `df-reviewer` → `df-qa` | `docs/contracts/ticket-attachments-create-and-download.md` |
-| 2     | Anexos na Conclusão, gravados junto com "Resolver"; sai o `AttachmentsSoonButton`                 | `df-architect` → `df-data` → `df-actions` ‖ `df-ui` → `df-reviewer` → `df-qa`                           | `docs/contracts/ticket-attachments-on-resolution.md`       |
+| Etapa | Entrega                                                                                           | Ondas                                                                                                       | Contrato                                                   |
+| ----- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1     | Infraestrutura (storage, URL de envio, verificação), anexos na criação, download, card no detalhe | `df-architect` → `df-data` ‖ `df-ui` (card) → `df-actions` ‖ `df-ui` (upload) → `df-reviewer` → `df-qa`     | `docs/contracts/ticket-attachments-create-and-download.md` |
+| 2     | Anexos na Conclusão, gravados junto com "Resolver"; sai o `AttachmentsSoonButton`                 | `df-architect` → `df-data` → `df-actions` ‖ `df-ui` → `df-architect` (fechamento) → `df-reviewer` → `df-qa` | `docs/contracts/ticket-attachments-on-resolution.md`       |
 
 `df-email` e `df-auth` não entram em nenhuma etapa.
 
 Na Etapa 1, a Conclusão continua com o "Anexar" bloqueado
 (`AttachmentsSoonButton` e `TICKET_ATTACHMENTS_SOON_MESSAGE` seguem existindo).
-Eles saem na Etapa 2.
+Eles saem na Etapa 2: o `df-ui` apaga o componente e o `df-architect` remove a
+constante numa onda de fechamento, depois do `df-ui`, para o `tsc` ficar verde
+a cada onda. Feito em 2026-10-13: os dois saíram.
+
+Decisões da Etapa 2 (contrato dela):
+
+- A verificação e a cópia dos anexos saem de `actions/tickets.ts` para
+  `app/_lib/actions/attachment-intake.ts` (módulo auxiliar sem `"use server"`,
+  com `import "server-only"`), usado por `createTicket` e `resolveTicket`.
+- "Enviar para outro setor" **não** é bloqueado por anexos na lista nem por
+  envio em curso; o aviso `Os anexos são salvos só ao resolver. Ao enviar para
+outro setor, eles não vão junto.` aparece na seção de anexos da Conclusão
+  sempre que esse botão existe.
+- "Resolver" fica bloqueado durante envio em curso ou com falha, no mesmo
+  padrão do "Abrir chamado".
+- Com anexos, `resolveTicket` confere `canUploadAttachment` antes de tocar o
+  R2; quem resolve continua decidido na transação.
+
+Ajuste visual (contrato `attachment-tiles.md`), decidido pelo usuário:
+
+- A lista de anexos vira **blocos lado a lado** que quebram de linha: ícone do
+  tipo em cima, extensão em letra pequena, nome (até 2 linhas), tamanho,
+  status e X no canto.
+- Cada tipo da tabela do domínio tem uma **categoria** (`pdf`, `text`,
+  `spreadsheet`, `document`, `presentation`, `image`, `archive`), com ícone e
+  cor próprios na UI; ZIP e RAR usam o ícone de livros (`Library`). A
+  categoria sai da extensão do nome, sem mudança no `df-data`.
+- Ondas: `df-architect` (feito) → `df-ui` → `df-reviewer` → `df-qa`
+  (cenários AK1–AK10, AK13 e AK14; AK11 e AK12 saíram com o card).
+
+Só o destinatário anexa (contrato `attachments-assignee-only.md`):
+
+- Uploader da Conclusão só com `canAttachToTicketDetail`; admin do setor,
+  diretoria e autor de chamado na fila resolvem sem anexo; na fila, ninguém
+  anexa até "Assumir".
+- `resolveTicket` confere `canAttachToTicket` antes do R2
+  (`findTicketAttachmentFacts`) e `updateTicketResolution` confere de novo sob
+  trava (`not_resolvable` + `reason: "attachments_not_allowed"`).
+- Ondas: `df-architect` (feito) → `df-data` → `df-actions` ‖ `df-ui` →
+  `df-reviewer` → `df-qa` (AO1–AO15).
+
+Card e download removidos (contrato `attachments-card-removal.md`):
+
+- Ondas: `df-ui` ‖ `df-actions` → `df-data` → `df-architect` (fechamento) →
+  `df-reviewer` → `df-qa` (CR1–CR7).
 
 ## Riscos
 
@@ -131,4 +192,5 @@ Etapa 1:
 - `npx tsc --noEmit`, `npm run lint` e `npm run build` passam; `df-reviewer`
   sem bloqueante.
 
-Etapa 2: definido no contrato dela.
+Etapa 2: cenários AR1–AR20 e critério de pronto em
+`docs/contracts/ticket-attachments-on-resolution.md`.

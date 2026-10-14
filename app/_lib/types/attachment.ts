@@ -1,4 +1,8 @@
+import type { ATTACHMENT_KINDS } from "@/app/_lib/domain/attachment-kinds"
 import type { TicketVisibilityFacts } from "@/app/_lib/types/ticket"
+import type { TicketEditabilityFacts } from "@/app/_lib/types/ticket-edit"
+
+export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number]
 
 export type AttachmentExtension =
   | "png"
@@ -46,6 +50,7 @@ export type AttachmentContentCheck = AttachmentBinaryCheck | AttachmentTextCheck
 
 export interface AttachmentTypeSpec {
   contentType: AttachmentContentType
+  kind: AttachmentKind
   check: AttachmentContentCheck
 }
 
@@ -109,17 +114,17 @@ export interface StoredAttachmentValues {
   storageKey: string
 }
 
-export interface TicketAttachmentItem {
-  id: number
-  fileName: string
-  sizeBytes: number
-  uploadedByName: string
-  createdAt: Date
+export interface AttachmentsStored {
+  status: "stored"
+  attachments: StoredAttachmentValues[]
 }
 
-export interface AttachmentDownloadTarget {
-  id: number
+export interface AttachmentRejected {
+  status: "rejected"
   fileName: string
-  storageKey: string
-  ticket: TicketVisibilityFacts
 }
+
+export type AttachmentsIntake = AttachmentsStored | AttachmentRejected
+
+export interface TicketAttachmentFacts
+  extends TicketVisibilityFacts, TicketEditabilityFacts {}

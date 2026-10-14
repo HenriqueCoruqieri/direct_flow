@@ -4,7 +4,7 @@ export const cn = createCn({
   extend: {
     theme: {
       shadow: ["underline", "glow", "glow-sm"],
-      text: ["caption", "title", "display"],
+      text: ["micro", "caption", "title", "display"],
     },
   },
 })

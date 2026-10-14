@@ -1,4 +1,8 @@
 import type {
+  StoredAttachmentValues,
+  UploadedAttachmentRef,
+} from "@/app/_lib/types/attachment"
+import type {
   TicketPendingTransfer,
   TicketStatus,
   TicketVisibilityFacts,
@@ -56,6 +60,7 @@ export interface UpdateTicketResolutionValues {
   ticketId: number
   solution: string
   resolverId: number
+  attachments?: readonly StoredAttachmentValues[]
 }
 
 export interface TicketResolutionSaved {
@@ -63,8 +68,11 @@ export interface TicketResolutionSaved {
   ticketId: number
 }
 
+export type TicketResolutionRefusal = "attachments_not_allowed"
+
 export interface TicketNotResolvable {
   status: "not_resolvable"
+  reason?: TicketResolutionRefusal
 }
 
 export type UpdateTicketResolutionOutcome =
@@ -73,4 +81,5 @@ export type UpdateTicketResolutionOutcome =
 export interface ResolveTicketFormDefaults {
   ticketId: number
   solution: string
+  attachments: UploadedAttachmentRef[]
 }

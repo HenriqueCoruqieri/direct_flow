@@ -15,7 +15,6 @@ import {
   isSafeAttachmentFileName,
   parsePendingAttachmentKey,
 } from "@/app/_lib/domain/attachment"
-import { idSearchParamSchema } from "@/app/_lib/validation/search-params"
 
 export const attachmentFileNameSchema = z
   .string({ error: ATTACHMENT_INVALID_FILE_NAME_MESSAGE })
@@ -76,14 +75,3 @@ export const uploadedAttachmentsSchema = z
   )
 
 export type UploadedAttachmentsInput = z.infer<typeof uploadedAttachmentsSchema>
-
-const INVALID_ATTACHMENT_MESSAGE = "Anexo inválido."
-
-export const attachmentIdParamSchema = idSearchParamSchema(
-  INVALID_ATTACHMENT_MESSAGE,
-)
-
-export const parseAttachmentIdParam = (value: string): number | null => {
-  const result = attachmentIdParamSchema.safeParse(value)
-  return result.success ? result.data : null
-}

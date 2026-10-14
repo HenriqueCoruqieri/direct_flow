@@ -17,6 +17,7 @@ interface TicketConclusionProps {
   state: TicketConclusionState
   sendToDepartment: SendToDepartmentSetup | null
   editable?: boolean
+  canAttach?: boolean
   className?: string
 }
 
@@ -25,6 +26,7 @@ const TicketConclusion = ({
   state,
   sendToDepartment,
   editable = false,
+  canAttach = false,
   className,
 }: TicketConclusionProps) => {
   const noSolution = (
@@ -39,6 +41,7 @@ const TicketConclusion = ({
         <ResolveTicketForm
           defaults={buildResolveTicketFormDefaults(ticketId)}
           sendToDepartment={sendToDepartment}
+          canAttach={canAttach}
         />
       )
       body = editable ? (

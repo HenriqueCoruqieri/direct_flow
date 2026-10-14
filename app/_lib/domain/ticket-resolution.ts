@@ -28,6 +28,9 @@ export const TICKET_SOLUTION_MAX_LENGTH = TICKET_DESCRIPTION_MAX_LENGTH
 
 export const NO_SOLUTION_LABEL = "Nenhuma solução registrada."
 
+export const RESOLUTION_ATTACHMENTS_NOTICE =
+  "Os anexos são salvos só ao resolver. Ao enviar para outro setor, eles não vão junto."
+
 const TICKET_STATUS_IS_RESOLVABLE = {
   aberto: true,
   em_analise: true,
@@ -152,7 +155,7 @@ export const ticketConclusionStateFor = (
 
 export const buildResolveTicketFormDefaults = (
   ticketId: number,
-): ResolveTicketFormDefaults => ({ ticketId, solution: "" })
+): ResolveTicketFormDefaults => ({ ticketId, solution: "", attachments: [] })
 
 export const describeTicketResolved = (ticketId: number): string =>
   `Chamado ${formatTicketNumber(ticketId)} resolvido.`

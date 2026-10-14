@@ -1,17 +1,13 @@
-import { canViewTicket } from "@/app/_lib/domain/ticket"
 import type { AccountState } from "@/app/_lib/types/account"
 import type {
   AttachmentByteSignature,
   AttachmentExtension,
+  AttachmentKind,
   AttachmentTypeMatch,
   AttachmentTypeSpec,
   AttachmentUploadStatus,
   PendingAttachmentKeyParts,
 } from "@/app/_lib/types/attachment"
-import type {
-  TicketActorFacts,
-  TicketVisibilityFacts,
-} from "@/app/_lib/types/ticket"
 
 export const ATTACHMENT_MAX_MEGABYTES = 10
 
@@ -24,8 +20,6 @@ export const ATTACHMENT_HEADER_BYTES = 4096
 export const ATTACHMENT_FILE_NAME_MAX_LENGTH = 255
 
 export const ATTACHMENT_UPLOAD_URL_TTL_SECONDS = 300
-
-export const ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS = 60
 
 export const ATTACHMENT_PENDING_PREFIX = "pending/"
 
@@ -42,6 +36,7 @@ const JPEG_SIGNATURE: readonly AttachmentByteSignature[] = [
 export const ATTACHMENT_TYPES = {
   png: {
     contentType: "image/png",
+    kind: "image",
     check: {
       kind: "binary",
       signature: [
@@ -54,14 +49,17 @@ export const ATTACHMENT_TYPES = {
   },
   jpg: {
     contentType: "image/jpeg",
+    kind: "image",
     check: { kind: "binary", signature: JPEG_SIGNATURE },
   },
   jpeg: {
     contentType: "image/jpeg",
+    kind: "image",
     check: { kind: "binary", signature: JPEG_SIGNATURE },
   },
   webp: {
     contentType: "image/webp",
+    kind: "image",
     check: {
       kind: "binary",
       signature: [
@@ -72,35 +70,45 @@ export const ATTACHMENT_TYPES = {
   },
   pdf: {
     contentType: "application/pdf",
+    kind: "pdf",
     check: {
       kind: "binary",
       signature: [{ offset: 0, bytes: [0x25, 0x50, 0x44, 0x46, 0x2d] }],
     },
   },
-  txt: { contentType: "text/plain", check: { kind: "text" } },
-  csv: { contentType: "text/csv", check: { kind: "text" } },
-  log: { contentType: "text/plain", check: { kind: "text" } },
+  txt: { contentType: "text/plain", kind: "text", check: { kind: "text" } },
+  csv: {
+    contentType: "text/csv",
+    kind: "spreadsheet",
+    check: { kind: "text" },
+  },
+  log: { contentType: "text/plain", kind: "text", check: { kind: "text" } },
   docx: {
     contentType:
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    kind: "document",
     check: { kind: "binary", signature: ZIP_SIGNATURE },
   },
   xlsx: {
     contentType:
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    kind: "spreadsheet",
     check: { kind: "binary", signature: ZIP_SIGNATURE },
   },
   pptx: {
     contentType:
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    kind: "presentation",
     check: { kind: "binary", signature: ZIP_SIGNATURE },
   },
   zip: {
     contentType: "application/zip",
+    kind: "archive",
     check: { kind: "binary", signature: ZIP_SIGNATURE },
   },
   rar: {
     contentType: "application/vnd.rar",
+    kind: "archive",
     check: {
       kind: "binary",
       signature: [{ offset: 0, bytes: [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07] }],
@@ -126,6 +134,16 @@ export const attachmentExtensionOf = (
   const extension = fileName.slice(dot + 1).toLowerCase()
   return isAttachmentExtension(extension) ? extension : null
 }
+
+export const attachmentKindFor = (fileName: string): AttachmentKind | null => {
+  const extension = attachmentExtensionOf(fileName)
+  if (extension === null) return null
+  const spec: AttachmentTypeSpec = ATTACHMENT_TYPES[extension]
+  return spec.kind
+}
+
+export const attachmentExtensionLabel = (fileName: string): string | null =>
+  attachmentExtensionOf(fileName)?.toUpperCase() ?? null
 
 const FORBIDDEN_FILE_NAME_CHARACTERS = ["/", "\\"]
 
@@ -233,7 +251,7 @@ export const isPendingAttachmentKeyOf = (
   userId: number,
 ): boolean => parsePendingAttachmentKey(key)?.userId === userId
 
-export const isStoredAttachmentKey = (key: string): boolean => {
+const isStoredAttachmentKey = (key: string): boolean => {
   const extension = STORED_ATTACHMENT_KEY_PATTERN.exec(key)?.[1]
   return extension !== undefined && isAttachmentExtension(extension)
 }
@@ -243,27 +261,6 @@ export const isAttachmentStorageKey = (key: string): boolean =>
 
 export const canUploadAttachment = (account: AccountState): boolean =>
   account.isActive && !account.mustChangePassword
-
-export const canDownloadAttachment = (
-  actor: TicketActorFacts,
-  ticket: TicketVisibilityFacts,
-): boolean =>
-  actor.isActive && !actor.mustChangePassword && canViewTicket(actor, ticket)
-
-export const attachmentDownloadPath = (attachmentId: number): string =>
-  `/api/attachments/${attachmentId}`
-
-const encodeRfc5987 = (value: string): string =>
-  encodeURIComponent(value).replace(
-    /['()*]/g,
-    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
-  )
-
-const asciiFileNameFallback = (fileName: string): string =>
-  fileName.replace(/[^\x20-\x7e]|["\\]/g, "_")
-
-export const attachmentContentDisposition = (fileName: string): string =>
-  `attachment; filename="${asciiFileNameFallback(fileName)}"; filename*=UTF-8''${encodeRfc5987(fileName)}`
 
 const KILOBYTE = 1024
 const MEGABYTE = KILOBYTE * 1024
@@ -312,14 +309,16 @@ export const ATTACHMENT_UPLOADS_FAILED_MESSAGE =
 
 export const ATTACHMENT_LIMITS_HINT = `Até ${ATTACHMENT_MAX_FILES} arquivos de até ${ATTACHMENT_MAX_MEGABYTES} MB cada.`
 
-export const ATTACHMENT_DOWNLOAD_FAILED_MESSAGE =
-  "Não foi possível baixar o anexo agora. Tente novamente."
-
 export const ATTACHMENT_UPLOAD_STATUS_LABELS = {
   uploading: "Enviando…",
   uploaded: "Enviado",
   failed: "Falha no envio",
 } satisfies Record<AttachmentUploadStatus, string>
+
+export const describeAttachmentUploadStatus = (
+  fileName: string,
+  status: AttachmentUploadStatus,
+): string => `${fileName}: ${ATTACHMENT_UPLOAD_STATUS_LABELS[status]}`
 
 export const describeInvalidAttachment = (fileName: string): string =>
   `Não foi possível anexar "${fileName}". Remova o arquivo e anexe de novo.`
@@ -331,6 +330,3 @@ export const describeRejectedAttachment = (
 
 export const removeAttachmentLabel = (fileName: string): string =>
   `Remover ${fileName}`
-
-export const downloadAttachmentLabel = (fileName: string): string =>
-  `Baixar ${fileName}`
