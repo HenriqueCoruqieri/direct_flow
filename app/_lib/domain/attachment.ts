@@ -1,3 +1,4 @@
+import { canViewTicket } from "@/app/_lib/domain/ticket"
 import type { AccountState } from "@/app/_lib/types/account"
 import type {
   AttachmentByteSignature,
@@ -8,6 +9,10 @@ import type {
   AttachmentUploadStatus,
   PendingAttachmentKeyParts,
 } from "@/app/_lib/types/attachment"
+import type {
+  TicketActorFacts,
+  TicketVisibilityFacts,
+} from "@/app/_lib/types/ticket"
 
 export const ATTACHMENT_MAX_MEGABYTES = 10
 
@@ -20,6 +25,8 @@ export const ATTACHMENT_HEADER_BYTES = 4096
 export const ATTACHMENT_FILE_NAME_MAX_LENGTH = 255
 
 export const ATTACHMENT_UPLOAD_URL_TTL_SECONDS = 300
+
+export const ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS = 60
 
 export const ATTACHMENT_PENDING_PREFIX = "pending/"
 
@@ -251,7 +258,7 @@ export const isPendingAttachmentKeyOf = (
   userId: number,
 ): boolean => parsePendingAttachmentKey(key)?.userId === userId
 
-const isStoredAttachmentKey = (key: string): boolean => {
+export const isStoredAttachmentKey = (key: string): boolean => {
   const extension = STORED_ATTACHMENT_KEY_PATTERN.exec(key)?.[1]
   return extension !== undefined && isAttachmentExtension(extension)
 }
@@ -261,6 +268,27 @@ export const isAttachmentStorageKey = (key: string): boolean =>
 
 export const canUploadAttachment = (account: AccountState): boolean =>
   account.isActive && !account.mustChangePassword
+
+export const canDownloadAttachment = (
+  actor: TicketActorFacts,
+  ticket: TicketVisibilityFacts,
+): boolean =>
+  actor.isActive && !actor.mustChangePassword && canViewTicket(actor, ticket)
+
+export const attachmentDownloadPath = (attachmentId: number): string =>
+  `/api/attachments/${attachmentId}`
+
+const encodeRfc5987 = (value: string): string =>
+  encodeURIComponent(value).replace(
+    /['()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  )
+
+const asciiFileNameFallback = (fileName: string): string =>
+  fileName.replace(/[^\x20-\x7e]|["\\]/g, "_")
+
+export const attachmentContentDisposition = (fileName: string): string =>
+  `attachment; filename="${asciiFileNameFallback(fileName)}"; filename*=UTF-8''${encodeRfc5987(fileName)}`
 
 const KILOBYTE = 1024
 const MEGABYTE = KILOBYTE * 1024
@@ -309,6 +337,11 @@ export const ATTACHMENT_UPLOADS_FAILED_MESSAGE =
 
 export const ATTACHMENT_LIMITS_HINT = `Até ${ATTACHMENT_MAX_FILES} arquivos de até ${ATTACHMENT_MAX_MEGABYTES} MB cada.`
 
+export const ATTACHMENT_NOT_FOUND_MESSAGE = "Anexo não encontrado."
+
+export const ATTACHMENT_DOWNLOAD_FAILED_MESSAGE =
+  "Não foi possível baixar o anexo agora. Tente novamente."
+
 export const ATTACHMENT_UPLOAD_STATUS_LABELS = {
   uploading: "Enviando…",
   uploaded: "Enviado",
@@ -330,3 +363,6 @@ export const describeRejectedAttachment = (
 
 export const removeAttachmentLabel = (fileName: string): string =>
   `Remover ${fileName}`
+
+export const downloadAttachmentLabel = (fileName: string): string =>
+  `Baixar ${fileName}`

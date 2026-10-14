@@ -13,6 +13,10 @@ O desenho removido fica registrado em
 
 Commit próprio, separado de `docs/contracts/attachments-assignee-only.md`.
 
+> Revisão de 2026-10-14: a leitura volta, dentro da Conclusão e não como card
+> (`docs/contracts/ticket-attachments-list-and-download.md`, ADR 018). Os
+> cenários CR1, CR3 e o critério 2 abaixo deixam de valer.
+
 ## O que não muda
 
 | Camada                                                                     | Mudança                                                          |

@@ -10,6 +10,12 @@ blocos, foi removido no mesmo dia (`docs/contracts/attachments-card-removal.md`)
 Ondas: `df-architect` (feito) → `df-ui` → `df-reviewer` → `df-qa`.
 `df-data` e `df-actions` **não entram**.
 
+> Revisão de 2026-10-14: o "nunca rolagem horizontal" da seção "Grade" é
+> sobre a **página** e o diálogo. O bloco de leitura da Conclusão
+> (`docs/contracts/ticket-attachments-list-and-download.md`) usa o mesmo
+> desenho de bloco numa linha só que rola de lado dentro de si mesmo. O
+> uploader continua em grade, sem rolagem própria.
+
 Altera, só na forma da lista, `docs/contracts/ticket-attachments-create-and-download.md`
 (seção `df-ui`: "Lista", `AttachmentUploadItem`) e
 `docs/contracts/ticket-attachments-on-resolution.md` (seção "Layout"). Fluxo,

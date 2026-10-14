@@ -9,9 +9,12 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 import {
+  ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS,
   ATTACHMENT_HEADER_BYTES,
   ATTACHMENT_UPLOAD_URL_TTL_SECONDS,
+  attachmentContentDisposition,
   isAttachmentStorageKey,
+  isStoredAttachmentKey,
   parsePendingAttachmentKey,
   pendingAttachmentKey,
   storedAttachmentKey,
@@ -151,5 +154,24 @@ export async function deleteAttachmentObject(key: string): Promise<void> {
       Bucket: readStorageEnv("R2_ATTACHMENTS_BUCKET"),
       Key: key,
     }),
+  )
+}
+
+export async function createAttachmentDownloadUrl(
+  storageKey: string,
+  fileName: string,
+): Promise<string> {
+  if (!isStoredAttachmentKey(storageKey)) {
+    throw new Error("[storage] Chave definitiva de anexo inválida.")
+  }
+
+  return getSignedUrl(
+    r2Client(),
+    new GetObjectCommand({
+      Bucket: readStorageEnv("R2_ATTACHMENTS_BUCKET"),
+      Key: storageKey,
+      ResponseContentDisposition: attachmentContentDisposition(fileName),
+    }),
+    { expiresIn: ATTACHMENT_DOWNLOAD_URL_TTL_SECONDS },
   )
 }

@@ -220,3 +220,26 @@ leitura voltar; voltar exige de novo a exceção da rota no `stack.md`.
 Os riscos "Linha sem objeto" e "conteúdo de ZIP/RAR" deixam de alcançar quem
 usa o app enquanto não houver download. O passo 2 da configuração (CORS) já
 liberava só `PUT` e não muda.
+
+## Revisão de 2026-10-14 — a leitura volta, dentro da Conclusão
+
+Por decisão do usuário (plano
+`docs/plans/comment-history-and-attachments-in-edit.md`, Etapa 2), a leitura
+volta: a decisão 5 vale de novo como escrita acima, e a exceção da rota
+`GET /api/attachments/[id]` volta às seções 2, 3 e 7 do `stack.md`. O que
+muda em relação ao desenho de 2026-10-13:
+
+- A lista não é mais um card na coluna da direita: é o bloco "Anexos" dentro
+  da Conclusão de `/tickets/[id]`, em todos os estados e também durante a
+  edição, com os anexos em blocos numa linha só, que rola de lado dentro do
+  próprio bloco (a página nunca rola de lado).
+- O bloco mostra ícone, extensão, nome e tamanho; não mostra quem enviou nem
+  quando. `TicketAttachmentItem` fica só com `id`, `fileName` e `sizeBytes`, e
+  a consulta deixa de fazer `join` com `users`.
+- O texto do `404` passa ao domínio (`ATTACHMENT_NOT_FOUND_MESSAGE`).
+- A rota não usa o módulo auxiliar `attachment-intake`, então
+  `app/api/attachments/**` não entra em `ACTION_HELPER_IMPORTERS`.
+
+Os riscos "Linha sem objeto" e "conteúdo de ZIP/RAR" voltam a valer, assim
+como a URL assinada reaproveitável por 60 s por quem a recebeu. Contrato:
+`docs/contracts/ticket-attachments-list-and-download.md`.

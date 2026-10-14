@@ -128,3 +128,15 @@ export type AttachmentsIntake = AttachmentsStored | AttachmentRejected
 
 export interface TicketAttachmentFacts
   extends TicketVisibilityFacts, TicketEditabilityFacts {}
+
+export interface TicketAttachmentItem {
+  id: number
+  fileName: string
+  sizeBytes: number
+}
+
+export interface AttachmentDownloadTarget {
+  fileName: string
+  storageKey: string
+  ticket: TicketVisibilityFacts
+}

@@ -26,6 +26,14 @@ dois trazem uma revisão de 2026-10-13 apontando para cá.
 > card e os cenários AT3–AT6, AT16–AT18 e AT23 ficam como registro do desenho,
 > para quando a leitura voltar.
 
+> **Revisão de 2026-10-14 — leitura de volta.** A rota, as duas funções de
+> dados, `createAttachmentDownloadUrl` e os itens de domínio, tipos e
+> validação acima voltam, com a lista dentro da Conclusão em vez do card
+> `TicketAttachments`. `TicketAttachmentItem` perde `uploadedByName` e
+> `createdAt`; `AttachmentDownloadTarget` perde `id`. A referência passa a ser
+> `docs/contracts/ticket-attachments-list-and-download.md`; as seções de
+> download daqui valem só no que aquele contrato não muda.
+
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `@aws-sdk/client-s3@^3.1140`, Node 24.
 

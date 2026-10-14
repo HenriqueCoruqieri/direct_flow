@@ -9,7 +9,8 @@ Contratos técnicos:
 
 - Etapa 1 — `docs/contracts/comment-history.md` (escrito em 2026-10-14, Onda 0
   da Etapa 1).
-- Etapa 2 — a escrever na Onda 0 dela.
+- Etapa 2 — `docs/contracts/ticket-attachments-list-and-download.md`
+  (escrito em 2026-10-14, Onda 0 da Etapa 2).
 - Etapa 3 — a escrever na Onda 0 dela.
 
 | Etapa | Entrega                                                                       | Ondas (previstas)                                                                                           | Migration                            |
@@ -95,9 +96,18 @@ aprovados; `tsc`, `lint` e `build` verdes; `df-reviewer` sem bloqueante.
   `listTicketAttachments`, `findAttachmentForDownload`,
   `createAttachmentDownloadUrl`, `parseAttachmentIdParam`.
 - A exceção da rota volta à seção 3 do `.claude/rules/stack.md` (aprovada pelo
-  usuário; o orquestrador edita) e `app/api/attachments/**` volta ao
-  `ACTION_HELPER_IMPORTERS` do `eslint.config.mjs` (`df-architect`). Revisão no
-  ADR 018.
+  usuário; o orquestrador edita). Revisão no ADR 018.
+- **Ajustes da Onda 0 (2026-10-14):**
+  - `app/api/attachments/**` **não** volta ao `ACTION_HELPER_IMPORTERS` do
+    `eslint.config.mjs`: a rota não usa o módulo auxiliar `attachment-intake`.
+  - `TicketAttachmentItem` fica só com `id`, `fileName` e `sizeBytes` (o bloco
+    não mostra quem enviou nem quando); `AttachmentDownloadTarget` sem `id`.
+  - **Transição até a Etapa 3:** o uploader do formulário de resolver passa a
+    se chamar `Novos anexos` (`RESOLUTION_NEW_ATTACHMENTS_LABEL`, prop `title`
+    do `AttachmentUploader`) e fica entre o bloco Anexos e a barra de ações. A
+    Etapa 3 só apaga o uploader, a constante e `RESOLUTION_ATTACHMENTS_NOTICE`.
+  - No `resolved`, o bloco vem depois das legendas "Resolvido em" e "Editável
+    até".
 
 **Riscos.** Os riscos de download do ADR 018 voltam: URL assinada de 60 s
 reaproveitável dentro do prazo por quem a recebeu; ZIP/RAR sem inspeção
@@ -129,12 +139,33 @@ modo de edição do chamado.
   arquivo, nome do arquivo em `note`. Migration `ADD VALUE`, não destrutiva.
 - Sai "Anexar" do formulário de resolver. Saem `attachments` de
   `resolveTicketSchema`, `resolveTicket` e `updateTicketResolution`,
-  `TicketResolutionRefusal` e `RESOLUTION_ATTACHMENTS_NOTICE` (fechamento do
+  `TicketResolutionRefusal`, `RESOLUTION_ATTACHMENTS_NOTICE` e
+  `RESOLUTION_NEW_ATTACHMENTS_LABEL` (transição da Etapa 2) (fechamento do
   `df-architect` depois dos consumidores, para o `tsc` ficar verde a cada
   onda).
 - "Salvar alterações" bloqueado durante envio em curso ou com falha.
 - `no_changes` considera anexos: incluir ou remover anexo já é mudança.
 - O destinatário pode remover anexo de outra pessoa, inclusive os da criação.
+
+**Herdado da Etapa 2.**
+
+- **Bloco de anexo duplicado** (ATENÇÃO do `df-reviewer`, dono `df-ui`). O
+  miolo do bloco salvo (`ticket-attachment-tile.tsx:25-37`) repete o de
+  `attachment-upload-item.tsx:42-51`, e o vazio tracejado
+  (`ticket-attachment-list.tsx:22`) repete `attachment-uploader.tsx:142`.
+  Nesta etapa, quando salvos e novos se juntam no modo edição, a parte comum
+  vira uma peça só, no `_components/` do grupo `(app)`.
+- **Altura da Conclusão** (observação do `df-qa`). Quando a faixa de blocos é
+  baixa, o card da Conclusão estica até a altura da coluna da direita e sobra
+  espaço vazio abaixo da faixa. Avaliar junto do novo layout do bloco no modo
+  edição.
+
+**Fora do escopo (candidato a `/refactor`).** A montagem de
+`TicketActorFacts` a partir de `session.id` + `getAccountFacts()` se repete em
+`app/api/attachments/[id]/route.ts:60-67` e
+`app/(app)/tickets/[id]/page.tsx:79-86` (ATENÇÃO do `df-reviewer`). O helper
+puro seria do `df-architect` (`app/_lib/domain/`); depois `df-actions` e
+`df-ui` trocam os chamadores.
 
 **Riscos.**
 
