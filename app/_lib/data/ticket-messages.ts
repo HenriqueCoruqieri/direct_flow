@@ -19,7 +19,7 @@ import type {
   UpdateTicketMessageValues,
 } from "@/app/_lib/types/ticket-comments"
 import { db } from "@/db"
-import { department, message, ticket, user } from "@/db/schema"
+import { department, message, messageHistory, ticket, user } from "@/db/schema"
 
 export async function listTicketMessages(
   ticketId: number,
@@ -83,6 +83,15 @@ export async function insertTicketMessage(
       .insert(message)
       .values({ ticketId, userId: authorId, content, visibility })
       .returning({ id: message.id })
+
+    await tx.insert(messageHistory).values({
+      messageId: created.id,
+      ticketId,
+      actorId: authorId,
+      event: "criacao",
+      content,
+      visibility,
+    })
 
     return { status: "saved", ticketId, messageId: created.id }
   })
@@ -150,6 +159,16 @@ export async function updateTicketMessage(
       .set({ content, updatedAt: now })
       .where(eq(message.id, messageId))
 
+    await tx.insert(messageHistory).values({
+      messageId,
+      ticketId,
+      actorId: editorId,
+      event: "edicao",
+      content,
+      visibility: messageRow.visibility,
+      changedAt: now,
+    })
+
     return { status: "saved", ticketId, messageId }
   })
 }
@@ -183,7 +202,11 @@ export async function deleteTicketMessage(
     if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
 
     const [messageRow] = await tx
-      .select({ userId: message.userId, visibility: message.visibility })
+      .select({
+        userId: message.userId,
+        content: message.content,
+        visibility: message.visibility,
+      })
       .from(message)
       .where(and(eq(message.id, messageId), eq(message.ticketId, ticketId)))
       .for("update")
@@ -204,6 +227,16 @@ export async function deleteTicketMessage(
     if (!canDeleteTicketComment(actor, ticketRow, author, now)) {
       return { status: "not_deletable" }
     }
+
+    await tx.insert(messageHistory).values({
+      messageId,
+      ticketId,
+      actorId,
+      event: "exclusao",
+      content: messageRow.content,
+      visibility: messageRow.visibility,
+      changedAt: now,
+    })
 
     await tx
       .delete(message)

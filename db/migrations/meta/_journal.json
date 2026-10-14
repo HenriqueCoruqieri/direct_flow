@@ -92,6 +92,20 @@
       "when": 1791528252050,
       "tag": "0012_ticket_status_recusado",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792004535250,
+      "tag": "0013_message_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792004542744,
+      "tag": "0014_backfill_message_history",
+      "breakpoints": true
     }
   ]
 }

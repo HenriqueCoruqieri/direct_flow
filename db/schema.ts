@@ -83,6 +83,12 @@ export const messageVisibilityEnum = pgEnum("message_visibility", [
   "interna",
 ])
 
+export const messageHistoryEventEnum = pgEnum("message_history_event", [
+  "criacao",
+  "edicao",
+  "exclusao",
+])
+
 export const department = pgTable(
   "department",
   {
@@ -338,6 +344,31 @@ export const message = pgTable(
   ],
 )
 
+export const messageHistory = pgTable(
+  "message_history",
+  {
+    id: pk(),
+    messageId: integer("message_id").notNull(),
+    ticketId: integer("ticket_id")
+      .notNull()
+      .references(() => ticket.id, { onDelete: "cascade" }),
+    actorId: integer("actor_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    event: messageHistoryEventEnum("event").notNull(),
+    content: text("content").notNull(),
+    visibility: messageVisibilityEnum("visibility").notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("message_history_message_idx").on(table.messageId, table.changedAt),
+    index("message_history_ticket_idx").on(table.ticketId),
+    index("message_history_actor_idx").on(table.actorId),
+  ],
+)
+
 export const attachment = pgTable(
   "attachment",
   {
@@ -399,6 +430,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   }),
   historyChanges: many(ticketHistory, { relationName: "history_changed_by" }),
   messages: many(message),
+  messageHistoryActions: many(messageHistory),
   attachments: many(attachment),
   historyFromAssignee: many(ticketHistory, {
     relationName: "history_from_assignee",
@@ -443,6 +475,7 @@ export const ticketRelations = relations(ticket, ({ one, many }) => ({
   transfers: many(ticketTransfer),
   history: many(ticketHistory),
   messages: many(message),
+  messageHistory: many(messageHistory),
   attachments: many(attachment),
 }))
 
@@ -538,6 +571,17 @@ export const messageRelations = relations(message, ({ one, many }) => ({
   attachments: many(attachment),
 }))
 
+export const messageHistoryRelations = relations(messageHistory, ({ one }) => ({
+  ticket: one(ticket, {
+    fields: [messageHistory.ticketId],
+    references: [ticket.id],
+  }),
+  actor: one(user, {
+    fields: [messageHistory.actorId],
+    references: [user.id],
+  }),
+}))
+
 export const attachmentRelations = relations(attachment, ({ one }) => ({
   ticket: one(ticket, {
     fields: [attachment.ticketId],
@@ -569,6 +613,8 @@ export type TicketHistory = typeof ticketHistory.$inferSelect
 export type NewTicketHistory = typeof ticketHistory.$inferInsert
 export type Message = typeof message.$inferSelect
 export type NewMessage = typeof message.$inferInsert
+export type MessageHistory = typeof messageHistory.$inferSelect
+export type NewMessageHistory = typeof messageHistory.$inferInsert
 export type Attachment = typeof attachment.$inferSelect
 export type NewAttachment = typeof attachment.$inferInsert
 
@@ -580,3 +626,5 @@ export type ApprovalStatus = (typeof approvalStatusEnum.enumValues)[number]
 export type HistoryEvent = (typeof historyEventEnum.enumValues)[number]
 export type MessageVisibility =
   (typeof messageVisibilityEnum.enumValues)[number]
+export type MessageHistoryEvent =
+  (typeof messageHistoryEventEnum.enumValues)[number]
