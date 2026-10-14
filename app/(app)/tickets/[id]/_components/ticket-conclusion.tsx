@@ -3,19 +3,21 @@ import {
   buildResolveTicketFormDefaults,
   NO_SOLUTION_LABEL,
 } from "@/app/_lib/domain/ticket-resolution"
+import type { TicketAttachmentItem } from "@/app/_lib/types/attachment"
 import type { TicketConclusionState } from "@/app/_lib/types/ticket-resolution"
 import { cn } from "@/app/_lib/utils"
 
-import HiddenWhileEditing from "./hidden-while-editing"
 import LockedSolutionField from "./locked-solution-field"
 import ResolveTicketForm from "./resolve-ticket-form"
 import type { SendToDepartmentSetup } from "./send-to-department-dialog"
+import TicketAttachmentList from "./ticket-attachment-list"
 import TicketEditSolution from "./ticket-edit-solution"
 
 interface TicketConclusionProps {
   ticketId: number
   state: TicketConclusionState
   sendToDepartment: SendToDepartmentSetup | null
+  attachments: readonly TicketAttachmentItem[]
   editable?: boolean
   canAttach?: boolean
   className?: string
@@ -25,6 +27,7 @@ const TicketConclusion = ({
   ticketId,
   state,
   sendToDepartment,
+  attachments,
   editable = false,
   canAttach = false,
   className,
@@ -32,27 +35,23 @@ const TicketConclusion = ({
   const noSolution = (
     <p className="text-sm text-muted-foreground">{NO_SOLUTION_LABEL}</p>
   )
+  const attachmentList = <TicketAttachmentList attachments={attachments} />
 
   let body: React.ReactNode
 
   switch (state.state) {
-    case "resolvable": {
-      const resolveForm = (
+    case "resolvable":
+      body = (
         <ResolveTicketForm
           defaults={buildResolveTicketFormDefaults(ticketId)}
           sendToDepartment={sendToDepartment}
           canAttach={canAttach}
+          savedAttachments={attachmentList}
+          editable={editable}
+          editingReplacement={noSolution}
         />
       )
-      body = editable ? (
-        <HiddenWhileEditing replacement={noSolution}>
-          {resolveForm}
-        </HiddenWhileEditing>
-      ) : (
-        resolveForm
-      )
       break
-    }
     case "resolved": {
       const lockedSolution = (
         <LockedSolutionField
@@ -61,40 +60,56 @@ const TicketConclusion = ({
         />
       )
       body = (
-        <div className="flex flex-col gap-2">
-          {editable ? (
-            <TicketEditSolution>{lockedSolution}</TicketEditSolution>
-          ) : (
-            lockedSolution
-          )}
-          {state.resolvedAt !== null ? (
-            <p className="text-caption text-muted-foreground">
-              Resolvido em{" "}
-              <time dateTime={toISO(state.resolvedAt)} className="tabular-nums">
-                {formatDateTime(state.resolvedAt)}
-              </time>
-            </p>
-          ) : null}
-          {state.editableUntil !== null ? (
-            <p className="text-caption text-muted-foreground">
-              Editável até{" "}
-              <time
-                dateTime={toISO(state.editableUntil)}
-                className="tabular-nums"
-              >
-                {formatDateTime(state.editableUntil)}
-              </time>
-            </p>
-          ) : null}
-        </div>
+        <>
+          <div className="flex flex-col gap-2">
+            {editable ? (
+              <TicketEditSolution>{lockedSolution}</TicketEditSolution>
+            ) : (
+              lockedSolution
+            )}
+            {state.resolvedAt !== null ? (
+              <p className="text-caption text-muted-foreground">
+                Resolvido em{" "}
+                <time
+                  dateTime={toISO(state.resolvedAt)}
+                  className="tabular-nums"
+                >
+                  {formatDateTime(state.resolvedAt)}
+                </time>
+              </p>
+            ) : null}
+            {state.editableUntil !== null ? (
+              <p className="text-caption text-muted-foreground">
+                Editável até{" "}
+                <time
+                  dateTime={toISO(state.editableUntil)}
+                  className="tabular-nums"
+                >
+                  {formatDateTime(state.editableUntil)}
+                </time>
+              </p>
+            ) : null}
+          </div>
+          {attachmentList}
+        </>
       )
       break
     }
     case "awaiting_transfer":
-      body = <LockedSolutionField value={state.message} />
+      body = (
+        <>
+          <LockedSolutionField value={state.message} />
+          {attachmentList}
+        </>
+      )
       break
     case "empty":
-      body = noSolution
+      body = (
+        <>
+          {noSolution}
+          {attachmentList}
+        </>
+      )
       break
   }
 

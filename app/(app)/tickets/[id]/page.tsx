@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { requireSession } from "@/app/_lib/auth/session"
+import { listTicketAttachments } from "@/app/_lib/data/attachments"
 import { listDepartmentOptions } from "@/app/_lib/data/departments"
 import { listTicketAssigneeOptions } from "@/app/_lib/data/people"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
@@ -102,9 +103,10 @@ const TicketDetailPage = async ({
     declineTarget !== null
       ? { target: declineTarget, leaveHref: backLink.href }
       : null
-  const [messages, editTags, editAssignees, departmentOptions] =
+  const [messages, attachments, editTags, editAssignees, departmentOptions] =
     await Promise.all([
       listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
+      listTicketAttachments(ticket.id),
       isEditable ? listActiveDepartmentTags(facts.departmentId) : null,
       isEditable ? listTicketAssigneeOptions(facts.departmentId) : null,
       canSendToDepartment ? listDepartmentOptions() : null,
@@ -170,6 +172,7 @@ const TicketDetailPage = async ({
             ticketId={ticket.id}
             state={conclusion}
             sendToDepartment={sendToDepartment}
+            attachments={attachments}
             editable={editable}
             canAttach={canAttach}
             className="lg:flex-1"

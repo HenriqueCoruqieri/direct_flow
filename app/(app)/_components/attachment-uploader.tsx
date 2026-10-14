@@ -27,6 +27,7 @@ import AttachmentUploadItem from "./attachment-upload-item"
 interface AttachmentUploaderProps {
   onChange: (value: UploadedAttachmentRef[]) => void
   onBusyChange: (busy: AttachmentUploaderBusy) => void
+  title?: string
   disabled?: boolean
   notice?: string
   actions?: React.ReactNode
@@ -37,6 +38,7 @@ interface AttachmentUploaderProps {
 const AttachmentUploader = ({
   onChange,
   onBusyChange,
+  title = TICKET_ATTACHMENTS_LABEL,
   disabled,
   notice,
   actions,
@@ -103,7 +105,7 @@ const AttachmentUploader = ({
 
   const heading = (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <FieldTitle id={labelId}>{TICKET_ATTACHMENTS_LABEL}</FieldTitle>
+      <FieldTitle id={labelId}>{title}</FieldTitle>
       <p id={hintId} className="text-xs text-muted-foreground">
         {ATTACHMENT_LIMITS_HINT}
       </p>

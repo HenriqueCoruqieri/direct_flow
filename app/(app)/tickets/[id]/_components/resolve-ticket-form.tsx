@@ -9,7 +9,10 @@ import { toast } from "sonner"
 
 import { Button } from "@/app/_components/ui/button"
 import { resolveTicket } from "@/app/_lib/actions/ticket-resolution"
-import { RESOLUTION_ATTACHMENTS_NOTICE } from "@/app/_lib/domain/ticket-resolution"
+import {
+  RESOLUTION_ATTACHMENTS_NOTICE,
+  RESOLUTION_NEW_ATTACHMENTS_LABEL,
+} from "@/app/_lib/domain/ticket-resolution"
 import { SEND_TO_DEPARTMENT_LABEL } from "@/app/_lib/domain/ticket-transfer"
 import type { ResolveTicketFormDefaults } from "@/app/_lib/types/ticket-resolution"
 import { cn } from "@/app/_lib/utils"
@@ -23,6 +26,7 @@ import {
   type AttachmentUploaderBusy,
   attachmentUploadsBlockMessage,
 } from "../../../_hooks/use-attachment-uploads"
+import HiddenWhileEditing from "./hidden-while-editing"
 import SendToDepartmentDialog, {
   type SendToDepartmentSetup,
 } from "./send-to-department-dialog"
@@ -32,13 +36,20 @@ interface ResolveTicketFormProps {
   defaults: ResolveTicketFormDefaults
   sendToDepartment: SendToDepartmentSetup | null
   canAttach: boolean
+  savedAttachments: React.ReactNode
+  editable: boolean
+  editingReplacement: React.ReactNode
 }
 
 const ResolveTicketForm = ({
   defaults,
   sendToDepartment,
   canAttach,
+  savedAttachments,
+  editable,
+  editingReplacement,
 }: ResolveTicketFormProps) => {
+  const formId = useId()
   const solutionId = useId()
   const submitBlockId = useId()
   const router = useRouter()
@@ -115,6 +126,7 @@ const ResolveTicketForm = ({
       ) : null}
       <Button
         type="submit"
+        form={formId}
         disabled={isSubmitting}
         aria-busy={isSubmitting || undefined}
         aria-disabled={submitBlockMessage !== null || undefined}
@@ -142,52 +154,74 @@ const ResolveTicketForm = ({
     </>
   )
 
-  return (
-    <>
-      <form
-        noValidate
-        onSubmit={handleFormSubmit}
-        className="flex min-w-0 flex-col gap-4"
-      >
+  const hideWhileEditing = (
+    node: React.ReactNode,
+    replacement: React.ReactNode = null,
+  ) =>
+    editable ? (
+      <HiddenWhileEditing replacement={replacement}>{node}</HiddenWhileEditing>
+    ) : (
+      node
+    )
+
+  const solutionForm = (
+    <form
+      id={formId}
+      noValidate
+      onSubmit={handleFormSubmit}
+      className="flex min-w-0 flex-col gap-4"
+    >
+      <Controller
+        name="solution"
+        control={form.control}
+        render={({ field, fieldState }) => (
+          <TicketSolutionField
+            id={solutionId}
+            {...field}
+            fieldState={fieldState}
+          />
+        )}
+      />
+    </form>
+  )
+
+  const footer = (
+    <div className="flex min-w-0 flex-col gap-4">
+      {canAttach ? (
         <Controller
-          name="solution"
+          name="attachments"
           control={form.control}
+          shouldUnregister
           render={({ field, fieldState }) => (
-            <TicketSolutionField
-              id={solutionId}
-              {...field}
+            <AttachmentUploader
+              ref={field.ref}
+              onChange={field.onChange}
+              onBusyChange={setUploadsBusy}
+              title={RESOLUTION_NEW_ATTACHMENTS_LABEL}
+              disabled={isSubmitting}
+              notice={
+                sendToDepartment !== null
+                  ? RESOLUTION_ATTACHMENTS_NOTICE
+                  : undefined
+              }
+              actions={formActions}
               fieldState={fieldState}
             />
           )}
         />
+      ) : (
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border-subtle pt-4">
+          {formActions}
+        </div>
+      )}
+    </div>
+  )
 
-        {canAttach ? (
-          <Controller
-            name="attachments"
-            control={form.control}
-            shouldUnregister
-            render={({ field, fieldState }) => (
-              <AttachmentUploader
-                ref={field.ref}
-                onChange={field.onChange}
-                onBusyChange={setUploadsBusy}
-                disabled={isSubmitting}
-                notice={
-                  sendToDepartment !== null
-                    ? RESOLUTION_ATTACHMENTS_NOTICE
-                    : undefined
-                }
-                actions={formActions}
-                fieldState={fieldState}
-              />
-            )}
-          />
-        ) : (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border-subtle pt-4">
-            {formActions}
-          </div>
-        )}
-      </form>
+  return (
+    <>
+      {hideWhileEditing(solutionForm, editingReplacement)}
+      {savedAttachments}
+      {hideWhileEditing(footer)}
 
       {sendToDepartment !== null ? (
         <SendToDepartmentDialog
