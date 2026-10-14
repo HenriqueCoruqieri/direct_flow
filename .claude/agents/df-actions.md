@@ -18,6 +18,15 @@ Você **escreve** apenas `app/_lib/actions/**`, um arquivo por entidade
 topo, e `app/api/cron/**` — as rotas das tarefas agendadas pelo Vercel Cron
 (seção 3 do `stack.md`, ADR 014).
 
+**Exceção — módulo auxiliar compartilhado.** Quando duas actions precisam do
+mesmo passo de orquestração (ex.: verificar e copiar anexos enviados), ele vai
+para um arquivo próprio em `app/_lib/actions/` **sem** `"use server"` e com
+`import "server-only"` na primeira linha, para nunca virar endpoint público nem
+chegar ao bundle do cliente. Só arquivos de `app/_lib/actions/` o importam
+(garantido pelo ESLint, `ACTION_HELPER_IMPORTERS` em `eslint.config.mjs`). Ele segue as mesmas regras de camada de uma action (não
+escreve SQL, chama `app/_lib/data/` e `app/_lib/storage/`) e não autentica nem
+revalida: isso continua na action que o chama.
+
 Você **não** escreve SQL, componentes, schema, schemas Zod, regra de negócio
 pura nem template de e-mail. Você **compõe** essas peças.
 

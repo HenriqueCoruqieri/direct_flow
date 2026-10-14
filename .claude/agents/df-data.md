@@ -93,8 +93,8 @@ apague evento.
 ## Pacotes que você instala
 
 `npm install @aws-sdk/client-s3` e `npm install @aws-sdk/s3-request-presigner`
-(para `app/_lib/storage/**`; o segundo gera URL assinada de envio e de download
-de anexo, ADR 018). `drizzle-orm` e `pg` já estão instalados.
+(para `app/_lib/storage/**`; o segundo gera a URL assinada de envio de anexo,
+ADR 018). `drizzle-orm` e `pg` já estão instalados.
 
 ## Antes de encerrar
 
