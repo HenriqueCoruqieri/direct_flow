@@ -46,6 +46,13 @@
   --tipo-incidente: #b53636;
   --tipo-bug: #b03f8a;
 
+  --file-pdf: #b53636;
+  --file-spreadsheet: #217538;
+  --file-document: #2563c9;
+  --file-presentation: #c2410c;
+  --file-image: #7047c9;
+  --file-archive: #8f5205;
+
   --note-internal: #fff7ea;
   --note-internal-border: #e3c893;
   --note-internal-foreground: #4f3a16;
@@ -133,6 +140,13 @@
   --tipo-incidente: #f07a7a;
   --tipo-bug: #e58fc8;
 
+  --file-pdf: #f07a7a;
+  --file-spreadsheet: #86d993;
+  --file-document: #6aa8ff;
+  --file-presentation: #fb923c;
+  --file-image: #b79cff;
+  --file-archive: #f2b45a;
+
   --note-internal: #17140e;
   --note-internal-border: #4a3c22;
   --note-internal-foreground: #e4d6bc;
@@ -218,6 +232,13 @@
   --color-tipo-incidente: var(--tipo-incidente);
   --color-tipo-bug: var(--tipo-bug);
 
+  --color-file-pdf: var(--file-pdf);
+  --color-file-spreadsheet: var(--file-spreadsheet);
+  --color-file-document: var(--file-document);
+  --color-file-presentation: var(--file-presentation);
+  --color-file-image: var(--file-image);
+  --color-file-archive: var(--file-archive);
+
   --color-note-internal: var(--note-internal);
   --color-note-internal-border: var(--note-internal-border);
   --color-note-internal-foreground: var(--note-internal-foreground);
@@ -240,6 +261,8 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --radius-5xl: calc(var(--radius) * 3);
 
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 0.875rem;
   --text-caption: 0.8125rem;
   --text-caption--line-height: 1.125rem;
   --text-title: 1.375rem;
