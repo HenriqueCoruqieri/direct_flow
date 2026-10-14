@@ -105,8 +105,9 @@ As setas são de mão única. Em particular:
   `app/_lib/data/`, revalida e devolve. O SQL vive em `app/_lib/data/`.
 - **Arquivo só entra e sai por `app/_lib/storage/`.** É o único lugar que
   importa `@aws-sdk/client-s3` e `@aws-sdk/s3-request-presigner` e conhece
-  bucket, chave e credencial do R2 (ADR 010, ADR 018). Quem chama é a action;
-  UI não importa storage, nem em Server Component.
+  bucket, chave e credencial do R2 (ADR 010, ADR 018). Quem chama é a action —
+  ou a rota de download de anexo (seção 3), que tem a forma de uma action; UI
+  não importa storage, nem em Server Component.
   `app/_lib/storage/` não importa `app/_lib/data/`, `app/_lib/auth/` nem
   `app/_lib/email/`: grava e apaga arquivo, e a action decide o que fazer com a
   URL devolvida.
@@ -144,6 +145,11 @@ Exceções permitidas (as únicas, e cada uma tem dono):
   (`vercel.json`), protegidas por `CRON_SECRET` (`df-actions`, ADR 014). Seguem
   a forma de uma action: autenticam o chamador, chamam `app/_lib/data/` e
   revalidam; nunca escrevem SQL.
+- `app/api/attachments/[id]/route.ts` — download de anexo de chamado (`df-actions`,
+  ADR 018). `GET` que autentica a sessão, autoriza com `app/_lib/domain/`, lê
+  por `app/_lib/data/`, pede a `app/_lib/storage/` uma URL assinada de vida
+  curta e redireciona. Existe como rota porque o link precisa ser um `<a href>`
+  que confere a permissão no clique; não grava nada e nunca escreve SQL.
 
 Qualquer outra rota de API precisa de justificativa escrita em `docs/adr/`.
 
@@ -366,7 +372,7 @@ agentes podem **ler** qualquer arquivo.
 | `docs/test-reports/**`                                                                                                               | `df-qa`                                   |
 | `db/auth-schema.ts` (só `session`, `account`, `verification`), `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`    | `df-auth`                                 |
 | `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`, `app/_lib/storage/**`                                                               | `df-data`                                 |
-| `app/_lib/actions/**`, `app/api/cron/**`                                                                                             | `df-actions`                              |
+| `app/_lib/actions/**`, `app/api/cron/**`, `app/api/attachments/**`                                                                   | `df-actions`                              |
 | `app/_lib/email/**`, `emails/**`                                                                                                     | `df-email`                                |
 | `app/**` (exceto `app/(auth)/**`, `app/api/**` e `app/_lib/**`), incluindo `app/_components/**`, `app/_hooks/**` e `app/globals.css` | `df-ui`                                   |
 | `app/_lib/utils.ts`, `components.json`                                                                                               | `df-ui`                                   |

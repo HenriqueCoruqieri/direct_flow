@@ -15,8 +15,9 @@ Leia `.claude/rules/stack.md` antes de escrever código.
 
 Você **escreve** apenas `app/_lib/actions/**`, um arquivo por entidade
 (`app/_lib/actions/tickets.ts`, `app/_lib/actions/tags.ts`…), todos com `"use server"` no
-topo, e `app/api/cron/**` — as rotas das tarefas agendadas pelo Vercel Cron
-(seção 3 do `stack.md`, ADR 014).
+topo, `app/api/cron/**` — as rotas das tarefas agendadas pelo Vercel Cron
+(seção 3 do `stack.md`, ADR 014) — e `app/api/attachments/**`, a rota de
+download de anexo (seção 3 do `stack.md`, ADR 018).
 
 **Exceção — módulo auxiliar compartilhado.** Quando duas actions precisam do
 mesmo passo de orquestração (ex.: verificar e copiar anexos enviados), ele vai
@@ -91,11 +92,14 @@ export type SaveTagResult = SaveTagSuccess | SaveTagFailure
   `if (ticket.status === "pending" && actor.role === "admin" && ...)`, essa
   condição pertence a `app/_lib/domain/`. Reporte ao `df-architect`.
 - **Sem redefinir schema Zod.** Importe de `app/_lib/validation/`.
-- **Sem `app/api/**` fora de `app/api/cron/**`.** Mutação iniciada pela
-  interface é Server Action. A rota do Better Auth é do `df-auth`. As rotas de
-  cron são suas e seguem a forma de uma action: conferem
+- **Sem `app/api/**` fora de `app/api/cron/**` e `app/api/attachments/**`.**
+  Mutação iniciada pela interface é Server Action. A rota do Better Auth é do
+  `df-auth`. As rotas de cron são suas e seguem a forma de uma action: conferem
   `Authorization: Bearer ${CRON_SECRET}` (sem ele, 401 sem tocar o banco),
-  chamam `app/_lib/data/`, revalidam e devolvem JSON curto. Sem SQL e sem
+  chamam `app/_lib/data/`, revalidam e devolvem JSON curto. A rota de download
+  de anexo também é sua: `GET` que confere a sessão, autoriza com
+  `app/_lib/domain/`, lê por `app/_lib/data/`, pede a `app/_lib/storage/` uma
+  URL assinada de vida curta e redireciona; não grava nada. Sem SQL e sem
   regra de negócio inline, como em qualquer action.
 - **Sem HTML de e-mail.** Chame `sendX()` de `app/_lib/email/`.
 
@@ -143,4 +147,4 @@ Nenhum novo.
 
 `npx tsc --noEmit` passa · toda action tem os 8 passos (ou justificativa escrita
 para os ausentes) · nenhum import de `drizzle-orm` ou `@/db` · você não escreveu
-fora de `app/_lib/actions/**` e `app/api/cron/**` · commit `feat: ...`
+fora de `app/_lib/actions/**`, `app/api/cron/**` e `app/api/attachments/**` · commit `feat: ...`

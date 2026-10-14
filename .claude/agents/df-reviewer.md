@@ -48,8 +48,8 @@ grep -rnE "\"(date-fns|moment|luxon|js-joda)\"" package.json
 # TanStack Query sem ADR (seção 1)
 grep -rn "@tanstack/react-query" app
 
-# Rota de API indevida (seção 3) — só api/auth e api/cron são permitidas
-find app/api -name "route.ts" -not -path "*auth*" -not -path "*cron*"
+# Rota de API indevida (seção 3) — só api/auth, api/cron e api/attachments/[id] são permitidas
+find app/api -name "route.ts" -not -path "*auth*" -not -path "*cron*" -not -path "*api/attachments/\[id\]/*"
 
 # Escape de tipo
 grep -rnE ": any\b|as any|@ts-ignore|@ts-expect-error" app db
