@@ -26,6 +26,16 @@ dos fatos do chamado, com o mesmo comportamento.
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `react-hook-form@7.88`.
 
+> **Revisão de 2026-10-14 — anexo só no "Editar".** O uploader da Conclusão
+> sai e `resolveTicket` deixa de receber anexo
+> (`docs/contracts/attachments-in-edit.md`). `canAttachToTicket` continua e
+> passa a decidir quem inclui **e remove** anexos no modo edição;
+> `ATTACHMENT_ASSIGNEE_ONLY_MESSAGE` vira
+> `Só o destinatário do chamado pode incluir ou remover anexos.`. A recusa
+> `attachments_not_allowed` de `updateTicketResolution`, a checagem antes do
+> R2 de `resolveTicket` e os cenários AO1, AO2, AO7, AO8, AO11 e AO17 deixam
+> de valer.
+
 ## Regra em uma frase
 
 Anexar na Conclusão exige **poder editar o chamado** (ADR 017:

@@ -20,6 +20,8 @@ export const ATTACHMENT_MAX_BYTES = ATTACHMENT_MAX_MEGABYTES * 1024 * 1024
 
 export const ATTACHMENT_MAX_FILES = 5
 
+export const TICKET_ATTACHMENTS_MAX = 10
+
 export const ATTACHMENT_HEADER_BYTES = 4096
 
 export const ATTACHMENT_FILE_NAME_MAX_LENGTH = 255
@@ -336,6 +338,10 @@ export const ATTACHMENT_UPLOADS_FAILED_MESSAGE =
   "Remova os anexos com falha antes de continuar."
 
 export const ATTACHMENT_LIMITS_HINT = `Até ${ATTACHMENT_MAX_FILES} arquivos de até ${ATTACHMENT_MAX_MEGABYTES} MB cada.`
+
+export const TICKET_ATTACHMENTS_LIMITS_HINT = `Até ${TICKET_ATTACHMENTS_MAX} arquivos neste chamado, de até ${ATTACHMENT_MAX_MEGABYTES} MB cada.`
+
+export const TICKET_ATTACHMENTS_LIMIT_MESSAGE = `O chamado pode ter no máximo ${TICKET_ATTACHMENTS_MAX} anexos.`
 
 export const ATTACHMENT_NOT_FOUND_MESSAGE = "Anexo não encontrado."
 

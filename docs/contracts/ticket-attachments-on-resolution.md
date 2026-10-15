@@ -36,6 +36,15 @@ apontando para cá.
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `react-hook-form@7.88`.
 
+> **Revisão de 2026-10-14 — anexo sai da resolução.** Resolver não recebe nem
+> grava anexo; anexos entram e saem pelo "Editar"
+> (`docs/contracts/attachments-in-edit.md`). Ficam o módulo
+> `attachment-intake` (agora usado por `createTicket` e `editTicket`) e o
+> padrão de verificação, cópia e rollback. O uploader do formulário de
+> resolver, `RESOLUTION_ATTACHMENTS_NOTICE`, `resolveTicketSchema.attachments`
+> e `UpdateTicketResolutionValues.attachments` saem; os cenários AR1–AR13,
+> AR16, AR18 e AR19 deixam de valer.
+
 ## Escopo técnico em uma frase
 
 O formulário da Conclusão ganha o mesmo `AttachmentUploader` do "Novo

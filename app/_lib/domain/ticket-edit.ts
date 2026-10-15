@@ -113,6 +113,8 @@ export const buildTicketEditFormOptions = (
     type: ticket.type,
     tagId: preselectedTagId(ticket.tagId, tags),
     assigneeId: preselectedAssigneeId(ticket.assignedTo, assignees),
+    attachments: [],
+    removedAttachmentIds: [],
   }
 
   return {

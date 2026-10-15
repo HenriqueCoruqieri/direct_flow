@@ -11,6 +11,7 @@ import LockedSolutionField from "./locked-solution-field"
 import ResolveTicketForm from "./resolve-ticket-form"
 import type { SendToDepartmentSetup } from "./send-to-department-dialog"
 import TicketAttachmentList from "./ticket-attachment-list"
+import TicketEditAttachments from "./ticket-edit-attachments"
 import TicketEditSolution from "./ticket-edit-solution"
 
 interface TicketConclusionProps {
@@ -35,7 +36,12 @@ const TicketConclusion = ({
   const noSolution = (
     <p className="text-sm text-muted-foreground">{NO_SOLUTION_LABEL}</p>
   )
-  const attachmentList = <TicketAttachmentList attachments={attachments} />
+  const attachmentsBlock =
+    editable && canAttach ? (
+      <TicketEditAttachments attachments={attachments} />
+    ) : (
+      <TicketAttachmentList attachments={attachments} />
+    )
 
   let body: React.ReactNode
 
@@ -45,8 +51,7 @@ const TicketConclusion = ({
         <ResolveTicketForm
           defaults={buildResolveTicketFormDefaults(ticketId)}
           sendToDepartment={sendToDepartment}
-          canAttach={canAttach}
-          savedAttachments={attachmentList}
+          savedAttachments={attachmentsBlock}
           editable={editable}
           editingReplacement={noSolution}
         />
@@ -90,7 +95,7 @@ const TicketConclusion = ({
               </p>
             ) : null}
           </div>
-          {attachmentList}
+          {attachmentsBlock}
         </>
       )
       break
@@ -99,7 +104,7 @@ const TicketConclusion = ({
       body = (
         <>
           <LockedSolutionField value={state.message} />
-          {attachmentList}
+          {attachmentsBlock}
         </>
       )
       break
@@ -107,7 +112,7 @@ const TicketConclusion = ({
       body = (
         <>
           {noSolution}
-          {attachmentList}
+          {attachmentsBlock}
         </>
       )
       break

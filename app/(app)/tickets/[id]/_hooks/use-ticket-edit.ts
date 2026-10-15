@@ -5,6 +5,8 @@ import type { TagOption } from "@/app/_lib/types/tag"
 import type { AssigneeOption } from "@/app/_lib/types/ticket"
 import type { EditTicketInput } from "@/app/_lib/validation/ticket"
 
+import type { AttachmentUploaderBusy } from "../../../_hooks/use-attachment-uploads"
+
 export interface TicketEditContextValue {
   form: UseFormReturn<EditTicketInput>
   tags: readonly TagOption[]
@@ -16,6 +18,8 @@ export interface TicketEditContextValue {
   includesSolution: boolean
   isEditing: boolean
   isSubmitting: boolean
+  saveBlockMessage: string | null
+  onUploadsBusyChange: (busy: AttachmentUploaderBusy) => void
   startEditing: () => void
   cancelEditing: () => void
   save: () => Promise<void>

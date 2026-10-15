@@ -135,6 +135,18 @@ export interface TicketAttachmentItem {
   sizeBytes: number
 }
 
+export interface TicketAttachmentEditCounts {
+  saved: number
+  removed: number
+  added: number
+}
+
+export interface TicketAttachmentEdit {
+  savedIds: readonly number[]
+  removedIds: readonly number[]
+  addedCount: number
+}
+
 export interface AttachmentDownloadTarget {
   fileName: string
   storageKey: string

@@ -1,3 +1,7 @@
+import type {
+  StoredAttachmentValues,
+  UploadedAttachmentRef,
+} from "@/app/_lib/types/attachment"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
   AssigneeOption,
@@ -93,20 +97,27 @@ export interface UpdateTicketByAssigneeValues extends TicketEditValues {
   ticketId: number
   editorId: number
   handoffComment?: string
+  addedAttachments?: readonly StoredAttachmentValues[]
+  removedAttachmentIds?: readonly number[]
 }
 
 export interface TicketEditSaved {
   status: "saved"
   ticketId: number
   tagChanged: boolean
+  removedStorageKeys?: string[]
 }
 
 export interface TicketNotFound {
   status: "not_found"
 }
 
+export type TicketEditRefusal =
+  "attachments_not_allowed" | "attachment_not_found" | "attachments_limit"
+
 export interface TicketNotEditable {
   status: "not_editable"
+  reason?: TicketEditRefusal
 }
 
 export interface TicketNoChanges {
@@ -134,6 +145,8 @@ export interface EditTicketFormDefaults {
   tagId?: number
   assigneeId?: number | null
   solution?: string
+  attachments: UploadedAttachmentRef[]
+  removedAttachmentIds: number[]
 }
 
 export interface TicketEditFormOptions {

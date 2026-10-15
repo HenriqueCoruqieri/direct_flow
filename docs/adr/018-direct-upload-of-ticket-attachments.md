@@ -243,3 +243,29 @@ muda em relação ao desenho de 2026-10-13:
 Os riscos "Linha sem objeto" e "conteúdo de ZIP/RAR" voltam a valer, assim
 como a URL assinada reaproveitável por 60 s por quem a recebeu. Contrato:
 `docs/contracts/ticket-attachments-list-and-download.md`.
+
+## Revisão de 2026-10-14 — anexar e remover só no "Editar"
+
+Por decisão do usuário (mesmo plano, Etapa 3), o anexo deixa de entrar pela
+resolução e passa a entrar e sair pelo modo de edição do chamado. Contrato:
+`docs/contracts/attachments-in-edit.md`.
+
+- **Onde a decisão 3 vale.** A action que grava passa a ser a da criação e a da
+  edição (`editTicket`); `resolveTicket` não recebe mais anexo. Verificação,
+  cópia, rollback das cópias e limpeza de `pending/` não mudam.
+- **Remoção pela interface** (substitui a consequência "o anexo é permanente
+  depois de enviado"). O destinatário remove anexos salvos no "Editar",
+  inclusive de outra pessoa. A linha de `attachment` sai na transação do
+  salvamento; o objeto em `tickets/` é apagado **depois** do commit, por
+  melhor esforço. Falha ali deixa órfão em `tickets/`, só com log — o mesmo
+  risco de "Órfão de cópia", agora também por remoção. Na ordem inversa
+  (apagar o objeto antes do commit), uma transação recusada deixaria linha
+  sem objeto, que alcança quem baixa; o órfão não alcança ninguém.
+- **Teto por chamado.** Além de 5 por envio na criação, o chamado tem no
+  máximo 10 anexos (salvos − removidos + novos), conferido na action antes
+  da cópia e de novo na transação, sob a trava do chamado. Só incluir é
+  limitado; remover nunca é recusado pelo teto.
+- **Linha do tempo.** Incluir e remover viram linhas `anexo_incluido` e
+  `anexo_removido` em `ticket_history`, uma por arquivo, com o nome em `note`
+  (migration `0015_history_event_attachments.sql`, `ADD VALUE`). Até aqui,
+  anexo não gerava linha de histórico.

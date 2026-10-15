@@ -22,6 +22,8 @@ export const HISTORY_EVENT_LABELS = {
   mudanca_tag: "Mudança de tag",
   edicao: "Edição",
   resolucao: "Resolução",
+  anexo_incluido: "Anexo incluído",
+  anexo_removido: "Anexo removido",
 } satisfies Record<HistoryEvent, string>
 
 export const SYSTEM_ACTOR_LABEL = "Sistema"
@@ -149,6 +151,8 @@ const HISTORY_EVENT_DESCRIBERS = {
     }),
   edicao: () => "Editou o chamado.",
   resolucao: () => "Resolveu o chamado.",
+  anexo_incluido: () => "Incluiu um anexo.",
+  anexo_removido: () => "Removeu um anexo.",
 } satisfies Record<HistoryEvent, HistoryEntryDescriber>
 
 export const describeHistoryEntry = (entry: TicketHistoryEntry): string =>
@@ -167,6 +171,8 @@ const HISTORY_EVENT_NAMES_ACTOR = {
   mudanca_tag: false,
   edicao: false,
   resolucao: false,
+  anexo_incluido: false,
+  anexo_removido: false,
 } satisfies Record<HistoryEvent, boolean>
 
 export const historyEntryNamesActor = (

@@ -11,7 +11,11 @@ import {
   TICKET_SOLUTION_MAX_LENGTH,
   TICKET_SOLUTION_MIN_LENGTH,
 } from "@/app/_lib/domain/ticket-resolution"
-import { uploadedAttachmentsSchema } from "@/app/_lib/validation/attachment"
+import {
+  removedAttachmentIdsSchema,
+  ticketAttachmentsToAddSchema,
+  uploadedAttachmentsSchema,
+} from "@/app/_lib/validation/attachment"
 import { handoffCommentSchema } from "@/app/_lib/validation/comment-text"
 import { registryIdSchema } from "@/app/_lib/validation/registry"
 import {
@@ -94,6 +98,8 @@ export const editTicketSchema = ticketFieldsSchema.extend({
   ticketId: ticketIdSchema,
   solution: ticketSolutionSchema.optional(),
   handoffComment: handoffCommentSchema.optional(),
+  attachments: ticketAttachmentsToAddSchema.optional(),
+  removedAttachmentIds: removedAttachmentIdsSchema.optional(),
 })
 
 export type EditTicketInput = z.infer<typeof editTicketSchema>

@@ -146,6 +146,13 @@ export const discardPendingAttachments = async (
   )
 }
 
+export const discardRemovedAttachments = async (
+  storageKeys: readonly string[],
+  logScope: string,
+): Promise<void> => {
+  await deleteAttachmentObjectsQuietly(storageKeys, `${logScope} remove`)
+}
+
 export const storePendingAttachments = async (
   refs: readonly UploadedAttachmentInput[],
   userId: number,

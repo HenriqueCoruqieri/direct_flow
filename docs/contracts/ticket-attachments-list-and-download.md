@@ -18,6 +18,14 @@ Ondas: `df-architect` (feito) → `df-data` → `df-actions` ‖ `df-ui` →
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `@aws-sdk/client-s3@^3.1140`, `lucide-react@1.47.0`, Tailwind v4.
 
+> **Revisão de 2026-10-14 — fim da transição.** Na Etapa 3
+> (`docs/contracts/attachments-in-edit.md`) o bloco ganha modo edição
+> (`Anexar` e X, só para o destinatário depois de "Editar") e o uploader
+> `Novos anexos` do formulário de resolver sai, com
+> `RESOLUTION_NEW_ATTACHMENTS_LABEL`. Fora da edição, tudo o que está aqui
+> continua valendo. Os cenários LA2, LA8 e LA10 (que anexam pelo formulário
+> de resolver) deixam de valer.
+
 ## O que não muda
 
 | Camada                                                                         | Mudança                                                                                                                         |

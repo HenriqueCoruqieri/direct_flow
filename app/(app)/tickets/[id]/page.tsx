@@ -195,7 +195,12 @@ const TicketDetailPage = async ({
     <>
       <AppTopBar />
       {editOptions !== null ? (
-        <TicketEditProvider options={editOptions}>{content}</TicketEditProvider>
+        <TicketEditProvider
+          options={editOptions}
+          savedAttachmentCount={attachments.length}
+        >
+          {content}
+        </TicketEditProvider>
       ) : (
         content
       )}

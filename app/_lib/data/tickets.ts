@@ -21,7 +21,10 @@ import {
   ticketAttendBlockFor,
   ticketSendBlockFor,
 } from "@/app/_lib/domain/ticket-assignment"
-import { canAttachToTicket } from "@/app/_lib/domain/ticket-attachment"
+import {
+  hasTicketAttachmentChanges,
+  ticketAttachmentEditRefusalFor,
+} from "@/app/_lib/domain/ticket-attachment"
 import { AUTO_CLOSE_NOTE } from "@/app/_lib/domain/ticket-closure"
 import {
   canEditSolution,
@@ -354,24 +357,59 @@ export async function updateTicketByAssignee(
       )
       .limit(1)
 
-    if (
-      !canEditTicket(
-        editor,
-        {
-          assignedTo: ticketRow.assignedTo,
-          currentDepartmentId: ticketRow.currentDepartmentId,
-          status: ticketRow.status,
-          resolvedAt: ticketRow.resolvedAt,
-          hasPendingTransfer: pendingTransfer !== undefined,
-        },
-        now,
-      )
-    ) {
+    const editabilityFacts = {
+      assignedTo: ticketRow.assignedTo,
+      currentDepartmentId: ticketRow.currentDepartmentId,
+      status: ticketRow.status,
+      resolvedAt: ticketRow.resolvedAt,
+      hasPendingTransfer: pendingTransfer !== undefined,
+    }
+
+    if (!canEditTicket(editor, editabilityFacts, now)) {
       return { status: "not_editable" }
     }
 
     if (values.solution !== undefined && !canEditSolution(ticketRow.status)) {
       return { status: "not_editable" }
+    }
+
+    const added = values.addedAttachments ?? []
+    const removedIds = [...new Set(values.removedAttachmentIds ?? [])]
+
+    const savedAttachments =
+      added.length > 0 || removedIds.length > 0
+        ? await tx
+            .select({
+              id: attachment.id,
+              fileName: attachment.fileName,
+              storageKey: attachment.storageKey,
+            })
+            .from(attachment)
+            .where(
+              and(
+                eq(attachment.ticketId, ticketId),
+                isNull(attachment.messageId),
+              ),
+            )
+            .orderBy(asc(attachment.createdAt), asc(attachment.id))
+            .for("update")
+        : []
+
+    if (added.length > 0 || removedIds.length > 0) {
+      const refusal = ticketAttachmentEditRefusalFor(
+        editor,
+        editabilityFacts,
+        {
+          savedIds: savedAttachments.map(({ id }) => id),
+          removedIds,
+          addedCount: added.length,
+        },
+        now,
+      )
+
+      if (refusal !== null) {
+        return { status: "not_editable", reason: refusal }
+      }
     }
 
     const [currentTagRow] = await tx
@@ -419,7 +457,16 @@ export async function updateTicketByAssignee(
       values,
     )
 
-    if (!hasTicketEditChanges(changes)) return { status: "no_changes" }
+    if (
+      !hasTicketEditChanges(changes) &&
+      !hasTicketAttachmentChanges({
+        saved: savedAttachments.length,
+        removed: removedIds.length,
+        added: added.length,
+      })
+    ) {
+      return { status: "no_changes" }
+    }
 
     const handoffComment = requiresHandoffComment(changes)
       ? (values.handoffComment ?? null)
@@ -477,16 +524,52 @@ export async function updateTicketByAssignee(
       }
     }
 
-    await tx.insert(ticketHistory).values({
-      ticketId,
-      changedBy: editorId,
-      event: "edicao",
-      note: describeTicketEditNote(changes),
-      changedAt,
-    })
+    let removedStorageKeys: string[] = []
+
+    if (removedIds.length > 0) {
+      const deleted = await tx
+        .delete(attachment)
+        .where(
+          and(
+            eq(attachment.ticketId, ticketId),
+            isNull(attachment.messageId),
+            inArray(attachment.id, removedIds),
+          ),
+        )
+        .returning({ storageKey: attachment.storageKey })
+
+      removedStorageKeys = deleted.map(({ storageKey }) => storageKey)
+    }
+
+    if (added.length > 0) {
+      await tx.insert(attachment).values(
+        added.map((item) => ({
+          ticketId,
+          messageId: null,
+          uploadedBy: editorId,
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          sizeBytes: item.sizeBytes,
+          storageKey: item.storageKey,
+          createdAt: changedAt,
+        })),
+      )
+    }
+
+    const historyRows: (typeof ticketHistory.$inferInsert)[] = []
+
+    if (hasTicketEditChanges(changes)) {
+      historyRows.push({
+        ticketId,
+        changedBy: editorId,
+        event: "edicao",
+        note: describeTicketEditNote(changes),
+        changedAt,
+      })
+    }
 
     if (changes.tag) {
-      await tx.insert(ticketHistory).values({
+      historyRows.push({
         ticketId,
         changedBy: editorId,
         event: "mudanca_tag",
@@ -496,8 +579,30 @@ export async function updateTicketByAssignee(
       })
     }
 
+    for (const removed of savedAttachments.filter(({ id }) =>
+      removedIds.includes(id),
+    )) {
+      historyRows.push({
+        ticketId,
+        changedBy: editorId,
+        event: "anexo_removido",
+        note: removed.fileName,
+        changedAt,
+      })
+    }
+
+    for (const item of added) {
+      historyRows.push({
+        ticketId,
+        changedBy: editorId,
+        event: "anexo_incluido",
+        note: item.fileName,
+        changedAt,
+      })
+    }
+
     if (changes.assignee) {
-      await tx.insert(ticketHistory).values({
+      historyRows.push({
         ticketId,
         changedBy: editorId,
         event: "atribuicao",
@@ -511,7 +616,7 @@ export async function updateTicketByAssignee(
     }
 
     if (nextStatus !== ticketRow.status) {
-      await tx.insert(ticketHistory).values({
+      historyRows.push({
         ticketId,
         changedBy: editorId,
         event: "mudanca_status",
@@ -521,7 +626,14 @@ export async function updateTicketByAssignee(
       })
     }
 
-    return { status: "saved", ticketId, tagChanged: changes.tag !== null }
+    await tx.insert(ticketHistory).values(historyRows)
+
+    return {
+      status: "saved",
+      ticketId,
+      tagChanged: changes.tag !== null,
+      removedStorageKeys,
+    }
   })
 }
 
@@ -604,19 +716,6 @@ export async function updateTicketResolution(
       return { status: "not_resolvable" }
     }
 
-    const attachments = values.attachments ?? []
-
-    if (
-      attachments.length > 0 &&
-      !canAttachToTicket(
-        resolver,
-        { ...ticketRow, hasPendingTransfer: pendingTransfer !== undefined },
-        changedAt,
-      )
-    ) {
-      return { status: "not_resolvable", reason: "attachments_not_allowed" }
-    }
-
     const assigneeId = resolutionAssigneeFor(resolver, ticketRow)
     const assigneeChanged = assigneeId !== ticketRow.assignedTo
 
@@ -650,21 +749,6 @@ export async function updateTicketResolution(
       toStatus: RESOLVED_TICKET_STATUS,
       changedAt,
     })
-
-    if (attachments.length > 0) {
-      await tx.insert(attachment).values(
-        attachments.map((item) => ({
-          ticketId,
-          messageId: null,
-          uploadedBy: resolverId,
-          fileName: item.fileName,
-          mimeType: item.mimeType,
-          sizeBytes: item.sizeBytes,
-          storageKey: item.storageKey,
-          createdAt: changedAt,
-        })),
-      )
-    }
 
     return { status: "saved", ticketId }
   })

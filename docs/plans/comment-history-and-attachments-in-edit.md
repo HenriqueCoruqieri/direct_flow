@@ -11,7 +11,8 @@ Contratos técnicos:
   da Etapa 1).
 - Etapa 2 — `docs/contracts/ticket-attachments-list-and-download.md`
   (escrito em 2026-10-14, Onda 0 da Etapa 2).
-- Etapa 3 — a escrever na Onda 0 dela.
+- Etapa 3 — `docs/contracts/attachments-in-edit.md` (escrito em 2026-10-14,
+  Onda 0 da Etapa 3).
 
 | Etapa | Entrega                                                                       | Ondas (previstas)                                                                                           | Migration                            |
 | ----- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------ |
@@ -146,6 +147,32 @@ modo de edição do chamado.
 - "Salvar alterações" bloqueado durante envio em curso ou com falha.
 - `no_changes` considera anexos: incluir ou remover anexo já é mudança.
 - O destinatário pode remover anexo de outra pessoa, inclusive os da criação.
+- **Ajustes da Onda 0 (2026-10-14):**
+  - Entrada: `editTicketSchema` ganha `attachments` (refs `pending/` novas, máx. 10) e `removedAttachmentIds` (máx. 10, sem repetição), os dois opcionais.
+  - Teto, "é do chamado" e quem anexa numa decisão pura só,
+    `ticketAttachmentEditRefusalFor`, usada pela action (antes do R2, só com
+    arquivo novo) e pela transação (sob trava, contagem por `select … for
+update`). Só incluir é limitado: salvar só remoções nunca bate no teto.
+  - Recusas de anexo como `reason` de `not_editable` (mesmo motivo de
+    `TicketNotResolvable.reason`: `tsc` verde entre ondas). Códigos novos na
+    action: `INVALID_ATTACHMENT`, `ATTACHMENT_NOT_FOUND`, `ATTACHMENTS_LIMIT`;
+    a de quem anexa continua `FORBIDDEN`, com o texto
+    `Só o destinatário do chamado pode incluir ou remover anexos.`
+  - Histórico, na ordem dos `id`: `edicao` (só com campo alterado) →
+    `mudanca_tag` → `anexo_removido` → `anexo_incluido` → `atribuicao` →
+    `mudanca_status`. Salvar só anexos não grava `edicao`.
+  - O uploader do modo edição só fica montado durante a edição: "Cancelar"
+    desmonta e descarta. Sem vaga, `Anexar` fica com `aria-disabled` e avisa
+    o teto.
+  - `findTicketAttachmentFacts` e `listTicketAttachments` **ficam**: servem à
+    checagem antes do R2 da edição.
+  - Altura da Conclusão: mantém o alinhamento com Comentários; no
+    `resolvable` a barra de ações vai para o rodapé do card.
+  - Fechamento do `df-architect` (Onda 3): sai o que a resolução usava para
+    anexos (`resolveTicketSchema.attachments`,
+    `UpdateTicketResolutionValues.attachments`, `TicketResolutionRefusal`,
+    `ResolveTicketFormDefaults.attachments`, `RESOLUTION_ATTACHMENTS_NOTICE`,
+    `RESOLUTION_NEW_ATTACHMENTS_LABEL`).
 
 **Herdado da Etapa 2.**
 

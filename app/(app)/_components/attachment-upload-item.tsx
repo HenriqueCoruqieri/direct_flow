@@ -9,13 +9,12 @@ import { Button } from "@/app/_components/ui/button"
 import {
   ATTACHMENT_UPLOAD_STATUS_LABELS,
   describeAttachmentUploadStatus,
-  formatAttachmentSize,
   removeAttachmentLabel,
 } from "@/app/_lib/domain/attachment"
 import type { AttachmentUploadStatus } from "@/app/_lib/types/attachment"
 import { cn } from "@/app/_lib/utils"
 
-import AttachmentKindIcon from "./attachment-kind-icon"
+import AttachmentTileBody from "./attachment-tile-body"
 
 interface AttachmentUploadItemProps {
   fileName: string
@@ -24,6 +23,7 @@ interface AttachmentUploadItemProps {
   error: string | null
   disabled?: boolean
   onRemove: () => void
+  className?: string
 }
 
 const STATUS_ICON_CLASS = "size-3.5 shrink-0"
@@ -35,20 +35,12 @@ const AttachmentUploadItem = ({
   error,
   disabled,
   onRemove,
+  className,
 }: AttachmentUploadItemProps) => {
   return (
-    <li className="min-w-0">
+    <li className={cn("min-w-0", className)}>
       <div className="relative flex h-full min-w-0 flex-col items-center gap-1 rounded-lg bg-surface-muted px-2 pt-3 pb-2.5 text-center">
-        <AttachmentKindIcon fileName={fileName} />
-        <span
-          title={fileName}
-          className="line-clamp-2 w-full text-xs font-medium wrap-anywhere"
-        >
-          {fileName}
-        </span>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {formatAttachmentSize(sizeBytes)}
-        </span>
+        <AttachmentTileBody fileName={fileName} sizeBytes={sizeBytes} />
         <p
           className={cn(
             "flex max-w-full items-center justify-center gap-1 text-xs",

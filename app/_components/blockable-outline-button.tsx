@@ -3,7 +3,7 @@ import { cn } from "@/app/_lib/utils"
 
 interface BlockableOutlineButtonProps extends Omit<
   React.ComponentProps<typeof Button>,
-  "variant" | "asChild" | "disabled" | "aria-disabled"
+  "variant" | "asChild" | "aria-disabled"
 > {
   blocked?: boolean
 }

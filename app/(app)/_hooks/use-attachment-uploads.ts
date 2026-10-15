@@ -42,6 +42,8 @@ export interface AttachmentUploadEntry {
 interface UseAttachmentUploadsOptions {
   onChange: (value: UploadedAttachmentRef[]) => void
   onBusyChange: (busy: AttachmentUploaderBusy) => void
+  maxFiles?: number
+  tooManyMessage?: string
 }
 
 export interface AttachmentUploadsControls {
@@ -93,6 +95,8 @@ const rejectionOf = async (file: File): Promise<string | null> => {
 export const useAttachmentUploads = ({
   onChange,
   onBusyChange,
+  maxFiles = ATTACHMENT_MAX_FILES,
+  tooManyMessage = ATTACHMENT_TOO_MANY_MESSAGE,
 }: UseAttachmentUploadsOptions): AttachmentUploadsControls => {
   const tooManyToastId = useId()
   const [items, setItems] = useState<AttachmentUploadEntry[]>([])
@@ -183,7 +187,7 @@ export const useAttachmentUploads = ({
     void upload(id, file, controller.signal)
   }
 
-  const hasRoom = () => itemsRef.current.length < ATTACHMENT_MAX_FILES
+  const hasRoom = () => itemsRef.current.length < maxFiles
 
   const addFiles = async (files: readonly File[]) => {
     let refusedForLimit = false
@@ -211,7 +215,7 @@ export const useAttachmentUploads = ({
     }
 
     if (refusedForLimit) {
-      toast.error(ATTACHMENT_TOO_MANY_MESSAGE, { id: tooManyToastId })
+      toast.error(tooManyMessage, { id: tooManyToastId })
     }
   }
 

@@ -14,8 +14,14 @@ import {
   attachmentExtensionOf,
   isSafeAttachmentFileName,
   parsePendingAttachmentKey,
+  TICKET_ATTACHMENTS_LIMIT_MESSAGE,
+  TICKET_ATTACHMENTS_MAX,
 } from "@/app/_lib/domain/attachment"
-import { idSearchParamSchema } from "@/app/_lib/validation/search-params"
+import { registryIdSchema } from "@/app/_lib/validation/registry"
+import {
+  idSearchParamSchema,
+  POSTGRES_INTEGER_MAX,
+} from "@/app/_lib/validation/search-params"
 
 export const attachmentFileNameSchema = z
   .string({ error: ATTACHMENT_INVALID_FILE_NAME_MESSAGE })
@@ -64,20 +70,42 @@ export const uploadedAttachmentSchema = z
 
 export type UploadedAttachmentInput = z.infer<typeof uploadedAttachmentSchema>
 
-export const uploadedAttachmentsSchema = z
-  .array(uploadedAttachmentSchema, {
-    error: ATTACHMENT_INVALID_REFERENCE_MESSAGE,
-  })
-  .max(ATTACHMENT_MAX_FILES, { error: ATTACHMENT_TOO_MANY_MESSAGE })
-  .refine(
-    (attachments) =>
-      new Set(attachments.map(({ key }) => key)).size === attachments.length,
-    { error: ATTACHMENT_DUPLICATE_MESSAGE },
-  )
+const uploadedAttachmentListSchema = (max: number, tooManyMessage: string) =>
+  z
+    .array(uploadedAttachmentSchema, {
+      error: ATTACHMENT_INVALID_REFERENCE_MESSAGE,
+    })
+    .max(max, { error: tooManyMessage })
+    .refine(
+      (attachments) =>
+        new Set(attachments.map(({ key }) => key)).size === attachments.length,
+      { error: ATTACHMENT_DUPLICATE_MESSAGE },
+    )
+
+export const uploadedAttachmentsSchema = uploadedAttachmentListSchema(
+  ATTACHMENT_MAX_FILES,
+  ATTACHMENT_TOO_MANY_MESSAGE,
+)
 
 export type UploadedAttachmentsInput = z.infer<typeof uploadedAttachmentsSchema>
 
+export const ticketAttachmentsToAddSchema = uploadedAttachmentListSchema(
+  TICKET_ATTACHMENTS_MAX,
+  TICKET_ATTACHMENTS_LIMIT_MESSAGE,
+)
+
 const INVALID_ATTACHMENT_MESSAGE = "Anexo inválido."
+
+export const attachmentIdSchema = registryIdSchema(
+  INVALID_ATTACHMENT_MESSAGE,
+).max(POSTGRES_INTEGER_MAX, { error: INVALID_ATTACHMENT_MESSAGE })
+
+export const removedAttachmentIdsSchema = z
+  .array(attachmentIdSchema, { error: INVALID_ATTACHMENT_MESSAGE })
+  .max(TICKET_ATTACHMENTS_MAX, { error: INVALID_ATTACHMENT_MESSAGE })
+  .refine((ids) => new Set(ids).size === ids.length, {
+    error: INVALID_ATTACHMENT_MESSAGE,
+  })
 
 export const attachmentIdParamSchema = idSearchParamSchema(
   INVALID_ATTACHMENT_MESSAGE,
