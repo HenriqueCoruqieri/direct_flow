@@ -178,3 +178,51 @@ const HISTORY_EVENT_NAMES_ACTOR = {
 export const historyEntryNamesActor = (
   entry: Pick<TicketHistoryEntry, "event">,
 ): boolean => HISTORY_EVENT_NAMES_ACTOR[entry.event]
+
+export const HISTORY_EVENT_SUMMARY_RANK = {
+  criacao: 100,
+  edicao: 90,
+  resolucao: 80,
+  transferencia_solicitada: 70,
+  transferencia_aprovada: 70,
+  transferencia_rejeitada: 70,
+  reabertura: 70,
+  encerramento: 70,
+  atribuicao: 50,
+  mudanca_prioridade: 20,
+  mudanca_tag: 10,
+  mudanca_status: 10,
+  anexo_incluido: 10,
+  anexo_removido: 10,
+} satisfies Record<HistoryEvent, number>
+
+const historyActionKey = (
+  entry: Pick<TicketHistoryEntry, "changedAt" | "changedById">,
+): string => `${entry.changedAt.getTime()}:${entry.changedById ?? "system"}`
+
+const outranks = (
+  candidate: Pick<TicketHistoryEntry, "event" | "id">,
+  current: Pick<TicketHistoryEntry, "event" | "id">,
+): boolean => {
+  const candidateRank = HISTORY_EVENT_SUMMARY_RANK[candidate.event]
+  const currentRank = HISTORY_EVENT_SUMMARY_RANK[current.event]
+  if (candidateRank !== currentRank) return candidateRank > currentRank
+  return candidate.id < current.id
+}
+
+export const summarizeTicketTimeline = (
+  entries: readonly TicketHistoryEntry[],
+): TicketHistoryEntry[] => {
+  const keptByAction = new Map<string, TicketHistoryEntry>()
+
+  for (const entry of entries) {
+    const key = historyActionKey(entry)
+    const current = keptByAction.get(key)
+    if (current === undefined || outranks(entry, current)) {
+      keptByAction.set(key, entry)
+    }
+  }
+
+  const kept = new Set(keptByAction.values())
+  return entries.filter((entry) => kept.has(entry))
+}

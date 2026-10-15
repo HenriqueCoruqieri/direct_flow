@@ -4,6 +4,7 @@ import {
   describeHistoryEntry,
   HISTORY_EVENT_LABELS,
   historyEntryNamesActor,
+  summarizeTicketTimeline,
 } from "@/app/_lib/domain/ticket-history"
 import type { TicketHistoryEntry } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
@@ -15,6 +16,8 @@ interface TicketTimelineProps {
 }
 
 const TicketTimeline = ({ entries }: TicketTimelineProps) => {
+  const visibleEntries = summarizeTicketTimeline(entries)
+
   return (
     <section
       aria-labelledby="ticket-timeline-heading"
@@ -27,19 +30,19 @@ const TicketTimeline = ({ entries }: TicketTimelineProps) => {
         Linha do tempo
       </h2>
 
-      {entries.length === 0 ? (
+      {visibleEntries.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Nenhum evento registrado.
         </p>
       ) : (
         <ScrollToEndArea
-          itemCount={entries.length}
+          itemCount={visibleEntries.length}
           label="Eventos da linha do tempo"
-          className="max-h-104"
+          className="max-h-62"
         >
           <ol className="flex flex-col">
-            {entries.map((entry, index) => {
-              const isLast = index === entries.length - 1
+            {visibleEntries.map((entry, index) => {
+              const isLast = index === visibleEntries.length - 1
 
               return (
                 <li key={entry.id} className="flex gap-3">

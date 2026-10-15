@@ -9,6 +9,21 @@ Ele **altera** `docs/contracts/ticket-resolution.md` (seção "Grid"), que
 continua valendo no que não é tocado aqui e traz uma revisão de 2026-10-12
 apontando para cá.
 
+> **Revisão de 2026-10-15 — linha do tempo resumida e ~3 eventos**
+> (`docs/contracts/timeline-summary.md`, que prevalece no que diverge). A
+> linha do tempo passa a mostrar **uma entrada por ação**
+> (`summarizeTicketTimeline`, `app/_lib/domain/ticket-history.ts`): linhas com
+> o mesmo `changed_at` e o mesmo `changed_by` viram a de maior prioridade
+> (`HISTORY_EVENT_SUMMARY_RANK`). A altura máxima cai para cerca de **3**
+> eventos simples, faixa [14.5rem, 19.75rem), recomendação `max-h-62`; a
+> faixa [25rem, 30.25rem) e o `max-h-104` abaixo ficam como registro. Deixam
+> de valer como escritos: **TS2** (o `#T2` mostra 4 eventos, não 7, e o
+> último é `Edição`, não `Mudança de tag`), **TS3** (a faixa passa a
+> `3h − 20` a `4h − 20` px) e **TS4** (cada edição acrescenta **um** evento,
+> `Edição`, não dois). O chamado curto do TS1 (`[QA] Janela aberta`) mostra 2
+> eventos, não 3. `ScrollToEndArea`, rolagem ao fim, acessibilidade e o
+> restante deste contrato continuam valendo.
+
 Versões observadas: `next@16.3.5`, Tailwind v4 (escala `--spacing` padrão,
 `0.25rem`).
 
