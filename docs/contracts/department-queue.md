@@ -111,6 +111,59 @@ público no chamado.` **Ficam superados**: o texto do diálogo no Q19; o envio
 > sem comentário do Q20, Q22, Q30 e do terceiro request do Q26 (preencher
 > `comment`); o Q23 passa a mostrar também o erro do comentário.
 
+> Revisão de 2026-10-15 (pedido do usuário, depois de `docs/contracts/approvals.md`):
+> **nenhuma aba da Fila lista `aguardando_aprovacao`**, nem "Todos" nem "Em
+> aberto", e as contagens das abas também não os contam. Esses chamados têm
+> lista própria, a aba "Aprovações" (`/approvals`), no setor de destino. A
+> posse não muda (ADR 016): o chamado continua com `current_department_id` =
+> destino e o detalhe segue aberto para o setor; só a Fila deixa de mostrá-lo.
+>
+> - Domínio (`app/_lib/domain/department-queue.ts`): duas listas novas,
+>   derivadas sem repetir valores, com o predicado novo
+>   `isNotAwaitingApproval(status)` de `app/_lib/domain/ticket.ts`
+>   (o mesmo que "Abertos por mim" de Meus chamados passou a usar):
+>   `DEPARTMENT_QUEUE_ALL_STATUSES = TICKET_STATUSES.filter(isNotAwaitingApproval)`
+>   (oito dos nove status de `ticket_status`) para "Todos" e
+>   `DEPARTMENT_QUEUE_OPEN_STATUSES = ACTIVE_TICKET_STATUSES.filter(isNotAwaitingApproval)`
+>   (`aberto`, `em_analise`, `encaminhado`, `recusado`, `em_andamento`) para
+>   "Em aberto". `TICKET_STATUSES` e `ACTIVE_TICKET_STATUSES` não mudam (Meus
+>   chamados, `ATTENDABLE_TICKET_STATUSES` e outros os usam). "Encaminhados"
+>   já não incluía o status (`ATTENDABLE_TICKET_STATUSES`).
+> - `df-data`, `df-actions`: nada. `queueTabCondition` e
+>   `countQueueTicketsByTab` já leem `DEPARTMENT_QUEUE_TAB_RULES[tab].statuses`.
+> - `df-ui`: nada. O filtro Status da tabela vem de
+>   `ticketStatusFiltersFor(DEPARTMENT_QUEUE_TAB_RULES[tab].statuses)` e perde
+>   "Aguardando aprovação" sozinho (Todos: 8 opções; Em aberto: 5). As ações
+>   da linha (`queueRowActionsFor`) não mudam: o status nunca teve "Assumir"
+>   nem "Enviar" (`AWAITING_APPROVAL`). `queueDepartmentOptions` não depende de
+>   status.
+> - Textos de vazio novos (tabela de abas abaixo atualizada): "Todos" ganha
+>   `Os que aguardam aprovação ficam em Aprovações.`; "Em aberto" ganha
+>   `Os enviados por outro setor ficam em Aprovações até alguém atendê-los.`
+>   `SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION` passa a dizer "vai para a lista de
+>   Aprovações do setor escolhido" em vez de "vai para a fila do setor
+>   escolhido".
+> - Consequência para a Diretoria: com `?setor=` de outro setor, o Diretor não
+>   vê mais na Fila os pendentes recebidos por esse setor, e "Aprovações" só
+>   lista os recebidos pela Diretoria (`approvalsDepartmentIdFor`). Ele continua
+>   abrindo o detalhe (`canViewTicket`) por link ou pela busca do topo.
+> - **Ficam superados**: o "aparece em **Em aberto** (e em Todos) do destino"
+>   da revisão de 2026-10-08 (`department-transfer.md`) acima, a linha
+>   "`aguardando_aprovacao` sem destinatário → Em aberto" do mapeamento de
+>   `queue-tabs-comment-delete-and-attend.md` e a contagem `em_aberto` com
+>   `'aguardando_aprovacao'` da QT2 de lá.
+>
+> Cenários do `df-qa` (usuários e setores de `docs/contracts/qa-seed.md`;
+> `A` = QA Admin Suporte, `I` = QA Admin Infra, `F` = id de QA Infra):
+>
+> | #   | Quem | Ação                                                                                                              | Esperado                                                                                                                                                                                                                                                                                                |
+> | --- | ---- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | QA1 | I    | A cria `[QA] Fila sem pendente` em QA Suporte e o envia para QA Infra (`#Q1`); I abre `/queue?tab=all` e `/queue` | `#Q1` não aparece em Todos nem em Em aberto; nenhuma linha com o selo "Aguardando aprovação"; o filtro Status não tem a opção; contagem de cada aba = `select count(*) from ticket where current_department_id = F and status <> 'aguardando_aprovacao' and <regra da aba>`; `#Q1` está em `/approvals` |
+> | QA2 | I    | no detalhe de `#Q1` (vindo de Aprovações), "Atender"; depois `/queue?tab=in_progress`                             | `#Q1` em Em andamento e em Todos da Fila de QA Infra; contagens de Em andamento e Todos +1                                                                                                                                                                                                              |
+> | QA3 | A, I | A cria e envia `[QA] Fila recusa` para QA Infra (`#Q2`); I recusa com motivo; A abre `/queue` de QA Suporte       | `#Q2` (`recusado`) volta à Fila de QA Suporte como antes: em Encaminhados se voltou com o solicitante, senão em Em aberto; e em Todos. Some de `/approvals` de QA Infra                                                                                                                                 |
+>
+> - [x] Cenários do `df-qa`: 6 de 6, relatório `docs/test-reports/2026-10-15-queue-without-awaiting-approval.md`
+
 ## Escopo técnico em uma frase
 
 Uma tela nova (`/queue`), duas leituras e uma escrita: a escrita troca só
@@ -476,15 +529,15 @@ export const queueRowActionsFor: (
 
 Abas (`DEPARTMENT_QUEUE_TAB_RULES`; a relação é sempre "setor atual"):
 
-| Aba (`?tab=`) | `label`      | `statuses`                   | `assignee`   | `emptyTitle`                | `emptyDescription`                                                                                                                                  |
-| ------------- | ------------ | ---------------------------- | ------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `all`         | Todos        | `TICKET_STATUSES`            | `any`        | Nenhum chamado no setor     | Os chamados que estiverem no setor aparecem aqui, em qualquer status.                                                                               |
-| `open`        | Em aberto    | `ACTIVE_TICKET_STATUSES`     | `unassigned` | Nenhum chamado em aberto    | Os chamados na fila do setor, ainda sem destinatário, aparecem aqui até alguém assumir ou recebê-los.                                               |
-| `forwarded`   | Encaminhados | `[ATTENDABLE_TICKET_STATUS]` | `assigned`   | Nenhum chamado encaminhado  | Os chamados do setor encaminhados para alguém aparecem aqui até o destinatário começar o atendimento.                                               |
-| `in_progress` | Em andamento | `[ATTENDED_TICKET_STATUS]`   | `any`        | Nenhum chamado em andamento | Os chamados do setor em atendimento aparecem aqui até serem resolvidos.                                                                             |
-| `resolved`    | Resolvidos   | `[RESOLVED_TICKET_STATUS]`   | `any`        | Nenhum chamado resolvido    | Os chamados do setor que foram resolvidos aparecem aqui até o fechamento automático, 7 dias após a resolução. (`7` = `RESOLUTION_EDIT_WINDOW_DAYS`) |
-| `closed`      | Fechados     | `["fechado"]`                | `any`        | Nenhum chamado fechado      | Os chamados do setor que foram fechados aparecem aqui.                                                                                              |
-| `cancelled`   | Cancelados   | `["cancelado"]`              | `any`        | Nenhum chamado cancelado    | Os chamados do setor que foram cancelados aparecem aqui.                                                                                            |
+| Aba (`?tab=`) | `label`      | `statuses`                                    | `assignee`   | `emptyTitle`                | `emptyDescription`                                                                                                                                                           |
+| ------------- | ------------ | --------------------------------------------- | ------------ | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `all`         | Todos        | `DEPARTMENT_QUEUE_ALL_STATUSES` (2026-10-15)  | `any`        | Nenhum chamado no setor     | Os chamados que estiverem no setor aparecem aqui, em qualquer status. Os que aguardam aprovação ficam em Aprovações.                                                         |
+| `open`        | Em aberto    | `DEPARTMENT_QUEUE_OPEN_STATUSES` (2026-10-15) | `unassigned` | Nenhum chamado em aberto    | Os chamados na fila do setor, ainda sem destinatário, aparecem aqui até alguém assumir ou recebê-los. Os enviados por outro setor ficam em Aprovações até alguém atendê-los. |
+| `forwarded`   | Encaminhados | `[ATTENDABLE_TICKET_STATUS]`                  | `assigned`   | Nenhum chamado encaminhado  | Os chamados do setor encaminhados para alguém aparecem aqui até o destinatário começar o atendimento.                                                                        |
+| `in_progress` | Em andamento | `[ATTENDED_TICKET_STATUS]`                    | `any`        | Nenhum chamado em andamento | Os chamados do setor em atendimento aparecem aqui até serem resolvidos.                                                                                                      |
+| `resolved`    | Resolvidos   | `[RESOLVED_TICKET_STATUS]`                    | `any`        | Nenhum chamado resolvido    | Os chamados do setor que foram resolvidos aparecem aqui até o fechamento automático, 7 dias após a resolução. (`7` = `RESOLUTION_EDIT_WINDOW_DAYS`)                          |
+| `closed`      | Fechados     | `["fechado"]`                                 | `any`        | Nenhum chamado fechado      | Os chamados do setor que foram fechados aparecem aqui.                                                                                                                       |
+| `cancelled`   | Cancelados   | `["cancelado"]`                               | `any`        | Nenhum chamado cancelado    | Os chamados do setor que foram cancelados aparecem aqui.                                                                                                                     |
 
 Desde 2026-10-08 as abas **não** particionam: Todos contém as demais, e o
 mapeamento de cada estado para uma aba (com as exceções de dados antigos) está

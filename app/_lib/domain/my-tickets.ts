@@ -2,6 +2,7 @@ import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
 import {
   ACTIVE_TICKET_STATUSES,
   AWAITING_APPROVAL_TICKET_STATUS,
+  isNotAwaitingApproval,
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
 import { RESOLUTION_EDIT_WINDOW_DAYS } from "@/app/_lib/domain/ticket-closure"
@@ -32,9 +33,7 @@ export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy = {
     "Nenhum chamado desta aba foi aberto no período escolhido. Escolha outro período ou “Todos”.",
 }
 
-const OPENED_TAB_STATUSES = ACTIVE_TICKET_STATUSES.filter(
-  (status) => status !== AWAITING_APPROVAL_TICKET_STATUS,
-)
+const OPENED_TAB_STATUSES = ACTIVE_TICKET_STATUSES.filter(isNotAwaitingApproval)
 
 export const MY_TICKETS_TAB_RULES = {
   opened: {

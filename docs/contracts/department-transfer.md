@@ -56,6 +56,22 @@ Padrões de outcome, trava, conflito e resultado de action vêm de
 > envia para outro setor (TR3, TR9–TR11, TR16, RJ16 e as preparações de
 > aceite e recusa), o envio sem comentário: preencher um comentário `[QA] …`.
 
+> Revisão de 2026-10-15 (`docs/contracts/approvals.md` e revisão de mesma data
+> em `docs/contracts/department-queue.md`, que prevalecem no que diverge): o
+> chamado enviado continua indo para o setor de destino
+> (`current_department_id`, sem destinatário, `aguardando_aprovacao`), mas
+> **não aparece mais na Fila** do destino, em aba nenhuma (nem "Em aberto"
+> nem "Todos", nem nas contagens). Ele é listado na aba **"Aprovações"**
+> (`/approvals`) do destino até ser aceito ou recusado. Depois do aceite, entra
+> em Em andamento da Fila do destino; depois da recusa, volta à Fila da origem
+> como antes. `SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION` passou a
+> `O chamado sai da fila deste setor e vai para a lista de Aprovações do setor escolhido, aguardando aprovação até alguém de lá atendê-lo. O comentário fica público no chamado e aparece no aviso de aprovação.`
+> **Ficam superados**: o "Fila: nada a codar. O chamado enviado aparece em
+> 'Em aberto' do destino" da Etapa 1, a linha "Em aberto" da tabela "Fila do
+> setor — abas" da Etapa 3 no que diz respeito a `aguardando_aprovacao`, e
+> todo cenário que procura o chamado pendente na Fila do destino (procurar em
+> `/approvals`). Cenários novos em `department-queue.md` (QA1–QA3).
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 

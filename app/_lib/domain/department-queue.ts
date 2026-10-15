@@ -1,8 +1,10 @@
+import { APPROVALS_LABEL } from "@/app/_lib/domain/approvals"
 import { assignableDepartments } from "@/app/_lib/domain/department"
 import { MY_TICKETS_EMPTY_PERIOD } from "@/app/_lib/domain/my-tickets"
 import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
 import {
   ACTIVE_TICKET_STATUSES,
+  isNotAwaitingApproval,
   RESOLVED_TICKET_STATUS,
   TICKET_CREATION_BLOCK_MESSAGES,
   TICKET_STATUSES,
@@ -52,22 +54,28 @@ export const DEFAULT_DEPARTMENT_QUEUE_PERIOD: PeriodFilterSelection = {
   periodo: "todos",
 }
 
+export const DEPARTMENT_QUEUE_ALL_STATUSES = TICKET_STATUSES.filter(
+  isNotAwaitingApproval,
+)
+
+export const DEPARTMENT_QUEUE_OPEN_STATUSES = ACTIVE_TICKET_STATUSES.filter(
+  isNotAwaitingApproval,
+)
+
 export const DEPARTMENT_QUEUE_TAB_RULES = {
   all: {
     label: "Todos",
-    statuses: TICKET_STATUSES,
+    statuses: DEPARTMENT_QUEUE_ALL_STATUSES,
     assignee: "any",
     emptyTitle: "Nenhum chamado no setor",
-    emptyDescription:
-      "Os chamados que estiverem no setor aparecem aqui, em qualquer status.",
+    emptyDescription: `Os chamados que estiverem no setor aparecem aqui, em qualquer status. Os que aguardam aprovação ficam em ${APPROVALS_LABEL}.`,
   },
   open: {
     label: "Em aberto",
-    statuses: ACTIVE_TICKET_STATUSES,
+    statuses: DEPARTMENT_QUEUE_OPEN_STATUSES,
     assignee: "unassigned",
     emptyTitle: "Nenhum chamado em aberto",
-    emptyDescription:
-      "Os chamados na fila do setor, ainda sem destinatário, aparecem aqui até alguém assumir ou recebê-los.",
+    emptyDescription: `Os chamados na fila do setor, ainda sem destinatário, aparecem aqui até alguém assumir ou recebê-los. Os enviados por outro setor ficam em ${APPROVALS_LABEL} até alguém atendê-los.`,
   },
   forwarded: {
     label: "Encaminhados",

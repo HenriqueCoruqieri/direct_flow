@@ -71,3 +71,17 @@ na fila do destino e **qualquer pessoa do setor de destino** o aceita
   `mudanca_status` de "Sistema" explicando o ajuste. Depois dela, todo chamado
   em `aguardando_aprovacao` tem exatamente uma transferência pendente, e toda
   pendente aponta para o setor atual do chamado.
+
+> Revisão de 2026-10-15 (`docs/contracts/approvals.md`): passa a existir a aba
+> "Aprovações" (`/approvals`), que **lista** as transferências pendentes
+> recebidas pelo setor de quem vê, com contador no menu. Não é a caixa de
+> aprovações superada acima: aceite e recusa continuam no detalhe, por
+> qualquer pessoa do setor de destino, e a regra de não revalidar sem acesso
+> não muda (o contador é atualizado pela UI com `router.refresh()` depois de
+> sair do detalhe).
+>
+> Revisão de 2026-10-15, Fila (`docs/contracts/department-queue.md`): o
+> chamado pendente deixa de aparecer na Fila do destino ("o chamado aparece na
+> fila do destino", no Contexto) e passa a ser listado só em "Aprovações". A
+> posse continua mudando no envio (decisão 1): `current_department_id` é o
+> destino e a visibilidade do detalhe não muda.

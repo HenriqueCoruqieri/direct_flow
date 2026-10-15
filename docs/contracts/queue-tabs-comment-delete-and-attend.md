@@ -58,6 +58,21 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > `AlertDialog`, o `aria-label` e a volta do foco (heading depois de excluir,
 > lixeira ao cancelar) não mudam; foco devolvido à lixeira não abre o tooltip.
 
+> Revisão de 2026-10-15 (`docs/contracts/approvals.md` e revisão de mesma data
+> em `docs/contracts/department-queue.md`, que prevalecem no que diverge):
+> "Todos" deixa de ser `TICKET_STATUSES` e passa a
+> `DEPARTMENT_QUEUE_ALL_STATUSES` (os oito status **menos**
+> `aguardando_aprovacao`); "Em aberto" deixa de ser `ACTIVE_TICKET_STATUSES` e
+> passa a `DEPARTMENT_QUEUE_OPEN_STATUSES` (idem). Chamado
+> `aguardando_aprovacao` não aparece em aba nenhuma da Fila nem nas contagens;
+> é listado em "Aprovações". **Ficam superados**: a decisão "Todos" =
+> `TICKET_STATUSES` (os oito), as linhas `all` e `open` da tabela de abas
+> (textos de vazio novos em `department-queue.md`), a linha
+> "`aguardando_aprovacao` sem destinatário (#66) → Em aberto" do mapeamento de
+> estados (agora: só em Aprovações), o `'aguardando_aprovacao'` da contagem
+> `em_aberto` da QT2 e as quantidades de opções do filtro Status (Todos: 7;
+> Em aberto: 5, com `recusado` e sem `aguardando_aprovacao`).
+
 ## Escopo técnico em uma frase
 
 Sem schema e sem migration: a Fila passa a ter sete abas, cada uma definida por

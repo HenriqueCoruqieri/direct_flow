@@ -1,3 +1,4 @@
+import { APPROVALS_LABEL } from "@/app/_lib/domain/approvals"
 import {
   assignableDepartments,
   isAssignableDepartment,
@@ -75,8 +76,7 @@ export const SEND_TO_DEPARTMENT_SUBMIT_LABEL = "Enviar"
 
 export const SEND_TO_DEPARTMENT_PENDING_LABEL = "Enviando…"
 
-export const SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION =
-  "O chamado sai da fila deste setor e vai para a fila do setor escolhido, aguardando aprovação até alguém de lá atendê-lo. O comentário fica público no chamado e aparece no aviso de aprovação."
+export const SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION = `O chamado sai da fila deste setor e vai para a lista de ${APPROVALS_LABEL} do setor escolhido, aguardando aprovação até alguém de lá atendê-lo. O comentário fica público no chamado e aparece no aviso de aprovação.`
 
 export const TRANSFER_TARGET_LABEL = "Setor de destino"
 
