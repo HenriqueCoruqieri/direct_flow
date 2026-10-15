@@ -42,6 +42,7 @@ const TicketCommentForm = ({ defaults }: TicketCommentFormProps) => {
     if (result.ok) {
       toast.success(result.message)
       form.reset(defaults)
+      document.getElementById(contentId)?.style.removeProperty("height")
       return
     }
 

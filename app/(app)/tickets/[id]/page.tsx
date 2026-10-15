@@ -49,6 +49,7 @@ import TicketComments from "./_components/ticket-comments"
 import TicketConclusion from "./_components/ticket-conclusion"
 import TicketDescription from "./_components/ticket-description"
 import TicketDetailFields from "./_components/ticket-detail-fields"
+import TicketDetailGrid from "./_components/ticket-detail-grid"
 import TicketDetailHeader from "./_components/ticket-detail-header"
 import TicketEditProvider from "./_components/ticket-edit-provider"
 import TicketTimeline from "./_components/ticket-timeline"
@@ -135,6 +136,15 @@ const TicketDetailPage = async ({
     canEdit: canEditTicketComment(actor, ticket, message, now),
     canDelete: canDeleteTicketComment(actor, ticket, message, now),
   }))
+  const layoutKey = [
+    ticket.status,
+    ticket.history.length,
+    messages.length,
+    attachments.length,
+    conclusion.state,
+    commentForm.state,
+    editable,
+  ].join(":")
 
   const content = (
     <div className="flex flex-col gap-5.5 px-5 pt-5 pb-8 lg:px-6">
@@ -162,36 +172,41 @@ const TicketDetailPage = async ({
         <PendingTransferNotice transfer={ticket.pendingTransfer} />
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5.5 lg:grid-cols-3 lg:items-stretch">
-        <div className="flex min-w-0 flex-col gap-5.5 lg:col-span-2">
-          <TicketDescription
-            description={ticket.description}
-            editable={editable}
-          />
-          <TicketAttachments
-            attachments={attachments}
-            editable={editable}
-            canAttach={canAttach}
-          />
-          <TicketTimeline entries={ticket.history} />
-          <TicketConclusion
-            ticketId={ticket.id}
-            state={conclusion}
-            sendToDepartment={sendToDepartment}
-            editable={editable}
-            className="lg:flex-1"
-          />
-        </div>
-        <div className="flex min-w-0 flex-col gap-5.5">
-          <TicketDetailFields ticket={ticket} editable={editable} />
-          <TicketComments
-            ticketId={ticket.id}
-            entries={commentEntries}
-            form={commentForm}
-            className="lg:flex-1"
-          />
-        </div>
-      </div>
+      <TicketDetailGrid
+        layoutKey={layoutKey}
+        main={
+          <>
+            <TicketDescription
+              description={ticket.description}
+              editable={editable}
+            />
+            <TicketAttachments
+              attachments={attachments}
+              editable={editable}
+              canAttach={canAttach}
+            />
+            <TicketTimeline entries={ticket.history} />
+            <TicketConclusion
+              ticketId={ticket.id}
+              state={conclusion}
+              sendToDepartment={sendToDepartment}
+              editable={editable}
+              className="lg:flex-1"
+            />
+          </>
+        }
+        aside={
+          <>
+            <TicketDetailFields ticket={ticket} editable={editable} />
+            <TicketComments
+              ticketId={ticket.id}
+              entries={commentEntries}
+              form={commentForm}
+              className="lg:flex-1"
+            />
+          </>
+        }
+      />
     </div>
   )
 

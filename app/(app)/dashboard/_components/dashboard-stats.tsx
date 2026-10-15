@@ -26,7 +26,7 @@ const DashboardStats = async ({ departmentId, range }: DashboardStatsProps) => {
     <div className="grid grid-cols-2 gap-3 lg:max-w-3xl">
       <StatCard label="Chamados no período" value={summary.ticketCount} />
       <StatCard
-        label="Principal tag ofensora"
+        label="Principal ofensor"
         value={topTag ? topTag.name : EMPTY_VALUE_LABEL}
         valueTitle={topTag?.name}
         valueClassName={topTag ? tagValueSize(topTag.name) : undefined}
