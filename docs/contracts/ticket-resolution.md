@@ -112,6 +112,12 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > uploader, ativo); os cenários 17–19 para o "Anexar" (o "Enviar para outro
 > setor" já tinha deixado de ser bloqueado).
 
+> Revisão de 2026-10-15, card Anexos (`docs/contracts/attachments-card.md`):
+> a coluna larga passa a ser Descrição → Anexos → Linha do tempo → Conclusão
+> (cenário 34). A Conclusão não tem mais bloco de anexos em nenhum estado;
+> continua com `lg:flex-1`, a barra de ações no rodapé e a borda de baixo
+> alinhada à de Comentários.
+
 ## Tabelas, enums e migration
 
 ### `db/schema.ts` (alterado)

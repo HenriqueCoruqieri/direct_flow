@@ -304,7 +304,7 @@ AH7 forjado: chamar a action `editTicket` com a sessão de A e
 ## Checklist de encerramento
 
 - [x] enum `attachment_history_event`, tabela `attachment_history`, relations e tipos; `history_event` sem `anexo_*` em `db/schema.ts`; migrations `0016`, `0017`, `0018`; domínio sem `anexo_*`; este contrato, revisões e plano (`df-architect`)
-- [ ] migrations aplicadas (usuário, via orquestrador)
-- [ ] `insertTicket` e `updateTicketByAssignee` gravando `inclusao`/`exclusao`, sem `anexo_*`, com o `insert` de `ticket_history` protegido (`df-data`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] migrations aplicadas (usuário, via orquestrador)
+- [x] `insertTicket` e `updateTicketByAssignee` gravando `inclusao`/`exclusao`, sem `anexo_*`, com o `insert` de `ticket_history` protegido (`df-data`)
+- [x] cenários do `df-qa`: 11 de 11, relatório `docs/test-reports/2026-10-15-attachment-history.md`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build` (etapa comitada em `02c4c4d`)

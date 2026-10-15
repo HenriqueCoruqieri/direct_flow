@@ -11,8 +11,17 @@ Contratos técnicos:
   0 da Etapa 1). **Concluída** em 2026-10-15: commit `95e007f`, QA 14 de 14
   (`docs/test-reports/2026-10-15-timeline-summary.md`).
 - Etapa 2 — `docs/contracts/attachment-history.md` (escrito em 2026-10-15,
-  Onda 0 da Etapa 2). Migrations `0016` a `0018`.
-- Etapa 3 — a escrever na Onda 0 da Etapa 3.
+  Onda 0 da Etapa 2). Migrations `0016` a `0018`. **Concluída** em
+  2026-10-15: commit `02c4c4d`, QA 11 de 11
+  (`docs/test-reports/2026-10-15-attachment-history.md`).
+- Etapa 3 — `docs/contracts/attachments-card.md` (escrito em 2026-10-15, Onda
+  0 da Etapa 3). Decisão de desenho: o `TicketAttachmentsFrame` vira o próprio
+  card (`section` + `h2`), e `TicketAttachments` só escolhe leitura ou edição.
+  **Concluída** em 2026-10-15: `df-reviewer` aprovado, QA 18 de 18
+  (`docs/test-reports/2026-10-15-attachments-card.md`), revisão pós-QA no
+  contrato; aguardando commit.
+
+**Plano concluído** em 2026-10-15: as três etapas entregues.
 
 | Etapa | Entrega                                                | Ondas (previstas)                                                                 | Migration                                                    |
 | ----- | ------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------ |

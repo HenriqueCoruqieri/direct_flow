@@ -25,24 +25,22 @@ const TicketAttachmentsFrame = ({
   announceChanges = false,
   listRef,
 }: TicketAttachmentsFrameProps) => {
-  const isGroup = describedBy !== undefined
   const heading = (
-    <h3 id={HEADING_ID} className="text-sm font-medium">
+    <h2 id={HEADING_ID} className="font-heading text-base font-semibold">
       {TICKET_ATTACHMENTS_LABEL}
-    </h3>
+    </h2>
   )
 
   return (
-    <div
-      role={isGroup ? "group" : undefined}
-      aria-labelledby={isGroup ? HEADING_ID : undefined}
+    <section
+      aria-labelledby={HEADING_ID}
       aria-describedby={describedBy}
-      className="flex min-w-0 flex-col gap-1.5"
+      className="flex min-w-0 flex-col gap-3 rounded-xl border border-border-subtle bg-surface p-5"
     >
       {details === undefined ? (
         heading
       ) : (
-        <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-1">
           {heading}
           {details}
         </div>
@@ -62,9 +60,9 @@ const TicketAttachmentsFrame = ({
           </div>
         )}
       </div>
-      {action !== undefined ? <div className="pt-1">{action}</div> : null}
+      {action !== undefined ? <div className="self-start">{action}</div> : null}
       {footer}
-    </div>
+    </section>
   )
 }
 

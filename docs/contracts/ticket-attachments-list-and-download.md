@@ -26,6 +26,13 @@ Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 > continua valendo. Os cenários LA2, LA8 e LA10 (que anexam pelo formulário
 > de resolver) deixam de valer.
 
+> **Revisão de 2026-10-15 — card próprio.** Na Etapa 3 do plano
+> `docs/plans/timeline-summary-and-attachments-card.md`
+> (`docs/contracts/attachments-card.md`) o bloco de leitura sai da Conclusão
+> e vira o card `Anexos` (`h2`), entre a Descrição e a Linha do tempo. Faixa,
+> blocos, vazio e download continuam como aqui; onde este contrato diz "na
+> Conclusão", vale "no card `Anexos`".
+
 ## O que não muda
 
 | Camada                                                                         | Mudança                                                                                                                         |

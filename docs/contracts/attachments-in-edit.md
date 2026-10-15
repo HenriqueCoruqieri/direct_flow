@@ -32,6 +32,21 @@ comitadas (`173afa9`, `535b6e1`, `c424a73`, `cbe0c58`).
 > AE4, AE6, AE8, AE9, AE10, AE12, AE15, AE18) ficam como registro da etapa e
 > não são mais critério; o resto do contrato continua valendo.
 
+> Revisão de 2026-10-15, Etapa 3 do plano
+> `docs/plans/timeline-summary-and-attachments-card.md`
+> (`docs/contracts/attachments-card.md`, que prevalece no que diverge): o
+> bloco "Anexos" **sai da Conclusão** e vira card próprio em `/tickets/[id]`,
+> logo abaixo da Descrição. O título passa de `h3` a `h2` do card (mesmo id
+> `ticket-attachments-heading`, único), o `role="group"` dá lugar ao
+> `section` rotulado e descrito, e `Anexar` fica no canto inferior esquerdo
+> do card. A regra 2 ("no próprio bloco Anexos da Conclusão"), as seções
+> `df-ui` "Fora da edição", "No modo edição" (posição e título) e "Altura da
+> Conclusão" (a Conclusão não tem mais bloco de anexos; `lg:flex-1` e a barra
+> no rodapé continuam) valem com essa troca. Nos cenários, "Conclusão" e
+> "`h3` `Anexos`" leem-se "card `Anexos`" e "`h2` `Anexos`"; AE1 ("Solução →
+> `Anexos` → barra") deixa de valer na ordem. Comportamento de edição sem
+> mudança.
+
 O anexo deixa de entrar pela resolução e passa a entrar **e sair** pelo modo de
 edição do chamado. Nada vai para o banco até "Salvar alterações"; "Cancelar"
 descarta tudo.

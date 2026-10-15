@@ -44,6 +44,7 @@ import AppTopBar from "../../_components/app-top-bar"
 import type { DeclineTransferDialogProps } from "./_components/decline-transfer-dialog"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
 import type { SendToDepartmentSetup } from "./_components/send-to-department-dialog"
+import TicketAttachments from "./_components/ticket-attachments"
 import TicketComments from "./_components/ticket-comments"
 import TicketConclusion from "./_components/ticket-conclusion"
 import TicketDescription from "./_components/ticket-description"
@@ -167,14 +168,17 @@ const TicketDetailPage = async ({
             description={ticket.description}
             editable={editable}
           />
+          <TicketAttachments
+            attachments={attachments}
+            editable={editable}
+            canAttach={canAttach}
+          />
           <TicketTimeline entries={ticket.history} />
           <TicketConclusion
             ticketId={ticket.id}
             state={conclusion}
             sendToDepartment={sendToDepartment}
-            attachments={attachments}
             editable={editable}
-            canAttach={canAttach}
             className="lg:flex-1"
           />
         </div>

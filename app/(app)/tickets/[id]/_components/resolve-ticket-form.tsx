@@ -25,7 +25,6 @@ import TicketSolutionField from "./ticket-solution-field"
 interface ResolveTicketFormProps {
   defaults: ResolveTicketFormDefaults
   sendToDepartment: SendToDepartmentSetup | null
-  savedAttachments: React.ReactNode
   editable: boolean
   editingReplacement: React.ReactNode
 }
@@ -35,7 +34,6 @@ const FOOTER_CLASS = "mt-auto"
 const ResolveTicketForm = ({
   defaults,
   sendToDepartment,
-  savedAttachments,
   editable,
   editingReplacement,
 }: ResolveTicketFormProps) => {
@@ -136,7 +134,6 @@ const ResolveTicketForm = ({
       ) : (
         solutionForm
       )}
-      {savedAttachments}
       {editable ? (
         <HiddenWhileEditing replacement={null} className={FOOTER_CLASS}>
           {actionBar}
