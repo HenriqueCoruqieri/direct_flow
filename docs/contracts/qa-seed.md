@@ -142,6 +142,18 @@ maior `id` de cada título que ainda esteja `resolvido`.
 | `SEED_QA`          | `true` faz o seed criar os setores e usuários QA. Padrão `false`; nunca em produção                   |
 | `SEED_QA_PASSWORD` | Senha dos três usuários QA. Mínimo de 8 caracteres; obrigatória com `SEED_QA=true`. Nunca em produção |
 
+## Dados existentes que afetam cenários
+
+Registros do banco de desenvolvimento que **não** são criados pelo seed, mas
+mudam o resultado esperado de algum cenário. O `df-qa` os considera na
+preparação e não os altera.
+
+| Registro | O que é                                                    | Efeito                                                                                                                                     |
+| -------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `#64`    | transferência pendente Diretoria → QA Suporte, desde 01/10 | aba Aprovações de QA Suporte não fica vazia: selo `1` e uma linha (`docs/contracts/approvals.md`, AP1 e AP5). Atender ou recusar muda isso |
+
+Acrescentado em 2026-10-15 (pós-QA de `docs/contracts/approvals.md`).
+
 ## Dados criados pelos testes
 
 - Todo ticket, tag ou registro criado pelo `df-qa` começa com `[QA]` no título

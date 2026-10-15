@@ -4,7 +4,12 @@ import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getAccountState } from "@/app/_lib/auth/account-state"
 import { getRegistryAccess } from "@/app/_lib/auth/registry-access"
 import { requireSession } from "@/app/_lib/auth/session"
+import { countPendingApprovals } from "@/app/_lib/data/approvals"
 import { findUserProfile } from "@/app/_lib/data/users"
+import {
+  approvalsDepartmentIdFor,
+  approvalsNavBadgeFor,
+} from "@/app/_lib/domain/approvals"
 import { hasDepartmentQueue } from "@/app/_lib/domain/department-queue"
 import { registryNavItemsFor } from "@/app/_lib/domain/registry"
 import {
@@ -29,6 +34,12 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
   if (accountState?.mustChangePassword) redirect("/set-password")
   if (!profile) notFound()
 
+  const approvalsDepartmentId = approvalsDepartmentIdFor(accountFacts)
+  const pendingApprovals =
+    approvalsDepartmentId === null
+      ? 0
+      : await countPendingApprovals(approvalsDepartmentId)
+
   const initials = getInitials(profile.name)
   const membership = describeMembership(profile.departmentName, profile.role)
 
@@ -41,6 +52,7 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
         membership={membership}
         registryItems={registryNavItemsFor(registryAccess)}
         showDepartmentQueue={hasDepartmentQueue(accountFacts)}
+        approvalsBadge={approvalsNavBadgeFor(pendingApprovals)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader

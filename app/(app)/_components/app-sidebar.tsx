@@ -1,11 +1,18 @@
-import { HouseIcon, InboxIcon, TicketIcon } from "lucide-react"
+import {
+  ArrowRightLeftIcon,
+  HouseIcon,
+  InboxIcon,
+  TicketIcon,
+} from "lucide-react"
 
 import LogoMark from "@/app/_components/logo-mark"
+import { APPROVALS_LABEL, APPROVALS_PATH } from "@/app/_lib/domain/approvals"
 import {
   DEPARTMENT_QUEUE_LABEL,
   DEPARTMENT_QUEUE_PATH,
 } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
+import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 import NavItem from "./nav-item"
@@ -20,6 +27,7 @@ interface AppSidebarProps {
   membership: string
   registryItems: RegistryNavItem[]
   showDepartmentQueue: boolean
+  approvalsBadge: ApprovalsNavBadge | null
 }
 
 const AppSidebar = ({
@@ -29,6 +37,7 @@ const AppSidebar = ({
   membership,
   registryItems,
   showDepartmentQueue,
+  approvalsBadge,
 }: AppSidebarProps) => {
   return (
     <aside className="sticky top-0 hidden h-dvh w-58 shrink-0 flex-col gap-1.5 border-r border-border-subtle bg-surface-bar px-3.5 py-5 lg:flex">
@@ -64,6 +73,14 @@ const AppSidebar = ({
               />
             </li>
           ) : null}
+          <li>
+            <NavItem
+              href={APPROVALS_PATH}
+              label={APPROVALS_LABEL}
+              icon={<ArrowRightLeftIcon aria-hidden="true" />}
+              badge={approvalsBadge}
+            />
+          </li>
           {registryItems.length > 0 ? (
             <li>
               <RegistryNav items={registryItems} />

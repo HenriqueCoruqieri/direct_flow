@@ -89,6 +89,7 @@ const DeclineTransferDialog = ({
       }
       setIsLeaving(true)
       router.replace(leaveHref)
+      router.refresh()
       return
     }
 
