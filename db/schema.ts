@@ -76,8 +76,6 @@ export const historyEventEnum = pgEnum("history_event", [
   "mudanca_tag",
   "edicao",
   "resolucao",
-  "anexo_incluido",
-  "anexo_removido",
 ])
 
 export const messageVisibilityEnum = pgEnum("message_visibility", [
@@ -88,6 +86,11 @@ export const messageVisibilityEnum = pgEnum("message_visibility", [
 export const messageHistoryEventEnum = pgEnum("message_history_event", [
   "criacao",
   "edicao",
+  "exclusao",
+])
+
+export const attachmentHistoryEventEnum = pgEnum("attachment_history_event", [
+  "inclusao",
   "exclusao",
 ])
 
@@ -402,6 +405,36 @@ export const attachment = pgTable(
   ],
 )
 
+export const attachmentHistory = pgTable(
+  "attachment_history",
+  {
+    id: pk(),
+    attachmentId: integer("attachment_id").notNull(),
+    ticketId: integer("ticket_id")
+      .notNull()
+      .references(() => ticket.id, { onDelete: "cascade" }),
+    actorId: integer("actor_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    event: attachmentHistoryEventEnum("event").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    storageKey: text("storage_key").notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("attachment_history_attachment_idx").on(
+      table.attachmentId,
+      table.changedAt,
+    ),
+    index("attachment_history_ticket_idx").on(table.ticketId),
+    index("attachment_history_actor_idx").on(table.actorId),
+  ],
+)
+
 export const departmentRelations = relations(department, ({ many }) => ({
   users: many(user),
   tags: many(tag),
@@ -434,6 +467,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   messages: many(message),
   messageHistoryActions: many(messageHistory),
   attachments: many(attachment),
+  attachmentHistoryActions: many(attachmentHistory),
   historyFromAssignee: many(ticketHistory, {
     relationName: "history_from_assignee",
   }),
@@ -479,6 +513,7 @@ export const ticketRelations = relations(ticket, ({ one, many }) => ({
   messages: many(message),
   messageHistory: many(messageHistory),
   attachments: many(attachment),
+  attachmentHistory: many(attachmentHistory),
 }))
 
 export const ticketTagRelations = relations(ticketTag, ({ one }) => ({
@@ -599,6 +634,20 @@ export const attachmentRelations = relations(attachment, ({ one }) => ({
   }),
 }))
 
+export const attachmentHistoryRelations = relations(
+  attachmentHistory,
+  ({ one }) => ({
+    ticket: one(ticket, {
+      fields: [attachmentHistory.ticketId],
+      references: [ticket.id],
+    }),
+    actor: one(user, {
+      fields: [attachmentHistory.actorId],
+      references: [user.id],
+    }),
+  }),
+)
+
 export type Department = typeof department.$inferSelect
 export type NewDepartment = typeof department.$inferInsert
 export type User = typeof user.$inferSelect
@@ -619,6 +668,8 @@ export type MessageHistory = typeof messageHistory.$inferSelect
 export type NewMessageHistory = typeof messageHistory.$inferInsert
 export type Attachment = typeof attachment.$inferSelect
 export type NewAttachment = typeof attachment.$inferInsert
+export type AttachmentHistory = typeof attachmentHistory.$inferSelect
+export type NewAttachmentHistory = typeof attachmentHistory.$inferInsert
 
 export type Role = (typeof roleEnum.enumValues)[number]
 export type TicketType = (typeof ticketTypeEnum.enumValues)[number]
@@ -630,3 +681,5 @@ export type MessageVisibility =
   (typeof messageVisibilityEnum.enumValues)[number]
 export type MessageHistoryEvent =
   (typeof messageHistoryEventEnum.enumValues)[number]
+export type AttachmentHistoryEvent =
+  (typeof attachmentHistoryEventEnum.enumValues)[number]

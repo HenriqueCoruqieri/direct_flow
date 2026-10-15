@@ -113,6 +113,27 @@
       "when": 1792011514248,
       "tag": "0015_history_event_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792093745886,
+      "tag": "0016_attachment_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792093754983,
+      "tag": "0017_backfill_attachment_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792093759761,
+      "tag": "0018_history_event_without_attachments",
+      "breakpoints": true
     }
   ]
 }

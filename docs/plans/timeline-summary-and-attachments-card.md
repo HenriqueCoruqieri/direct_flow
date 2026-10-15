@@ -8,8 +8,10 @@ dela.
 Contratos técnicos:
 
 - Etapa 1 — `docs/contracts/timeline-summary.md` (escrito em 2026-10-15, Onda
-  0 da Etapa 1).
-- Etapa 2 — a escrever na Onda 0 da Etapa 2.
+  0 da Etapa 1). **Concluída** em 2026-10-15: commit `95e007f`, QA 14 de 14
+  (`docs/test-reports/2026-10-15-timeline-summary.md`).
+- Etapa 2 — `docs/contracts/attachment-history.md` (escrito em 2026-10-15,
+  Onda 0 da Etapa 2). Migrations `0016` a `0018`.
 - Etapa 3 — a escrever na Onda 0 da Etapa 3.
 
 | Etapa | Entrega                                                | Ondas (previstas)                                                                 | Migration                                                    |

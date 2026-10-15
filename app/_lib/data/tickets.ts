@@ -87,6 +87,7 @@ import type {
 import { db, type Transaction } from "@/db"
 import {
   attachment,
+  attachmentHistory,
   department,
   message,
   tag,
@@ -296,16 +297,39 @@ export async function insertTicket(
     })
 
     if (values.attachments && values.attachments.length > 0) {
-      await tx.insert(attachment).values(
-        values.attachments.map((item) => ({
+      const inserted = await tx
+        .insert(attachment)
+        .values(
+          values.attachments.map((item) => ({
+            ticketId: created.id,
+            messageId: null,
+            uploadedBy: values.createdBy,
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: item.sizeBytes,
+            storageKey: item.storageKey,
+            createdAt: created.createdAt,
+          })),
+        )
+        .returning({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          storageKey: attachment.storageKey,
+        })
+
+      await tx.insert(attachmentHistory).values(
+        inserted.map((row) => ({
+          attachmentId: row.id,
           ticketId: created.id,
-          messageId: null,
-          uploadedBy: values.createdBy,
-          fileName: item.fileName,
-          mimeType: item.mimeType,
-          sizeBytes: item.sizeBytes,
-          storageKey: item.storageKey,
-          createdAt: created.createdAt,
+          actorId: values.createdBy,
+          event: "inclusao" as const,
+          fileName: row.fileName,
+          mimeType: row.mimeType,
+          sizeBytes: row.sizeBytes,
+          storageKey: row.storageKey,
+          changedAt: created.createdAt,
         })),
       )
     }
@@ -536,22 +560,67 @@ export async function updateTicketByAssignee(
             inArray(attachment.id, removedIds),
           ),
         )
-        .returning({ storageKey: attachment.storageKey })
+        .returning({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          storageKey: attachment.storageKey,
+        })
 
       removedStorageKeys = deleted.map(({ storageKey }) => storageKey)
+
+      if (deleted.length > 0) {
+        await tx.insert(attachmentHistory).values(
+          deleted.map((row) => ({
+            attachmentId: row.id,
+            ticketId,
+            actorId: editorId,
+            event: "exclusao" as const,
+            fileName: row.fileName,
+            mimeType: row.mimeType,
+            sizeBytes: row.sizeBytes,
+            storageKey: row.storageKey,
+            changedAt,
+          })),
+        )
+      }
     }
 
     if (added.length > 0) {
-      await tx.insert(attachment).values(
-        added.map((item) => ({
+      const inserted = await tx
+        .insert(attachment)
+        .values(
+          added.map((item) => ({
+            ticketId,
+            messageId: null,
+            uploadedBy: editorId,
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: item.sizeBytes,
+            storageKey: item.storageKey,
+            createdAt: changedAt,
+          })),
+        )
+        .returning({
+          id: attachment.id,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          storageKey: attachment.storageKey,
+        })
+
+      await tx.insert(attachmentHistory).values(
+        inserted.map((row) => ({
+          attachmentId: row.id,
           ticketId,
-          messageId: null,
-          uploadedBy: editorId,
-          fileName: item.fileName,
-          mimeType: item.mimeType,
-          sizeBytes: item.sizeBytes,
-          storageKey: item.storageKey,
-          createdAt: changedAt,
+          actorId: editorId,
+          event: "inclusao" as const,
+          fileName: row.fileName,
+          mimeType: row.mimeType,
+          sizeBytes: row.sizeBytes,
+          storageKey: row.storageKey,
+          changedAt,
         })),
       )
     }
@@ -575,28 +644,6 @@ export async function updateTicketByAssignee(
         event: "mudanca_tag",
         fromTagId: changes.tag.fromTagId,
         toTagId: changes.tag.toTagId,
-        changedAt,
-      })
-    }
-
-    for (const removed of savedAttachments.filter(({ id }) =>
-      removedIds.includes(id),
-    )) {
-      historyRows.push({
-        ticketId,
-        changedBy: editorId,
-        event: "anexo_removido",
-        note: removed.fileName,
-        changedAt,
-      })
-    }
-
-    for (const item of added) {
-      historyRows.push({
-        ticketId,
-        changedBy: editorId,
-        event: "anexo_incluido",
-        note: item.fileName,
         changedAt,
       })
     }
@@ -626,7 +673,9 @@ export async function updateTicketByAssignee(
       })
     }
 
-    await tx.insert(ticketHistory).values(historyRows)
+    if (historyRows.length > 0) {
+      await tx.insert(ticketHistory).values(historyRows)
+    }
 
     return {
       status: "saved",

@@ -20,6 +20,18 @@ comitadas (`173afa9`, `535b6e1`, `c424a73`, `cbe0c58`).
 > de comportamento muda (sem vaga, foco depois de remover, `disabled` durante o
 > envio). Cenários alterados: AE3, AE23 e AE24.
 
+> Revisão de 2026-10-15, Etapa 2 do plano
+> `docs/plans/timeline-summary-and-attachments-card.md`
+> (`docs/contracts/attachment-history.md`): a **regra 7** deixa de valer.
+> Incluir e remover anexo não grava mais `anexo_incluido`/`anexo_removido` em
+> `ticket_history` (os dois valores saem de `history_event` e as linhas
+> antigas são apagadas pela migration `0017`); cada inclusão e exclusão vira
+> uma linha `inclusao`/`exclusao` em `attachment_history`, que nenhuma tela
+> lê. Edição só de anexos não aparece na linha do tempo. Os trechos que citam
+> `anexo_*` (schema, passos 3 e 4 do histórico, textos da linha do tempo,
+> AE4, AE6, AE8, AE9, AE10, AE12, AE15, AE18) ficam como registro da etapa e
+> não são mais critério; o resto do contrato continua valendo.
+
 O anexo deixa de entrar pela resolução e passa a entrar **e sair** pelo modo de
 edição do chamado. Nada vai para o banco até "Salvar alterações"; "Cancelar"
 descarta tudo.
