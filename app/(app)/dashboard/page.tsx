@@ -17,6 +17,8 @@ import DashboardOverview from "./_components/dashboard-overview"
 import DashboardOverviewSkeleton from "./_components/dashboard-overview-skeleton"
 import DashboardTopTags from "./_components/dashboard-top-tags"
 import DashboardTopTagsSkeleton from "./_components/dashboard-top-tags-skeleton"
+import DashboardTransfers from "./_components/dashboard-transfers"
+import DashboardTransfersSkeleton from "./_components/dashboard-transfers-skeleton"
 
 export const metadata: Metadata = {
   title: "Início",
@@ -68,6 +70,15 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
             </Suspense>
             <Suspense fallback={<DashboardOverdueSkeleton />}>
               <DashboardOverdue departmentId={actor.departmentId} now={now} />
+            </Suspense>
+          </div>
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+            <Suspense fallback={<DashboardTransfersSkeleton />}>
+              <DashboardTransfers
+                departmentId={actor.departmentId}
+                range={range}
+                now={now}
+              />
             </Suspense>
           </div>
         </div>

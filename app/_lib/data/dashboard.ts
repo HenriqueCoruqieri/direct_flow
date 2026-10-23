@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm"
 
+import { countPendingApprovals } from "@/app/_lib/data/approvals"
 import {
   BACKLOG_TICKET_STATUSES,
   DASHBOARD_RESOLVED_STATUSES,
@@ -10,14 +11,20 @@ import {
   TICKET_PRIORITY_DUE_HOURS,
   ticketDueAt,
 } from "@/app/_lib/domain/ticket-due"
+import {
+  PENDING_TRANSFER_STATUS,
+  REJECTED_TRANSFER_STATUS,
+} from "@/app/_lib/domain/ticket-transfer"
 import type {
+  DashboardIncomingTransfer,
   DashboardOverdueTicket,
   DashboardOverview,
   DashboardTopTags,
+  DashboardTransferSummary,
 } from "@/app/_lib/types/dashboard"
 import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
-import { tag, ticket, ticketTag, ticketTransfer } from "@/db/schema"
+import { department, tag, ticket, ticketTag, ticketTransfer } from "@/db/schema"
 
 export async function findDashboardOverview(
   departmentId: number,
@@ -147,4 +154,58 @@ export async function listOverdueTickets(
     priority: row.priority,
     dueAt: ticketDueAt({ createdAt: row.createdAt, priority: row.priority }),
   }))
+}
+
+export async function findTransferSummary(
+  departmentId: number,
+  range: DateRange,
+): Promise<DashboardTransferSummary> {
+  const isPending = eq(ticketTransfer.status, PENDING_TRANSFER_STATUS)
+  const isRejectedInRange = and(
+    eq(ticketTransfer.status, REJECTED_TRANSFER_STATUS),
+    gte(ticketTransfer.reviewedAt, range.start),
+    lt(ticketTransfer.reviewedAt, range.end),
+  )
+
+  const [incomingPendingCount, outgoingRows] = await Promise.all([
+    countPendingApprovals(departmentId),
+    db
+      .select({
+        outgoingPendingCount: sql<number>`(count(*) filter (where ${isPending}))::int`,
+        rejectedCount: sql<number>`(count(*) filter (where ${isRejectedInRange}))::int`,
+      })
+      .from(ticketTransfer)
+      .where(eq(ticketTransfer.fromDepartmentId, departmentId)),
+  ])
+
+  return {
+    incomingPendingCount,
+    outgoingPendingCount: outgoingRows[0]?.outgoingPendingCount ?? 0,
+    rejectedCount: outgoingRows[0]?.rejectedCount ?? 0,
+  }
+}
+
+export async function listOldestIncomingTransfers(
+  departmentId: number,
+  limit: number,
+): Promise<DashboardIncomingTransfer[]> {
+  return db
+    .select({
+      transferId: ticketTransfer.id,
+      ticketId: ticket.id,
+      ticketTitle: ticket.title,
+      fromDepartmentName: department.name,
+      sentAt: ticketTransfer.createdAt,
+    })
+    .from(ticketTransfer)
+    .innerJoin(department, eq(department.id, ticketTransfer.fromDepartmentId))
+    .innerJoin(ticket, eq(ticket.id, ticketTransfer.ticketId))
+    .where(
+      and(
+        eq(ticketTransfer.toDepartmentId, departmentId),
+        eq(ticketTransfer.status, PENDING_TRANSFER_STATUS),
+      ),
+    )
+    .orderBy(asc(ticketTransfer.createdAt), asc(ticketTransfer.id))
+    .limit(limit)
 }

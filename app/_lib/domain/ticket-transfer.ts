@@ -237,6 +237,9 @@ export const isTicketTransferReviewConflict = (
 ): reason is TicketTransferReviewStateBlockReason =>
   TICKET_TRANSFER_REVIEW_BLOCK_IS_CONFLICT[reason]
 
+export const PENDING_TRANSFER_STATUS =
+  "pendente" as const satisfies ApprovalStatus
+
 export const REJECTED_TRANSFER_STATUS =
   "rejeitado" as const satisfies ApprovalStatus
 

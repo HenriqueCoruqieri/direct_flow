@@ -1,9 +1,11 @@
 import {
+  elapsedMs,
   formatDuration,
   formatTotalHours,
   HOUR_MS,
   MINUTE_MS,
 } from "@/app/_lib/date"
+import { APPROVALS_LABEL } from "@/app/_lib/domain/approvals"
 import { DEPARTMENT_QUEUE_OPEN_STATUSES } from "@/app/_lib/domain/department-queue"
 import {
   type ActiveTicketStatus,
@@ -13,6 +15,8 @@ import {
 import type {
   DashboardOverdueColumn,
   DashboardOverviewCard,
+  DashboardTransferCounter,
+  DashboardTransferCounterTone,
 } from "@/app/_lib/types/dashboard"
 import type { DepartmentQueueTab } from "@/app/_lib/types/department-queue"
 import type { TicketStatus } from "@/app/_lib/types/ticket"
@@ -140,3 +144,45 @@ export const tagBarPercent = (count: number, maxCount: number): number => {
   if (maxCount <= 0) return 0
   return (Math.min(Math.max(count, 0), maxCount) / maxCount) * 100
 }
+
+export const TRANSFERS_CARD_LABEL = "Transferências entre setores"
+
+export const TRANSFER_COUNTER_LABELS = {
+  incoming: "Aguardando nosso aceite",
+  outgoing: "Enviados, pendentes",
+  rejected: "Recusados por outros",
+} satisfies Record<DashboardTransferCounter, string>
+
+export const REJECTED_TRANSFERS_SCOPE_HINT = "no período"
+
+export const TRANSFERS_APPROVALS_LINK_LABEL = `Ver em ${APPROVALS_LABEL}`
+
+export const INCOMING_TRANSFERS_LIMIT = 5
+
+export const INCOMING_TRANSFER_STALE_HOURS = 4
+
+export const INCOMING_TRANSFER_STALE_MS =
+  INCOMING_TRANSFER_STALE_HOURS * HOUR_MS
+
+export const STALE_INCOMING_TRANSFER_LABEL = `Aguardando aceite há ${formatDuration(INCOMING_TRANSFER_STALE_MS)} ou mais`
+
+export const EMPTY_INCOMING_TRANSFERS_TITLE = "Nenhum chamado aguardando aceite"
+
+export const EMPTY_INCOMING_TRANSFERS_DESCRIPTION =
+  "Os chamados enviados por outros setores aparecem aqui até alguém do setor atender ou recusar."
+
+export const transferCounterToneFor = (
+  counter: DashboardTransferCounter,
+  count: number,
+): DashboardTransferCounterTone => {
+  if (count <= 0) return "neutral"
+  if (counter === "incoming") return "highlight"
+  if (counter === "rejected") return "alert"
+  return "neutral"
+}
+
+export const incomingTransferOriginLabel = (departmentName: string): string =>
+  `de ${departmentName}`
+
+export const isStaleIncomingTransfer = (sentAt: Date, now: Date): boolean =>
+  elapsedMs(sentAt, now) >= INCOMING_TRANSFER_STALE_MS

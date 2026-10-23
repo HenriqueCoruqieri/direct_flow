@@ -6,8 +6,8 @@ do Início, o plano `docs/plans/dashboard-home.md` (2026-09-24): o card
 lg:max-w-3xl`) ficam superados. O shell, o filtro de período, as regras de fuso
 (ADR 009) e a URL continuam valendo como lá.
 
-Contratos por etapa: Etapa 1 em `docs/contracts/dashboard-overview.md`; Etapas
-2 e 3 ganham seção própria no mesmo arquivo quando forem abertas.
+Contratos por etapa, todos em `docs/contracts/dashboard-overview.md`: seções
+"Etapa 1", "Etapa 2" e "Etapa 3a"; a 3b ganha seção própria quando for aberta.
 
 ## Referência visual
 
@@ -81,17 +81,20 @@ número e divergiria da Fila. `BACKLOG_TICKET_STATUSES` reaproveita
   `Record<TicketPriority, number>`; o SQL recebe os prazos como parâmetro (ou
   `case` montado a partir da constante), nunca valor literal.
 
-### Linha 3 (Etapa 3)
+### Linha 3 (Etapas 3a e 3b)
 
 Grade igual à da linha 2: lado a lado (3+2) a partir de `xl` e empilhada
-abaixo (revisão 2026-10-23, RW15).
+abaixo (revisão 2026-10-23, RW15). Entre a 3a e a 3b, a coluna da esquerda
+fica vazia em `xl+` (o card de transferências já ocupa o slot da direita, sem
+placeholder).
 
-- **Últimos 7 dias** (~3/5): por dia (hoje e os 6 anteriores, fuso SP),
+- **Últimos 7 dias** (~3/5, Etapa 3b): por dia (hoje e os 6 anteriores, fuso SP),
   quantos chamados do setor foram abertos (`created_at`) e quantos resolvidos
   (`resolved_at`, status `resolvido`/`fechado`). Eixo X "Sex 9 … Hoje", rótulo
   no último ponto. Dias sem dado valem 0 (série completa de 7 pontos, montada
   no domínio a partir das chaves de dia). Não depende do filtro de período.
-- **Transferências entre setores** (~2/5), situação atual:
+- **Transferências entre setores** (~2/5, Etapa 3a), situação atual (exceto
+  "Recusados por outros", que segue o período e diz isso na tela):
   - "Aguardando nosso aceite" (destaque `warning`): pendentes com
     `to_department_id` = setor (mesmo número do selo de Aprovações).
   - "Enviados, pendentes": pendentes com `from_department_id` = setor.
@@ -99,7 +102,9 @@ abaixo (revisão 2026-10-23, RW15).
     `reviewed_at` no período.
   - Lista das pendentes para o setor, mais antigas primeiro:
     "#1068 de RH · há 3h 20min" (`formatTicketNumber`, nome do setor de
-    origem, tempo desde o envio com a duração de `app/_lib/date.ts`).
+    origem, tempo desde o envio com a duração de `app/_lib/date.ts`), até 5
+    itens, destaque `warning` em todo item parado há 4h ou mais; cada item
+    abre o detalhe com a origem Aprovações, e o card tem "Ver em Aprovações".
 
 ## Etapas e ondas
 
@@ -120,9 +125,13 @@ Concluída e comitada em 2026-10-23 (`c4ca2d4`); `df-qa` 16/16 em
 - `df-actions`, `df-auth`, `df-email`: não participam (sem mutação).
 - **Onda 3 — `df-reviewer`**; **Onda 4 — `df-qa`** (cenários do contrato).
 
-### Etapa 2 — linha 2
+### Etapa 2 — linha 2 (concluída)
 
-Seção "Etapa 2" de `docs/contracts/dashboard-overview.md`.
+Seção "Etapa 2" de `docs/contracts/dashboard-overview.md`. Concluída e
+comitada em 2026-10-23 (`33cf321`); `df-qa` em
+`docs/test-reports/2026-10-23-dashboard-overview-row2.md` (RW15 reprovado na
+primeira rodada e aprovado no reteste depois da revisão para `xl`; RW11 e RW13
+não executados por falta de conta de outro setor e de setor sem atraso).
 
 - **Onda 0 — `df-architect`** (feito): prazo por prioridade em
   `app/_lib/domain/ticket-due.ts`, `TICKET_PRIORITIES`, tipos da linha 2,
@@ -138,13 +147,41 @@ Seção "Etapa 2" de `docs/contracts/dashboard-overview.md`.
 - `df-actions`, `df-auth`, `df-email`: não participam.
 - **Onda 3 — `df-reviewer`**; **Onda 4 — `df-qa`** (RW1–RW17).
 
-### Etapa 3 — linha 3
+### Etapa 3 — linha 3, em duas sub-etapas
+
+Decisão do usuário (2026-10-23): **um commit por assunto**. A Etapa 3 vira
+3a e 3b, sequenciais, cada uma com seu ciclo completo (Ondas 0 a 4) e seu
+commit. O diff da 3a não leva nada do gráfico.
+
+#### Etapa 3a — Transferências entre setores
+
+Seção "Etapa 3a" de `docs/contracts/dashboard-overview.md`. Concluída em
+2026-10-23, aguardando commit; `df-qa` em
+`docs/test-reports/2026-10-23-dashboard-transfers.md` (13 de 16, 0 falhas;
+TR11 e TR12 não executados por recusa no login do Diretor, TR13
+desnecessário; ver "Limites conhecidos da Etapa 3a" no contrato).
+
+- **Onda 0 — `df-architect`** (feito): `elapsedMs`/`formatElapsed` em
+  `app/_lib/date.ts`, `DashboardTransferSummary`, `DashboardIncomingTransfer`
+  e tons em `app/_lib/types/dashboard.ts`, `PENDING_TRANSFER_STATUS`, textos,
+  limite (5), destaque (4h) e tons em `app/_lib/domain/dashboard.ts`,
+  `TRANSFERS_APPROVALS_HREF` e `incomingTransferTicketHref`.
+- **Onda 1 — `df-data`**: `findTransferSummary` (reaproveita
+  `countPendingApprovals`) e `listOldestIncomingTransfers`.
+- **Onda 1/2 — `df-ui`**: linha 3 com só o card da direita
+  (`xl:col-span-2 xl:col-start-4`), mini-cards, lista, vazio, esqueleto.
+- `df-actions`, `df-auth`, `df-email`: não participam.
+- **Onda 3 — `df-reviewer`** (feito, aprovado com atenções); **Onda 4 —
+  `df-qa`** (feito, TR1–TR16).
+
+#### Etapa 3b — Últimos 7 dias
 
 O orquestrador atualiza `.claude/rules/stack.md` (Recharts via `chart` do
 shadcn, linha nova na tabela da seção 1) e `.claude/agents/df-ui.md` (pacote na
 lista do agente), com aprovação do usuário, **antes** da Onda 0. Depois:
-contrato (série de 7 dias, contadores e lista de transferências, "há X"),
-`df-data`, `df-ui` (`npx shadcn@latest add chart`).
+contrato (série de 7 dias, regra de altura contra o card de transferências),
+`df-data`, `df-ui` (`npx shadcn@latest add chart`; o card entra como primeiro
+filho da linha 3, `xl:col-span-3`).
 
 ## Riscos
 

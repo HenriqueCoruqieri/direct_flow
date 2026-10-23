@@ -30,3 +30,21 @@ export interface DashboardOverdueTicket {
   priority: TicketPriority
   dueAt: Date
 }
+
+export type DashboardTransferCounter = "incoming" | "outgoing" | "rejected"
+
+export type DashboardTransferCounterTone = "highlight" | "alert" | "neutral"
+
+export interface DashboardTransferSummary {
+  incomingPendingCount: number
+  outgoingPendingCount: number
+  rejectedCount: number
+}
+
+export interface DashboardIncomingTransfer {
+  transferId: number
+  ticketId: number
+  ticketTitle: string
+  fromDepartmentName: string
+  sentAt: Date
+}

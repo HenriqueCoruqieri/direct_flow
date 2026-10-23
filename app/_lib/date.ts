@@ -181,3 +181,16 @@ export const formatDuration = (durationMs: number): string =>
 
 export const formatTotalHours = (durationMs: number): string =>
   `${integerFormat.format(Math.floor(Math.max(durationMs, 0) / HOUR_MS))}h`
+
+export const elapsedMs = (
+  value: DateInput,
+  now: DateInput = new Date(),
+): number => Math.max(dayjs(now).diff(dayjs(value)), 0)
+
+export const formatElapsed = (
+  value: DateInput,
+  now: DateInput = new Date(),
+): string => {
+  const elapsed = elapsedMs(value, now)
+  return elapsed < MINUTE_MS ? "agora" : `há ${formatDuration(elapsed)}`
+}

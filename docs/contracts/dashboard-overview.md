@@ -865,7 +865,424 @@ Notas para não reportar como defeito:
 ### Checklist da Etapa 2
 
 - [x] `TicketDueFacts`, tipos da linha 2, `ticket-due.ts`, `TICKET_PRIORITIES`, textos e regras em `dashboard.ts`, `formatShortDateTime`, `OVERDUE_QUEUE_HREF`, esta seção (`df-architect`)
-- [ ] `listDashboardTopTags` e `listOverdueTickets`, com `EXPLAIN` na resposta (`df-data`)
-- [ ] Linha 2, dois cards, dois `Suspense`, esqueletos, regra de altura (`df-ui`)
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`
-- [ ] Cenários RW1–RW17 (`df-qa`)
+- [x] `listDashboardTopTags` e `listOverdueTickets`, com `EXPLAIN` na resposta (`df-data`)
+- [x] Linha 2, dois cards, dois `Suspense`, esqueletos, regra de altura (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`
+- [x] Cenários RW1–RW17 (`df-qa`; RW15 reprovado e aprovado no reteste depois da revisão para `xl`; RW11 e RW13 não executados, ver observações acima)
+
+Etapa 2 concluída e comitada em 2026-10-23 (`33cf321`).
+
+---
+
+## Etapa 3a — linha 3, direita: Transferências entre setores
+
+Por decisão do usuário (2026-10-23, um commit por assunto) a linha 3 entra em
+duas sub-etapas: **3a** (esta, o card de transferências) e **3b** (Últimos 7
+dias, gráfico com Recharts, seção própria depois). Nada da 3b é escrito aqui.
+
+### Tabelas, enums e migration
+
+**Nenhuma mudança de schema. Nenhuma migration.** O fluxo lê:
+
+- `ticket_transfer` — `id`, `ticket_id`, `from_department_id`,
+  `to_department_id`, `status`, `reviewed_at`, `created_at`
+- `department` — `id`, `name` (setor de origem)
+- `ticket` — `id`, `title` (só para o `title` do item da lista)
+- enum `approval_status` (`pendente`, `aprovado`, `cancelado`, `rejeitado`)
+
+Índices que atendem, sem índice novo:
+
+- "Aguardando nosso aceite" e a lista: `transfer_inbox_idx`
+  (`to_department_id, status, created_at desc`). A contagem usa o prefixo; a
+  lista "mais antigas primeiro" lê o mesmo índice de trás para a frente
+  (`created_at asc`) e para no `limit`, sem ordenar.
+- "Enviados, pendentes" e "Recusados por outros": `transfer_from_department_idx`
+  (`from_department_id`); `status` e `reviewed_at` filtram as linhas do setor.
+  O volume de transferências por setor é pequeno; se o `EXPLAIN` mostrar
+  problema, reporte e o `df-architect` avalia `(from_department_id, status)`.
+
+### Definições
+
+| Contador                | Definição                                                                                                 | Período                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Aguardando nosso aceite | `status = 'pendente'` e `to_department_id` = setor. **Mesmo número do selo de Aprovações**                | não (situação atual)           |
+| Enviados, pendentes     | `status = 'pendente'` e `from_department_id` = setor                                                      | não (situação atual)           |
+| Recusados por outros    | `status = 'rejeitado'`, `from_department_id` = setor e `reviewed_at` no período (`[start, end)`)          | **sim**, o do filtro do Início |
+| Lista                   | As pendentes de "Aguardando nosso aceite", `created_at` asc, `id` asc, até `INCOMING_TRANSFERS_LIMIT` (5) | não (situação atual)           |
+
+- `cancelado` não entra em nenhum contador. `aprovado` já aparece na linha 1
+  ("+N recebidos de outros setores").
+- "Há X" na lista = `now − ticket_transfer.created_at` (o envio), com o mesmo
+  `now` da página.
+- Pelo ADR 016 o chamado pendente já está em `current_department_id` = destino
+  e fica só em Aprovações (não na Fila). Por isso o card leva o link "Ver em
+  Aprovações" e cada item abre o detalhe com a origem `approvals`.
+
+### Datas — `app/_lib/date.ts` (acréscimo)
+
+```ts
+export const elapsedMs: (value: DateInput, now?: DateInput) => number
+export const formatElapsed: (value: DateInput, now?: DateInput) => string
+```
+
+| Função          | Semântica                                                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `elapsedMs`     | `now − value` em ms; negativo (relógio adiantado) vale 0                                                                                            |
+| `formatElapsed` | `< 1 min` → `agora`; senão `há ` + `formatDuration` (`há 22min`, `há 3h 20min`, `há 1d 2h`, `há 2d`). Truncado em minutos como a duração da Etapa 1 |
+
+`formatRelative` (do `dayjs`, "há 3 horas") **não** serve aqui: arredonda e não
+dá "3h 20min".
+
+### Tipos — `app/_lib/types/dashboard.ts` (acréscimo)
+
+```ts
+export type DashboardTransferCounter = "incoming" | "outgoing" | "rejected"
+
+export type DashboardTransferCounterTone = "highlight" | "alert" | "neutral"
+
+export interface DashboardTransferSummary {
+  incomingPendingCount: number
+  outgoingPendingCount: number
+  rejectedCount: number
+}
+
+export interface DashboardIncomingTransfer {
+  transferId: number
+  ticketId: number
+  ticketTitle: string
+  fromDepartmentName: string
+  sentAt: Date
+}
+```
+
+`sentAt` = `ticket_transfer.created_at` (mesmo nome de `ApprovalListItem`).
+
+### Domínio
+
+`app/_lib/domain/ticket-transfer.ts` (acréscimo), ao lado do
+`REJECTED_TRANSFER_STATUS` que já existe:
+
+```ts
+export const PENDING_TRANSFER_STATUS =
+  "pendente" as const satisfies ApprovalStatus
+```
+
+O `df-data` usa os dois nas leituras novas, sem literal solto.
+`countPendingApprovals` continua como está (literal `"pendente"`); trocar é
+refatoração fora desta etapa.
+
+`app/_lib/domain/dashboard.ts` (acréscimo):
+
+```ts
+export const TRANSFERS_CARD_LABEL = "Transferências entre setores"
+export const TRANSFER_COUNTER_LABELS: Record<DashboardTransferCounter, string>
+export const REJECTED_TRANSFERS_SCOPE_HINT = "no período"
+export const TRANSFERS_APPROVALS_LINK_LABEL = "Ver em Aprovações"
+export const INCOMING_TRANSFERS_LIMIT = 5
+export const INCOMING_TRANSFER_STALE_HOURS = 4
+export const INCOMING_TRANSFER_STALE_MS: number
+export const STALE_INCOMING_TRANSFER_LABEL = "Aguardando aceite há 4h ou mais"
+export const EMPTY_INCOMING_TRANSFERS_TITLE = "Nenhum chamado aguardando aceite"
+export const EMPTY_INCOMING_TRANSFERS_DESCRIPTION: string
+
+export const transferCounterToneFor: (
+  counter: DashboardTransferCounter,
+  count: number,
+) => DashboardTransferCounterTone
+export const incomingTransferOriginLabel: (departmentName: string) => string
+export const isStaleIncomingTransfer: (sentAt: Date, now: Date) => boolean
+```
+
+| Nome                                   | Semântica                                                                                                                                                                                                      |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRANSFER_COUNTER_LABELS`              | `incoming` → `Aguardando nosso aceite` · `outgoing` → `Enviados, pendentes` · `rejected` → `Recusados por outros`. Ordem na tela: incoming, outgoing, rejected                                                 |
+| `REJECTED_TRANSFERS_SCOPE_HINT`        | Marca, no mini-card de recusados, que só ele segue o período. Os outros dois não levam marca (situação atual é o padrão do card, como em "Maiores atrasos")                                                    |
+| `TRANSFERS_APPROVALS_LINK_LABEL`       | `Ver em ` + `APPROVALS_LABEL`                                                                                                                                                                                  |
+| `INCOMING_TRANSFERS_LIMIT`             | 5 itens, igual a `OVERDUE_TICKETS_LIMIT` por coerência entre as linhas. A regra de altura contra o gráfico é da 3b; se ela pedir outro número, muda aqui, nunca na UI                                          |
+| `INCOMING_TRANSFER_STALE_HOURS`        | 4h: o mesmo valor do menor prazo de atendimento (`critica`), como teto para um chamado ficar parado sem ninguém aceitar. Constante própria, não derivada de `TICKET_PRIORITY_DUE_HOURS`: são regras diferentes |
+| `STALE_INCOMING_TRANSFER_LABEL`        | Texto acessível do item destacado; montado com `formatDuration`, então acompanha a constante                                                                                                                   |
+| `EMPTY_INCOMING_TRANSFERS_DESCRIPTION` | `Os chamados enviados por outros setores aparecem aqui até alguém do setor atender ou recusar.`                                                                                                                |
+| `transferCounterToneFor`               | `count ≤ 0` → `neutral` (qualquer contador). `incoming` com `count > 0` → `highlight` (fundo e número `warning`). `rejected` com `count > 0` → `alert` (só o número `warning`). `outgoing` → sempre `neutral`  |
+| `incomingTransferOriginLabel`          | `RH` → `de RH`                                                                                                                                                                                                 |
+| `isStaleIncomingTransfer`              | `elapsedMs(sentAt, now) ≥ INCOMING_TRANSFER_STALE_MS`, **inclusivo**. Vale para **todo** item acima do limite, não só o primeiro; como a lista é "mais antigas primeiro", os destacados ficam juntos no topo   |
+
+Por que o destaque do "Aguardando" some com `0`: no print o mini-card está
+destacado porque há o que aceitar; com zero não há alerta a dar, e manter o
+laranja ensinaria o usuário a ignorar a cor.
+
+Número do chamado: `formatTicketNumber(ticketId)` (`app/_lib/domain/ticket.ts`).
+
+### Validação — `app/_lib/validation/dashboard.ts` (acréscimo)
+
+```ts
+export const TRANSFERS_APPROVALS_HREF: string
+export const incomingTransferTicketHref: (ticketId: number) => string
+```
+
+| Nome                         | Valor                                                                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRANSFERS_APPROVALS_HREF`   | `approvalsHref(DEFAULT_APPROVALS_PERIOD)` → `/approvals?periodo=todos`                                                                                                          |
+| `incomingTransferTicketHref` | `approvalsTicketDetailHref(DEFAULT_APPROVALS_PERIOD, id)` → `/tickets/{id}?from=approvals&periodo=todos`. No detalhe, o link de retorno rotulado "Aprovações" leva a Aprovações |
+
+Origem `approvals`, e não uma origem "Início" nova, porque o chamado pendente
+só existe em Aprovações: voltar para lá depois de atender ou recusar é o
+caminho natural, e não exige tipo de origem novo.
+
+### `df-data` — `app/_lib/data/dashboard.ts`
+
+```ts
+export async function findTransferSummary(
+  departmentId: number,
+  range: DateRange,
+): Promise<DashboardTransferSummary>
+
+export async function listOldestIncomingTransfers(
+  departmentId: number,
+  limit: number,
+): Promise<DashboardIncomingTransfer[]>
+```
+
+Sem `now`: nenhuma das duas leituras depende do instante (o "há X" e o
+destaque são calculados na UI com o `now` da página).
+
+**`findTransferSummary`** — duas leituras em `Promise.all`:
+
+1. `countPendingApprovals(departmentId)` de `app/_lib/data/approvals.ts`,
+   **reaproveitada** (importada, não copiada) → `incomingPendingCount`. É o que
+   garante o mesmo número do selo.
+2. Enviados e recusados, uma varredura das transferências que saíram do setor:
+
+```sql
+select
+  count(*) filter (where tr.status = $pending)::int as outgoing_pending_count,
+  count(*) filter (
+    where tr.status = $rejected
+      and tr.reviewed_at >= $start and tr.reviewed_at < $end
+  )::int as rejected_count
+from ticket_transfer tr
+where tr.from_department_id = $departmentId
+```
+
+- `$pending` = `PENDING_TRANSFER_STATUS`, `$rejected` = `REJECTED_TRANSFER_STATUS`.
+- Intervalo meio-aberto (`>=`/`<`); `reviewed_at` nulo nunca passa.
+- Sem linhas: `{ incomingPendingCount: 0, outgoingPendingCount: 0, rejectedCount: 0 }`.
+
+**`listOldestIncomingTransfers`**:
+
+```sql
+select tr.id as transfer_id, t.id as ticket_id, t.title as ticket_title,
+  d.name as from_department_name, tr.created_at as sent_at
+from ticket_transfer tr
+join department d on d.id = tr.from_department_id
+join ticket t on t.id = tr.ticket_id
+where tr.to_department_id = $departmentId
+  and tr.status = $pending
+order by tr.created_at asc, tr.id asc
+limit $limit
+```
+
+- Mesmo filtro de `countPendingApprovals` (destino + pendente), então
+  `lista.length = min(incomingPendingCount, limit)`.
+- Sem pendentes: `[]`.
+- Rodar `EXPLAIN ANALYZE` das três leituras para Suporte (14) e Diretoria (11)
+  e colar na resposta.
+
+### `df-actions`, `df-auth`, `df-email`
+
+**Nada.** Sem mutação.
+
+### `df-ui` — o que fazer
+
+**Arquivos** em `app/(app)/dashboard/_components/` (nomes sugeridos):
+`dashboard-transfers.tsx`, `dashboard-transfers-skeleton.tsx` e, se ajudar,
+`transfer-counter.tsx` (o mini-card) e `incoming-transfer-item.tsx`. `page.tsx`
+ganha a linha 3. Linhas 1 e 2 não mudam. Reaproveitar `DashboardPanel`; o
+cabeçalho (título + link) segue o de `dashboard-overdue-header.tsx` — se for
+generalizar aquele componente, é decisão do `df-ui`.
+
+**Grade da linha 3 (3a).** Abaixo da linha 2, no mesmo `flex-col gap-3`:
+`grid grid-cols-1 gap-3 xl:grid-cols-5`, com o card de transferências em
+`xl:col-span-2 xl:col-start-4`. Abaixo de `xl` ocupa a largura toda. Em `xl+`
+a coluna da esquerda (3/5) fica **vazia** até a 3b: sem placeholder, sem
+esqueleto, sem texto "em breve". Quando a 3b entrar, ela acrescenta o card do
+gráfico como primeiro filho (`xl:col-span-3`) e nada mais muda; o
+`xl:col-start-4` passa a ser redundante e pode ficar ou sair.
+
+**Um `Suspense`, sem `key` de período**, com o esqueleto do card. O card faz
+uma leitura só (`Promise.all` de `findTransferSummary(actor.departmentId,
+range)` e `listOldestIncomingTransfers(actor.departmentId,
+INCOMING_TRANSFERS_LIMIT)`) e recebe `now` da página. Sem `key` pelo mesmo
+motivo do card de atrasos: só um contador depende do período, e o esqueleto
+piscando na troca de filtro seria pior do que o número mudar no lugar.
+
+**Cabeçalho**: `TRANSFERS_CARD_LABEL` (mesmo estilo do título de "Maiores
+atrasos") à esquerda; link `TRANSFERS_APPROVALS_LINK_LABEL` →
+`TRANSFERS_APPROVALS_HREF` à direita, sempre (com ou sem pendentes).
+
+**3 mini-cards** lado a lado (`grid grid-cols-3 gap-2`) em todas as larguras,
+inclusive 390 px. Ordem: incoming, outgoing, rejected. Cada um: rótulo
+pequeno de `TRANSFER_COUNTER_LABELS` em cima (pode quebrar em até 2 linhas,
+**nunca** truncar), número grande (`font-heading`, `tabular-nums`) embaixo,
+empurrado para o fim (`mt-auto`) para os três números ficarem na mesma linha
+de base; os três com a mesma altura (stretch do grid). Marcação sugerida: `dl`
+com `dt`/`dd`, ou o rótulo como nome acessível do número.
+
+- Recusados: entre o rótulo e o número, `REJECTED_TRANSFERS_SCOPE_HINT` ("no
+  período") em texto menor e `text-muted-foreground`. Fica acima do número,
+  para não desalinhar a linha dos números.
+- Tom por `transferCounterToneFor(counter, count)`:
+  - `highlight`: fundo `bg-warning`, borda `border-warning-border`, número
+    `text-warning-foreground`;
+  - `alert`: fundo e borda neutros, número `text-warning-foreground`;
+  - `neutral`: superfície secundária neutra do tema (a que o `df-ui` já usa),
+    número na cor padrão.
+  - O rótulo sempre presente garante que cor não é a única informação.
+
+**Lista** (abaixo dos mini-cards, `ul`/`li`, linhas finas `border-border-subtle`
+entre itens):
+
+- Cada item é um link inteiro para `incomingTransferTicketHref(ticketId)`, com
+  `title={ticketTitle}` e foco visível.
+- À esquerda: `formatTicketNumber(ticketId)` em fonte mono,
+  `text-muted-foreground`, seguido de
+  `incomingTransferOriginLabel(fromDepartmentName)`; o nome do setor trunca em
+  uma linha (é o que encolhe).
+- À direita: `formatElapsed(sentAt, now)`, `whitespace-nowrap`,
+  `tabular-nums`, com `title={formatDateTime(sentAt)}`.
+- `isStaleIncomingTransfer(sentAt, now)`: o "há X" em
+  `text-warning-foreground font-semibold` e um texto `sr-only` com
+  `STALE_INCOMING_TRANSFER_LABEL` (cor nunca sozinha).
+- Mostra todos os itens devolvidos (até 5). Com mais pendentes que o limite,
+  nada extra: o contador mostra o total e o link leva a Aprovações.
+
+**Vazio** (`incomingPendingCount = 0`, lista `[]`): mini-cards com os números
+e tons normais (o "Aguardando" fica `neutral` com `0`), e no lugar da lista
+`EMPTY_INCOMING_TRANSFERS_TITLE` + `EMPTY_INCOMING_TRANSFERS_DESCRIPTION`,
+texto pequeno e neutro, como o vazio de atrasos. O link "Ver em Aprovações"
+continua.
+
+**Esqueleto**: cabeçalho (título e link), 3 mini-cards e 5 linhas.
+`aria-busy` e `aria-label="Carregando transferências entre setores"`. Mesmo
+`col-span`/`col-start` do card, para a grade não pular.
+
+**Altura**: na 3a o card tem a altura do próprio conteúdo (não há vizinho).
+A regra de altura contra o gráfico é da 3b.
+
+### Riscos da Etapa 3a
+
+1. **Coluna vazia em `xl+`.** Entre os commits da 3a e da 3b, a linha 3 tem
+   3/5 em branco à esquerda. Aceito: é provisório e evita placeholder falso.
+2. **Selo × contador.** Os dois usam `countPendingApprovals`, em leituras
+   separadas do mesmo request; só diferem se uma transferência for criada ou
+   revisada entre as duas.
+3. **"Recusados" no período × o resto situação atual.** Mitigado pela marca
+   "no período" no mini-card.
+4. **"Há X" congelado.** O tempo é do render (o `now` da página); não conta
+   sozinho na tela aberta. Aceito, como os atrasos.
+
+### Cenários do `df-qa`
+
+Parametrizados por setor. Contas reais fornecidas pelo orquestrador na hora
+(as mesmas da Etapa 2): `D` = Diretor (Diretoria, `DIR` = 11), `A` =
+Administrador de Suporte, `M` = Membro de Suporte (`S` = 14). Não há conta de
+outro setor. **Preferir leitura.** Se algum cenário exigir criar
+transferência, só com chamado novo de título `[QA] Transferências …`, pela
+interface; nunca mexer em chamado que não seja `[QA]`. Bordas de período: as
+da Etapa 1.
+
+Consulta `TS(dep, inicio, fim)`:
+
+```sql
+select
+  (select count(*) from ticket_transfer
+    where to_department_id = :dep and status = 'pendente') as aguardando,
+  (select count(*) from ticket_transfer
+    where from_department_id = :dep and status = 'pendente') as enviados,
+  (select count(*) from ticket_transfer
+    where from_department_id = :dep and status = 'rejeitado'
+      and reviewed_at >= :inicio and reviewed_at < :fim) as recusados
+```
+
+Consulta `TL(dep)` (lista):
+
+```sql
+select t.id, d.name as origem, t.title,
+  to_char(tr.created_at at time zone 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') as enviado_sp,
+  floor(extract(epoch from (now() - tr.created_at)) / 60) as minutos
+from ticket_transfer tr
+join department d on d.id = tr.from_department_id
+join ticket t on t.id = tr.ticket_id
+where tr.to_department_id = :dep and tr.status = 'pendente'
+order by tr.created_at asc, tr.id asc
+limit 5
+```
+
+"Há X" esperado a partir de `minutos` (`m`): `m < 1` → `agora`; senão `há ` +
+o formato de duração da Etapa 1 (`{m}min`, `{h}h {min}min`, `{d}d {h}h`, sem a
+parte zerada). Tolerância de 1 min entre a consulta e o render. Destaque
+esperado em todo item com `m ≥ 240`.
+
+| #    | Quem    | Ação                                                                                                           | Esperado                                                                                                                                                                                                                                                                                                                         |
+| ---- | ------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TR1  | A       | `/dashboard` Hoje, 1280 px                                                                                     | abaixo da linha 2, card "Transferências entre setores" na coluna da direita (~2/5, mesma largura e posição horizontal de "Maiores atrasos"); à esquerda, nada (nem placeholder nem esqueleto). Linhas 1 e 2 iguais às das Etapas 1 e 2                                                                                           |
+| TR2  | A       | Hoje                                                                                                           | 3 mini-cards na ordem Aguardando nosso aceite · Enviados, pendentes · Recusados por outros, com `TS(S, hoje)`; "Aguardando" = número do selo de Aprovações no menu (`0` se não houver selo)                                                                                                                                      |
+| TR3  | A       | Semana, Mês, Personalizado de 3 dias com hoje, 2026-01-01                                                      | só "Recusados" muda, = `recusados` de `TS(S, …)`; "Aguardando", "Enviados" e a lista iguais em todos os períodos; o card não mostra esqueleto na troca                                                                                                                                                                           |
+| TR4  | A       | Mini-card de recusados                                                                                         | texto "no período" visível entre o rótulo e o número; os outros dois sem essa marca; os três números na mesma linha de base                                                                                                                                                                                                      |
+| TR5  | A       | Tons                                                                                                           | "Aguardando" com fundo e número `warning` se `aguardando > 0`, neutro se `0`; "Recusados" com número `warning` se `> 0`, neutro se `0`; "Enviados" sempre neutro                                                                                                                                                                 |
+| TR6  | A       | Lista                                                                                                          | itens = `TL(S)`, mesma ordem (mais antigo em cima), `#id` mono discreto + `de {origem}`, "há X" à direita conforme a regra acima; `title` do item = título do chamado; `title` do "há X" = `enviado_sp`                                                                                                                          |
+| TR7  | A       | Destaque                                                                                                       | itens com `m ≥ 240` com o "há X" em `warning` e texto acessível "Aguardando aceite há 4h ou mais"; itens com `m < 240` sem. Se nenhum item cruzar o limite (ou não houver itens) em nenhum setor acessível: NÃO EXECUTADO, com a consulta                                                                                        |
+| TR8  | A       | Clicar num item da lista                                                                                       | `/tickets/{id}?from=approvals&periodo=todos`, detalhe do chamado certo; o link de retorno rotulado "Aprovações" leva a Aprovações                                                                                                                                                                                                |
+| TR9  | A       | Clicar "Ver em Aprovações"                                                                                     | `/approvals?periodo=todos`; os chamados da lista estão em Aprovações                                                                                                                                                                                                                                                             |
+| TR10 | M       | `/dashboard` Hoje                                                                                              | mesmos números e lista de A (o card é do setor, não do papel)                                                                                                                                                                                                                                                                    |
+| TR11 | D       | `/dashboard` Hoje e Mês                                                                                        | números = `TS(DIR, …)`, lista = `TL(DIR)`; nada de Suporte                                                                                                                                                                                                                                                                       |
+| TR12 | todos   | Setor com `aguardando = 0` (conferir pela consulta)                                                            | `Nenhum chamado aguardando aceite` + descrição, sem lista; "Aguardando" neutro com `0`; link "Ver em Aprovações" presente. Se nenhum setor acessível tiver `aguardando = 0`: NÃO EXECUTADO, com a consulta                                                                                                                       |
+| TR13 | M, A, D | Só se TR2/TR3 não tiverem mostrado nenhum valor diferente de 0 em "Enviados" ou "Recusados": preparação mínima | M cria `[QA] Transferências 1` em Suporte e o envia para a Diretoria → A e M veem "Enviados" +1; D vê "Aguardando" +1 e o item `agora`/`há {m}min` na lista (no fim, por ser o mais novo, se houver menos de 5 pendentes). D recusa com motivo → A vê "Recusados" +1 em Hoje e "Enviados" −1; D vê "Aguardando" −1 e o item some |
+| TR14 | A       | 1024 px                                                                                                        | card em largura total abaixo da linha 2; mini-cards lado a lado; sem rolagem horizontal                                                                                                                                                                                                                                          |
+| TR15 | A       | 390×844                                                                                                        | mini-cards lado a lado (3 colunas), rótulos em até 2 linhas sem `…`, números inteiros; nome do setor de origem trunca, "há X" inteiro; sem rolagem horizontal                                                                                                                                                                    |
+| TR16 | todos   | toda a bateria                                                                                                 | console e dev server sem erro nem aviso de hidratação; linhas 1 e 2 continuam conforme OV e RW                                                                                                                                                                                                                                   |
+
+Notas para não reportar como defeito:
+
+- "Recusados por outros" conta pela data da recusa (`reviewed_at`), não pela
+  do envio.
+- Transferência `cancelado` não aparece em contador nenhum.
+- A lista para em 5 mesmo que "Aguardando" seja maior.
+- "Há X" não atualiza sozinho com a página aberta.
+- A coluna esquerda vazia em `xl+` é esperada até a 3b.
+
+### Critério de pronto da Etapa 3a
+
+1. Card na direita da linha 3 em `xl+`, largura total abaixo; esquerda vazia
+   sem placeholder.
+2. Contadores e lista iguais a `TS`/`TL`; "Aguardando" = selo; só "Recusados"
+   segue o período (TR3) e mostra a marca (TR4).
+3. Tons, destaque e vazio conforme TR5, TR7 e TR12; links conforme TR8 e TR9.
+4. 390 px sem rolagem horizontal.
+5. Nenhum literal de status de transferência no SQL novo (usa
+   `PENDING_TRANSFER_STATUS`/`REJECTED_TRANSFER_STATUS`); nada da 3b no diff.
+6. `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem
+   bloqueante; `df-qa` aprova TR1–TR16.
+
+### Checklist da Etapa 3a
+
+- [x] `elapsedMs`, `formatElapsed`; tipos de transferência do Início; `PENDING_TRANSFER_STATUS`; textos, limite, destaque e tons em `dashboard.ts`; `TRANSFERS_APPROVALS_HREF` e `incomingTransferTicketHref`; esta seção e o plano (`df-architect`)
+- [x] `findTransferSummary` e `listOldestIncomingTransfers`, com `EXPLAIN` na resposta (`df-data`; Seq Scan em `ticket_transfer` com 52 linhas, < 0,2 ms, sem índice novo)
+- [x] Linha 3 (só a direita), card, mini-cards, lista, vazio, esqueleto (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado com atenções, nenhum bloqueante)
+- [x] Cenários TR1–TR16 (`df-qa`: 13 de 16, 0 falhas, 3 não executados; `docs/test-reports/2026-10-23-dashboard-transfers.md`)
+
+### Limites conhecidos da Etapa 3a
+
+- **TR11 e TR12 não executados.** O login do Diretor foi recusado na rodada
+  do `df-qa`, e a Diretoria é o único setor acessível com `aguardando = 0`.
+  Os valores esperados (`TS(11)` = 0 / 3 / 0 em Mês, `TL(11)` vazia, tela de
+  vazio com "Aguardando" neutro e link "Ver em Aprovações") estão anotados no
+  relatório para quando o Diretor puder entrar.
+- **TR13 desnecessário.** Era preparação condicional; TR2/TR3 já mostraram
+  valores diferentes de 0, então a condição não se aplicou.
+- **TR5–TR7 cobertos em parte.** Suporte tinha uma só transferência
+  pendente, parada há 7d 23h. Não foram observados na tela: "Aguardando"
+  neutro com `0`, a ordem com vários itens, item recente sem destaque (e o
+  formato `agora`/`há {m}min`) e o limite de 5 itens.
+
+Etapa 3a concluída em 2026-10-23, aguardando commit.
