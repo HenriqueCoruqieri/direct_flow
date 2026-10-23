@@ -99,6 +99,13 @@ export const TICKET_PRIORITY_LABELS = {
   critica: "Crítica",
 } satisfies Record<TicketPriority, string>
 
+const isTicketPriority = (value: string): value is TicketPriority =>
+  Object.hasOwn(TICKET_PRIORITY_LABELS, value)
+
+export const TICKET_PRIORITIES: readonly TicketPriority[] = Object.keys(
+  TICKET_PRIORITY_LABELS,
+).filter(isTicketPriority)
+
 export const TICKET_TYPE_LABELS = {
   duvida: "Dúvida",
   ocorrencia: "Ocorrência",

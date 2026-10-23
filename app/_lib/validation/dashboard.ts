@@ -1,7 +1,10 @@
 import { z } from "zod"
 
+import { OVERDUE_QUEUE_TAB } from "@/app/_lib/domain/dashboard"
+import { DEFAULT_DEPARTMENT_QUEUE_PERIOD } from "@/app/_lib/domain/department-queue"
 import { DEFAULT_PERIOD, PRESET_PERIODS } from "@/app/_lib/domain/period"
 import type { DateKey, PeriodSelection } from "@/app/_lib/types/period"
+import { departmentQueueHref } from "@/app/_lib/validation/department-queue"
 import {
   customPeriodSchema,
   readPeriodParams,
@@ -31,3 +34,9 @@ export const parseDashboardParams = (
 
 export const serializeDashboardParams = (selection: PeriodSelection): string =>
   serializePeriodParams(selection)
+
+export const OVERDUE_QUEUE_HREF = departmentQueueHref({
+  tab: OVERDUE_QUEUE_TAB,
+  period: DEFAULT_DEPARTMENT_QUEUE_PERIOD,
+  departmentId: null,
+})

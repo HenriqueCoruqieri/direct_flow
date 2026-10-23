@@ -49,6 +49,16 @@ export const formatDate = (value: DateInput): string =>
 export const formatDateTime = (value: DateInput): string =>
   inAppZone(value).format("DD/MM/YYYY HH:mm")
 
+export const formatShortDateTime = (
+  value: DateInput,
+  now: DateInput = new Date(),
+): string => {
+  const zoned = inAppZone(value)
+  return zoned.isSame(inAppZone(now), "year")
+    ? zoned.format("D MMM, HH:mm")
+    : zoned.format("D MMM YYYY, HH:mm")
+}
+
 export const formatRelative = (
   value: DateInput,
   now: DateInput = new Date(),

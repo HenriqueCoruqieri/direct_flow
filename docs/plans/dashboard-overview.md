@@ -70,18 +70,21 @@ número e divergiria da Fila. `BACKLOG_TICKET_STATUSES` reaproveita
   tag de outro setor não entra, empate por `lower(name)` e `id`). Destaque da
   primeira: nome, "N chamados · X% do volume" (X = chamados com a tag ÷
   chamados no período, arredondado para baixo). Lista com contagem e barra
-  proporcional à maior. Quantos itens couberem no card; o `df-data` limita a
-  um N fixo (proposta: 6) e a UI mostra os que cabem. Nenhuma tag: vazio
-  definido no contrato da etapa.
+  proporcional à maior. Limite fixo de 6 tags (linhas da tabela de atrasos +
+  1, para as duas colunas terem altura parecida); a UI mostra todas as
+  devolvidas, sem cortar. Vazio e regra de altura no contrato da etapa.
 - **Maiores atrasos** (~2/5): chamados do setor em `BACKLOG_TICKET_STATUSES`
   cujo vencimento calculado (`created_at` + prazo da prioridade) já passou,
-  maior atraso primeiro, limite pequeno (proposta: 5). Colunas Nº, Título,
-  Prioridade, Vencimento; link "Ver na fila" para `/queue`. Situação atual,
+  maior atraso primeiro, limite de 5. Colunas Nº, Título,
+  Prioridade, Vencimento; link "Ver na fila" para a aba "Todos" da Fila (`/queue?tab=all&periodo=todos`). Situação atual,
   não depende do período. O prazo vive em `app/_lib/domain/` como
   `Record<TicketPriority, number>`; o SQL recebe os prazos como parâmetro (ou
   `case` montado a partir da constante), nunca valor literal.
 
 ### Linha 3 (Etapa 3)
+
+Grade igual à da linha 2: lado a lado (3+2) a partir de `xl` e empilhada
+abaixo (revisão 2026-10-23, RW15).
 
 - **Últimos 7 dias** (~3/5): por dia (hoje e os 6 anteriores, fuso SP),
   quantos chamados do setor foram abertos (`created_at`) e quantos resolvidos
@@ -100,7 +103,10 @@ número e divergiria da Fila. `BACKLOG_TICKET_STATUSES` reaproveita
 
 ## Etapas e ondas
 
-### Etapa 1 — grade da página e linha 1
+### Etapa 1 — grade da página e linha 1 (concluída)
+
+Concluída e comitada em 2026-10-23 (`c4ca2d4`); `df-qa` 16/16 em
+`docs/test-reports/2026-10-23-dashboard-overview.md`.
 
 - **Onda 0 — `df-architect`** (feito): `DashboardOverview` e
   `DashboardOverviewCard` em `app/_lib/types/dashboard.ts`, `DurationPart` em
@@ -116,8 +122,21 @@ número e divergiria da Fila. `BACKLOG_TICKET_STATUSES` reaproveita
 
 ### Etapa 2 — linha 2
 
-Contrato próprio (tipos de ranking e de atraso, prazo por prioridade,
-`listDashboardTopTags`, `listOverdueTickets`), dois cards lado a lado em `lg`.
+Seção "Etapa 2" de `docs/contracts/dashboard-overview.md`.
+
+- **Onda 0 — `df-architect`** (feito): prazo por prioridade em
+  `app/_lib/domain/ticket-due.ts`, `TICKET_PRIORITIES`, tipos da linha 2,
+  textos, limites (5 atrasos, 6 tags) e regra do percentual em
+  `app/_lib/domain/dashboard.ts`, `formatShortDateTime`, `OVERDUE_QUEUE_HREF`.
+- **Onda 1 — `df-data`**: `listDashboardTopTags`, `listOverdueTickets`.
+- **Onda 1/2 — `df-ui`**: linha 2 com um `Suspense` por card, dois cards lado
+  a lado a partir de `xl` (empilhados abaixo), esqueletos, regra de altura.
+- **Revisão 2026-10-23 (RW15):** a 1024 px a abertura em `lg` deixava a
+  tabela de atrasos com 284 px e rolagem horizontal. As linhas 2 e 3 passam a
+  ficar lado a lado (3+2) só a partir de `xl` (1280 px), o mesmo breakpoint da
+  linha 1 em 4 colunas. Detalhe na seção "Etapa 2" do contrato.
+- `df-actions`, `df-auth`, `df-email`: não participam.
+- **Onda 3 — `df-reviewer`**; **Onda 4 — `df-qa`** (RW1–RW17).
 
 ### Etapa 3 — linha 3
 

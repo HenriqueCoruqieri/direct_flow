@@ -10,7 +10,11 @@ import {
   CLOSED_TICKET_STATUS,
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
-import type { DashboardOverviewCard } from "@/app/_lib/types/dashboard"
+import type {
+  DashboardOverdueColumn,
+  DashboardOverviewCard,
+} from "@/app/_lib/types/dashboard"
+import type { DepartmentQueueTab } from "@/app/_lib/types/department-queue"
 import type { TicketStatus } from "@/app/_lib/types/ticket"
 
 export const DASHBOARD_PATH = "/dashboard"
@@ -70,3 +74,69 @@ export const illustrativeBacklogMs = (backlogCount: number): number =>
 
 export const backlogHoursHint = (backlogCount: number): string =>
   `${formatTotalHours(illustrativeBacklogMs(backlogCount))} em backlog`
+
+export const TOP_TAGS_CARD_LABEL = "Principal ofensor"
+
+export const OVERDUE_CARD_LABEL = "Maiores atrasos"
+
+export const OVERDUE_QUEUE_LINK_LABEL = "Ver na fila"
+
+export const OVERDUE_QUEUE_TAB: DepartmentQueueTab = "all"
+
+export const OVERDUE_TICKETS_LIMIT = 5
+
+export const TOP_TAGS_LIMIT = OVERDUE_TICKETS_LIMIT + 1
+
+export const OVERDUE_TICKET_STATUSES: readonly ActiveTicketStatus[] =
+  BACKLOG_TICKET_STATUSES
+
+export const OVERDUE_COLUMN_LABELS = {
+  number: "Nº",
+  title: "Título",
+  priority: "Prioridade",
+  dueAt: "Vencimento",
+} satisfies Record<DashboardOverdueColumn, string>
+
+export const NO_TAGGED_TICKETS_IN_PERIOD_HINT =
+  "Nenhum chamado com tag no período"
+
+export const EMPTY_OVERDUE_TITLE = "Nenhum chamado em atraso"
+
+export const EMPTY_OVERDUE_DESCRIPTION =
+  "Os chamados do setor com vencimento já passado aparecem aqui."
+
+export const topTagsEmptyHint = (ticketCount: number): string =>
+  ticketCount > 0 ? NO_TAGGED_TICKETS_IN_PERIOD_HINT : NO_TICKETS_IN_PERIOD_HINT
+
+export const tagVolumePercent = (
+  tagCount: number,
+  ticketCount: number,
+): number | null => {
+  if (ticketCount <= 0) return null
+  const tagged = Math.min(Math.max(tagCount, 0), ticketCount)
+  return Math.floor((tagged / ticketCount) * 100)
+}
+
+const ticketCountLabel = (count: number): string =>
+  `${count} ${count === 1 ? "chamado" : "chamados"}`
+
+const volumeLabel = (tagCount: number, ticketCount: number): string | null => {
+  const percent = tagVolumePercent(tagCount, ticketCount)
+  if (percent === null) return null
+  if (percent === 0 && tagCount > 0) return "< 1% do volume"
+  return `${percent}% do volume`
+}
+
+export const topTagVolumeHint = (
+  tagCount: number,
+  ticketCount: number,
+): string => {
+  const volume = volumeLabel(tagCount, ticketCount)
+  const count = ticketCountLabel(tagCount)
+  return volume === null ? count : `${count} · ${volume}`
+}
+
+export const tagBarPercent = (count: number, maxCount: number): number => {
+  if (maxCount <= 0) return 0
+  return (Math.min(Math.max(count, 0), maxCount) / maxCount) * 100
+}

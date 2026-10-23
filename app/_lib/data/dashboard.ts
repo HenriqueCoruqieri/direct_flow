@@ -1,13 +1,23 @@
-import { and, count, eq, gte, inArray, lt, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm"
 
 import {
   BACKLOG_TICKET_STATUSES,
   DASHBOARD_RESOLVED_STATUSES,
+  OVERDUE_TICKET_STATUSES,
 } from "@/app/_lib/domain/dashboard"
-import type { DashboardOverview } from "@/app/_lib/types/dashboard"
+import { TICKET_PRIORITIES } from "@/app/_lib/domain/ticket"
+import {
+  TICKET_PRIORITY_DUE_HOURS,
+  ticketDueAt,
+} from "@/app/_lib/domain/ticket-due"
+import type {
+  DashboardOverdueTicket,
+  DashboardOverview,
+  DashboardTopTags,
+} from "@/app/_lib/types/dashboard"
 import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
-import { ticket, ticketTransfer } from "@/db/schema"
+import { tag, ticket, ticketTag, ticketTransfer } from "@/db/schema"
 
 export async function findDashboardOverview(
   departmentId: number,
@@ -62,4 +72,79 @@ export async function findDashboardOverview(
       averageResolutionMs === null ? null : Number(averageResolutionMs),
     backlogCount: ticketRow?.backlogCount ?? 0,
   }
+}
+
+export async function listDashboardTopTags(
+  departmentId: number,
+  range: DateRange,
+  limit: number,
+): Promise<DashboardTopTags> {
+  const createdInRange = and(
+    eq(ticket.currentDepartmentId, departmentId),
+    gte(ticket.createdAt, range.start),
+    lt(ticket.createdAt, range.end),
+  )
+  const tagTicketCount = count()
+
+  const [totalRows, tagRows] = await Promise.all([
+    db
+      .select({ value: sql<number>`(${count()})::int` })
+      .from(ticket)
+      .where(createdInRange),
+    db
+      .select({
+        id: tag.id,
+        name: tag.name,
+        ticketCount: sql<number>`(${tagTicketCount})::int`,
+      })
+      .from(ticketTag)
+      .innerJoin(tag, eq(tag.id, ticketTag.tagId))
+      .innerJoin(ticket, eq(ticket.id, ticketTag.ticketId))
+      .where(and(createdInRange, eq(tag.departmentId, departmentId)))
+      .groupBy(tag.id, tag.name)
+      .orderBy(desc(tagTicketCount), asc(sql`lower(${tag.name})`), asc(tag.id))
+      .limit(limit),
+  ])
+
+  return { ticketCount: totalRows[0]?.value ?? 0, tags: tagRows }
+}
+
+export async function listOverdueTickets(
+  departmentId: number,
+  now: Date,
+  limit: number,
+): Promise<DashboardOverdueTicket[]> {
+  const dueHours = sql.join(
+    TICKET_PRIORITIES.map(
+      (priority) =>
+        sql`when ${priority} then ${TICKET_PRIORITY_DUE_HOURS[priority]}::int`,
+    ),
+    sql` `,
+  )
+  const dueAt = sql`(${ticket.createdAt} + make_interval(hours => case ${ticket.priority} ${dueHours} end))`
+
+  const rows = await db
+    .select({
+      id: ticket.id,
+      title: ticket.title,
+      priority: ticket.priority,
+      createdAt: ticket.createdAt,
+    })
+    .from(ticket)
+    .where(
+      and(
+        eq(ticket.currentDepartmentId, departmentId),
+        inArray(ticket.status, [...OVERDUE_TICKET_STATUSES]),
+        sql`${dueAt} < ${now}`,
+      ),
+    )
+    .orderBy(asc(dueAt), asc(ticket.createdAt), asc(ticket.id))
+    .limit(limit)
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    priority: row.priority,
+    dueAt: ticketDueAt({ createdAt: row.createdAt, priority: row.priority }),
+  }))
 }

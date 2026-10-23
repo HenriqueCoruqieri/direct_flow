@@ -298,6 +298,15 @@ componente React e sim tipo utilitário derivado,
 `consistent-type-definitions` (que só reclama de alias de objeto literal) e
 dispensa a supressão. É a forma a preferir neste template e nos futuros.
 
+> **Nota (2026-10-23):** o `eslint.config.mjs` agora configura
+> `@typescript-eslint/no-empty-object-type` com
+> `allowInterfaces: "with-single-extends"`. Interface vazia que estende
+> exatamente um tipo (`interface DashboardPanelProps extends React.ComponentProps<"section"> {}`)
+> passa sem diretiva, então props de componente que só repassam as de um
+> elemento continuam `interface`, como manda a seção 5 do `stack.md`. Para tipo
+> utilitário que não é prop de componente, o alias com `Omit` acima continua
+> sendo a forma preferida.
+
 Conteúdo mínimo obrigatório: saudação com `userName`, botão/link para `resetUrl`,
 a frase de validade usando `expiresInMinutes`, e o aviso de que o link é de uso
 único e que, se não foi ele quem pediu, basta ignorar o e-mail. **O template não

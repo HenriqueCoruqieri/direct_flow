@@ -11,8 +11,12 @@ import {
 
 import AppTopBar from "../_components/app-top-bar"
 import PeriodFilter from "../_components/period-filter"
+import DashboardOverdue from "./_components/dashboard-overdue"
+import DashboardOverdueSkeleton from "./_components/dashboard-overdue-skeleton"
 import DashboardOverview from "./_components/dashboard-overview"
 import DashboardOverviewSkeleton from "./_components/dashboard-overview-skeleton"
+import DashboardTopTags from "./_components/dashboard-top-tags"
+import DashboardTopTagsSkeleton from "./_components/dashboard-top-tags-skeleton"
 
 export const metadata: Metadata = {
   title: "Início",
@@ -52,6 +56,20 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
               range={range}
             />
           </Suspense>
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+            <Suspense
+              key={serializeDashboardParams(selection)}
+              fallback={<DashboardTopTagsSkeleton />}
+            >
+              <DashboardTopTags
+                departmentId={actor.departmentId}
+                range={range}
+              />
+            </Suspense>
+            <Suspense fallback={<DashboardOverdueSkeleton />}>
+              <DashboardOverdue departmentId={actor.departmentId} now={now} />
+            </Suspense>
+          </div>
         </div>
       </div>
     </>

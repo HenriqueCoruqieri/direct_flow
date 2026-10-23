@@ -61,6 +61,10 @@ const eslintConfig = defineConfig([
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
       "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
+      "@typescript-eslint/no-empty-object-type": [
+        "error",
+        { allowInterfaces: "with-single-extends" },
+      ],
       "no-restricted-imports": [
         "error",
         { paths: cnPaths, patterns: cnPatterns },
