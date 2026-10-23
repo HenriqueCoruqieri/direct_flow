@@ -6,6 +6,15 @@ Decisão de fuso em `docs/adr/009-calendar-in-sao-paulo-timezone.md`.
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 `drizzle-orm@0.45.2`.
 
+> **Revisão de 2026-10-23 — cards substituídos.** Os cards do Início passam a
+> ser definidos por `docs/contracts/dashboard-overview.md` (plano
+> `docs/plans/dashboard-overview.md`). Ficam superados aqui: o card "Principal
+> tag ofensora" do topo (volta na Etapa 2 como ranking, na linha 2),
+> `DashboardSummary`/`DashboardTopTag` (substituídos por `DashboardOverview`) e
+> `findDashboardSummary` (substituída por `findDashboardOverview`). Shell,
+> filtro de período, URL, validação, datas e seed demo continuam valendo como
+> abaixo.
+
 ## Revisão de 2026-10-05 — datas futuras no Personalizado
 
 Plano: `docs/plans/pending-improvements.md`, Entrega A. A especificação comum às

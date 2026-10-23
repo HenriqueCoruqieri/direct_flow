@@ -2,6 +2,11 @@
 
 Implementado em 2026-09-24. Contrato: `docs/contracts/dashboard.md`.
 
+> Superado em 2026-10-23 quanto aos cards do Início por
+> `docs/plans/dashboard-overview.md`: os dois cards e o "Principal tag
+> ofensora" do topo dão lugar a três linhas de cards. Shell, filtro e regras de
+> período continuam como aqui.
+
 Aprovado em 2026-09-24 via `/consult`. Referência visual: canvas "Direct Flow — Telas" (https://claude.ai/artifact/QFARH48WWbuxmM1V8N1479), artboards "Fila do setor · desktop" (claro e escuro) para o shell desktop e "Início (dashboard)" (claro e escuro) para cards e cabeçalho mobile.
 
 ## Escopo

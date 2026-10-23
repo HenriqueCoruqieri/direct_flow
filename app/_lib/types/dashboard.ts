@@ -1,9 +1,10 @@
-export interface DashboardTopTag {
-  name: string
-  count: number
-}
+export type DashboardOverviewCard =
+  "ticketCount" | "resolutionRate" | "averageResolution" | "backlog"
 
-export interface DashboardSummary {
+export interface DashboardOverview {
   ticketCount: number
-  topTag: DashboardTopTag | null
+  receivedTransferCount: number
+  resolvedTicketCount: number
+  averageResolutionMs: number | null
+  backlogCount: number
 }

@@ -5,6 +5,7 @@ import relativeTime from "dayjs/plugin/relativeTime"
 import timezone from "dayjs/plugin/timezone"
 import utc from "dayjs/plugin/utc"
 
+import type { DurationPart } from "@/app/_lib/types/duration"
 import type {
   DateKey,
   DateRange,
@@ -22,6 +23,18 @@ export const APP_TIME_ZONE = "America/Sao_Paulo"
 export const WEEK_STARTS_ON = 1
 
 export type DateInput = Date | string | number
+
+export const MINUTE_MS = 60 * 1000
+
+export const HOUR_MS = 60 * MINUTE_MS
+
+const MINUTES_PER_HOUR = 60
+
+const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR
+
+const integerFormat = new Intl.NumberFormat("pt-BR", {
+  maximumFractionDigits: 0,
+})
 
 const DATE_KEY_FORMAT = "YYYY-MM-DD"
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
@@ -127,3 +140,34 @@ export const dateKeyToCalendarDate = (key: DateKey): Date => dayjs(key).toDate()
 
 export const todayCalendarDate = (now: DateInput = new Date()): Date =>
   dateKeyToCalendarDate(todayKey(now))
+
+export const durationParts = (durationMs: number): DurationPart[] => {
+  const totalMinutes = Math.floor(Math.max(durationMs, 0) / MINUTE_MS)
+  if (totalMinutes < 1) return [{ value: "< 1", unit: "min" }]
+
+  const days = Math.floor(totalMinutes / MINUTES_PER_DAY)
+  const hours = Math.floor((totalMinutes % MINUTES_PER_DAY) / MINUTES_PER_HOUR)
+  const minutes = totalMinutes % MINUTES_PER_HOUR
+
+  if (days > 0) {
+    const dayPart: DurationPart = { value: String(days), unit: "d" }
+    return hours > 0
+      ? [dayPart, { value: String(hours), unit: "h" }]
+      : [dayPart]
+  }
+  if (hours > 0) {
+    const hourPart: DurationPart = { value: String(hours), unit: "h" }
+    return minutes > 0
+      ? [hourPart, { value: String(minutes), unit: "min" }]
+      : [hourPart]
+  }
+  return [{ value: String(minutes), unit: "min" }]
+}
+
+export const formatDuration = (durationMs: number): string =>
+  durationParts(durationMs)
+    .map((part) => `${part.value}${part.unit}`)
+    .join(" ")
+
+export const formatTotalHours = (durationMs: number): string =>
+  `${integerFormat.format(Math.floor(Math.max(durationMs, 0) / HOUR_MS))}h`

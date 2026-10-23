@@ -11,8 +11,8 @@ import {
 
 import AppTopBar from "../_components/app-top-bar"
 import PeriodFilter from "../_components/period-filter"
-import DashboardStats from "./_components/dashboard-stats"
-import DashboardStatsSkeleton from "./_components/dashboard-stats-skeleton"
+import DashboardOverview from "./_components/dashboard-overview"
+import DashboardOverviewSkeleton from "./_components/dashboard-overview-skeleton"
 
 export const metadata: Metadata = {
   title: "Início",
@@ -42,12 +42,17 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
           />
         </div>
 
-        <Suspense
-          key={serializeDashboardParams(selection)}
-          fallback={<DashboardStatsSkeleton />}
-        >
-          <DashboardStats departmentId={actor.departmentId} range={range} />
-        </Suspense>
+        <div className="flex flex-col gap-3">
+          <Suspense
+            key={serializeDashboardParams(selection)}
+            fallback={<DashboardOverviewSkeleton />}
+          >
+            <DashboardOverview
+              departmentId={actor.departmentId}
+              range={range}
+            />
+          </Suspense>
+        </div>
       </div>
     </>
   )

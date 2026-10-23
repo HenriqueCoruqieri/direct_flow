@@ -1,41 +1,21 @@
-import { cn } from "@/app/_lib/utils"
-
 interface StatCardProps {
   label: string
   value: React.ReactNode
-  hint?: React.ReactNode
-  valueTitle?: string
-  valueClassName?: string
+  footer: React.ReactNode
 }
 
-const StatCard = ({
-  label,
-  value,
-  hint,
-  valueTitle,
-  valueClassName,
-}: StatCardProps) => {
+const StatCard = ({ label, value, footer }: StatCardProps) => {
   return (
     <div className="flex min-w-0 flex-col gap-1.5 rounded-2xl border border-border-subtle bg-surface p-4">
       <span className="text-caption font-semibold text-muted-foreground">
         {label}
       </span>
       <span className="flex h-8 items-center">
-        <span
-          title={valueTitle}
-          className={cn(
-            "truncate font-heading text-display leading-none font-semibold",
-            valueClassName,
-          )}
-        >
+        <span className="font-heading text-display leading-none font-semibold whitespace-nowrap">
           {value}
         </span>
       </span>
-      {hint ? (
-        <span className="truncate text-xs font-bold text-text-tertiary">
-          {hint}
-        </span>
-      ) : null}
+      <div className="flex h-5 min-w-0 items-center">{footer}</div>
     </div>
   )
 }
