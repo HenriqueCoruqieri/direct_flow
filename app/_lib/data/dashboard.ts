@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm"
+import { union } from "drizzle-orm/pg-core"
 
 import { countPendingApprovals } from "@/app/_lib/data/approvals"
 import {
@@ -39,16 +40,33 @@ export async function findDashboardOverview(
     gte(ticket.resolvedAt, range.start),
     lt(ticket.resolvedAt, range.end),
   )
+  const acceptedInRange = and(
+    eq(ticketTransfer.toDepartmentId, departmentId),
+    eq(ticketTransfer.status, "aprovado"),
+    gte(ticketTransfer.reviewedAt, range.start),
+    lt(ticketTransfer.reviewedAt, range.end),
+  )
   const isResolvedStatus = inArray(ticket.status, [
     ...DASHBOARD_RESOLVED_STATUSES,
   ])
   const isBacklogStatus = inArray(ticket.status, [...BACKLOG_TICKET_STATUSES])
 
-  const [ticketRows, transferRows] = await Promise.all([
+  const received = union(
+    db
+      .select({ ticketId: ticket.id })
+      .from(ticket)
+      .where(and(eq(ticket.originDepartmentId, departmentId), createdInRange)),
+    db
+      .select({ ticketId: ticketTransfer.ticketId })
+      .from(ticketTransfer)
+      .where(acceptedInRange),
+  ).as("received")
+
+  const [ticketRows, transferRows, receivedRows] = await Promise.all([
     db
       .select({
         ticketCount: sql<number>`(count(*) filter (where ${createdInRange}))::int`,
-        resolvedTicketCount: sql<number>`(count(*) filter (where ${createdInRange} and ${isResolvedStatus}))::int`,
+        periodResolvedCount: sql<number>`(count(*) filter (where ${resolvedInRange} and ${isResolvedStatus}))::int`,
         averageResolutionMs: sql<
           string | null
         >`avg(extract(epoch from (${ticket.resolvedAt} - ${ticket.createdAt})) * 1000) filter (where ${resolvedInRange} and ${isResolvedStatus})`,
@@ -59,14 +77,8 @@ export async function findDashboardOverview(
     db
       .select({ value: sql<number>`(${count()})::int` })
       .from(ticketTransfer)
-      .where(
-        and(
-          eq(ticketTransfer.toDepartmentId, departmentId),
-          eq(ticketTransfer.status, "aprovado"),
-          gte(ticketTransfer.reviewedAt, range.start),
-          lt(ticketTransfer.reviewedAt, range.end),
-        ),
-      ),
+      .where(acceptedInRange),
+    db.select({ value: sql<number>`(${count()})::int` }).from(received),
   ])
 
   const ticketRow = ticketRows[0]
@@ -75,7 +87,8 @@ export async function findDashboardOverview(
   return {
     ticketCount: ticketRow?.ticketCount ?? 0,
     receivedTransferCount: transferRows[0]?.value ?? 0,
-    resolvedTicketCount: ticketRow?.resolvedTicketCount ?? 0,
+    periodReceivedCount: receivedRows[0]?.value ?? 0,
+    periodResolvedCount: ticketRow?.periodResolvedCount ?? 0,
     averageResolutionMs:
       averageResolutionMs === null ? null : Number(averageResolutionMs),
     backlogCount: ticketRow?.backlogCount ?? 0,

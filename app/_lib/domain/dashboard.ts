@@ -24,7 +24,9 @@ import type {
   DashboardActivityPoint,
   DashboardActivitySeries,
   DashboardOverdueColumn,
+  DashboardOverview,
   DashboardOverviewCard,
+  DashboardResolutionRate,
   DashboardTransferCounter,
   DashboardTransferCounterTone,
 } from "@/app/_lib/types/dashboard"
@@ -67,14 +69,40 @@ export const receivedTransfersHint = (count: number): string => {
   return `+${count} ${count === 1 ? "recebido" : "recebidos"} de outros setores`
 }
 
-export const resolutionRatePercent = (
-  resolvedCount: number,
-  ticketCount: number,
-): number | null => {
-  if (ticketCount <= 0) return null
-  const resolved = Math.min(Math.max(resolvedCount, 0), ticketCount)
-  return Math.floor((resolved / ticketCount) * 100)
+const floorPercent = (part: number, whole: number): number =>
+  Math.floor((part * 100) / whole)
+
+const resolvedLabel = (count: number): string =>
+  `${count} ${count === 1 ? "resolvido" : "resolvidos"}`
+
+export const RESOLUTION_BAR_MAX_PERCENT = 100
+
+export const resolutionRateFor = (
+  overview: DashboardOverview,
+): DashboardResolutionRate => {
+  const resolvedCount = Math.max(overview.periodResolvedCount, 0)
+  const receivedCount = Math.max(overview.periodReceivedCount, 0)
+  if (receivedCount > 0) {
+    const percent = floorPercent(resolvedCount, receivedCount)
+    return {
+      kind: "measured",
+      percent,
+      barPercent: Math.min(percent, RESOLUTION_BAR_MAX_PERCENT),
+      resolvedCount,
+      receivedCount,
+    }
+  }
+  if (resolvedCount > 0) return { kind: "unreceived", resolvedCount }
+  return { kind: "empty" }
 }
+
+export const resolvedOfReceivedHint = (
+  resolvedCount: number,
+  receivedCount: number,
+): string => `${resolvedLabel(resolvedCount)} de ${receivedCount}`
+
+export const resolvedWithoutReceivedHint = (resolvedCount: number): string =>
+  `${resolvedLabel(resolvedCount)}, nenhum recebido`
 
 export const formatResolutionRate = (percent: number): string => `${percent}%`
 
@@ -135,7 +163,7 @@ export const tagVolumePercent = (
 ): number | null => {
   if (ticketCount <= 0) return null
   const tagged = Math.min(Math.max(tagCount, 0), ticketCount)
-  return Math.floor((tagged / ticketCount) * 100)
+  return floorPercent(tagged, ticketCount)
 }
 
 const ticketCountLabel = (count: number): string =>

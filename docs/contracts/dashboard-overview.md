@@ -99,6 +99,14 @@ propósito: a taxa olha os chamados **abertos** no período; o tempo médio olha
 os **resolvidos** no período (um chamado aberto no mês passado e resolvido
 hoje entra no tempo de Hoje, não na taxa de Hoje).
 
+> **Revisão 2026-10-23 — substitui a taxa desta etapa.** `resolvedTicketCount`
+> e `resolutionRatePercent` saem: a taxa passa a ser resolvidos no período
+> (por `resolved_at`, a coorte do tempo médio) ÷ recebidos no período
+> (chamados distintos abertos no setor ou aceitos por ele no período,
+> `periodReceivedCount`), sem teto em 100%. Ver "Revisão
+> 2026-10-23 — taxa de resolução sobre o que o setor recebeu", no fim do
+> documento.
+
 ### Domínio — `app/_lib/domain/dashboard.ts`
 
 ```ts
@@ -2252,3 +2260,302 @@ Personalizado de um dia por hora; nada desenhado nos baldes futuros.
    tooltip (AP13 continua valendo: nenhum tooltip, nenhum `0`); eixo por hora
    com rótulos densos e espaçamento irregular (`preserveStartEnd`); curva
    `monotone` com sobrepasso entre pontos.
+
+## Revisão 2026-10-23 — taxa de resolução sobre o que o setor recebeu
+
+Mudança de regra aprovada pelo usuário, sem `/consult`. A taxa da Etapa 1 era
+coorte (dos chamados **abertos** no período, quantos estão resolvidos) e não
+responde "o setor dá conta do que entra?": no teste, 3 abertos e 4 resolvidos
+num dia deram 50%. Esta seção **substitui** a definição da taxa da Etapa 1
+(campo `resolvedTicketCount`, função `resolutionRatePercent`, linha "Taxa de
+resolução" da tabela de cards, coluna `resolvidos` da consulta `OV`, a parte
+da taxa em OV7 e OV10). O card 1 ("Chamados no período"), os cards 3 e 4 e o
+gráfico **não mudam**.
+
+Sem mudança de schema, sem migration, sem índice novo.
+
+### Definições
+
+| Termo                     | Definição                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Recebidos no período**  | Chamados **distintos** que entraram no setor no período: abertos no setor (`ticket.origin_department_id` = setor e `created_at` no período, todos os status) **ou** aceitos de outro setor (`ticket_transfer` `aprovado`, `to_department_id` = setor, `reviewed_at` no período). União por `ticket.id`: cada chamado conta uma vez. Transferência pendente não entra |
+| **Resolvidos no período** | Chamados do setor com `resolved_at` no período e status em `DASHBOARD_RESOLVED_STATUSES` (`resolvido`, `fechado`). Reaberto sai da conta enquanto estiver reaberto. Mesma coorte do "Tempo médio de resolução" e da série "Resolvidos" do gráfico                                                                                                                    |
+| **Taxa**                  | `floor(resolvidos × 100 / recebidos)`. **Pode passar de 100%** (o setor resolveu estoque de períodos anteriores)                                                                                                                                                                                                                                                     |
+
+O "Y" de "X resolvidos de Y" é calculado no banco (`periodReceivedCount`) e
+**não** é `ticketCount + receivedTransferCount`. Ele difere do card 1, e isso é
+aceito: o card 1 ("Chamados no período" e "+N recebidos") não muda e continua
+contando por `current_department_id`.
+
+Casos de borda da união:
+
+| Caso                                                                              | Conta em "recebidos" do setor?                                                              |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Aberto em outro setor, enviado e aceito pelo setor no mesmo período               | **uma** vez (pelo aceite)                                                                   |
+| Aberto no setor e transferido para fora no mesmo período                          | **sim**, no setor de origem (pela abertura); e também no destino, se ele aceitar no período |
+| Aberto no setor, enviado para fora e devolvido (aceito de volta) no mesmo período | **uma** vez                                                                                 |
+| Aberto em outro setor e enviado ao setor, ainda pendente                          | não (no card 1 já conta)                                                                    |
+| Aceito no período, aberto em período anterior                                     | sim (pelo aceite)                                                                           |
+| Dois aceites do mesmo chamado pelo setor no período (ida, volta e nova ida)       | **uma** vez                                                                                 |
+
+"Resolvidos" continua por `current_department_id`: um chamado aberto no setor e
+transferido para fora conta como recebido na origem e, se resolvido, como
+resolvido no destino.
+
+### Tipos — `app/_lib/types/dashboard.ts`
+
+`resolvedTicketCount` **sai** (só a taxa usava). Entram `periodReceivedCount`,
+`periodResolvedCount` e o resultado da taxa:
+
+```ts
+export interface DashboardOverview {
+  ticketCount: number
+  receivedTransferCount: number
+  periodReceivedCount: number
+  periodResolvedCount: number
+  averageResolutionMs: number | null
+  backlogCount: number
+}
+
+export interface DashboardMeasuredResolutionRate {
+  kind: "measured"
+  percent: number
+  barPercent: number
+  resolvedCount: number
+  receivedCount: number
+}
+
+export interface DashboardUnreceivedResolutionRate {
+  kind: "unreceived"
+  resolvedCount: number
+}
+
+export interface DashboardEmptyResolutionRate {
+  kind: "empty"
+}
+
+export type DashboardResolutionRate =
+  | DashboardMeasuredResolutionRate
+  | DashboardUnreceivedResolutionRate
+  | DashboardEmptyResolutionRate
+```
+
+| Campo                 | Definição                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `periodReceivedCount` | Recebidos no período (definição acima), chamados distintos, calculado no banco                      |
+| `periodResolvedCount` | Resolvidos no período (definição acima). `averageResolutionMs === null` ⇔ `periodResolvedCount = 0` |
+
+### Domínio — `app/_lib/domain/dashboard.ts`
+
+`resolutionRatePercent` **sai**. Entram:
+
+```ts
+export const RESOLUTION_BAR_MAX_PERCENT = 100
+export const resolutionRateFor: (
+  overview: DashboardOverview,
+) => DashboardResolutionRate
+export const resolvedOfReceivedHint: (
+  resolvedCount: number,
+  receivedCount: number,
+) => string
+export const resolvedWithoutReceivedHint: (resolvedCount: number) => string
+```
+
+`formatResolutionRate` e `NO_TICKETS_IN_PERIOD_HINT` continuam.
+
+| Nome                          | Semântica                                                                                                                                                                                                                                                                                |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolutionRateFor`           | `received = periodReceivedCount`, `resolved = periodResolvedCount` (negativos valem 0). `received > 0` → `measured`, `percent = floor(resolved × 100 / received)` **sem teto**, `barPercent = min(percent, 100)`. `received = 0` e `resolved > 0` → `unreceived`. Os dois zero → `empty` |
+| `resolvedOfReceivedHint`      | `(4, 8)` → `4 resolvidos de 8`; `(1, 3)` → `1 resolvido de 3`; `(0, 5)` → `0 resolvidos de 5`. Singular só em `resolved = 1`; o `Y` vai sem substantivo                                                                                                                                  |
+| `resolvedWithoutReceivedHint` | `2` → `2 resolvidos, nenhum recebido`; `1` → `1 resolvido, nenhum recebido`                                                                                                                                                                                                              |
+| `RESOLUTION_BAR_MAX_PERCENT`  | `100`: teto da largura da barra e `aria-valuemax`                                                                                                                                                                                                                                        |
+
+O percentual multiplica antes de dividir (`resolved × 100 / received`) para não
+errar por ponto flutuante: `29 / 100 × 100` dá `28,999…` e cairia para `28%`.
+`tagVolumePercent` (Etapa 2) passa a usar a mesma conta interna; o resultado só
+muda nos casos que antes saíam um ponto abaixo do certo.
+
+### `df-data` — `app/_lib/data/dashboard.ts`
+
+Em `findDashboardOverview`, no agregado de `ticket`, `resolvedTicketCount`
+(coorte por `created_at`) **sai** e entra `periodResolvedCount`, com o
+**mesmo** filtro do `avg` do tempo médio:
+
+```sql
+count(*) filter (
+  where t.resolved_at >= $start and t.resolved_at < $end
+    and t.status in (:DASHBOARD_RESOLVED_STATUSES)
+)::int as period_resolved_count
+```
+
+Em Drizzle, um `sql<number>` com `(count(*) filter (where ${resolvedInRange}
+and ${isResolvedStatus}))::int`, reaproveitando os dois predicados que já
+existem na função. Sem linha → `periodResolvedCount: 0`.
+
+**Terceira leitura, `periodReceivedCount`**, no mesmo `Promise.all`: contagem
+da **união distinta** das duas origens. `union` (não `union all`) é o que
+elimina o repetido:
+
+```sql
+select count(*)::int as period_received_count
+from (
+  select t.id as ticket_id
+  from ticket t
+  where t.origin_department_id = $departmentId
+    and t.created_at >= $start and t.created_at < $end
+  union
+  select tr.ticket_id
+  from ticket_transfer tr
+  where tr.to_department_id = $departmentId
+    and tr.status = 'aprovado'
+    and tr.reviewed_at >= $start and tr.reviewed_at < $end
+) as received
+```
+
+- Em Drizzle: `union` de `drizzle-orm/pg-core` sobre os dois `select`, com
+  `.as("received")` e `count()` por fora (ou `sql` parametrizado equivalente).
+  Consultar o `context7` para a forma da versão instalada.
+- `'aprovado'` como literal tipado, igual à leitura de aceites que já existe.
+- Intervalo meio-aberto; `reviewed_at` nulo nunca passa.
+- Sem linha → `periodReceivedCount: 0`.
+- A leitura de aceites (`receivedTransferCount`) continua como está: é o
+  "+N recebidos" do card 1.
+- Índices: `ticket_origin_department_idx` (só `origin_department_id`) e
+  `transfer_inbox_idx` (`to_department_id`, `status`, `created_at`). Sem índice
+  novo; rodar `EXPLAIN ANALYZE` da leitura nova para QA Suporte e a Diretoria
+  e colar na resposta.
+
+### `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que muda
+
+`dashboard-overview.tsx`: a fórmula sai da UI. `const rate =
+resolutionRateFor(overview)` e decisão por `rate.kind`:
+
+| `rate.kind`  | Valor grande                                                  | Embaixo do valor                                                                                                          |
+| ------------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `measured`   | `formatResolutionRate(rate.percent)` (valor real, ex. `133%`) | barra com largura `rate.barPercent%` **e**, abaixo dela, `resolvedOfReceivedHint(rate.resolvedCount, rate.receivedCount)` |
+| `unreceived` | `EMPTY_VALUE_LABEL` (`—`)                                     | `resolvedWithoutReceivedHint(rate.resolvedCount)`, sem barra                                                              |
+| `empty`      | `EMPTY_VALUE_LABEL` (`—`)                                     | `NO_TICKETS_IN_PERIOD_HINT`, sem barra (como hoje)                                                                        |
+
+`resolution-progress.tsx` (barra):
+
+- largura = `barPercent` (nunca acima de 100%);
+- `role="progressbar"`, `aria-label` = rótulo do card, `aria-valuemin={0}`,
+  `aria-valuemax={RESOLUTION_BAR_MAX_PERCENT}`, `aria-valuenow={barPercent}`
+  (o ARIA exige `valuenow` dentro de `[min, max]`) e
+  `aria-valuetext={formatResolutionRate(percent)}` com o valor **real**: o
+  leitor de tela anuncia `133%`, nunca `100%`. Até 100 os dois coincidem.
+  A barra recebe as duas grandezas (`percent` e `barPercent`) por props.
+
+**Altura.** A altura externa dos 4 cards da linha 1 continua a de hoje, igual
+entre eles, e o esqueleto não muda. A linha de apoio do `StatCard` é `h-5`
+(20 px); barra e texto cabem nela empilhados: barra `h-1` (4 px) em cima,
+`StatHint` (`text-xs`, altura de linha 16 px) embaixo, sem `gap` — 4 + 16 = 20. Basta o `footer` do card 2 ser uma coluna (`w-full`) com
+`ResolutionProgress` + `StatHint`; `StatCard` e `StatHint` não mudam. Se o
+desenho pedir mais respiro, a alternativa permitida é aumentar a linha de apoio
+**dos 4** cards e do esqueleto juntos, nunca só a do card 2. O texto trunca
+com `title`, como os outros.
+
+### Exemplos
+
+"Abertos no setor" é por `origin_department_id`; "Aceitas" são os chamados
+aceitos no período que **não** estão entre os abertos (a união já descontou o
+repetido).
+
+**Os exemplos do usuário com a regra nova.** Os números do usuário vinham do
+card 1 (`current_department_id`), não da união. Eles continuam valendo nas
+condições abaixo; fora delas, o valor muda pelo motivo indicado.
+
+- **Semana, 8 recebidos e 4 resolvidos (50%):** vale se os 6 do card 1 foram
+  abertos no próprio setor e as 2 aceitas são de chamados abertos antes da
+  semana. Se as 2 aceitas foram abertas **na semana** em outro setor, elas já
+  estavam entre os 6 do card 1 (o envio troca o `current_department_id`); os
+  abertos no setor são 4, os recebidos são 6 e a taxa é **66%** (linha "Semana,
+  aceitas abertas na própria semana"). Os recebidos também sobem se o setor
+  abriu chamados na semana e os transferiu para fora: eles saem do card 1 e
+  continuam contando aqui.
+- **Dia, 3 recebidos e 4 resolvidos (133%):** com 0 aceites, vale se os 3 do
+  card 1 foram abertos no próprio setor e nenhum chamado aberto no setor nesse
+  dia foi transferido para fora; cada um transferido soma 1 aos recebidos (com
+  um, `4 resolvidos de 4`, 100%). Um chamado de outro setor enviado ao setor e
+  ainda pendente está nos 3 do card 1 mas não nos recebidos (com um, `4
+resolvidos de 2`, 200%).
+
+O `df-qa` confirma os dois casos reais com a consulta `RR` (RR1).
+
+| Caso                                      | Abertos no setor | Aceitas | Recebidos | Resolvidos | Valor  | Barra     | Linha                           |
+| ----------------------------------------- | ---------------- | ------- | --------- | ---------- | ------ | --------- | ------------------------------- |
+| Semana do usuário                         | 6                | 2       | 8         | 4          | `50%`  | metade    | `4 resolvidos de 8`             |
+| Semana, aceitas abertas na própria semana | 4                | 2       | 6         | 4          | `66%`  | 66%       | `4 resolvidos de 6`             |
+| Dia do teste                              | 3                | 0       | 3         | 4          | `133%` | cheia     | `4 resolvidos de 3`             |
+| Só estoque, nada entrou                   | 0                | 0       | 0         | 2          | `—`    | sem barra | `2 resolvidos, nenhum recebido` |
+| Um resolvido, nada entrou                 | 0                | 0       | 0         | 1          | `—`    | sem barra | `1 resolvido, nenhum recebido`  |
+| Um resolvido de três                      | 3                | 0       | 3         | 1          | `33%`  | 33%       | `1 resolvido de 3`              |
+| Entrou, nada resolvido                    | 5                | 0       | 5         | 0          | `0%`   | vazia     | `0 resolvidos de 5`             |
+| Período vazio                             | 0                | 0       | 0         | 0          | `—`    | sem barra | `Nenhum chamado no período`     |
+| Arredondamento                            | 200              | 0       | 200       | 199        | `99%`  | 99%       | `199 resolvidos de 200`         |
+
+### Cenários do `df-qa`
+
+Mesmas contas, bordas de período e preparação da Etapa 1. Consulta `RR(dep,
+inicio, fim)`:
+
+```sql
+with abertos as (
+  select t.id from ticket t
+  where t.origin_department_id = :dep
+    and t.created_at >= :inicio and t.created_at < :fim
+), aceitos as (
+  select tr.ticket_id as id from ticket_transfer tr
+  where tr.to_department_id = :dep and tr.status = 'aprovado'
+    and tr.reviewed_at >= :inicio and tr.reviewed_at < :fim
+)
+select
+  (select count(*) from abertos) as abertos,
+  (select count(distinct id) from aceitos) as aceitos,
+  (select count(*) from (select id from abertos union select id from aceitos) u)
+    as recebidos,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.status in ('resolvido', 'fechado')
+      and t.resolved_at >= :inicio and t.resolved_at < :fim) as resolvidos
+```
+
+Taxa = `floor(resolvidos × 100 / recebidos)`. `recebidos ≤ abertos + aceitos`;
+a diferença é o repetido que a união descontou.
+
+| #    | Quem  | Ação                                                                             | Esperado                                                                                                                                                                                                                                                                                                                    |
+| ---- | ----- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RR1  | A     | `/dashboard` Hoje, Semana, Mês e Personalizado de 3 dias                         | valor = taxa de `RR(S, …)` (pode passar de 100%); linha `{resolvidos} resolvido(s) de {recebidos}`; card 1 continua igual a `OV`/`RT` da Etapa 1 (não a `abertos`/`aceitos` desta consulta)                                                                                                                                 |
+| RR2  | A     | Período com `resolvidos > recebidos > 0` (procurar com `RR`; ex. o dia do teste) | valor acima de `100%` (ex. `133%`), barra cheia sem passar do trilho; `aria-valuenow="100"`, `aria-valuemax="100"`, `aria-valuetext` com o valor real (`133%`). Se não houver período assim: NÃO EXECUTADO, com a consulta                                                                                                  |
+| RR3  | A     | Período com `recebidos > 0` e `resolvidos ≤ recebidos`                           | largura da barra = `%`; `aria-valuenow` = número de `aria-valuetext`                                                                                                                                                                                                                                                        |
+| RR4  | A     | Personalizado num dia com `recebidos = 0` e `resolvidos > 0` (procurar com `RR`) | `—`, sem barra, `{N} resolvido(s), nenhum recebido` (singular em 1). Se não houver dia assim: NÃO EXECUTADO, com a consulta                                                                                                                                                                                                 |
+| RR5  | A     | Personalizado num dia sem nada (OV6)                                             | `—` + `Nenhum chamado no período`, sem barra                                                                                                                                                                                                                                                                                |
+| RR6  | A     | Preparação da Etapa 1, Hoje antes/depois                                         | `#V1` (criado e resolvido hoje em QA Suporte): recebidos de A +1 e resolvidos +1. `#V2` (aberto em QA Infra): recebidos de A **não** mudam no envio (pendente) e sobem **+1** no aceite, resolvidos igual. Para I, `#V2` conta +1 em recebidos de QA Infra desde a abertura e continua contando depois do aceite em Suporte |
+| RR7  | A     | Coerência no mesmo período                                                       | `X` da linha = soma da série Resolvidos do gráfico (tabela acessível), contando **até hoje**: o gráfico não mostra baldes futuros, então em Semana e Mês a comparação vale para a parte do período até hoje; card 3 em `—` ⇔ `X = 0`                                                                                        |
+| RR8  | A     | 1280, 1024 e 390 px, em período com dados e com `—`                              | os cards da mesma linha da grade com a mesma altura externa, igual à de antes da revisão e à do esqueleto; linha da taxa inteira ou truncada com `title`; sem rolagem horizontal                                                                                                                                            |
+| RR9  | I, D  | `/dashboard` Hoje e Mês                                                          | bate com `RR(F, …)` e `RR(DIR, …)`                                                                                                                                                                                                                                                                                          |
+| RR10 | todos | toda a bateria                                                                   | console e dev server sem erro nem aviso de hidratação                                                                                                                                                                                                                                                                       |
+
+A parte da taxa em OV7 e OV10 fica **substituída** por RR1–RR6; a coluna
+`resolvidos` da consulta `OV` deixa de valer. Notas para não reportar como
+defeito: taxa acima de 100%; `Y` diferente do card 1; chamado aberto no setor
+e transferido para fora no período contando como recebido na origem (e, se
+aceito no período, também no destino).
+
+### Checklist da revisão
+
+- [x] `periodReceivedCount`, `periodResolvedCount` e `DashboardResolutionRate` nos tipos; `resolutionRateFor`, `resolvedOfReceivedHint`, `resolvedWithoutReceivedHint`, `RESOLUTION_BAR_MAX_PERCENT`; `resolutionRatePercent` fora; esta seção e o plano (`df-architect`)
+- [x] `periodResolvedCount` no lugar de `resolvedTicketCount` e leitura nova `periodReceivedCount` (união distinta, com `EXPLAIN`) em `findDashboardOverview`, filtro de aceite compartilhado em `acceptedInRange` (`df-data`). `EXPLAIN`: união com Bitmap Index Scan em `ticket_origin_department_idx` + Seq Scan em `ticket_transfer`, ~0,15 ms para Suporte e Diretoria, sem índice novo
+- [x] card 2 com `resolutionRateFor`, barra limitada, `aria-valuetext` real, linha nova na mesma altura (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` APROVADO COM ATENÇÕES (DRY em `findDashboardOverview`, corrigido com `acceptedInRange`; `EXPLAIN` colado acima)
+- [x] RR1–RR10 (`df-qa`): 7 de 10, 0 falhas; RR4, RR6 e RR9 não executados (`docs/test-reports/2026-10-23-dashboard-resolution-rate.md`)
+
+### Limites conhecidos da revisão
+
+- **RR4 não executado.** O Suporte não tem dia com `recebidos = 0` e `resolvidos > 0`; o cenário fica para quando houver um chamado aberto em outro dia e resolvido no setor.
+- **RR6 e RR9 não executados.** Dependem de contas de QA Infra (`#V2`, I) e do Diretor (D), não fornecidas.
+- **Relógio do banco 24 h à frente do da máquina do app** no momento do teste (`now()` do banco 2026-10-25 01:01 UTC × máquina 2026-10-24 01:03 UTC). Chamado novo ganha `created_at` no dia seguinte ao "Hoje" do app, o que distorce testes de "hoje" e a comparação de RR7 em Semana e Mês. É de ambiente, não da regra; alinhar os relógios antes de testar com chamados novos.

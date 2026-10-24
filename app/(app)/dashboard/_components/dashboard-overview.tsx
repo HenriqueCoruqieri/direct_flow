@@ -8,7 +8,9 @@ import {
   NO_RESOLUTIONS_IN_PERIOD_HINT,
   NO_TICKETS_IN_PERIOD_HINT,
   receivedTransfersHint,
-  resolutionRatePercent,
+  resolutionRateFor,
+  resolvedOfReceivedHint,
+  resolvedWithoutReceivedHint,
 } from "@/app/_lib/domain/dashboard"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import type { DateRange } from "@/app/_lib/types/period"
@@ -28,10 +30,7 @@ const DashboardOverview = async ({
   range,
 }: DashboardOverviewProps) => {
   const overview = await findDashboardOverview(departmentId, range)
-  const ratePercent = resolutionRatePercent(
-    overview.resolvedTicketCount,
-    overview.ticketCount,
-  )
+  const rate = resolutionRateFor(overview)
   const averageResolutionMs = overview.averageResolutionMs
 
   return (
@@ -48,18 +47,32 @@ const DashboardOverview = async ({
       <StatCard
         label={DASHBOARD_OVERVIEW_LABELS.resolutionRate}
         value={
-          ratePercent === null
-            ? EMPTY_VALUE_LABEL
-            : formatResolutionRate(ratePercent)
+          rate.kind === "measured"
+            ? formatResolutionRate(rate.percent)
+            : EMPTY_VALUE_LABEL
         }
         footer={
-          ratePercent === null ? (
-            <StatHint text={NO_TICKETS_IN_PERIOD_HINT} />
+          rate.kind === "measured" ? (
+            <div className="flex w-full min-w-0 flex-col">
+              <ResolutionProgress
+                percent={rate.percent}
+                barPercent={rate.barPercent}
+                label={DASHBOARD_OVERVIEW_LABELS.resolutionRate}
+              />
+              <StatHint
+                text={resolvedOfReceivedHint(
+                  rate.resolvedCount,
+                  rate.receivedCount,
+                )}
+              />
+            </div>
           ) : (
-            <ResolutionProgress
-              percent={ratePercent}
-              label={DASHBOARD_OVERVIEW_LABELS.resolutionRate}
-              valueText={formatResolutionRate(ratePercent)}
+            <StatHint
+              text={
+                rate.kind === "unreceived"
+                  ? resolvedWithoutReceivedHint(rate.resolvedCount)
+                  : NO_TICKETS_IN_PERIOD_HINT
+              }
             />
           )
         }

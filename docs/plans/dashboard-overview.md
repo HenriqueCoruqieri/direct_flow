@@ -11,6 +11,20 @@ lg:max-w-3xl`) ficam superados. O shell, o filtro de período, as regras de fuso
 Contratos por etapa, todos em `docs/contracts/dashboard-overview.md`: seções
 "Etapa 1", "Etapa 2", "Etapa 3a" e "Etapa 3b".
 
+**Revisão 2026-10-23 — taxa de resolução (concluída).** A pedido do
+usuário, o card "Taxa de resolução" deixa de ser coorte por `created_at` e
+passa a responder "o setor dá conta do que entra?": resolvidos no período
+(por `resolved_at`) ÷ recebidos no período (chamados distintos abertos no
+setor, por `origin_department_id`, ou aceitos de outro setor), podendo passar de 100% (barra limitada a cheia), com a linha
+"X resolvidos de Y" abaixo da barra e "X resolvidos, nenhum recebido" quando
+nada entrou. Card 1 e gráfico não mudam. Seção "Revisão 2026-10-23 — taxa de
+resolução sobre o que o setor recebeu" do contrato. `df-data` trocou
+`resolvedTicketCount` por `periodResolvedCount` e acrescentou
+`periodReceivedCount` (união distinta); `df-ui` usa `resolutionRateFor` no
+card 2; `df-reviewer` aprovou com atenções (resolvidas); `df-qa` 7 de 10, 0
+falhas, RR4/RR6/RR9 não executados
+(`docs/test-reports/2026-10-23-dashboard-resolution-rate.md`).
+
 ## Referência visual
 
 Print enviado pelo usuário, descrito em texto: página "Início · 15 out 2026 ·

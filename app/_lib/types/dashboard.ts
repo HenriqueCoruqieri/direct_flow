@@ -6,10 +6,33 @@ export type DashboardOverviewCard =
 export interface DashboardOverview {
   ticketCount: number
   receivedTransferCount: number
-  resolvedTicketCount: number
+  periodReceivedCount: number
+  periodResolvedCount: number
   averageResolutionMs: number | null
   backlogCount: number
 }
+
+export interface DashboardMeasuredResolutionRate {
+  kind: "measured"
+  percent: number
+  barPercent: number
+  resolvedCount: number
+  receivedCount: number
+}
+
+export interface DashboardUnreceivedResolutionRate {
+  kind: "unreceived"
+  resolvedCount: number
+}
+
+export interface DashboardEmptyResolutionRate {
+  kind: "empty"
+}
+
+export type DashboardResolutionRate =
+  | DashboardMeasuredResolutionRate
+  | DashboardUnreceivedResolutionRate
+  | DashboardEmptyResolutionRate
 
 export type DashboardOverdueColumn = "number" | "title" | "priority" | "dueAt"
 
