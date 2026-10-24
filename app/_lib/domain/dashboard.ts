@@ -29,6 +29,8 @@ import type { TicketStatus } from "@/app/_lib/types/ticket"
 
 export const DASHBOARD_PATH = "/dashboard"
 
+export const DASHBOARD_LABEL = "Início"
+
 export const DASHBOARD_OVERVIEW_LABELS = {
   ticketCount: "Chamados no período",
   resolutionRate: "Taxa de resolução",

@@ -1,10 +1,12 @@
 import { APPROVALS_LABEL } from "@/app/_lib/domain/approvals"
+import { DASHBOARD_LABEL } from "@/app/_lib/domain/dashboard"
 import { DEPARTMENT_QUEUE_LABEL } from "@/app/_lib/domain/department-queue"
 import { ticketDetailPath } from "@/app/_lib/domain/ticket"
 import {
   MY_TICKETS_BACK_LINK,
   MY_TICKETS_ORIGIN,
   TICKET_DETAIL_FROM_APPROVALS,
+  TICKET_DETAIL_FROM_DASHBOARD,
   TICKET_DETAIL_FROM_PARAM,
   TICKET_DETAIL_FROM_QUEUE,
 } from "@/app/_lib/domain/ticket-detail-origin"
@@ -18,6 +20,10 @@ import {
   approvalsHref,
   parseApprovalsPeriod,
 } from "@/app/_lib/validation/approvals"
+import {
+  dashboardHref,
+  parseDashboardParams,
+} from "@/app/_lib/validation/dashboard"
 import {
   departmentQueueHref,
   departmentQueueKeepParams,
@@ -44,6 +50,12 @@ export const parseTicketDetailOrigin = (
     return {
       source: TICKET_DETAIL_FROM_APPROVALS,
       period: parseApprovalsPeriod(raw, today),
+    }
+  }
+  if (from === TICKET_DETAIL_FROM_DASHBOARD) {
+    return {
+      source: TICKET_DETAIL_FROM_DASHBOARD,
+      period: parseDashboardParams(raw, today),
     }
   }
   return MY_TICKETS_ORIGIN
@@ -83,6 +95,8 @@ export const ticketDetailBackLinkFor = (
       }
     case TICKET_DETAIL_FROM_APPROVALS:
       return { href: approvalsHref(origin.period), label: APPROVALS_LABEL }
+    case TICKET_DETAIL_FROM_DASHBOARD:
+      return { href: dashboardHref(origin.period), label: DASHBOARD_LABEL }
     default:
       return MY_TICKETS_BACK_LINK
   }

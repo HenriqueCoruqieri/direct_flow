@@ -553,6 +553,10 @@ export const tagBarPercent: (count: number, maxCount: number) => number
 Rótulo de prioridade: `TICKET_PRIORITY_LABELS` (`app/_lib/domain/ticket.ts`).
 Link do Nº: `ticketDetailPath(id)`; texto do Nº: `formatTicketNumber(id)`.
 
+> **Revisão 2026-10-24.** O link do Nº passa a ser
+> `dashboardTicketDetailHref(selection, id)` (origem `dashboard`). Ver
+> "Revisão 2026-10-24 — voltar do chamado para o Início", no fim do documento.
+
 ### Validação — `app/_lib/validation/dashboard.ts` (acréscimo)
 
 ```ts
@@ -1027,6 +1031,12 @@ export const incomingTransferTicketHref: (ticketId: number) => string
 Origem `approvals`, e não uma origem "Início" nova, porque o chamado pendente
 só existe em Aprovações: voltar para lá depois de atender ou recusar é o
 caminho natural, e não exige tipo de origem novo.
+
+> **Revisão 2026-10-24 — substitui o parágrafo acima.** `incomingTransferTicketHref`
+> passa a ser `(selection: PeriodSelection, ticketId: number) => string` e usa a
+> origem `dashboard`: o voltar leva ao Início no mesmo período, não a
+> Aprovações. Ver "Revisão 2026-10-24 — voltar do chamado para o Início", no
+> fim do documento. O TR8 abaixo fica substituído pelo VD3.
 
 ### `df-data` — `app/_lib/data/dashboard.ts`
 
@@ -1752,3 +1762,97 @@ Notas para não reportar como defeito:
   continua visível no rótulo do último ponto e na tabela acessível.
 
 Etapa 3b concluída em 2026-10-23, aguardando commit.
+
+---
+
+## Revisão 2026-10-24 — voltar do chamado para o Início
+
+Pedido do usuário: o chamado aberto a partir do Início ("Maiores atrasos", da
+Etapa 2, e a lista de "Transferências entre setores", da Etapa 3a) tem que
+voltar para o **Início**, no mesmo período que estava selecionado. Antes,
+"Maiores atrasos" linkava sem origem (o voltar caía em "Meus chamados") e
+Transferências usava `from=approvals` (o voltar caía em Aprovações). A regra
+passa a ser: o voltar leva para a tela de onde a pessoa saiu. Isso também vale
+para Transferências, mesmo que o chamado pendente exista em Aprovações, porque
+quem clicou estava no Início.
+
+### Tipos — `app/_lib/types/ticket-detail-origin.ts`
+
+```ts
+export interface TicketDetailDashboardOrigin {
+  source: "dashboard"
+  period: PeriodSelection
+}
+
+export type TicketDetailOrigin =
+  | TicketDetailMyTicketsOrigin
+  | TicketDetailQueueOrigin
+  | TicketDetailApprovalsOrigin
+  | TicketDetailDashboardOrigin
+```
+
+`PeriodSelection`, e não `PeriodFilterSelection`: o Início não tem "Todos".
+
+### Domínio
+
+| Arquivo                                   | Acréscimo                                               |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `app/_lib/domain/ticket-detail-origin.ts` | `TICKET_DETAIL_FROM_DASHBOARD = "dashboard"`            |
+| `app/_lib/domain/dashboard.ts`            | `DASHBOARD_LABEL = "Início"` (rótulo do link de voltar) |
+
+### Validação
+
+```ts
+// app/_lib/validation/dashboard.ts
+export const dashboardHref: (selection: PeriodSelection) => string
+export const dashboardTicketDetailHref: (
+  selection: PeriodSelection,
+  ticketId: number,
+) => string
+```
+
+| Nome                        | Valor                                                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `dashboardHref`             | `/dashboard?periodo=mes`; Personalizado → `/dashboard?periodo=personalizado&de=…&ate=…` |
+| `dashboardTicketDetailHref` | `/tickets/{id}?from=dashboard&periodo=mes` (mesma serialização de período do Início)    |
+
+`incomingTransferTicketHref` foi removido: só repassava para `dashboardTicketDetailHref`, que o item de transferência agora chama direto.
+
+`app/_lib/validation/ticket-detail-origin.ts`:
+
+- `parseTicketDetailOrigin`: `from=dashboard` →
+  `{ source: "dashboard", period: parseDashboardParams(raw, today) }`. Período
+  ausente ou inválido (inclusive `periodo=todos`) cai no padrão do Início,
+  `Hoje`.
+- `ticketDetailBackLinkFor`: origem `dashboard` →
+  `{ href: dashboardHref(period), label: "Início" }`.
+- `from=queue`, `from=approvals` e sem `from` (Meus chamados, busca do topo):
+  sem mudança.
+
+`validation/dashboard.ts` deixou de importar `validation/ticket-detail-origin.ts`
+(monta o link com `ticketDetailPath` e as constantes de domínio); o import vai
+agora no sentido contrário, sem ciclo.
+
+### `df-data`, `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que fazer
+
+1. `app/(app)/dashboard/page.tsx`: passar `selection` para `DashboardOverdue` e
+   `DashboardTransfers` (e desta para cada `IncomingTransferItem`).
+2. `dashboard-overdue.tsx:89`: `ticketDetailPath(ticket.id)` →
+   `dashboardTicketDetailHref(selection, ticket.id)`.
+3. `incoming-transfer-item.tsx:31`:
+   `dashboardTicketDetailHref(selection, transfer.ticketId)`.
+4. O link "Ver em Aprovações" do card (`TRANSFERS_APPROVALS_HREF`) e o
+   `OVERDUE_QUEUE_HREF` não mudam.
+
+### Cenários do `df-qa`
+
+| #   | Papel | Passo                                                                                                                              | Esperado                                                                                                                                                                                     |
+| --- | ----- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VD1 | A     | `/dashboard?periodo=mes`, clicar no Nº de um chamado em "Maiores atrasos"; usar o link de voltar                                   | URL `/tickets/{id}?from=dashboard&periodo=mes`; link "Início" → `/dashboard?periodo=mes`, filtro em "Mês"                                                                                    |
+| VD2 | A     | Mesmo de VD1 com Personalizado (ex.: dos últimos 10 dias até hoje)                                                                 | o voltar leva a `/dashboard?periodo=personalizado&de=…&ate=…` com as mesmas datas e o rótulo de intervalo igual                                                                              |
+| VD3 | A     | `/dashboard?periodo=mes` e depois Personalizado; clicar num item de "Transferências entre setores"; voltar                         | URL com `from=dashboard` e o período; link "Início" volta ao Início no mesmo período (substitui o TR8)                                                                                       |
+| VD4 | A     | `/tickets/{id}?from=dashboard&periodo=todos` à mão; depois abrir chamados por Meus chamados, Fila, Aprovações e pela busca do topo | o primeiro volta para `/dashboard?periodo=hoje`; os demais mantêm o voltar de antes ("Meus chamados", "Fila do setor" com aba e período, "Aprovações" com período, "Meus chamados" na busca) |

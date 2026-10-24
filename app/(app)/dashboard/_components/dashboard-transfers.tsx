@@ -11,7 +11,7 @@ import {
   transferCounterToneFor,
 } from "@/app/_lib/domain/dashboard"
 import type { DashboardTransferCounter } from "@/app/_lib/types/dashboard"
-import type { DateRange } from "@/app/_lib/types/period"
+import type { DateRange, PeriodSelection } from "@/app/_lib/types/period"
 
 import DashboardPanel from "./dashboard-panel"
 import DashboardTransfersHeader from "./dashboard-transfers-header"
@@ -30,12 +30,14 @@ interface DashboardTransfersProps {
   departmentId: number
   range: DateRange
   now: Date
+  selection: PeriodSelection
 }
 
 const DashboardTransfers = async ({
   departmentId,
   range,
   now,
+  selection,
 }: DashboardTransfersProps) => {
   const [summary, transfers] = await Promise.all([
     findTransferSummary(departmentId, range),
@@ -83,6 +85,7 @@ const DashboardTransfers = async ({
               key={transfer.transferId}
               transfer={transfer}
               now={now}
+              selection={selection}
             />
           ))}
         </ul>

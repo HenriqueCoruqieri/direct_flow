@@ -8,21 +8,27 @@ import {
 } from "@/app/_lib/domain/dashboard"
 import { formatTicketNumber } from "@/app/_lib/domain/ticket"
 import type { DashboardIncomingTransfer } from "@/app/_lib/types/dashboard"
+import type { PeriodSelection } from "@/app/_lib/types/period"
 import { cn } from "@/app/_lib/utils"
-import { incomingTransferTicketHref } from "@/app/_lib/validation/dashboard"
+import { dashboardTicketDetailHref } from "@/app/_lib/validation/dashboard"
 
 interface IncomingTransferItemProps {
   transfer: DashboardIncomingTransfer
   now: Date
+  selection: PeriodSelection
 }
 
-const IncomingTransferItem = ({ transfer, now }: IncomingTransferItemProps) => {
+const IncomingTransferItem = ({
+  transfer,
+  now,
+  selection,
+}: IncomingTransferItemProps) => {
   const stale = isStaleIncomingTransfer(transfer.sentAt, now)
 
   return (
     <li className="border-b border-border-subtle last:border-0">
       <Link
-        href={incomingTransferTicketHref(transfer.ticketId)}
+        href={dashboardTicketDetailHref(selection, transfer.ticketId)}
         title={transfer.ticketTitle}
         className="flex min-w-0 items-center justify-between gap-3 rounded-sm py-2.5 text-sm transition-colors outline-none hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
       >

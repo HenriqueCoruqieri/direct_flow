@@ -19,10 +19,11 @@ import {
 import {
   formatTicketNumber,
   TICKET_PRIORITY_LABELS,
-  ticketDetailPath,
 } from "@/app/_lib/domain/ticket"
+import type { PeriodSelection } from "@/app/_lib/types/period"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
+import { dashboardTicketDetailHref } from "@/app/_lib/validation/dashboard"
 
 import DashboardOverdueHeader from "./dashboard-overdue-header"
 import DashboardPanel from "./dashboard-panel"
@@ -41,11 +42,13 @@ const HEAD_CLASS = "h-10 text-xs font-semibold text-muted-foreground"
 interface DashboardOverdueProps {
   departmentId: number
   now: Date
+  selection: PeriodSelection
 }
 
 const DashboardOverdue = async ({
   departmentId,
   now,
+  selection,
 }: DashboardOverdueProps) => {
   const tickets = await listOverdueTickets(
     departmentId,
@@ -86,7 +89,7 @@ const DashboardOverdue = async ({
               <TableRow key={ticket.id} className="border-border-subtle">
                 <TableCell className="py-3 pl-0">
                   <Link
-                    href={ticketDetailPath(ticket.id)}
+                    href={dashboardTicketDetailHref(selection, ticket.id)}
                     className="rounded-sm font-mono text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
                   >
                     {formatTicketNumber(ticket.id)}

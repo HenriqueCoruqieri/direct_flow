@@ -71,7 +71,11 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
               />
             </Suspense>
             <Suspense fallback={<DashboardOverdueSkeleton />}>
-              <DashboardOverdue departmentId={actor.departmentId} now={now} />
+              <DashboardOverdue
+                departmentId={actor.departmentId}
+                now={now}
+                selection={selection}
+              />
             </Suspense>
           </div>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
@@ -86,6 +90,7 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
                 departmentId={actor.departmentId}
                 range={range}
                 now={now}
+                selection={selection}
               />
             </Suspense>
           </div>
