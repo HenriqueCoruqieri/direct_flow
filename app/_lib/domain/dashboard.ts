@@ -1,11 +1,16 @@
 import {
   elapsedMs,
   formatDuration,
+  formatRangeLabel,
+  formatTimeBucket,
+  formatTimeBucketLong,
   formatTotalHours,
-  formatWeekdayDay,
-  formatWeekdayLong,
   HOUR_MS,
   MINUTE_MS,
+  rangeDayCount,
+  rangeWeekCount,
+  toDateKey,
+  todayKey,
 } from "@/app/_lib/date"
 import { APPROVALS_LABEL } from "@/app/_lib/domain/approvals"
 import { DEPARTMENT_QUEUE_OPEN_STATUSES } from "@/app/_lib/domain/department-queue"
@@ -15,16 +20,20 @@ import {
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
 import type {
-  DashboardDailyActivityPoint,
-  DashboardDailyActivitySeries,
-  DashboardDailyCount,
+  DashboardActivityCount,
+  DashboardActivityPoint,
+  DashboardActivitySeries,
   DashboardOverdueColumn,
   DashboardOverviewCard,
   DashboardTransferCounter,
   DashboardTransferCounterTone,
 } from "@/app/_lib/types/dashboard"
 import type { DepartmentQueueTab } from "@/app/_lib/types/department-queue"
-import type { DateKey, DayWindow } from "@/app/_lib/types/period"
+import type {
+  DateRange,
+  TimeBucket,
+  TimeBucketGranularity,
+} from "@/app/_lib/types/period"
 import type { TicketStatus } from "@/app/_lib/types/ticket"
 
 export const DASHBOARD_PATH = "/dashboard"
@@ -195,58 +204,127 @@ export const incomingTransferOriginLabel = (departmentName: string): string =>
 export const isStaleIncomingTransfer = (sentAt: Date, now: Date): boolean =>
   elapsedMs(sentAt, now) >= INCOMING_TRANSFER_STALE_MS
 
-export const DAILY_ACTIVITY_DAYS = 7
+export const ACTIVITY_MAX_DAY_BUCKETS = 31
 
-export const DAILY_ACTIVITY_CARD_LABEL = `Últimos ${DAILY_ACTIVITY_DAYS} dias`
+export const ACTIVITY_MAX_WEEK_BUCKETS = 53
 
-export const DAILY_ACTIVITY_LOADING_LABEL = `Carregando últimos ${DAILY_ACTIVITY_DAYS} dias`
+export const ACTIVITY_CARD_LABEL = "Abertos × resolvidos"
 
-export const DAILY_ACTIVITY_SERIES = [
+export const ACTIVITY_LOADING_LABEL = "Carregando abertos × resolvidos"
+
+export const ACTIVITY_SERIES = [
   "opened",
   "resolved",
-] as const satisfies readonly DashboardDailyActivitySeries[]
+] as const satisfies readonly DashboardActivitySeries[]
 
-export const DAILY_ACTIVITY_SERIES_LABELS = {
+export const ACTIVITY_SERIES_LABELS = {
   opened: "Abertos",
   resolved: "Resolvidos",
-} satisfies Record<DashboardDailyActivitySeries, string>
+} satisfies Record<DashboardActivitySeries, string>
 
-export const DAILY_ACTIVITY_SERIES_COLORS = {
+export const ACTIVITY_SERIES_COLORS = {
   opened: "var(--status-aberto)",
   resolved: "var(--status-resolvido)",
-} satisfies Record<DashboardDailyActivitySeries, string>
+} satisfies Record<DashboardActivitySeries, string>
 
-export const DAILY_ACTIVITY_DAY_COLUMN_LABEL = "Dia"
+export const ACTIVITY_GRANULARITY_LABELS = {
+  hour: "por hora",
+  day: "por dia",
+  week: "por semana",
+  month: "por mês",
+} satisfies Record<TimeBucketGranularity, string>
 
-export const DAILY_ACTIVITY_TODAY_LABEL = "Hoje"
+export const ACTIVITY_BUCKET_COLUMN_LABELS = {
+  hour: "Hora",
+  day: "Dia",
+  week: "Semana",
+  month: "Mês",
+} satisfies Record<TimeBucketGranularity, string>
 
-export const EMPTY_DAILY_ACTIVITY_TITLE = `Nenhum chamado aberto ou resolvido nos últimos ${DAILY_ACTIVITY_DAYS} dias`
+export const ACTIVITY_TODAY_LABEL = "Hoje"
 
-export const EMPTY_DAILY_ACTIVITY_DESCRIPTION =
-  "Os chamados abertos e resolvidos no setor aparecem aqui, dia a dia."
+export const EMPTY_ACTIVITY_TITLE =
+  "Nenhum chamado aberto ou resolvido no período"
 
-export const dailyActivityDayLabel = (key: DateKey, today: DateKey): string =>
-  key === today ? DAILY_ACTIVITY_TODAY_LABEL : formatWeekdayDay(key)
+export const EMPTY_ACTIVITY_DESCRIPTIONS = {
+  hour: "Os chamados abertos e resolvidos no setor aparecem aqui, hora a hora.",
+  day: "Os chamados abertos e resolvidos no setor aparecem aqui, dia a dia.",
+  week: "Os chamados abertos e resolvidos no setor aparecem aqui, semana a semana.",
+  month: "Os chamados abertos e resolvidos no setor aparecem aqui, mês a mês.",
+} satisfies Record<TimeBucketGranularity, string>
 
-export const buildDailyActivitySeries = (
-  days: readonly DayWindow[],
-  counts: readonly DashboardDailyCount[],
-  today: DateKey,
-): DashboardDailyActivityPoint[] => {
+export const activityGranularityFor = (
+  range: DateRange,
+): TimeBucketGranularity => {
+  const days = rangeDayCount(range)
+  if (days <= 1) return "hour"
+  if (days <= ACTIVITY_MAX_DAY_BUCKETS) return "day"
+  if (rangeWeekCount(range) <= ACTIVITY_MAX_WEEK_BUCKETS) return "week"
+  return "month"
+}
+
+export const activityPeriodLabel = (
+  range: DateRange,
+  granularity: TimeBucketGranularity,
+): string =>
+  `${formatRangeLabel(range)} · ${ACTIVITY_GRANULARITY_LABELS[granularity]}`
+
+export const activityTableCaption = (
+  range: DateRange,
+  granularity: TimeBucketGranularity,
+): string =>
+  `${ACTIVITY_CARD_LABEL}, ${activityPeriodLabel(range, granularity)}`
+
+export const isFutureBucket = (bucket: TimeBucket, now: Date): boolean =>
+  bucket.start.getTime() > now.getTime()
+
+export const activityBucketLabel = (
+  bucket: TimeBucket,
+  granularity: TimeBucketGranularity,
+  now: Date,
+): string =>
+  granularity === "day" && toDateKey(bucket.start) === todayKey(now)
+    ? ACTIVITY_TODAY_LABEL
+    : formatTimeBucket(bucket, granularity)
+
+const countOrZero = (value: number | undefined): number =>
+  Math.max(value ?? 0, 0)
+
+export const buildActivitySeries = (
+  buckets: readonly TimeBucket[],
+  granularity: TimeBucketGranularity,
+  counts: readonly DashboardActivityCount[],
+  now: Date,
+): DashboardActivityPoint[] => {
   const countsByKey = new Map(counts.map((count) => [count.key, count]))
-  return days.map((day) => {
-    const count = countsByKey.get(day.key)
+  return buckets.map((bucket) => {
+    const count = countsByKey.get(bucket.key)
+    const isFuture = isFutureBucket(bucket, now)
     return {
-      key: day.key,
-      label: dailyActivityDayLabel(day.key, today),
-      longLabel: formatWeekdayLong(day.key),
-      opened: Math.max(count?.openedCount ?? 0, 0),
-      resolved: Math.max(count?.resolvedCount ?? 0, 0),
+      key: bucket.key,
+      label: activityBucketLabel(bucket, granularity, now),
+      longLabel: formatTimeBucketLong(bucket, granularity),
+      opened: isFuture ? null : countOrZero(count?.openedCount),
+      resolved: isFuture ? null : countOrZero(count?.resolvedCount),
     }
   })
 }
 
-export const isDailyActivityEmpty = (
-  points: readonly DashboardDailyActivityPoint[],
+export const isRecordedActivityPoint = (
+  point: DashboardActivityPoint,
+): boolean => point.opened !== null && point.resolved !== null
+
+export const recordedActivityPoints = (
+  points: readonly DashboardActivityPoint[],
+): DashboardActivityPoint[] => points.filter(isRecordedActivityPoint)
+
+export const activityLastPointIndex = (
+  points: readonly DashboardActivityPoint[],
+): number => points.findLastIndex(isRecordedActivityPoint)
+
+export const isActivityEmpty = (
+  points: readonly DashboardActivityPoint[],
 ): boolean =>
-  points.every((point) => point.opened === 0 && point.resolved === 0)
+  points.every(
+    (point) => (point.opened ?? 0) === 0 && (point.resolved ?? 0) === 0,
+  )

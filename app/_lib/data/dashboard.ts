@@ -16,14 +16,14 @@ import {
   REJECTED_TRANSFER_STATUS,
 } from "@/app/_lib/domain/ticket-transfer"
 import type {
-  DashboardDailyCount,
+  DashboardActivityCount,
   DashboardIncomingTransfer,
   DashboardOverdueTicket,
   DashboardOverview,
   DashboardTopTags,
   DashboardTransferSummary,
 } from "@/app/_lib/types/dashboard"
-import type { DateKey, DateRange, DayWindow } from "@/app/_lib/types/period"
+import type { DateRange, TimeBucket } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { department, tag, ticket, ticketTag, ticketTransfer } from "@/db/schema"
 
@@ -157,22 +157,22 @@ export async function listOverdueTickets(
   }))
 }
 
-interface DailyCountRow extends Record<string, unknown> {
-  dayKey: DateKey
+interface ActivityCountRow extends Record<string, unknown> {
+  bucketKey: string
   openedCount: number
   resolvedCount: number
 }
 
-export async function listDailyActivity(
+export async function listActivityBuckets(
   departmentId: number,
-  days: readonly DayWindow[],
-): Promise<DashboardDailyCount[]> {
-  if (days.length === 0) return []
+  buckets: readonly TimeBucket[],
+): Promise<DashboardActivityCount[]> {
+  if (buckets.length === 0) return []
 
-  const dayRows = sql.join(
-    days.map(
-      (day) =>
-        sql`(${day.key}::text, ${day.start.toISOString()}::timestamptz, ${day.end.toISOString()}::timestamptz)`,
+  const bucketRows = sql.join(
+    buckets.map(
+      (bucket) =>
+        sql`(${bucket.key}::text, ${bucket.start.toISOString()}::timestamptz, ${bucket.end.toISOString()}::timestamptz)`,
     ),
     sql`, `,
   )
@@ -181,28 +181,28 @@ export async function listDailyActivity(
     sql`, `,
   )
 
-  const result = await db.execute<DailyCountRow>(sql`
-    select d.day_key as "dayKey",
+  const result = await db.execute<ActivityCountRow>(sql`
+    select b.bucket_key as "bucketKey",
       (count(t.id) filter (
-        where t.created_at >= d.day_start and t.created_at < d.day_end
+        where t.created_at >= b.bucket_start and t.created_at < b.bucket_end
       ))::int as "openedCount",
       (count(t.id) filter (
-        where t.resolved_at >= d.day_start and t.resolved_at < d.day_end
+        where t.resolved_at >= b.bucket_start and t.resolved_at < b.bucket_end
           and t.status in (${resolvedStatuses})
       ))::int as "resolvedCount"
-    from (values ${dayRows}) as d(day_key, day_start, day_end)
+    from (values ${bucketRows}) as b(bucket_key, bucket_start, bucket_end)
     left join ${ticket} t
       on t.current_department_id = ${departmentId}
       and (
-        (t.created_at >= d.day_start and t.created_at < d.day_end)
-        or (t.resolved_at >= d.day_start and t.resolved_at < d.day_end)
+        (t.created_at >= b.bucket_start and t.created_at < b.bucket_end)
+        or (t.resolved_at >= b.bucket_start and t.resolved_at < b.bucket_end)
       )
-    group by d.day_key
-    order by d.day_key
+    group by b.bucket_key
+    order by b.bucket_key
   `)
 
   return result.rows.map((row) => ({
-    key: row.dayKey,
+    key: row.bucketKey,
     openedCount: row.openedCount,
     resolvedCount: row.resolvedCount,
   }))

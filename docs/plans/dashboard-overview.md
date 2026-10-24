@@ -207,6 +207,20 @@ incluídas no `stack.md` e no `df-ui.md` em 2026-10-23.
 - **Onda 3 — `df-reviewer`** (feito, aprovado com atenções, tratadas);
   **Onda 4 — `df-qa`** (LD1–LD17, só leitura; reteste do LD10 aprovado).
 
+**Revisão 2026-10-24 (concluída).** A pedido do usuário, o card passa a
+seguir o filtro de período e vira "Abertos × resolvidos", com o período
+embaixo do título: por hora em intervalo de um dia (Hoje), por dia até 31
+dias (Semana, Mês, Personalizado curto), por semana até 53 semanas e por mês
+acima disso; baldes futuros sem valor. Seção "Revisão 2026-10-24 — o gráfico
+da linha 3 segue o período" do contrato. Onda 0 (`df-architect`) feita;
+`df-data` renomeia `listDailyActivity` → `listActivityBuckets` (SQL igual);
+`df-ui` passa `range` ao card e põe `key` de período no `Suspense`; `df-qa`
+AP1–AP16 no lugar de LD3, LD4, LD7, LD11, LD13, LD15 e LD16. Todas as ondas
+feitas: `EXPLAIN` 0,17 ms (24 baldes) e 0,27 ms (53); `df-reviewer` aprovado
+com atenções de processo; `df-qa` 14 de 16, 0 falhas, AP2/AP3 não executados
+(`docs/test-reports/2026-10-24-dashboard-activity-period.md`). Limites
+conhecidos na seção da revisão do contrato.
+
 ## Riscos
 
 1. **Maiores atrasos cheio desde o primeiro dia.** Com todo chamado em

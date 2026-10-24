@@ -1,4 +1,3 @@
-import type { DateKey } from "@/app/_lib/types/period"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
 
 export type DashboardOverviewCard =
@@ -50,18 +49,18 @@ export interface DashboardIncomingTransfer {
   sentAt: Date
 }
 
-export type DashboardDailyActivitySeries = "opened" | "resolved"
+export type DashboardActivitySeries = "opened" | "resolved"
 
-export interface DashboardDailyCount {
-  key: DateKey
+export interface DashboardActivityCount {
+  key: string
   openedCount: number
   resolvedCount: number
 }
 
-export interface DashboardDailyActivityPoint {
-  key: DateKey
+export interface DashboardActivityPoint {
+  key: string
   label: string
   longLabel: string
-  opened: number
-  resolved: number
+  opened: number | null
+  resolved: number | null
 }

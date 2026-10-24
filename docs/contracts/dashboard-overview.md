@@ -1301,6 +1301,10 @@ Etapa 3a concluída e comitada em 2026-10-23 (`0b69f4d`).
 
 ## Etapa 3b — linha 3, esquerda: Últimos 7 dias
 
+> Revista em 2026-10-24: o card passou a seguir o período e se chama
+> "Abertos × resolvidos". Onde as duas divergem, vale a seção "Revisão
+> 2026-10-24 — o gráfico da linha 3 segue o período", no fim deste documento.
+
 Gráfico de linhas com duas séries (Abertos × Resolvidos), um ponto por dia, de
 6 dias atrás até hoje. Regras de gráfico: linha "Gráficos" da tabela e
 parágrafo "**Gráficos:**" da seção 1 de `.claude/rules/stack.md`; trecho
@@ -1856,3 +1860,395 @@ Nada.
 | VD2 | A     | Mesmo de VD1 com Personalizado (ex.: dos últimos 10 dias até hoje)                                                                 | o voltar leva a `/dashboard?periodo=personalizado&de=…&ate=…` com as mesmas datas e o rótulo de intervalo igual                                                                              |
 | VD3 | A     | `/dashboard?periodo=mes` e depois Personalizado; clicar num item de "Transferências entre setores"; voltar                         | URL com `from=dashboard` e o período; link "Início" volta ao Início no mesmo período (substitui o TR8)                                                                                       |
 | VD4 | A     | `/tickets/{id}?from=dashboard&periodo=todos` à mão; depois abrir chamados por Meus chamados, Fila, Aprovações e pela busca do topo | o primeiro volta para `/dashboard?periodo=hoje`; os demais mantêm o voltar de antes ("Meus chamados", "Fila do setor" com aba e período, "Aprovações" com período, "Meus chamados" na busca) |
+
+---
+
+## Revisão 2026-10-24 — o gráfico da linha 3 segue o período
+
+Pedido do usuário (opção A): o card da Etapa 3b, antes "Últimos 7 dias",
+passa a **acompanhar o filtro de período** do Início. Esta seção **substitui**
+as definições da Etapa 3b onde elas mudam; o que não está aqui (cores por
+token, regra de altura, `aria-hidden` + tabela `sr-only` com o `sr-only` na
+`<div>`, vazio sem legenda, `isAnimationActive={false}`, só `ChartContainer`)
+continua valendo.
+
+Sem mudança de schema, sem migration, sem índice novo.
+
+### Definições
+
+**Balde** é o intervalo `[start, end)` de um ponto do gráfico, em fuso SP
+(ADR 009), com bordas vindas de `app/_lib/date.ts`. A granularidade depende só
+do **intervalo resolvido** (`resolvePeriodRange`), não do nome do período:
+
+| Dias no intervalo                                        | Granularidade | Pontos          | Quem cai aqui                                |
+| -------------------------------------------------------- | ------------- | --------------- | -------------------------------------------- |
+| 1                                                        | `hour`        | 24 (0h–23h)     | Hoje; Personalizado com `de = ate`           |
+| 2 a 31 (`ACTIVITY_MAX_DAY_BUCKETS`)                      | `day`         | 2 a 31          | Semana (7), Mês (28–31), Personalizado curto |
+| 32 ou mais, até 53 semanas (`ACTIVITY_MAX_WEEK_BUCKETS`) | `week`        | até 53          | Personalizado longo (até ~1 ano)             |
+| mais de 53 semanas                                       | `month`       | 1 por mês civil | Personalizado de mais de ~1 ano              |
+
+- **Personalizado de um dia vai por hora**, não por dia: um ponto só não
+  desenha linha. É a extensão natural de "Hoje por hora" (um Personalizado de
+  um dia é o mesmo recorte do Hoje, em outra data).
+- **Teto de semanas: 53.** Acima disso (Personalizado de mais de um ano; a
+  validação não limita o tamanho do intervalo, só impede terminar depois de
+  hoje), por mês civil. Não há teto para meses: o custo da consulta é linear em
+  baldes × chamados do setor (ver `df-data`), e 10 anos dão 120 pontos.
+- **Semana de segunda a domingo** (`WEEK_STARTS_ON`, igual ao preset Semana).
+  Nas pontas do Personalizado a semana é **cortada pelo intervalo**: o balde vai
+  de `max(segunda, de)` a `min(domingo, ate)`, e o rótulo mostra só os dias
+  cobertos (`1–2 ago`, `19–24 out`). O mesmo corte vale para o mês nas pontas.
+- **Baldes futuros ficam no eixo, sem valor.** Semana e Mês cobrem a semana e o
+  mês inteiros (`resolvePeriodRange`), e Hoje vai até 23h. Balde com
+  `start > now` tem `opened`/`resolved` = `null`: o eixo X mostra o período
+  inteiro (24 horas, 7 dias, o mês todo) e as linhas **param no balde atual**.
+  Não `0`: zero numa hora que ainda não chegou afirma "nada aconteceu", o que é
+  falso, e puxaria a linha para baixo no fim do gráfico. Não cortar o eixo: com
+  corte, às 0h30 o Hoje teria 1 ponto (sem linha) e a forma do gráfico mudaria
+  a cada hora. O balde atual (`start ≤ now < end`) é parcial e aparece com o que
+  já aconteceu. O Personalizado não tem balde futuro (`ate ≤ hoje`, validação de
+  `customPeriodSchema`).
+- Séries **sem mudança**: Abertos = `created_at` no balde, todos os status;
+  Resolvidos = `resolved_at` no balde e status em `DASHBOARD_RESOLVED_STATUSES`.
+  Escopo `current_department_id`. Consequência: a **soma de Abertos de todos os
+  pontos = "Chamados no período"** da linha 1, em qualquer período.
+- Vazio: todos os valores registrados em `0` (os `null` não contam).
+
+### Tipos
+
+`app/_lib/types/period.ts` — `DayWindow` sai, entra:
+
+```ts
+export type TimeBucketGranularity = "hour" | "day" | "week" | "month"
+
+export interface TimeBucket extends DateRange {
+  key: string
+}
+```
+
+`key` por granularidade, ordenável como texto e única no intervalo: `hour` →
+`2026-10-24T14`; `day` → `2026-10-24`; `week` e `month` → o primeiro dia
+**coberto** do balde (`2026-08-01` para a semana cortada de 1–2 ago,
+`2026-08-03` para a seguinte).
+
+`app/_lib/types/dashboard.ts` — renomeados (o nome "daily" ficou falso):
+
+| Antes                          | Agora                     | Mudança                                   |
+| ------------------------------ | ------------------------- | ----------------------------------------- |
+| `DashboardDailyActivitySeries` | `DashboardActivitySeries` | só nome                                   |
+| `DashboardDailyCount`          | `DashboardActivityCount`  | `key: string` (era `DateKey`, mesmo tipo) |
+| `DashboardDailyActivityPoint`  | `DashboardActivityPoint`  | `opened`/`resolved`: `number \| null`     |
+
+### Datas — `app/_lib/date.ts`
+
+Sai `lastDayWindows` (sem outro uso). Ficam `formatWeekdayDay` e
+`formatWeekdayLong`. Entram:
+
+```ts
+export const rangeDayCount: (range: DateRange) => number
+export const rangeWeekCount: (range: DateRange) => number
+export const timeBuckets: (
+  range: DateRange,
+  granularity: TimeBucketGranularity,
+) => TimeBucket[]
+export const formatTimeBucket: (
+  bucket: TimeBucket,
+  granularity: TimeBucketGranularity,
+) => string
+export const formatTimeBucketLong: (
+  bucket: TimeBucket,
+  granularity: TimeBucketGranularity,
+) => string
+```
+
+| Função                 | Semântica                                                                                                                                                                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rangeDayCount`        | dias civis (SP) cobertos por `[start, end)`; `0` se vazio                                                                                                                                                                                                                                                     |
+| `rangeWeekCount`       | semanas segunda–domingo tocadas pelo intervalo (2026-08-01 a 2026-10-24 → 13)                                                                                                                                                                                                                                 |
+| `timeBuckets`          | baldes do mais antigo ao mais novo, cobrindo o intervalo sem buraco nem sobreposição; bordas por `zonedDateTime`/`addDaysToKey` (nada de fuso no SQL)                                                                                                                                                         |
+| `formatTimeBucket`     | eixo X — `hour`: `14h`; `day`: `Sex 9`; `week`: `12–18 out`, `29 set–5 out`, `12 out` (balde de um dia); `month`: `out/26`                                                                                                                                                                                    |
+| `formatTimeBucketLong` | tooltip e tabela — `hour`: `14h às 15h` (o último: `23h às 0h`); `day`: `sexta-feira, 9 de outubro`; `week`: `12 a 18 de outubro de 2026`, `29 de setembro a 5 de outubro de 2026`, `29 de dezembro de 2025 a 4 de janeiro de 2026`; `month` inteiro: `outubro de 2026`, cortado: `1 a 24 de outubro de 2026` |
+
+O mês leva o ano no rótulo curto (`out/26`) e a semana não: o mês só aparece em
+intervalo de mais de um ano, onde o mesmo mês se repete no eixo; a semana cobre
+até um ano, e a linha do período embaixo do título dá o ano.
+
+### Domínio — `app/_lib/domain/dashboard.ts`
+
+Saem `DAILY_ACTIVITY_DAYS`, `DAILY_ACTIVITY_CARD_LABEL`,
+`DAILY_ACTIVITY_LOADING_LABEL`, `DAILY_ACTIVITY_DAY_COLUMN_LABEL`,
+`EMPTY_DAILY_ACTIVITY_TITLE`, `EMPTY_DAILY_ACTIVITY_DESCRIPTION`,
+`dailyActivityDayLabel`, `buildDailyActivitySeries` e `isDailyActivityEmpty`.
+Renomeados sem mudar valor: `DAILY_ACTIVITY_SERIES` → `ACTIVITY_SERIES`,
+`DAILY_ACTIVITY_SERIES_LABELS` → `ACTIVITY_SERIES_LABELS`,
+`DAILY_ACTIVITY_SERIES_COLORS` → `ACTIVITY_SERIES_COLORS`,
+`DAILY_ACTIVITY_TODAY_LABEL` → `ACTIVITY_TODAY_LABEL`. Entram:
+
+```ts
+export const ACTIVITY_MAX_DAY_BUCKETS = 31
+export const ACTIVITY_MAX_WEEK_BUCKETS = 53
+export const ACTIVITY_CARD_LABEL = "Abertos × resolvidos"
+export const ACTIVITY_LOADING_LABEL = "Carregando abertos × resolvidos"
+export const ACTIVITY_GRANULARITY_LABELS: Record<TimeBucketGranularity, string>
+export const ACTIVITY_BUCKET_COLUMN_LABELS: Record<
+  TimeBucketGranularity,
+  string
+>
+export const EMPTY_ACTIVITY_TITLE =
+  "Nenhum chamado aberto ou resolvido no período"
+export const EMPTY_ACTIVITY_DESCRIPTIONS: Record<TimeBucketGranularity, string>
+
+export const activityGranularityFor: (range: DateRange) => TimeBucketGranularity
+export const activityPeriodLabel: (
+  range: DateRange,
+  granularity: TimeBucketGranularity,
+) => string
+export const activityTableCaption: (
+  range: DateRange,
+  granularity: TimeBucketGranularity,
+) => string
+export const isFutureBucket: (bucket: TimeBucket, now: Date) => boolean
+export const activityBucketLabel: (
+  bucket: TimeBucket,
+  granularity: TimeBucketGranularity,
+  now: Date,
+) => string
+export const buildActivitySeries: (
+  buckets: readonly TimeBucket[],
+  granularity: TimeBucketGranularity,
+  counts: readonly DashboardActivityCount[],
+  now: Date,
+) => DashboardActivityPoint[]
+export const isRecordedActivityPoint: (point: DashboardActivityPoint) => boolean
+export const recordedActivityPoints: (
+  points: readonly DashboardActivityPoint[],
+) => DashboardActivityPoint[]
+export const activityLastPointIndex: (
+  points: readonly DashboardActivityPoint[],
+) => number
+export const isActivityEmpty: (
+  points: readonly DashboardActivityPoint[],
+) => boolean
+```
+
+| Nome                            | Semântica                                                                                                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACTIVITY_GRANULARITY_LABELS`   | `por hora` · `por dia` · `por semana` · `por mês`                                                                                                                    |
+| `ACTIVITY_BUCKET_COLUMN_LABELS` | primeira coluna da tabela acessível: `Hora` · `Dia` · `Semana` · `Mês` (era sempre `Dia`)                                                                            |
+| `EMPTY_ACTIVITY_DESCRIPTIONS`   | `Os chamados abertos e resolvidos no setor aparecem aqui, hora a hora.` (e `dia a dia`, `semana a semana`, `mês a mês`)                                              |
+| `activityGranularityFor`        | tabela das Definições: 1 dia → `hour`; ≤ 31 dias → `day`; ≤ 53 semanas → `week`; senão `month`                                                                       |
+| `activityPeriodLabel`           | linha embaixo do título: `formatRangeLabel(range)` + `·` + granularidade — `24 out 2026 · por hora`, `19–25 out 2026 · por dia`, `1 ago – 24 out 2026 · por semana`  |
+| `activityTableCaption`          | `caption` da tabela: `Abertos × resolvidos, 24 out 2026 · por hora`                                                                                                  |
+| `isFutureBucket`                | `bucket.start > now`                                                                                                                                                 |
+| `activityBucketLabel`           | `day` e o balde é hoje → `Hoje`; senão `formatTimeBucket`. A hora atual não ganha rótulo especial                                                                    |
+| `buildActivitySeries`           | um ponto por balde, na ordem dos baldes; contagem casada por `key`; sem linha → `0`; negativo → `0`; balde futuro → `null` nas duas séries; linha sem balde ignorada |
+| `isRecordedActivityPoint`       | `opened` e `resolved` não nulos (o balde já começou)                                                                                                                 |
+| `recordedActivityPoints`        | só os pontos registrados, na ordem: linhas da tabela acessível (que não lista hora nem dia futuro)                                                                   |
+| `activityLastPointIndex`        | índice do último ponto registrado (o balde atual em Hoje, Semana e Mês; o último no Personalizado); `-1` se nenhum. Onde vão o marcador e os rótulos de valor        |
+| `isActivityEmpty`               | todos os pontos com `opened` e `resolved` em `0` ou `null` (lista vazia → `true`)                                                                                    |
+
+### `df-data` — `app/_lib/data/dashboard.ts`
+
+Renomear `listDailyActivity` → **`listActivityBuckets`**. O SQL serve como
+está: já recebe `{ key, start, end }` genéricos e só compara instantes.
+
+```ts
+export async function listActivityBuckets(
+  departmentId: number,
+  buckets: readonly TimeBucket[],
+): Promise<DashboardActivityCount[]>
+```
+
+- Trocar `DayWindow` → `TimeBucket` e `DashboardDailyCount` →
+  `DashboardActivityCount`. Renomear os aliases do `values`
+  (`day_key/day_start/day_end` → `bucket_key/bucket_start/bucket_end`) e o tipo
+  da linha é opcional, só legibilidade.
+- `buckets` vazio → `[]`, sem consulta. `order by` pela chave continua certo
+  (as chaves ordenam como texto).
+- **Custo.** O plano da 3b era `Nested Loop Left Join` com o `or` como
+  `Join Filter` sobre as linhas do setor: o trabalho é baldes × chamados do
+  setor. Hoje são 24 baldes, Mês até 31, Personalizado semanal até 53 e mensal
+  sem teto. Com ~223 chamados no setor, 53 baldes ≈ 12 mil comparações. Rodar
+  `EXPLAIN ANALYZE` com 24 baldes (Hoje) e com 53 (Personalizado de um ano)
+  para Suporte (14) e colar na resposta. Se passar de alguns ms, reportar; a
+  saída seria pré-filtrar as linhas do setor pelo intervalo inteiro
+  (`min(start)`/`max(end)`) antes do `join`, sem mudar o resultado.
+
+### `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que muda
+
+Renomear os arquivos (`dashboard-daily-activity*.tsx`, `daily-activity-*.tsx`)
+é opcional; os identificadores importados mudam conforme as tabelas acima.
+
+**Leitura**, com o `range` e o `now` da página:
+
+```ts
+const granularity = activityGranularityFor(range)
+const buckets = timeBuckets(range, granularity)
+const counts = await listActivityBuckets(departmentId, buckets)
+const points = buildActivitySeries(buckets, granularity, counts, now)
+```
+
+O card passa a receber `range` (além de `now`); o componente cliente continua
+recebendo `points` prontos (agora `number | null`, ainda serializável).
+
+**`Suspense` com `key={serializeDashboardParams(selection)}`**, como a linha 1
+e "Principal ofensor": o card agora depende do período, e com a `key` o
+esqueleto aparece na troca em vez de o gráfico antigo ficar na tela sob o
+filtro novo. Atrasos e transferências continuam **sem** `key`.
+
+**Cabeçalho**: título `ACTIVITY_CARD_LABEL` e, embaixo dele, em texto
+secundário, `activityPeriodLabel(range, granularity)`. Legenda à direita como
+antes; em 390 px pode quebrar para baixo, sem `…`. O esqueleto também recebe e
+mostra o período (é síncrono, não depende da consulta), com
+`aria-label={ACTIVITY_LOADING_LABEL}`.
+
+**Gráfico**:
+
+- `connectNulls` desligado (padrão): os baldes futuros (`null`) ficam como
+  espaço vazio à direita, sem linha.
+- **Último ponto** em `activityLastPointIndex(points)`, não mais em
+  `points.length - 1` (em Hoje, Semana e Mês ele fica no meio do eixo). Mesmo
+  desenho da 3b: Abertos acima, Resolvidos abaixo, `0` também rotulado.
+- **Eixo X**: até 7 pontos, `interval={0}` (todos os rótulos, como na 3b). Com
+  mais de 7 (Hoje 24, Mês, Personalizado), `interval="preserveStartEnd"` com
+  `minTickGap` pequeno: o Recharts mede o texto e omite os rótulos que
+  colidiriam, mantendo o primeiro e o último. Rótulo **omitido**, nunca cortado
+  nem sobreposto; o valor de cada ponto continua no tooltip e na tabela. Margem
+  direita suficiente para o último rótulo (`23h`, `Sáb 31`, `19–24 out`,
+  `out/26`).
+- **Tooltip**: título = `longLabel`. Em balde futuro, nenhum tooltip (nem `0`):
+  o `content` devolve `null` quando o ponto não é registrado.
+- Altura: sem mudança de regra. O cabeçalho ganha uma linha (o período); a área
+  do gráfico continua `flex-1 min-h-56`, e em `xl+` quem dita a altura da linha
+  continua sendo o card de transferências.
+
+**Tabela acessível**: `caption` = `activityTableCaption(range, granularity)`;
+primeira coluna `ACTIVITY_BUCKET_COLUMN_LABELS[granularity]`; linhas =
+`recordedActivityPoints(points)` com `longLabel`. **Vazio**:
+`EMPTY_ACTIVITY_TITLE` + `EMPTY_ACTIVITY_DESCRIPTIONS[granularity]`, mesmo
+desenho da 3b.
+
+### Riscos da revisão
+
+1. **Rótulos omitidos com muitos pontos.** Com 24 a 53 pontos o eixo não mostra
+   todos os rótulos em 390 px (nem em 1280 com 31 dias). É a escolha: omitir em
+   vez de cortar.
+2. **Alvo do tooltip estreito** com 31–53 pontos; aceito.
+3. **Personalizado muito longo.** Sem teto de meses; um intervalo de décadas dá
+   centenas de pontos mensais quase todos em zero. Não é caso real hoje.
+
+### Cenários do `df-qa`
+
+Contas: `A` = Administrador de Suporte, `M` = Membro de Suporte (`S` = 14).
+**Só leitura.** Datas de exemplo para hoje = sábado, 2026-10-24.
+
+Consulta `AH(dep, dia)` — por hora (`dia` = hoje no Hoje):
+
+```sql
+with horas as (
+  select :dia::date + make_interval(hours => n) as ini
+  from generate_series(0, 23) as n
+)
+select extract(hour from h.ini)::int as hora,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.created_at >= h.ini at time zone 'America/Sao_Paulo'
+      and t.created_at < (h.ini + interval '1 hour') at time zone 'America/Sao_Paulo'
+  ) as abertos,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.status in ('resolvido', 'fechado')
+      and t.resolved_at >= h.ini at time zone 'America/Sao_Paulo'
+      and t.resolved_at < (h.ini + interval '1 hour') at time zone 'America/Sao_Paulo'
+  ) as resolvidos
+from horas h
+order by h.ini
+```
+
+Consulta `AD(dep, de, ate)` — por dia: a `DA` da 3b com
+`select d::date as dia from generate_series(:de::date, :ate::date, interval '1 day') d`
+no lugar do `with dias`.
+
+Consulta `AW(dep, de, ate)` — por semana cortada:
+
+```sql
+with dias as (
+  select d::date as dia
+  from generate_series(:de::date, :ate::date, interval '1 day') d
+), semanas as (
+  select min(dia) as ini, max(dia) as fim from dias
+  group by date_trunc('week', dia)
+)
+select s.ini, s.fim,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.created_at >= s.ini::timestamp at time zone 'America/Sao_Paulo'
+      and t.created_at < (s.fim + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as abertos,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.status in ('resolvido', 'fechado')
+      and t.resolved_at >= s.ini::timestamp at time zone 'America/Sao_Paulo'
+      and t.resolved_at < (s.fim + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as resolvidos
+from semanas s
+order by s.ini
+```
+
+(`generate_series`, `date_trunc` e `at time zone` só na conferência; a
+aplicação não os usa.)
+
+| #    | Quem  | Ação                                                                                                     | Esperado                                                                                                                                                                                                                               |
+| ---- | ----- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AP1  | A     | `/dashboard` Hoje, 1280 px                                                                               | título "Abertos × resolvidos"; embaixo `24 out 2026 · por hora`; legenda Abertos/Resolvidos se o setor teve chamado aberto ou resolvido hoje; se o período estiver vazio, vale AP15 (sem legenda)                                      |
+| AP2  | A     | Hoje: eixo e valores                                                                                     | eixo de `0h` a `23h` (24 pontos; rótulos intermediários podem ser omitidos, nenhum cortado); tooltip `14h às 15h`; valores de cada hora até a atual = `AH(S, hoje)`; as linhas param na hora atual, nada desenhado nas horas seguintes |
+| AP3  | A     | Hoje: último ponto e tabela                                                                              | marcador e valores na hora atual (não em `23h`); tabela acessível com caption `Abertos × resolvidos, 24 out 2026 · por hora`, coluna `Hora`, uma linha por hora de `0h` até a atual (nenhuma futura)                                   |
+| AP4  | A     | Semana                                                                                                   | `19–25 out 2026 · por dia`; os 7 rótulos visíveis `Seg 19 · Ter 20 · Qua 21 · Qui 22 · Sex 23 · Hoje · Dom 25`; valores = `AD(S, 2026-10-19, 2026-10-24)`; nada desenhado no domingo; marcador em "Hoje"                               |
+| AP5  | A     | Mês                                                                                                      | `1–31 out 2026 · por dia`; 31 pontos, rótulos omitidos sem corte, `Qui 1` e `Sáb 31` visíveis; valores = `AD(S, 2026-10-01, 2026-10-24)`; as linhas param em "Hoje"                                                                    |
+| AP6  | A     | Personalizado 2026-10-10 a 2026-10-24                                                                    | `10–24 out 2026 · por dia`; 15 pontos de `Sáb 10` a `Hoje`; valores = `AD`; marcador no último                                                                                                                                         |
+| AP7  | A     | Personalizado 2026-08-01 a 2026-10-24                                                                    | `1 ago – 24 out 2026 · por semana`; 13 pontos, primeiro `1–2 ago`, último `19–24 out`; tooltip `1 a 2 de agosto de 2026`; tabela com coluna `Semana`; valores = `AW(S, 2026-08-01, 2026-10-24)`                                        |
+| AP8  | A     | Personalizado de um dia passado com chamado no setor (`AH(S, dia)` com algum valor > 0; ex.: 2026-10-23) | `<dia> · por hora` (ex.: `23 out 2026 · por hora`); 24 pontos, todos registrados (dia passado), marcador em `23h`; valores = `AH(S, dia)`. Dia sem chamado cai no vazio: é AP15, não AP8                                               |
+| AP9  | A     | Coerência com a linha 1, em AP1, AP4, AP5, AP6 e AP7                                                     | soma de Abertos dos pontos (tabela acessível) = "Chamados no período"                                                                                                                                                                  |
+| AP10 | A     | Trocar Hoje → Semana → Mês → Personalizado → Hoje                                                        | a cada troca o card mostra o esqueleto (com o período novo) e volta com título, linha do período e pontos do período novo; atrasos e transferências sem esqueleto                                                                      |
+| AP11 | A     | 1280 px, cada período                                                                                    | os dois cards da linha 3 com a mesma altura externa; área do gráfico ≥ 224 px; sem rolagem interna                                                                                                                                     |
+| AP12 | A     | 390×844, Hoje, Mês e AP7                                                                                 | sem rolagem horizontal; rótulos do eixo legíveis e não sobrepostos; título, período e legenda sem `…`; rótulos do último ponto inteiros                                                                                                |
+| AP13 | A     | Passar o cursor em balde futuro (Hoje, hora seguinte; Mês, dia 31)                                       | nenhum tooltip, nenhum `0`                                                                                                                                                                                                             |
+| AP14 | M     | `/dashboard` Hoje e Mês                                                                                  | mesmos pontos de A (é do setor, não do papel)                                                                                                                                                                                          |
+| AP15 | todos | Período sem chamado do setor (ex.: Personalizado de um dia sem chamado, pela `AH`)                       | sem legenda; "Nenhum chamado aberto ou resolvido no período" + "…, hora a hora."; card sem encolher. Se não houver dia assim: NÃO EXECUTADO, com a consulta                                                                            |
+| AP16 | todos | Toda a bateria                                                                                           | console e dev server sem erro, sem aviso de hidratação, sem aviso do Recharts de largura/altura `0`/`-1`; VD1–VD4 e TR1–TR16 continuam valendo                                                                                         |
+
+LD3, LD4, LD7, LD11, LD13, LD15 e LD16 da 3b ficam **substituídos** por
+AP2–AP15; LD7 ("não muda com o período") deixa de valer. Notas para não
+reportar como defeito: rótulo do eixo omitido com muitos pontos (o valor está
+no tooltip e na tabela); semana cortada nas pontas do Personalizado;
+Personalizado de um dia por hora; nada desenhado nos baldes futuros.
+
+### Checklist da revisão
+
+- [x] `TimeBucket`, `TimeBucketGranularity`, tipos renomeados; `rangeDayCount`, `rangeWeekCount`, `timeBuckets`, `formatTimeBucket`, `formatTimeBucketLong`; constantes, `activityGranularityFor`, `buildActivitySeries` e auxiliares; esta seção e o plano (`df-architect`)
+- [x] `listActivityBuckets`, com `EXPLAIN` de 24 e 53 baldes (`df-data`): `Nested Loop Left Join` com o `or` como `Join Filter` sobre Seq Scan filtrado pelo setor 14, 0,17 ms com 24 baldes e 0,27 ms com 53; sem pré-filtro
+- [x] card com `range`, `Suspense` com `key`, período no cabeçalho e no esqueleto, último ponto, eixo, tooltip, tabela (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado com atenções, só de processo)
+- [x] AP1–AP16 (`df-qa`): 14 de 16, 0 falhas, AP2 e AP3 não executados — `docs/test-reports/2026-10-24-dashboard-activity-period.md`
+
+### Limites conhecidos
+
+1. **AP2 e AP3 não executados.** Suporte não tinha chamado aberto nem resolvido
+   no dia do teste, então Hoje só mostrou o vazio. A granularidade por hora foi
+   coberta em parte pelo dia passado 2026-10-23 (AP8: 24 pontos, tooltips e
+   valores); o balde atual no meio do eixo por hora não foi visto. Rodar de
+   novo quando o setor tiver atividade no dia.
+2. **Esqueleto só em carga direta ou recarga.** No clique do filtro o Next
+   mantém a tela antiga até a resposta chegar (a navegação é uma transition) e
+   o fallback do `Suspense` com `key` não aparece. É comportamento da
+   navegação, não do `Suspense`, e vale igual para a linha 1 e "Principal
+   ofensor". AP10 conta como aprovado pela troca de conteúdo, sem exigir o
+   esqueleto no clique.
+3. **Cosméticos aceitos.** Cursor vertical do Recharts sobre balde futuro, sem
+   tooltip (AP13 continua valendo: nenhum tooltip, nenhum `0`); eixo por hora
+   com rótulos densos e espaçamento irregular (`preserveStartEnd`); curva
+   `monotone` com sobrepasso entre pontos.

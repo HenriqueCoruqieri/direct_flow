@@ -9,9 +9,10 @@ import type { DurationPart } from "@/app/_lib/types/duration"
 import type {
   DateKey,
   DateRange,
-  DayWindow,
   PeriodFilterSelection,
   PeriodSelection,
+  TimeBucket,
+  TimeBucketGranularity,
 } from "@/app/_lib/types/period"
 
 dayjs.extend(utc)
@@ -99,18 +100,6 @@ const dayRange = (firstKey: DateKey, lastKey: DateKey): DateRange => ({
   end: zonedDateTime(addDaysToKey(lastKey, 1)),
 })
 
-export const lastDayWindows = (
-  count: number,
-  now: DateInput = new Date(),
-): DayWindow[] => {
-  const today = todayKey(now)
-  const total = Math.max(Math.floor(count), 1)
-  return Array.from({ length: total }, (_, index) => {
-    const key = addDaysToKey(today, index - total + 1)
-    return { key, ...dayRange(key, key) }
-  })
-}
-
 export const formatWeekdayDay = (key: DateKey): string =>
   capitalize(dayjs.utc(key).format("ddd D"))
 
@@ -163,6 +152,143 @@ export const formatRangeLabel = (range: DateRange): string => {
     return `${first.format("D MMM")} – ${last.format("D MMM YYYY")}`
   }
   return `${first.format("D MMM YYYY")} – ${last.format("D MMM YYYY")}`
+}
+
+const HOURS_PER_DAY = 24
+
+const firstDayKey = (range: DateRange): DateKey => toDateKey(range.start)
+
+const lastDayKey = (range: DateRange): DateKey =>
+  toDateKey(range.end.getTime() - 1)
+
+const weekEndKey = (key: DateKey): DateKey => addDaysToKey(weekStartKey(key), 6)
+
+const monthEndKey = (key: DateKey): DateKey =>
+  addDaysToKey(addMonthsToKey(monthStartKey(key), 1), -1)
+
+export const rangeDayCount = (range: DateRange): number =>
+  Math.max(
+    dayjs.utc(lastDayKey(range)).diff(dayjs.utc(firstDayKey(range)), "day") + 1,
+    0,
+  )
+
+export const rangeWeekCount = (range: DateRange): number =>
+  Math.max(
+    dayjs
+      .utc(weekStartKey(lastDayKey(range)))
+      .diff(dayjs.utc(weekStartKey(firstDayKey(range))), "week") + 1,
+    0,
+  )
+
+const rangeDayKeys = (range: DateRange): DateKey[] => {
+  const first = firstDayKey(range)
+  return Array.from({ length: rangeDayCount(range) }, (_, index) =>
+    addDaysToKey(first, index),
+  )
+}
+
+const hourBuckets = (key: DateKey): TimeBucket[] =>
+  Array.from({ length: HOURS_PER_DAY }, (_, hour) => ({
+    key: `${key}T${pad(hour)}`,
+    start: zonedDateTime(key, hour),
+    end:
+      hour + 1 < HOURS_PER_DAY
+        ? zonedDateTime(key, hour + 1)
+        : zonedDateTime(addDaysToKey(key, 1)),
+  }))
+
+const spanBuckets = (
+  range: DateRange,
+  spanEndKey: (key: DateKey) => DateKey,
+): TimeBucket[] => {
+  const last = lastDayKey(range)
+  const buckets: TimeBucket[] = []
+  for (let cursor = firstDayKey(range); cursor <= last;) {
+    const candidate = spanEndKey(cursor)
+    const end = candidate < last ? candidate : last
+    buckets.push({ key: cursor, ...dayRange(cursor, end) })
+    cursor = addDaysToKey(end, 1)
+  }
+  return buckets
+}
+
+export const timeBuckets = (
+  range: DateRange,
+  granularity: TimeBucketGranularity,
+): TimeBucket[] => {
+  switch (granularity) {
+    case "hour":
+      return rangeDayKeys(range).flatMap(hourBuckets)
+    case "day":
+      return rangeDayKeys(range).map((key) => ({
+        key,
+        ...dayRange(key, key),
+      }))
+    case "week":
+      return spanBuckets(range, weekEndKey)
+    case "month":
+      return spanBuckets(range, monthEndKey)
+  }
+}
+
+const formatHour = (value: DateInput): string => inAppZone(value).format("H[h]")
+
+const formatDaySpanShort = (firstKey: DateKey, lastKey: DateKey): string => {
+  const first = dayjs.utc(firstKey)
+  const last = dayjs.utc(lastKey)
+  if (first.isSame(last, "day")) return first.format("D MMM")
+  if (first.isSame(last, "month")) {
+    return `${first.format("D")}–${last.format("D MMM")}`
+  }
+  return `${first.format("D MMM")}–${last.format("D MMM")}`
+}
+
+const formatDaySpanLong = (firstKey: DateKey, lastKey: DateKey): string => {
+  const first = dayjs.utc(firstKey)
+  const last = dayjs.utc(lastKey)
+  const lastLabel = last.format("D [de] MMMM [de] YYYY")
+  if (first.isSame(last, "day")) return lastLabel
+  if (first.isSame(last, "month")) return `${first.format("D")} a ${lastLabel}`
+  if (first.isSame(last, "year")) {
+    return `${first.format("D [de] MMMM")} a ${lastLabel}`
+  }
+  return `${first.format("D [de] MMMM [de] YYYY")} a ${lastLabel}`
+}
+
+export const formatTimeBucket = (
+  bucket: TimeBucket,
+  granularity: TimeBucketGranularity,
+): string => {
+  switch (granularity) {
+    case "hour":
+      return formatHour(bucket.start)
+    case "day":
+      return formatWeekdayDay(firstDayKey(bucket))
+    case "week":
+      return formatDaySpanShort(firstDayKey(bucket), lastDayKey(bucket))
+    case "month":
+      return dayjs.utc(firstDayKey(bucket)).format("MMM/YY")
+  }
+}
+
+export const formatTimeBucketLong = (
+  bucket: TimeBucket,
+  granularity: TimeBucketGranularity,
+): string => {
+  const first = firstDayKey(bucket)
+  const last = lastDayKey(bucket)
+  switch (granularity) {
+    case "hour":
+      return `${formatHour(bucket.start)} às ${formatHour(bucket.end)}`
+    case "day":
+      return formatWeekdayLong(first)
+    case "week":
+      return formatDaySpanLong(first, last)
+    case "month":
+      return first === monthStartKey(first) && last === monthEndKey(first)
+        ? dayjs.utc(first).format("MMMM [de] YYYY")
+        : formatDaySpanLong(first, last)
+  }
 }
 
 export const calendarDateToKey = (value: Date): DateKey =>

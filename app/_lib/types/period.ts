@@ -33,6 +33,8 @@ export interface DateRange {
   end: Date
 }
 
-export interface DayWindow extends DateRange {
-  key: DateKey
+export type TimeBucketGranularity = "hour" | "day" | "week" | "month"
+
+export interface TimeBucket extends DateRange {
+  key: string
 }

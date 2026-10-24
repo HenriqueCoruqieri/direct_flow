@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import type { DotItemDotProps } from "recharts"
+import type { DotItemDotProps, TooltipContentProps } from "recharts"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
 import {
@@ -11,60 +11,45 @@ import {
   ChartTooltipContent,
 } from "@/app/_components/ui/chart"
 import {
-  DAILY_ACTIVITY_SERIES,
-  DAILY_ACTIVITY_SERIES_COLORS,
-  DAILY_ACTIVITY_SERIES_LABELS,
+  ACTIVITY_SERIES,
+  ACTIVITY_SERIES_COLORS,
+  ACTIVITY_SERIES_LABELS,
+  activityLastPointIndex,
+  isRecordedActivityPoint,
 } from "@/app/_lib/domain/dashboard"
 import type {
-  DashboardDailyActivityPoint,
-  DashboardDailyActivitySeries,
+  DashboardActivityPoint,
+  DashboardActivitySeries,
 } from "@/app/_lib/types/dashboard"
 
 const CHART_CONFIG = {
   opened: {
-    label: DAILY_ACTIVITY_SERIES_LABELS.opened,
-    color: DAILY_ACTIVITY_SERIES_COLORS.opened,
+    label: ACTIVITY_SERIES_LABELS.opened,
+    color: ACTIVITY_SERIES_COLORS.opened,
   },
   resolved: {
-    label: DAILY_ACTIVITY_SERIES_LABELS.resolved,
-    color: DAILY_ACTIVITY_SERIES_COLORS.resolved,
+    label: ACTIVITY_SERIES_LABELS.resolved,
+    color: ACTIVITY_SERIES_COLORS.resolved,
   },
 } satisfies ChartConfig
 
 const LAST_POINT_LABEL_OFFSET = {
   opened: -10,
   resolved: 18,
-} satisfies Record<DashboardDailyActivitySeries, number>
+} satisfies Record<DashboardActivitySeries, number>
 
-const CHART_MARGIN = { top: 20, right: 16, bottom: 0, left: 0 }
+const CHART_MARGIN = { top: 20, right: 28, bottom: 0, left: 0 }
 
 const Y_AXIS_PADDING = { top: 0, bottom: 20 }
 
-const longLabelFromPayload = (
-  label: unknown,
-  payload: readonly unknown[],
-): ReactNode => {
-  const [item] = payload
-  if (typeof item === "object" && item !== null && "payload" in item) {
-    const point: unknown = item.payload
-    if (
-      typeof point === "object" &&
-      point !== null &&
-      "longLabel" in point &&
-      typeof point.longLabel === "string"
-    ) {
-      return point.longLabel
-    }
-  }
-  return typeof label === "string" ? label : null
-}
+const MAX_POINTS_WITH_ALL_TICKS = 7
 
 const renderLastPoint = (
-  series: DashboardDailyActivitySeries,
+  series: DashboardActivitySeries,
   lastIndex: number,
   { cx, cy, index, value }: DotItemDotProps,
 ): ReactNode => {
-  if (index !== lastIndex || cx === undefined || cy === undefined) return null
+  if (index !== lastIndex || cx == null || cy == null) return null
   return (
     <g key={`${series}-last`}>
       <circle
@@ -87,12 +72,35 @@ const renderLastPoint = (
   )
 }
 
-interface DailyActivityChartProps {
-  points: DashboardDailyActivityPoint[]
+interface ActivityChartProps {
+  points: DashboardActivityPoint[]
 }
 
-const DailyActivityChart = ({ points }: DailyActivityChartProps) => {
-  const lastIndex = points.length - 1
+const ActivityChart = ({ points }: ActivityChartProps) => {
+  const lastIndex = activityLastPointIndex(points)
+  const pointsByKey = new Map(points.map((point) => [point.key, point]))
+  const showAllTicks = points.length <= MAX_POINTS_WITH_ALL_TICKS
+
+  const tickLabel = (key: unknown): string =>
+    typeof key === "string" ? (pointsByKey.get(key)?.label ?? "") : ""
+
+  const renderTooltip = ({
+    active,
+    payload,
+    label,
+  }: TooltipContentProps): ReactNode => {
+    const point = typeof label === "string" ? pointsByKey.get(label) : undefined
+    if (point === undefined || !isRecordedActivityPoint(point)) return null
+    return (
+      <ChartTooltipContent
+        active={active}
+        payload={payload}
+        label={label}
+        indicator="line"
+        labelFormatter={() => point.longLabel}
+      />
+    )
+  }
 
   return (
     <ChartContainer
@@ -103,8 +111,10 @@ const DailyActivityChart = ({ points }: DailyActivityChartProps) => {
       <LineChart data={points} margin={CHART_MARGIN}>
         <CartesianGrid vertical={false} stroke="var(--color-border-subtle)" />
         <XAxis
-          dataKey="label"
-          interval={0}
+          dataKey="key"
+          tickFormatter={tickLabel}
+          interval={showAllTicks ? 0 : "preserveStartEnd"}
+          minTickGap={4}
           axisLine={false}
           tickLine={false}
           tickMargin={8}
@@ -118,15 +128,8 @@ const DailyActivityChart = ({ points }: DailyActivityChartProps) => {
           tickMargin={4}
           width={32}
         />
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              indicator="line"
-              labelFormatter={longLabelFromPayload}
-            />
-          }
-        />
-        {DAILY_ACTIVITY_SERIES.map((series) => (
+        <ChartTooltip content={renderTooltip} />
+        {ACTIVITY_SERIES.map((series) => (
           <Line
             key={series}
             dataKey={series}
@@ -143,4 +146,4 @@ const DailyActivityChart = ({ points }: DailyActivityChartProps) => {
   )
 }
 
-export default DailyActivityChart
+export default ActivityChart
