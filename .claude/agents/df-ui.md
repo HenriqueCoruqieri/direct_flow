@@ -1,6 +1,6 @@
 ---
 name: df-ui
-description: Interface do Direct Flow — rotas do App Router, Server e Client Components, shadcn/ui, React Hook Form + Zod, TanStack Table, lucide-react, Sonner e Tailwind. Use para qualquer tela, componente, formulário, tabela ou layout.
+description: Interface do Direct Flow — rotas do App Router, Server e Client Components, shadcn/ui, React Hook Form + Zod, TanStack Table, Recharts (via `chart` do shadcn), lucide-react, Sonner e Tailwind. Use para qualquer tela, componente, formulário, tabela ou layout.
 tools: Read, Write, Edit, Glob, Grep, Bash, mcp__context7
 model: opus
 ---
@@ -98,6 +98,11 @@ paginar em memória.
 
 Notificações: apenas Sonner, com um único `<Toaster />` no layout raiz.
 
+Gráficos: apenas Recharts dentro do `ChartContainer` do primitivo `chart` do
+shadcn (`npx shadcn@latest add chart`), conforme a regra "Gráficos" da seção 1
+do `stack.md`. Cores por token, componente `"use client"` recebendo a série
+pronta por props.
+
 ## Datas
 
 Importe de `@/app/_lib/date`. Nunca importe `dayjs` direto, nunca use
@@ -129,7 +134,7 @@ a **mesma** função que ela usa, para que interface e servidor nunca discordem.
 
 ## Pacotes que você instala
 
-`npm install react-hook-form @hookform/resolvers @tanstack/react-table lucide-react sonner next-themes`
+`npm install react-hook-form @hookform/resolvers @tanstack/react-table lucide-react sonner next-themes recharts`
 · primitivos do shadcn via `npx shadcn@latest add`
 
 Dependências instaladas automaticamente pelo CLI do shadcn (`shadcn`,

@@ -11,6 +11,8 @@ import {
 
 import AppTopBar from "../_components/app-top-bar"
 import PeriodFilter from "../_components/period-filter"
+import DashboardDailyActivity from "./_components/dashboard-daily-activity"
+import DashboardDailyActivitySkeleton from "./_components/dashboard-daily-activity-skeleton"
 import DashboardOverdue from "./_components/dashboard-overdue"
 import DashboardOverdueSkeleton from "./_components/dashboard-overdue-skeleton"
 import DashboardOverview from "./_components/dashboard-overview"
@@ -73,6 +75,12 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
             </Suspense>
           </div>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
+            <Suspense fallback={<DashboardDailyActivitySkeleton />}>
+              <DashboardDailyActivity
+                departmentId={actor.departmentId}
+                now={now}
+              />
+            </Suspense>
             <Suspense fallback={<DashboardTransfersSkeleton />}>
               <DashboardTransfers
                 departmentId={actor.departmentId}

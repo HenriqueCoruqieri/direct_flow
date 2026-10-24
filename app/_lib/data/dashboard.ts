@@ -16,13 +16,14 @@ import {
   REJECTED_TRANSFER_STATUS,
 } from "@/app/_lib/domain/ticket-transfer"
 import type {
+  DashboardDailyCount,
   DashboardIncomingTransfer,
   DashboardOverdueTicket,
   DashboardOverview,
   DashboardTopTags,
   DashboardTransferSummary,
 } from "@/app/_lib/types/dashboard"
-import type { DateRange } from "@/app/_lib/types/period"
+import type { DateKey, DateRange, DayWindow } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { department, tag, ticket, ticketTag, ticketTransfer } from "@/db/schema"
 
@@ -153,6 +154,57 @@ export async function listOverdueTickets(
     title: row.title,
     priority: row.priority,
     dueAt: ticketDueAt({ createdAt: row.createdAt, priority: row.priority }),
+  }))
+}
+
+interface DailyCountRow extends Record<string, unknown> {
+  dayKey: DateKey
+  openedCount: number
+  resolvedCount: number
+}
+
+export async function listDailyActivity(
+  departmentId: number,
+  days: readonly DayWindow[],
+): Promise<DashboardDailyCount[]> {
+  if (days.length === 0) return []
+
+  const dayRows = sql.join(
+    days.map(
+      (day) =>
+        sql`(${day.key}::text, ${day.start.toISOString()}::timestamptz, ${day.end.toISOString()}::timestamptz)`,
+    ),
+    sql`, `,
+  )
+  const resolvedStatuses = sql.join(
+    DASHBOARD_RESOLVED_STATUSES.map((status) => sql`${status}`),
+    sql`, `,
+  )
+
+  const result = await db.execute<DailyCountRow>(sql`
+    select d.day_key as "dayKey",
+      (count(t.id) filter (
+        where t.created_at >= d.day_start and t.created_at < d.day_end
+      ))::int as "openedCount",
+      (count(t.id) filter (
+        where t.resolved_at >= d.day_start and t.resolved_at < d.day_end
+          and t.status in (${resolvedStatuses})
+      ))::int as "resolvedCount"
+    from (values ${dayRows}) as d(day_key, day_start, day_end)
+    left join ${ticket} t
+      on t.current_department_id = ${departmentId}
+      and (
+        (t.created_at >= d.day_start and t.created_at < d.day_end)
+        or (t.resolved_at >= d.day_start and t.resolved_at < d.day_end)
+      )
+    group by d.day_key
+    order by d.day_key
+  `)
+
+  return result.rows.map((row) => ({
+    key: row.dayKey,
+    openedCount: row.openedCount,
+    resolvedCount: row.resolvedCount,
   }))
 }
 

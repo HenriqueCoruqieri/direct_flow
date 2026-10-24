@@ -32,3 +32,7 @@ export interface DateRange {
   start: Date
   end: Date
 }
+
+export interface DayWindow extends DateRange {
+  key: DateKey
+}

@@ -2,6 +2,8 @@ import {
   elapsedMs,
   formatDuration,
   formatTotalHours,
+  formatWeekdayDay,
+  formatWeekdayLong,
   HOUR_MS,
   MINUTE_MS,
 } from "@/app/_lib/date"
@@ -13,12 +15,16 @@ import {
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
 import type {
+  DashboardDailyActivityPoint,
+  DashboardDailyActivitySeries,
+  DashboardDailyCount,
   DashboardOverdueColumn,
   DashboardOverviewCard,
   DashboardTransferCounter,
   DashboardTransferCounterTone,
 } from "@/app/_lib/types/dashboard"
 import type { DepartmentQueueTab } from "@/app/_lib/types/department-queue"
+import type { DateKey, DayWindow } from "@/app/_lib/types/period"
 import type { TicketStatus } from "@/app/_lib/types/ticket"
 
 export const DASHBOARD_PATH = "/dashboard"
@@ -186,3 +192,59 @@ export const incomingTransferOriginLabel = (departmentName: string): string =>
 
 export const isStaleIncomingTransfer = (sentAt: Date, now: Date): boolean =>
   elapsedMs(sentAt, now) >= INCOMING_TRANSFER_STALE_MS
+
+export const DAILY_ACTIVITY_DAYS = 7
+
+export const DAILY_ACTIVITY_CARD_LABEL = `Últimos ${DAILY_ACTIVITY_DAYS} dias`
+
+export const DAILY_ACTIVITY_LOADING_LABEL = `Carregando últimos ${DAILY_ACTIVITY_DAYS} dias`
+
+export const DAILY_ACTIVITY_SERIES = [
+  "opened",
+  "resolved",
+] as const satisfies readonly DashboardDailyActivitySeries[]
+
+export const DAILY_ACTIVITY_SERIES_LABELS = {
+  opened: "Abertos",
+  resolved: "Resolvidos",
+} satisfies Record<DashboardDailyActivitySeries, string>
+
+export const DAILY_ACTIVITY_SERIES_COLORS = {
+  opened: "var(--status-aberto)",
+  resolved: "var(--status-resolvido)",
+} satisfies Record<DashboardDailyActivitySeries, string>
+
+export const DAILY_ACTIVITY_DAY_COLUMN_LABEL = "Dia"
+
+export const DAILY_ACTIVITY_TODAY_LABEL = "Hoje"
+
+export const EMPTY_DAILY_ACTIVITY_TITLE = `Nenhum chamado aberto ou resolvido nos últimos ${DAILY_ACTIVITY_DAYS} dias`
+
+export const EMPTY_DAILY_ACTIVITY_DESCRIPTION =
+  "Os chamados abertos e resolvidos no setor aparecem aqui, dia a dia."
+
+export const dailyActivityDayLabel = (key: DateKey, today: DateKey): string =>
+  key === today ? DAILY_ACTIVITY_TODAY_LABEL : formatWeekdayDay(key)
+
+export const buildDailyActivitySeries = (
+  days: readonly DayWindow[],
+  counts: readonly DashboardDailyCount[],
+  today: DateKey,
+): DashboardDailyActivityPoint[] => {
+  const countsByKey = new Map(counts.map((count) => [count.key, count]))
+  return days.map((day) => {
+    const count = countsByKey.get(day.key)
+    return {
+      key: day.key,
+      label: dailyActivityDayLabel(day.key, today),
+      longLabel: formatWeekdayLong(day.key),
+      opened: Math.max(count?.openedCount ?? 0, 0),
+      resolved: Math.max(count?.resolvedCount ?? 0, 0),
+    }
+  })
+}
+
+export const isDailyActivityEmpty = (
+  points: readonly DashboardDailyActivityPoint[],
+): boolean =>
+  points.every((point) => point.opened === 0 && point.resolved === 0)

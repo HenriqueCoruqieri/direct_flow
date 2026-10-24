@@ -40,6 +40,7 @@ usuário. Não existe "segunda biblioteca para a mesma coisa" neste projeto.
 | Ícones            | `lucide-react`                       | `df-ui`        |
 | Tabelas           | TanStack Table                       | `df-ui`        |
 | Notificações (UI) | Sonner (via shadcn)                  | `df-ui`        |
+| Gráficos          | Recharts (via `chart` do shadcn)     | `df-ui`        |
 | Datas             | Day.js — **só** via `app/_lib/date`  | `df-architect` |
 | Autenticação      | Better Auth                          | `df-auth`      |
 | E-mail            | Resend                               | `df-email`     |
@@ -49,6 +50,16 @@ usuário. Não existe "segunda biblioteca para a mesma coisa" neste projeto.
 **Datas:** `dayjs` é importado em **um único arquivo**, `app/_lib/date.ts`. Qualquer
 outro arquivo que precise formatar data importa de `@/app/_lib/date`. Isso é o que
 garante formatação consistente em toda a aplicação — não é preferência de estilo.
+
+**Gráficos:** todo gráfico é Recharts dentro do `ChartContainer` do primitivo
+`chart` do shadcn (`app/_components/ui/chart.tsx`), que liga as cores aos tokens
+do tema e entrega tooltip e legenda no padrão do projeto. Os elementos do
+gráfico (`LineChart`, `Line`, `XAxis`…) vêm de `recharts` direto — é assim que o
+primitivo foi feito para ser usado, então não conta como a exceção do parágrafo
+abaixo. Cor só por token (`var(--chart-N)` ou outro token do tema), nunca hex
+solto. O componente do gráfico é `"use client"` e recebe a série já montada por
+props de um Server Component: a agregação acontece em `app/_lib/data/`, os
+rótulos de data em `@/app/_lib/date`. Nenhuma outra biblioteca de gráfico.
 
 **Bibliotecas por baixo dos primitivos do shadcn.** O que um primitivo de
 `app/_components/ui/` já envolve (`radix-ui`, `cmdk`) não é segunda biblioteca.

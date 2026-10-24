@@ -1285,4 +1285,470 @@ Notas para não reportar como defeito:
   neutro com `0`, a ordem com vários itens, item recente sem destaque (e o
   formato `agora`/`há {m}min`) e o limite de 5 itens.
 
-Etapa 3a concluída em 2026-10-23, aguardando commit.
+Etapa 3a concluída e comitada em 2026-10-23 (`0b69f4d`).
+
+---
+
+## Etapa 3b — linha 3, esquerda: Últimos 7 dias
+
+Gráfico de linhas com duas séries (Abertos × Resolvidos), um ponto por dia, de
+6 dias atrás até hoje. Regras de gráfico: linha "Gráficos" da tabela e
+parágrafo "**Gráficos:**" da seção 1 de `.claude/rules/stack.md`; trecho
+"Gráficos" de `.claude/agents/df-ui.md`. Nada das linhas 1 e 2 nem do card de
+transferências muda.
+
+### Tabelas, enums e migration
+
+**Nenhuma mudança de schema. Nenhuma migration.** O fluxo lê:
+
+- `ticket` — `id`, `current_department_id`, `status`, `created_at`, `resolved_at`
+- enum `ticket_status`
+
+Índice que atende: `ticket_dept_status_idx`
+(`current_department_id, status, created_at desc`), pelo prefixo
+`current_department_id`. `resolved_at` continua sem índice e filtra as linhas
+do setor (como na Etapa 1). Nenhum índice novo; se o `EXPLAIN` mostrar
+problema, reporte.
+
+### Definições
+
+| Série      | Por dia `d` (fuso SP, `[início de d, início de d+1)`)                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Abertos    | `count` de `ticket` com `current_department_id` = setor e `created_at` em `d`, **todos os status**                      |
+| Resolvidos | `count` de `ticket` com `current_department_id` = setor, `resolved_at` em `d` e status em `DASHBOARD_RESOLVED_STATUSES` |
+
+- 7 pontos sempre: hoje e os 6 dias anteriores. Dia sem chamado vale `0`.
+- **Não segue o filtro de período.** Hoje é o dia do `now` da página.
+- **Resolvidos filtra status `resolvido`/`fechado`**, como o tempo médio da
+  Etapa 1: as duas métricas olham a mesma coorte ("resolvido em `d`"), e um
+  chamado com `resolved_at` preenchido mas de volta a um status ativo não conta
+  como resolvido em nenhum dos dois cards.
+- Abertos segue o card "Chamados no período" (todos os status, inclusive
+  `cancelado` e `aguardando_aprovacao`): a soma dos 7 pontos de Abertos é igual
+  ao "Chamados no período" de um Personalizado com os mesmos 7 dias.
+- Escopo por `current_department_id`, como toda a página: chamado aberto em
+  outro setor e transferido para cá conta como aberto aqui no dia em que foi
+  criado lá.
+- Vazio = **todos** os 14 valores em `0` (`isDailyActivityEmpty`). Basta um
+  valor `> 0` em qualquer série para o gráfico aparecer.
+
+### Datas — `app/_lib/date.ts` (acréscimo)
+
+```ts
+export const lastDayWindows: (count: number, now?: DateInput) => DayWindow[]
+export const formatWeekdayDay: (key: DateKey) => string
+export const formatWeekdayLong: (key: DateKey) => string
+```
+
+`DayWindow` em `app/_lib/types/period.ts`:
+
+```ts
+export interface DayWindow extends DateRange {
+  key: DateKey
+}
+```
+
+| Função              | Semântica                                                                                                                                                                                                      |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lastDayWindows`    | `count` dias terminando em hoje (fuso SP), **do mais antigo para hoje**; cada um com `key` (`YYYY-MM-DD`), `start` = `zonedDateTime(key)` e `end` = `zonedDateTime(key + 1 dia)`. `count` truncado, mínimo `1` |
+| `formatWeekdayDay`  | `2026-10-09` → `Sex 9`: dia da semana abreviado do locale `pt-br` com a primeira letra maiúscula, dia sem zero à esquerda (`Sáb 10`, `Dom 11`)                                                                 |
+| `formatWeekdayLong` | `2026-10-09` → `sexta-feira, 9 de outubro`. Para tooltip e leitor de tela, onde `Sex 9` soa mal                                                                                                                |
+
+As bordas vêm de `zonedDateTime`/`addDaysToKey` (risco 6 do plano): nada de
+`date_trunc` nem `at time zone` no SQL da aplicação. O Brasil não tem horário
+de verão desde 2019, mas a borda é calculada dia a dia, então um dia de 23h ou
+25h continuaria certo.
+
+### Tipos — `app/_lib/types/dashboard.ts` (acréscimo)
+
+```ts
+export type DashboardDailyActivitySeries = "opened" | "resolved"
+
+export interface DashboardDailyCount {
+  key: DateKey
+  openedCount: number
+  resolvedCount: number
+}
+
+export interface DashboardDailyActivityPoint {
+  key: DateKey
+  label: string
+  longLabel: string
+  opened: number
+  resolved: number
+}
+```
+
+- `DashboardDailyCount` é o que o `df-data` devolve (uma linha por dia).
+- `DashboardDailyActivityPoint` é o ponto que o componente do gráfico recebe.
+  As chaves `opened`/`resolved` são as de `DashboardDailyActivitySeries`, para
+  servirem de `dataKey` do Recharts e de chave do `ChartConfig` sem mapa
+  intermediário. `label` vai no eixo X; `longLabel` no tooltip e na tabela
+  acessível.
+
+### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo)
+
+```ts
+export const DAILY_ACTIVITY_DAYS = 7
+export const DAILY_ACTIVITY_CARD_LABEL = `Últimos ${DAILY_ACTIVITY_DAYS} dias`
+export const DAILY_ACTIVITY_LOADING_LABEL = `Carregando últimos ${DAILY_ACTIVITY_DAYS} dias`
+export const DAILY_ACTIVITY_SERIES: readonly ["opened", "resolved"]
+export const DAILY_ACTIVITY_SERIES_LABELS: Record<
+  DashboardDailyActivitySeries,
+  string
+>
+export const DAILY_ACTIVITY_SERIES_COLORS: Record<
+  DashboardDailyActivitySeries,
+  string
+>
+export const DAILY_ACTIVITY_DAY_COLUMN_LABEL = "Dia"
+export const DAILY_ACTIVITY_TODAY_LABEL = "Hoje"
+export const EMPTY_DAILY_ACTIVITY_TITLE: string
+export const EMPTY_DAILY_ACTIVITY_DESCRIPTION: string
+
+export const dailyActivityDayLabel: (key: DateKey, today: DateKey) => string
+export const buildDailyActivitySeries: (
+  days: readonly DayWindow[],
+  counts: readonly DashboardDailyCount[],
+  today: DateKey,
+) => DashboardDailyActivityPoint[]
+export const isDailyActivityEmpty: (
+  points: readonly DashboardDailyActivityPoint[],
+) => boolean
+```
+
+| Nome                               | Semântica                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DAILY_ACTIVITY_DAYS`              | 7. O título, o rótulo de carregamento e o texto do vazio são montados a partir dela                                                                                                         |
+| `DAILY_ACTIVITY_LOADING_LABEL`     | `Carregando últimos 7 dias`. `aria-label` do esqueleto do card                                                                                                                              |
+| `DAILY_ACTIVITY_SERIES`            | Ordem das séries na legenda, no tooltip e nas colunas da tabela acessível: `opened`, `resolved`                                                                                             |
+| `DAILY_ACTIVITY_SERIES_LABELS`     | `opened` → `Abertos` · `resolved` → `Resolvidos`                                                                                                                                            |
+| `DAILY_ACTIVITY_SERIES_COLORS`     | `opened` → `var(--status-aberto)` (azul) · `resolved` → `var(--status-resolvido)` (verde). Tokens do tema com valor claro e escuro em `app/globals.css`; ver "Por que não `--chart-N`"      |
+| `DAILY_ACTIVITY_DAY_COLUMN_LABEL`  | Cabeçalho da coluna de dia na tabela acessível                                                                                                                                              |
+| `DAILY_ACTIVITY_TODAY_LABEL`       | Rótulo do último ponto no eixo X                                                                                                                                                            |
+| `EMPTY_DAILY_ACTIVITY_TITLE`       | `Nenhum chamado aberto ou resolvido nos últimos 7 dias`                                                                                                                                     |
+| `EMPTY_DAILY_ACTIVITY_DESCRIPTION` | `Os chamados abertos e resolvidos no setor aparecem aqui, dia a dia.`                                                                                                                       |
+| `dailyActivityDayLabel`            | `key === today` → `Hoje`; senão `formatWeekdayDay(key)`                                                                                                                                     |
+| `buildDailyActivitySeries`         | Um ponto por item de `days`, **na ordem de `days`**; contagem casada por `key`; dia sem linha em `counts` vale `0` (negativo vale `0`); linha de `counts` sem dia correspondente é ignorada |
+| `isDailyActivityEmpty`             | `true` se todos os pontos têm `opened = 0` e `resolved = 0` (lista vazia também é `true`)                                                                                                   |
+
+**Por que não `--chart-N`.** `--chart-1` já é `var(--status-aberto)`, mas
+`--chart-2` é `--status-em-andamento` (verde-azulado), não o verde de
+resolvido. Usar os tokens de status direto liga a cor ao significado (o azul de
+"Abertos" é o do selo `aberto`, o verde de "Resolvidos" é o do selo
+`resolvido`) e não obriga a mexer na paleta `--chart-*`. Os dois têm variante
+escura. Se a paleta de gráficos for redesenhada, a troca é só nesta constante.
+
+### `df-data` — `app/_lib/data/dashboard.ts`
+
+```ts
+export async function listDailyActivity(
+  departmentId: number,
+  days: readonly DayWindow[],
+): Promise<DashboardDailyCount[]>
+```
+
+Recebe as janelas prontas de `lastDayWindows` (não recebe `now` nem calcula
+borda). `days` vazio → `[]`, sem consulta.
+
+**Decisão: `values` com as bordas vindas de `date.ts` + `left join`, não
+`generate_series` nem `group by` de data.** `generate_series` e
+`group by (created_at at time zone …)::date` poriam o fuso e o corte do dia
+dentro do SQL, contra o risco 6 do plano e o ADR 009 (a borda de dia tem uma
+fonte só, `app/_lib/date.ts`). Com `values`, o SQL só compara instantes com
+`>=`/`<`, como todas as outras leituras do Início, e devolve uma linha por dia
+mesmo sem chamado (o `left join` garante os zeros; o domínio ainda completa,
+por segurança). É uma consulta só, com uma varredura das linhas do setor.
+
+```sql
+select d.day_key,
+  count(t.id) filter (
+    where t.created_at >= d.day_start and t.created_at < d.day_end
+  )::int as opened_count,
+  count(t.id) filter (
+    where t.resolved_at >= d.day_start and t.resolved_at < d.day_end
+      and t.status in (:DASHBOARD_RESOLVED_STATUSES)
+  )::int as resolved_count
+from (values
+  ($key0::text, $start0::timestamptz, $end0::timestamptz),
+  …
+  ($key6::text, $start6::timestamptz, $end6::timestamptz)
+) as d(day_key, day_start, day_end)
+left join ticket t
+  on t.current_department_id = $departmentId
+  and (
+    (t.created_at >= d.day_start and t.created_at < d.day_end)
+    or (t.resolved_at >= d.day_start and t.resolved_at < d.day_end)
+  )
+group by d.day_key
+order by d.day_key
+```
+
+- Linhas do `values` montadas com `sql.join` sobre `days`, cada uma
+  `(${day.key}::text, ${day.start}::timestamptz, ${day.end}::timestamptz)`
+  no template `sql`. Não passar array JS dentro do `sql` esperando `unnest`: o
+  Drizzle expande array como lista de parâmetros, não como array do Postgres.
+- Status de `DASHBOARD_RESOLVED_STATUSES` via `inArray` ou `sql`
+  parametrizado, nunca literal.
+- `count(t.id)`, não `count(*)`: no dia sem chamado o `left join` traz uma
+  linha com `t` nulo, que `count(t.id)` conta como 0.
+- O `or` no `on` é necessário: um chamado criado num dia e resolvido em outro
+  entra nos dois dias, cada vez numa série; criado e resolvido no mesmo dia
+  entra uma vez e conta nas duas.
+- `count` como `int` (o `pg` entrega `bigint` como string).
+- Ordem por `day_key` (texto `YYYY-MM-DD` ordena como data).
+- Rodar `EXPLAIN ANALYZE` para Suporte (14) e Diretoria (11) e colar na
+  resposta. O `or` pode levar o planner a um Seq Scan em `ticket`; com o volume
+  atual, aceito abaixo de alguns ms. Reportar linhas e tempo.
+
+### `df-actions`, `df-auth`, `df-email`
+
+**Nada.** Sem mutação.
+
+### `df-ui` — o que fazer
+
+**Instalar o primitivo**: `npx shadcn@latest add chart` (traz `recharts` e cria
+`app/_components/ui/chart.tsx`). Depois, trocar o import do `cn` para
+`@/app/_lib/utils` e conferir se o CLI tocou em `app/globals.css` (as
+variáveis `--chart-1`…`--chart-5` já existem; se o CLI acrescentou ou
+sobrescreveu algo, reverter para o que estava). Antes de usar a API, consultar
+o `context7` na versão do `recharts` instalada.
+
+**Arquivos** em `app/(app)/dashboard/_components/` (nomes sugeridos):
+
+- `dashboard-daily-activity.tsx` — Server Component: lê, monta a série,
+  desenha cabeçalho, tabela acessível e vazio;
+- `daily-activity-chart.tsx` — `"use client"`, só o gráfico;
+- `dashboard-daily-activity-skeleton.tsx`.
+
+`page.tsx`: o card entra como **primeiro filho** da grade da linha 3
+(`xl:col-span-3`); o card de transferências não muda (o `xl:col-start-4` pode
+ficar ou sair).
+
+**Leitura** (Server Component), com o mesmo `now` da página:
+
+```ts
+const days = lastDayWindows(DAILY_ACTIVITY_DAYS, now)
+const counts = await listDailyActivity(departmentId, days)
+const points = buildDailyActivitySeries(days, counts, todayKey(now))
+```
+
+O componente cliente recebe `points` por props (só `string` e `number`,
+serializáveis), não importa `app/_lib/data/` nem `app/_lib/auth/` e não chama
+função de data para montar rótulo: os rótulos chegam prontos, o que também
+evita divergência de hidratação pelo fuso do navegador.
+
+**Um `Suspense`, sem `key` de período**, com o esqueleto. O card não depende do
+período; sem `key` o React mantém o gráfico na troca de filtro em vez de piscar
+o esqueleto (mesmo motivo de atrasos e transferências).
+
+**Cabeçalho**: `DAILY_ACTIVITY_CARD_LABEL` à esquerda, no mesmo estilo de
+título dos outros cards (`DashboardPanel` e cabeçalhos já existentes). À
+direita, a legenda: um item por série, na ordem de `DAILY_ACTIVITY_SERIES`, com
+um traço curto (~12 px) na cor da série e o rótulo de
+`DAILY_ACTIVITY_SERIES_LABELS` em texto. Pode ser o `ChartLegend` do primitivo
+ou marcação própria no cabeçalho; se for própria, o traço é `aria-hidden`. Em
+390 px a legenda pode quebrar para baixo do título; nunca truncar.
+
+**Gráfico** (`ChartContainer` + `LineChart` e elementos do `recharts`):
+
+- `ChartConfig` montado das constantes do domínio: `opened` →
+  `{ label: DAILY_ACTIVITY_SERIES_LABELS.opened, color: DAILY_ACTIVITY_SERIES_COLORS.opened }`,
+  idem `resolved`. Na `Line`, `stroke="var(--color-opened)"` /
+  `"var(--color-resolved)"` (as variáveis que o `ChartContainer` cria a partir
+  do config). Nenhum hex.
+- Duas `Line` (`type` `monotone` ou `linear`, decisão do `df-ui`),
+  `dataKey="opened"` e `dataKey="resolved"`, traço ~2 px, **sem** ponto nos dias
+  intermediários (`dot={false}`) e `isAnimationActive={false}` (o componente
+  recebe props de novo a cada troca de filtro; animação repetindo seria
+  ruído).
+- **Último ponto**: só no índice `points.length - 1`, um marcador (círculo
+  cheio na cor da série, ~4 px de raio, contorno na cor da superfície do card)
+  e o valor em rótulo (`LabelList` com `content` que só desenha no último
+  índice, ou `dot` customizado), `tabular-nums`, pequeno. Abertos **acima** do
+  ponto e Resolvidos **abaixo**, para não se sobreporem quando os valores forem
+  iguais ou próximos. Valor `0` também mostra o rótulo.
+- **Eixo X**: `dataKey="label"`, sem linha de eixo nem tick mark, texto
+  pequeno `text-muted-foreground`, **os 7 rótulos sempre visíveis**
+  (`interval={0}`), "Hoje" no fim. Margem lateral suficiente para "Hoje" e o
+  rótulo do último ponto não serem cortados.
+- **Eixo Y**: à esquerda, `allowDecimals={false}`, começando em 0
+  (`domain={[0, "auto"]}` ou equivalente), sem linha de eixo, ticks discretos
+  `text-muted-foreground`, largura para 2–3 dígitos.
+- **Grade**: `CartesianGrid vertical={false}`, só horizontais, traço fino na
+  cor de borda do tema (token).
+- **Tooltip**: `ChartTooltip` + `ChartTooltipContent` do primitivo; título =
+  `longLabel` do ponto (via `labelFormatter` lendo o payload), uma linha por
+  série com rótulo e valor.
+
+**Acessibilidade** — o gráfico não pode ser a única forma do dado:
+
+- O SVG fica fora da árvore de acessibilidade (`aria-hidden="true"` no
+  contêiner do gráfico). Escolha `aria-hidden` + tabela, não `role="img"`.
+- Junto, uma `table` dentro de uma `<div className="sr-only">`, com
+  `caption` = `DAILY_ACTIVITY_CARD_LABEL`, cabeçalhos
+  `DAILY_ACTIVITY_DAY_COLUMN_LABEL` · `Abertos` · `Resolvidos` (na ordem de
+  `DAILY_ACTIVITY_SERIES`), uma linha por ponto: `longLabel` do dia e os dois
+  números. Pode ficar no Server Component.
+- O `sr-only` fica na `<div>` em volta, **nunca** direto no `<table>`: com
+  `display: table` o navegador não aplica `width: 1px` nem `overflow: hidden`,
+  a tabela mantém a largura do conteúdo e alargava a página a 390 px (falha
+  LD10 do `df-qa`, `docs/test-reports/2026-10-23-dashboard-daily-activity.md`;
+  corrigido em `app/(app)/dashboard/_components/dashboard-daily-activity.tsx`).
+- A legenda tem texto; cor nunca é a única diferença entre as séries.
+
+**Vazio** (`isDailyActivityEmpty(points)`): cabeçalho com o título e **sem**
+legenda; no lugar do gráfico, `EMPTY_DAILY_ACTIVITY_TITLE` +
+`EMPTY_DAILY_ACTIVITY_DESCRIPTION`, texto pequeno e neutro como os outros
+vazios, centralizado na área do gráfico (que mantém a altura mínima, para o
+card não encolher). Sem gráfico e sem tabela `sr-only`. Motivo de não desenhar
+as linhas em zero: duas retas no 0 com eixo `0–0` parecem gráfico quebrado e
+não dizem nada além do texto.
+
+**Altura (regra contra o card de transferências).**
+
+- Em `xl+` as duas colunas da linha 3 têm a mesma altura (stretch do grid) e os
+  dois cards são `h-full`. O card do gráfico é `flex flex-col`; a área do
+  gráfico é `relative flex-1 min-h-56` e o `ChartContainer` fica
+  `absolute inset-0` com `aspect-auto` (tirando o `aspect-video` padrão do
+  primitivo). Assim o SVG ocupa a altura que sobrar e **não** contribui com
+  altura intrínseca para a linha: sem isso o `ResponsiveContainer` do Recharts
+  pode entrar em laço de medição e esticar a linha.
+- Em `xl+` quem dita a altura da linha é o card de transferências (cabeçalho, 3
+  mini-cards e até 5 itens). Com transferências vazio ou curto, dita o mínimo
+  do gráfico (`min-h-56`, 224 px de área).
+- Critério a 1280 px: os dois cards com a mesma altura externa; no card do
+  gráfico, entre o eixo X e a borda inferior só o padding (nenhum vão); nenhum
+  dos dois com rolagem.
+- Abaixo de `xl`: largura total, área com a altura mínima, acima do card de
+  transferências.
+- Nunca altura fixa em px no card nem `overflow-hidden` cortando eixo ou
+  rótulo. `INCOMING_TRANSFERS_LIMIT` continua 5; se a medição pedir outro
+  número, o `df-ui` reporta e o `df-architect` muda a constante.
+
+**Esqueleto**: cabeçalho (título e dois blocos curtos de legenda) e um bloco da
+altura mínima da área do gráfico; `aria-busy` e
+`aria-label={DAILY_ACTIVITY_LOADING_LABEL}`, nunca o texto escrito à mão; mesmo `xl:col-span-3` e `h-full`
+em `xl+`, para a grade não pular.
+
+**Responsivo**: 390 px sem rolagem horizontal, os 7 rótulos do eixo X
+visíveis. Se colidirem mesmo com fonte pequena, o `df-ui` reporta a largura
+medida em vez de esconder rótulo ou trocar o formato (formato novo é helper
+novo em `app/_lib/date.ts`).
+
+### Riscos da Etapa 3b
+
+1. **Abertos por `current_department_id`.** Chamado transferido para cá conta
+   no dia em que foi criado lá; transferido para fora sai do histórico daqui. É
+   a regra da página inteira; registrado para o `df-qa` não tratar como
+   defeito.
+2. **Gráfico congelado.** "Hoje" é o dia do render; com a página aberta na
+   virada do dia, o gráfico só anda na próxima navegação.
+3. **Recharts no cliente.** Primeira biblioteca de gráfico do projeto, no
+   bundle do Início. Aceito (decisão do usuário, regra no `stack.md`).
+4. **Rótulos do eixo em 390 px.** Sete rótulos de até 6 caracteres em ~300 px
+   de plotagem: cabe com fonte de 11–12 px, mas é o ponto mais provável de
+   ajuste.
+
+### Cenários do `df-qa`
+
+Contas fornecidas pelo orquestrador: `D` = Diretor (Diretoria, `DIR` = 11; o
+login foi recusado na última rodada — se continuar, os cenários de `D` ficam
+NÃO EXECUTADO com a consulta e os valores esperados no relatório), `A` =
+Administrador de Suporte, `M` = Membro de Suporte (`S` = 14). **Só leitura**:
+nenhum cenário cria, altera ou resolve chamado.
+
+Consulta `DA(dep)`, uma linha por dia, do mais antigo para hoje:
+
+```sql
+with dias as (
+  select ((now() at time zone 'America/Sao_Paulo')::date - (6 - n)) as dia
+  from generate_series(0, 6) as n
+)
+select
+  d.dia,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.created_at >= d.dia::timestamp at time zone 'America/Sao_Paulo'
+      and t.created_at < (d.dia + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as abertos,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.status in ('resolvido', 'fechado')
+      and t.resolved_at >= d.dia::timestamp at time zone 'America/Sao_Paulo'
+      and t.resolved_at < (d.dia + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as resolvidos
+from dias d
+order by d.dia
+```
+
+(`generate_series` e `at time zone` aqui são só da conferência; a aplicação não
+os usa.) Rótulo esperado por `dia`: `Dom` `Seg` `Ter` `Qua` `Qui` `Sex` `Sáb` +
+dia do mês sem zero; o último é `Hoje`. Exemplo para 2026-10-23 (sexta):
+`Sáb 17 · Dom 18 · Seg 19 · Ter 20 · Qua 21 · Qui 22 · Hoje`.
+
+| #    | Quem  | Ação                                                     | Esperado                                                                                                                                                                                                 |
+| ---- | ----- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LD1  | A     | `/dashboard` Hoje, 1280 px                               | linha 3: "Últimos 7 dias" à esquerda (~3/5), "Transferências entre setores" à direita (~2/5), alinhados com os cards da linha 2. Linhas 1 e 2 e o card de transferências iguais aos das Etapas 1, 2 e 3a |
+| LD2  | A     | Cabeçalho                                                | título "Últimos 7 dias" à esquerda; legenda à direita com "Abertos" (traço azul) e "Resolvidos" (traço verde), nessa ordem, com texto visível                                                            |
+| LD3  | A     | Eixo X                                                   | 7 rótulos, do mais antigo à esquerda até "Hoje" à direita, iguais aos esperados a partir de `DA(S)`; nenhum escondido nem cortado                                                                        |
+| LD4  | A     | Valores por dia (tooltip em cada dia e tabela acessível) | `abertos`/`resolvidos` de cada dia = `DA(S)`; dia sem chamado = `0`; tooltip com a data por extenso (`sexta-feira, 16 de outubro`)                                                                       |
+| LD5  | A     | Último ponto                                             | marcador por série só no ponto "Hoje" (nenhum nos outros dias) e os valores de hoje em rótulo, Abertos acima e Resolvidos abaixo, sem sobreposição; `0` aparece se o valor for 0                         |
+| LD6  | A     | Eixo Y, grade e cores                                    | marcas inteiras a partir de 0 (sem `0,5`); grade só horizontal, discreta; cor computada das linhas = `--status-aberto` e `--status-resolvido`                                                            |
+| LD7  | A     | Trocar para Semana, Mês, Personalizado e voltar a Hoje   | o gráfico **não** muda e não mostra esqueleto; os outros cards seguem as regras deles                                                                                                                    |
+| LD8  | A     | Altura a 1280 px                                         | os dois cards da linha 3 com a mesma altura externa; o gráfico ocupa a altura disponível, sem vão abaixo do eixo X além do padding; área ≥ 224 px; sem rolagem interna                                   |
+| LD9  | A     | 1024 px                                                  | gráfico em largura total acima do card de transferências; área ≥ 224 px; sem rolagem horizontal                                                                                                          |
+| LD10 | A     | 390×844                                                  | sem rolagem horizontal; os 7 rótulos do eixo X visíveis e legíveis; legenda pode quebrar abaixo do título, sem `…`; rótulos do último ponto inteiros                                                     |
+| LD11 | A     | Acessibilidade                                           | o SVG fora da árvore de acessibilidade; tabela com caption "Últimos 7 dias", colunas Dia · Abertos · Resolvidos e 7 linhas = `DA(S)`, dia por extenso                                                    |
+| LD12 | A     | Tema escuro (se houver alternância)                      | linhas azul e verde legíveis sobre a superfície escura; grade e eixos visíveis                                                                                                                           |
+| LD13 | M     | `/dashboard` Hoje                                        | mesmo gráfico de A (é do setor, não do papel)                                                                                                                                                            |
+| LD14 | D     | `/dashboard` Hoje                                        | valores = `DA(DIR)`; nada de Suporte. Login recusado: NÃO EXECUTADO, com `DA(11)` anotado                                                                                                                |
+| LD15 | todos | Setor com `DA` inteiro em 0 (conferir pela consulta)     | sem legenda; "Nenhum chamado aberto ou resolvido nos últimos 7 dias" + descrição na área do gráfico, card sem encolher. Se nenhum setor acessível tiver a semana zerada: NÃO EXECUTADO, com a consulta   |
+| LD16 | A     | Coerência com a linha 1                                  | Personalizado de 6 dias atrás até hoje: "Chamados no período" = soma de Abertos dos 7 pontos                                                                                                             |
+| LD17 | todos | Toda a bateria                                           | console e dev server sem erro, sem aviso de hidratação e sem aviso do Recharts sobre largura/altura `0` ou `-1`; TR1–TR16 da 3a continuam valendo                                                        |
+
+Notas para não reportar como defeito:
+
+- O gráfico ignora o filtro de período (é sempre a última semana).
+- Resolvidos conta pela data de resolução e só com status `resolvido`/`fechado`.
+- Chamado criado e resolvido no mesmo dia conta nas duas séries daquele dia.
+- Chamado transferido para o setor conta em Abertos no dia em que foi criado,
+  mesmo que tenha chegado depois.
+
+### Critério de pronto da Etapa 3b
+
+1. Card à esquerda da linha 3 em `xl+`, largura total abaixo; transferências
+   inalterado.
+2. Os 14 valores iguais a `DA` (LD4) e rótulos do eixo conforme LD3.
+3. Legenda, último ponto, eixos, grade e cores por token conforme LD2, LD5 e
+   LD6; vazio conforme LD15; tabela acessível conforme LD11.
+4. Altura conforme LD8; 390 px sem rolagem horizontal (LD10).
+5. Recharts só dentro do `ChartContainer`; nenhum hex; componente do gráfico
+   `"use client"` recebendo `points` prontos; nenhum `date_trunc` nem
+   `at time zone` no SQL da aplicação; nenhum status literal no SQL.
+6. `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem
+   bloqueante; `df-qa` aprova LD1–LD17 (LD14 e LD15 podem ficar NÃO EXECUTADO
+   com a consulta).
+
+### Checklist da Etapa 3b
+
+- [x] `lastDayWindows`, `formatWeekdayDay`, `formatWeekdayLong`; `DayWindow`; tipos da série; constantes, cores, vazio, `dailyActivityDayLabel`, `buildDailyActivitySeries`, `isDailyActivityEmpty`; esta seção e o plano (`df-architect`)
+- [x] `listDailyActivity`, com `EXPLAIN` na resposta (`df-data`: `Nested Loop Left Join` com `Join Filter` do `or` sobre Seq Scan filtrado pelo setor, ~0,2 ms com 223 chamados; sem índice novo)
+- [x] `chart` instalado (`recharts@3.8.0` via `npx shadcn@latest add chart`, import do `cn` trocado), card, gráfico, legenda, último ponto, tabela acessível, vazio, esqueleto, linha 3 completa (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado com atenções, todas tratadas)
+- [x] Cenários LD1–LD17 (`df-qa`: 14 de 17 na primeira rodada, LD10 falho e corrigido; reteste do LD10 aprovado; LD14 e LD15 não executados; `docs/test-reports/2026-10-23-dashboard-daily-activity.md`)
+
+### Limites conhecidos da Etapa 3b
+
+- **LD14 e LD15 não executados.** O login do Diretor foi recusado de novo, e a
+  Diretoria (`DA(11)`, os 7 dias em 0) é o único setor acessível com a semana
+  zerada. O estado vazio do gráfico (sem legenda, título e descrição na área do
+  gráfico, card sem encolher) ficou **sem validação no navegador**.
+- **Casos não observados.** Nenhum dia com valor além de hoje e nenhum
+  Resolvidos maior que 0 na semana de Suporte: a forma da linha com vários
+  pontos não nulos e a série verde acima de 0 não foram vistas na tela.
+- **Tooltip de "Hoje".** Como o último ponto fica na borda direita do plot, o
+  tooltip de "Hoje" só abre com o cursor a ~4 px dessa borda. O valor de hoje
+  continua visível no rótulo do último ponto e na tabela acessível.
+
+Etapa 3b concluída em 2026-10-23, aguardando commit.

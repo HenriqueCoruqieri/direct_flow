@@ -9,6 +9,7 @@ import type { DurationPart } from "@/app/_lib/types/duration"
 import type {
   DateKey,
   DateRange,
+  DayWindow,
   PeriodFilterSelection,
   PeriodSelection,
 } from "@/app/_lib/types/period"
@@ -42,6 +43,9 @@ const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 const inAppZone = (value: DateInput) => dayjs(value).tz(APP_TIME_ZONE)
 
 const pad = (value: number): string => String(value).padStart(2, "0")
+
+const capitalize = (value: string): string =>
+  value.charAt(0).toLocaleUpperCase("pt-BR") + value.slice(1)
 
 export const formatDate = (value: DateInput): string =>
   inAppZone(value).format("DD/MM/YYYY")
@@ -94,6 +98,24 @@ const dayRange = (firstKey: DateKey, lastKey: DateKey): DateRange => ({
   start: zonedDateTime(firstKey),
   end: zonedDateTime(addDaysToKey(lastKey, 1)),
 })
+
+export const lastDayWindows = (
+  count: number,
+  now: DateInput = new Date(),
+): DayWindow[] => {
+  const today = todayKey(now)
+  const total = Math.max(Math.floor(count), 1)
+  return Array.from({ length: total }, (_, index) => {
+    const key = addDaysToKey(today, index - total + 1)
+    return { key, ...dayRange(key, key) }
+  })
+}
+
+export const formatWeekdayDay = (key: DateKey): string =>
+  capitalize(dayjs.utc(key).format("ddd D"))
+
+export const formatWeekdayLong = (key: DateKey): string =>
+  dayjs.utc(key).format("dddd, D [de] MMMM")
 
 const weekStartKey = (key: DateKey): DateKey =>
   addDaysToKey(key, -((dayjs.utc(key).day() - WEEK_STARTS_ON + 7) % 7))

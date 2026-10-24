@@ -1,5 +1,7 @@
 # Plano — Início: visão geral do setor
 
+**Concluído** em 2026-10-23 (Etapas 1, 2, 3a e 3b; a 3b aguarda commit).
+
 Aprovado em 2026-10-23 via `/consult`. Substitui, no que diz respeito aos cards
 do Início, o plano `docs/plans/dashboard-home.md` (2026-09-24): o card
 "Principal ofensor" do topo e a grade de dois cards (`grid-cols-2
@@ -7,7 +9,7 @@ lg:max-w-3xl`) ficam superados. O shell, o filtro de período, as regras de fuso
 (ADR 009) e a URL continuam valendo como lá.
 
 Contratos por etapa, todos em `docs/contracts/dashboard-overview.md`: seções
-"Etapa 1", "Etapa 2" e "Etapa 3a"; a 3b ganha seção própria quando for aberta.
+"Etapa 1", "Etapa 2", "Etapa 3a" e "Etapa 3b".
 
 ## Referência visual
 
@@ -153,10 +155,10 @@ Decisão do usuário (2026-10-23): **um commit por assunto**. A Etapa 3 vira
 3a e 3b, sequenciais, cada uma com seu ciclo completo (Ondas 0 a 4) e seu
 commit. O diff da 3a não leva nada do gráfico.
 
-#### Etapa 3a — Transferências entre setores
+#### Etapa 3a — Transferências entre setores (concluída)
 
-Seção "Etapa 3a" de `docs/contracts/dashboard-overview.md`. Concluída em
-2026-10-23, aguardando commit; `df-qa` em
+Seção "Etapa 3a" de `docs/contracts/dashboard-overview.md`. Concluída e comitada em
+2026-10-23 (`0b69f4d`); `df-qa` em
 `docs/test-reports/2026-10-23-dashboard-transfers.md` (13 de 16, 0 falhas;
 TR11 e TR12 não executados por recusa no login do Diretor, TR13
 desnecessário; ver "Limites conhecidos da Etapa 3a" no contrato).
@@ -174,7 +176,11 @@ desnecessário; ver "Limites conhecidos da Etapa 3a" no contrato).
 - **Onda 3 — `df-reviewer`** (feito, aprovado com atenções); **Onda 4 —
   `df-qa`** (feito, TR1–TR16).
 
-#### Etapa 3b — Últimos 7 dias
+#### Etapa 3b — Últimos 7 dias (concluída)
+
+Concluída em 2026-10-23, aguardando commit; `df-qa` em
+`docs/test-reports/2026-10-23-dashboard-daily-activity.md` (LD14 e LD15 não
+executados; ver "Limites conhecidos da Etapa 3b" no contrato).
 
 O orquestrador atualiza `.claude/rules/stack.md` (Recharts via `chart` do
 shadcn, linha nova na tabela da seção 1) e `.claude/agents/df-ui.md` (pacote na
@@ -182,6 +188,24 @@ lista do agente), com aprovação do usuário, **antes** da Onda 0. Depois:
 contrato (série de 7 dias, regra de altura contra o card de transferências),
 `df-data`, `df-ui` (`npx shadcn@latest add chart`; o card entra como primeiro
 filho da linha 3, `xl:col-span-3`).
+
+Seção "Etapa 3b" de `docs/contracts/dashboard-overview.md`. Regras de gráfico
+incluídas no `stack.md` e no `df-ui.md` em 2026-10-23.
+
+- **Onda 0 — `df-architect`** (feito): `lastDayWindows`, `formatWeekdayDay`
+  e `formatWeekdayLong` em `app/_lib/date.ts`, `DayWindow` em
+  `app/_lib/types/period.ts`, `DashboardDailyCount`,
+  `DashboardDailyActivityPoint` e `DashboardDailyActivitySeries` em
+  `app/_lib/types/dashboard.ts`, textos, cores por token, vazio e montagem da
+  série em `app/_lib/domain/dashboard.ts`.
+- **Onda 1 — `df-data`** (feito): `listDailyActivity` (bordas dos dias vindas de
+  `date.ts` num `values` + `left join`; sem fuso no SQL; sem índice novo).
+- **Onda 1/2 — `df-ui`** (feito): `chart` do shadcn (`recharts@3.8.0`), card
+  com legenda, gráfico de linhas, último ponto rotulado, tabela acessível,
+  vazio, esqueleto, regra de altura.
+- `df-actions`, `df-auth`, `df-email`: não participam.
+- **Onda 3 — `df-reviewer`** (feito, aprovado com atenções, tratadas);
+  **Onda 4 — `df-qa`** (LD1–LD17, só leitura; reteste do LD10 aprovado).
 
 ## Riscos
 
