@@ -46,6 +46,19 @@ export const serializeDashboardParams = (selection: PeriodSelection): string =>
 export const dashboardHref = (selection: PeriodSelection): string =>
   periodFilterHref(DASHBOARD_PATH, {}, selection)
 
+const DASHBOARD_PERIOD_PARAM_KEYS = ["periodo", "de", "ate"] as const
+
+export const dashboardCanonicalHref = (
+  raw: RawSearchParams,
+  selection: PeriodSelection,
+): string | null => {
+  const canonical = new URLSearchParams(serializeDashboardParams(selection))
+  const isCanonical = DASHBOARD_PERIOD_PARAM_KEYS.every(
+    (key) => raw[key] === (canonical.get(key) ?? undefined),
+  )
+  return isCanonical ? null : dashboardHref(selection)
+}
+
 export const dashboardTicketDetailHref = (
   selection: PeriodSelection,
   ticketId: number,

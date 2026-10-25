@@ -2559,3 +2559,86 @@ aceito no período, também no destino).
 - **RR4 não executado.** O Suporte não tem dia com `recebidos = 0` e `resolvidos > 0`; o cenário fica para quando houver um chamado aberto em outro dia e resolvido no setor.
 - **RR6 e RR9 não executados.** Dependem de contas de QA Infra (`#V2`, I) e do Diretor (D), não fornecidas.
 - **Relógio do banco 24 h à frente do da máquina do app** no momento do teste (`now()` do banco 2026-10-25 01:01 UTC × máquina 2026-10-24 01:03 UTC). Chamado novo ganha `created_at` no dia seguinte ao "Hoje" do app, o que distorce testes de "hoje" e a comparação de RR7 em Semana e Mês. É de ambiente, não da regra; alinhar os relógios antes de testar com chamados novos.
+
+---
+
+## Revisão 2026-10-25 — a URL do Início sempre mostra o período
+
+Pedido do usuário: ao clicar em "Início" no menu, a URL fica `/dashboard`, sem
+período. A URL tem que mostrar o período em uso (`/dashboard?periodo=hoje`).
+Decisão: a **própria página** corrige a URL. Se o período estiver ausente ou
+inválido, ela redireciona para a URL canônica do período que
+`parseDashboardParams` resolveu (o padrão "Hoje" quando não há período válido).
+URL já canônica não redireciona. O link do menu não muda, e Meus chamados, Fila
+e Aprovações também não.
+
+### Validação — `app/_lib/validation/dashboard.ts`
+
+```ts
+export const dashboardCanonicalHref: (
+  raw: RawSearchParams,
+  selection: PeriodSelection,
+) => string | null
+```
+
+- Recebe os `searchParams` crus e a `selection` que `parseDashboardParams`
+  devolveu para eles. Devolve `dashboardHref(selection)` quando a URL precisa
+  ser corrigida e `null` quando já é canônica.
+- Canônica = `periodo`, `de` e `ate` da URL iguais, um a um, aos de
+  `serializeDashboardParams(selection)`: em preset, só `periodo`; em
+  Personalizado, `periodo`, `de` e `ate`. Parâmetro de período repetido
+  (`?periodo=hoje&periodo=mes`), vazio (`?periodo=`) ou que sobra (`de`/`ate`
+  num preset) também redireciona.
+- **Parâmetros desconhecidos** (qualquer chave fora de `periodo`, `de`, `ate`)
+  não causam redirecionamento. Se a URL redirecionar por causa do período,
+  eles não vão junto, porque o destino é sempre `dashboardHref`. Motivos: o
+  Início não lê nenhum outro parâmetro, então descartá-los não perde nada; não
+  redirecionar por causa deles deixa a correção restrita ao período (o que foi
+  pedido) e evita laço com algum parâmetro que o framework ou uma ferramenta
+  externa acrescente à URL.
+- Sem laço: o destino é `serializeDashboardParams` da mesma `selection`, e
+  `parseDashboardParams` desse destino devolve a mesma `selection` (preset fica
+  igual; Personalizado válido mantém as mesmas `de` e `ate`). A segunda
+  requisição, portanto, devolve `null`.
+
+### `df-data`, `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que fazer
+
+`app/(app)/dashboard/page.tsx`: ler `await searchParams` uma vez, calcular a
+`selection` e, **antes de renderizar qualquer coisa**, chamar
+`dashboardCanonicalHref(raw, selection)`. Se não for `null`, chamar
+`redirect(href)` de `next/navigation`. Em Server Component o `redirect` lança
+`NEXT_REDIRECT`, interrompe a renderização e substitui a entrada do histórico
+(o tipo `replace`/`push` não tem efeito em Server Component,
+`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/redirect.md`).
+Não envolver em `try/catch`. O `requireSession()` continua antes, para que quem
+não tem sessão vá para o login, e não para o Início.
+
+### Cenários do `df-qa`
+
+Nenhum precisa de banco. Conferir a URL na barra de endereço depois da
+navegação.
+
+| #   | Papel | Passo                                                                                                                         | Esperado                                                                                                                                                                                                                           |
+| --- | ----- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CU1 | A     | clicar em "Início" no menu; depois abrir `/dashboard` à mão                                                                   | as duas vezes a URL vira `/dashboard?periodo=hoje`, filtro em "Hoje"                                                                                                                                                               |
+| CU2 | A     | abrir `/dashboard?periodo=lixo` e `/dashboard?periodo=todos`                                                                  | os dois viram `/dashboard?periodo=hoje`, filtro em "Hoje"                                                                                                                                                                          |
+| CU3 | A     | abrir `/dashboard?periodo=mes`; depois `/dashboard?periodo=personalizado&de=…&ate=…` válido (ex. últimos 10 dias)             | a URL **não muda** em nenhum dos dois; filtro em "Mês" e depois em Personalizado com as mesmas datas                                                                                                                               |
+| CU4 | A     | Personalizado inválido: `de` depois de `ate`, `ate` depois de hoje, `de=2026-13-40`, ou sem `ate`                             | cada um vira `/dashboard?periodo=hoje`                                                                                                                                                                                             |
+| CU5 | A     | `/dashboard?periodo=mes`, abrir um chamado de "Maiores atrasos", usar o voltar "Início"; repetir VD4 da revisão de 2026-10-24 | volta para `/dashboard?periodo=mes` sem redirecionar de novo; o `from=dashboard&periodo=todos` volta para `/dashboard?periodo=hoje`. Na aba Rede do DevTools, uma navegação só por página, sem laço; console e dev server sem erro |
+
+Nota para não reportar como defeito: o Início ignora parâmetros desconhecidos.
+`/dashboard?periodo=hoje&x=1` não redireciona e mantém o `x`, e
+`/dashboard?x=1` vira `/dashboard?periodo=hoje`, sem o `x`.
+
+### Checklist da revisão
+
+- [x] `dashboardCanonicalHref` e esta seção (`df-architect`)
+- [x] `redirect` no `page.tsx` (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`
+- [x] CU1–CU5 (`df-qa`)
+
+Observação: o link do menu, o login e a troca de senha ainda apontam para `/dashboard` sem período e passam por um redirecionamento a mais, como decidido acima ("o link do menu não muda").

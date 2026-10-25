@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 import { requireSession } from "@/app/_lib/auth/session"
 import { formatRangeLabel, resolvePeriodRange, todayKey } from "@/app/_lib/date"
 import { PRESET_PERIODS } from "@/app/_lib/domain/period"
 import {
+  dashboardCanonicalHref,
   parseDashboardParams,
   serializeDashboardParams,
 } from "@/app/_lib/validation/dashboard"
@@ -29,7 +31,12 @@ export const metadata: Metadata = {
 const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
   const actor = await requireSession()
   const now = new Date()
-  const selection = parseDashboardParams(await searchParams, todayKey(now))
+  const raw = await searchParams
+  const selection = parseDashboardParams(raw, todayKey(now))
+  const canonicalHref = dashboardCanonicalHref(raw, selection)
+  if (canonicalHref !== null) {
+    redirect(canonicalHref)
+  }
   const range = resolvePeriodRange(selection, now)
 
   return (
