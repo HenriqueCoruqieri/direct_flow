@@ -64,6 +64,7 @@ export interface InsertTicketValues {
   description: string
   type: TicketType
   tagId: number
+  priority: TicketPriority
   assigneeId: number | null
   createdBy: number
   originDepartmentId: number
@@ -89,6 +90,7 @@ export type InsertTicketOutcome =
 export interface NewTicketFormDefaults {
   title: string
   description: string
+  priority: TicketPriority
   assigneeId: number | null
   attachments: UploadedAttachmentRef[]
 }

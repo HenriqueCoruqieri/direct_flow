@@ -9,6 +9,19 @@ resultado de action e de formulário vêm de `docs/contracts/registry-tags.md` e
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`.
 
+## Revisão de 2026-10-26 — o autor escolhe a prioridade
+
+Decidida no plano `docs/plans/ticket-priority-and-sla.md`; referência técnica
+em `docs/contracts/ticket-priority-and-sla.md`. **Cai "o autor não escolhe
+prioridade".** O formulário ganha um Select "Prioridade" pré-selecionado em
+Média; `createTicketSchema` ganha `priority` (enum `ticket_priority`, default
+`INITIAL_TICKET_PRIORITY`); `InsertTicketValues` e `NewTicketFormDefaults`
+ganham `priority`; `insertTicket` grava `values.priority` no ticket e em
+`toPriority` do evento `criacao`; `createTicket` repassa a prioridade validada.
+Onde o texto abaixo diz `INITIAL_TICKET_PRIORITY` na gravação, leia
+`values.priority`. O formulário usa
+`useForm<CreateTicketFormValues, unknown, CreateTicketInput>`.
+
 ## Revisão de 2026-10-02 — criação sem setor de destino
 
 Decidida no plano `docs/plans/ticket-resolution-and-comments.md`. **Sai o setor
@@ -303,7 +316,7 @@ export const describeTicketCreated: (ticketId: number) => string
 | `TICKET_TYPE_LABELS`        | `Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`. Única fonte dos rótulos em todo o projeto                                                                             |
 | `TICKET_*_LENGTH`           | Limites de título e descrição, para o schema e para contador de caracteres na UI                                                                                                                         |
 | ~~`INITIAL_TICKET_STATUS`~~ | Removido na revisão de 2026-10-06. O status de criação vem de `creationStatusFor` (`app/_lib/domain/ticket-assignment.ts`): fila → `aberto`, autor → `em_andamento`, colega → `encaminhado`              |
-| `INITIAL_TICKET_PRIORITY`   | `media`. O autor não escolhe prioridade                                                                                                                                                                  |
+| `INITIAL_TICKET_PRIORITY`   | `media`. Desde 2026-10-26, só o valor inicial do Select e o `default` do schema; o autor escolhe a prioridade                                                                                            |
 | `formatTicketNumber`        | `42` → `#42`. Número visível do chamado é o `ticket.id`                                                                                                                                                  |
 | `checkTicketCreation`       | Nesta ordem: inativo → `USER_INACTIVE`; `mustChangePassword` → `PASSWORD_CHANGE_REQUIRED`; Não alocado → `DEPARTMENT_UNASSIGNED`; `activeTagCount < 1` → `DEPARTMENT_WITHOUT_TAGS`; senão `{ ok: true }` |
 | `isUsableTicketTag`         | Tag ativa **e** do setor do autor                                                                                                                                                                        |
@@ -409,7 +422,7 @@ share`. Sem linha ou `!isUsableTicketTag(row, values.originDepartmentId)` →
    `{ status: "invalid_tag" }`, sem gravar nada.
 2. `insert into ticket` com `title`, `description`, `type`, `status:
 creationStatusFor(assigneeTargetFor(createdBy, assigneeId))` (revisão de
-   2026-10-06), `priority: INITIAL_TICKET_PRIORITY`, `createdBy`,
+   2026-10-06), `priority: values.priority` (revisão de 2026-10-26), `createdBy`,
    `originDepartmentId` e `currentDepartmentId` **ambos** =
    `values.originDepartmentId`, `assignedTo = values.assigneeId` (nulo = fila;
    revisões de 2026-10-05 e 2026-10-06); `returning id, created_at`. `dueAt`,
@@ -417,7 +430,7 @@ creationStatusFor(assigneeTargetFor(createdBy, assigneeId))` (revisão de
 3. `insert into ticket_tag (ticket_id, tag_id, created_at)` com `created_at =
 ticket.created_at`.
 4. `insert into ticket_history`, evento `criacao`: `changedBy = createdBy`,
-   `toStatus` = o mesmo status do passo 2, `toPriority = INITIAL_TICKET_PRIORITY`,
+   `toStatus` = o mesmo status do passo 2, `toPriority = values.priority`,
    `toDepartmentId = originDepartmentId`, `changedAt = ticket.created_at`. Demais
    colunas nulas.
 5. `{ status: "saved", ticketId }`.
@@ -732,7 +745,8 @@ Os do plano, com os nomes técnicos:
 1. Membro cria com tag do próprio setor e destinatário padrão (fila; outros
    destinatários seguem `creationStatusFor`, revisão de 2026-10-06) →
    `ticket.status = aberto`,
-   `origin = current` = setor do autor, `priority = media`, 1 linha em
+   `origin = current` = setor do autor, `priority` = a escolhida (Média se
+   não mudar o Select; revisão de 2026-10-26), 1 linha em
    `ticket_tag`, 1 linha em `ticket_history` (`criacao`, `to_status = aberto`),
    nenhum `ticket_transfer`; toast `Chamado #N criado.`; card "Chamados no
    período" do Início +1.

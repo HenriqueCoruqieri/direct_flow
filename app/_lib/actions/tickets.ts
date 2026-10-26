@@ -175,6 +175,7 @@ export const createTicket = async (
       title: parsed.data.title,
       description: parsed.data.description,
       type: parsed.data.type,
+      priority: parsed.data.priority,
       tagId: parsed.data.tagId,
       assigneeId: parsed.data.assigneeId,
       createdBy: actor.id,

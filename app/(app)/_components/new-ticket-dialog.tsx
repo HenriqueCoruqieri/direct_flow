@@ -25,6 +25,7 @@ import { TICKET_CREATOR_LABEL } from "@/app/_lib/domain/ticket-assignee"
 import type { NewTicketFormAvailable } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
 import {
+  type CreateTicketFormValues,
   type CreateTicketInput,
   createTicketSchema,
 } from "@/app/_lib/validation/ticket"
@@ -37,6 +38,7 @@ import AttachmentUploader from "./attachment-uploader"
 import NewTicketButton from "./new-ticket-button"
 import TicketAssigneeField from "./ticket-assignee-field"
 import TicketDescriptionField from "./ticket-description-field"
+import TicketPriorityField from "./ticket-priority-field"
 import TicketTagField from "./ticket-tag-field"
 import TicketTitleField from "./ticket-title-field"
 import TicketTypeField from "./ticket-type-field"
@@ -52,6 +54,7 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
   const titleId = useId()
   const descriptionId = useId()
   const typeId = useId()
+  const priorityId = useId()
   const tagId = useId()
   const creatorId = useId()
   const assigneeId = useId()
@@ -60,7 +63,7 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
   const [open, setOpen] = useState(false)
   const [uploadsBusy, setUploadsBusy] = useState<AttachmentUploaderBusy>("idle")
 
-  const form = useForm<CreateTicketInput>({
+  const form = useForm<CreateTicketFormValues, unknown, CreateTicketInput>({
     resolver: zodResolver(createTicketSchema),
     defaultValues: options.defaults,
   })
@@ -199,17 +202,31 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
               )}
             />
 
-            <Controller
-              name="type"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <TicketTypeField
-                  id={typeId}
-                  {...field}
-                  fieldState={fieldState}
-                />
-              )}
-            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Controller
+                name="type"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <TicketTypeField
+                    id={typeId}
+                    {...field}
+                    fieldState={fieldState}
+                  />
+                )}
+              />
+
+              <Controller
+                name="priority"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <TicketPriorityField
+                    id={priorityId}
+                    {...field}
+                    fieldState={fieldState}
+                  />
+                )}
+              />
+            </div>
 
             <Controller
               name="tagId"

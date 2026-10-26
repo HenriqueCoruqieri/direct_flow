@@ -106,6 +106,8 @@ export const TICKET_PRIORITIES: readonly TicketPriority[] = Object.keys(
   TICKET_PRIORITY_LABELS,
 ).filter(isTicketPriority)
 
+export const TICKET_PRIORITY_FIELD_LABEL = "Prioridade"
+
 export const TICKET_TYPE_LABELS = {
   duvida: "Dúvida",
   ocorrencia: "Ocorrência",
@@ -251,6 +253,7 @@ export const buildNewTicketFormOptions = (
     defaults: {
       title: "",
       description: "",
+      priority: INITIAL_TICKET_PRIORITY,
       assigneeId: null,
       attachments: [],
     },

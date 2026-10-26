@@ -1,8 +1,10 @@
 import { z } from "zod"
 
 import {
+  INITIAL_TICKET_PRIORITY,
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_DESCRIPTION_MIN_LENGTH,
+  TICKET_PRIORITIES,
   TICKET_TITLE_MAX_LENGTH,
   TICKET_TITLE_MIN_LENGTH,
   TICKET_TYPES,
@@ -49,6 +51,10 @@ export const ticketTypeSchema = z.enum(TICKET_TYPES, {
   error: "Selecione o tipo do chamado.",
 })
 
+export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES, {
+  error: "Selecione a prioridade do chamado.",
+})
+
 export const ticketSolutionSchema = z
   .string({ error: "Descreva a solução." })
   .trim()
@@ -73,10 +79,13 @@ const ticketFieldsSchema = z.object({
 })
 
 export const createTicketSchema = ticketFieldsSchema.extend({
+  priority: ticketPrioritySchema.default(INITIAL_TICKET_PRIORITY),
   attachments: uploadedAttachmentsSchema.optional(),
 })
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>
+
+export type CreateTicketFormValues = z.input<typeof createTicketSchema>
 
 export const TICKET_ID_MAX = POSTGRES_INTEGER_MAX
 
