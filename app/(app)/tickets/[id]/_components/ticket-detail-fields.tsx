@@ -1,24 +1,32 @@
 import { formatDateTime, toISO } from "@/app/_lib/date"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
-import { TICKET_TYPE_LABELS } from "@/app/_lib/domain/ticket"
+import {
+  TICKET_PRIORITY_FIELD_LABEL,
+  TICKET_PRIORITY_LABELS,
+  TICKET_TYPE_LABELS,
+} from "@/app/_lib/domain/ticket"
 import {
   describeTicketAssignee,
   TICKET_ASSIGNEE_LABEL,
   TICKET_CREATOR_LABEL,
 } from "@/app/_lib/domain/ticket-assignee"
+import { TICKET_SLA_LABEL } from "@/app/_lib/domain/ticket-due"
 import type { TicketDetail } from "@/app/_lib/types/ticket"
 
+import TicketSlaValue from "../../../_components/ticket-sla-value"
 import TicketDetailFieldList from "./ticket-detail-field-list"
 import TicketEditAssignee from "./ticket-edit-assignee"
 import TicketEditClassification from "./ticket-edit-classification"
 
 interface TicketDetailFieldsProps {
   ticket: TicketDetail
+  now: Date
   editable?: boolean
 }
 
 const TicketDetailFields = ({
   ticket,
+  now,
   editable = false,
 }: TicketDetailFieldsProps) => {
   const classification = (
@@ -87,6 +95,18 @@ const TicketDetailFields = ({
                   {formatDateTime(ticket.createdAt)}
                 </time>
               ),
+            },
+          ]}
+        />
+        <TicketDetailFieldList
+          fields={[
+            {
+              label: TICKET_PRIORITY_FIELD_LABEL,
+              value: TICKET_PRIORITY_LABELS[ticket.priority],
+            },
+            {
+              label: TICKET_SLA_LABEL,
+              value: <TicketSlaValue facts={ticket} now={now} />,
             },
           ]}
         />

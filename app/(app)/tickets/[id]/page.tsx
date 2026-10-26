@@ -160,7 +160,6 @@ const TicketDetailPage = async ({
           id={ticket.id}
           title={ticket.title}
           status={ticket.status}
-          priority={ticket.priority}
           editable={editable}
           assumeTarget={assumeTarget}
           attendTarget={attendTarget}
@@ -197,7 +196,7 @@ const TicketDetailPage = async ({
         }
         aside={
           <>
-            <TicketDetailFields ticket={ticket} editable={editable} />
+            <TicketDetailFields ticket={ticket} now={now} editable={editable} />
             <TicketComments
               ticketId={ticket.id}
               entries={commentEntries}

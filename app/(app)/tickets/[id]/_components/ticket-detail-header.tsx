@@ -1,11 +1,7 @@
-import {
-  formatTicketNumber,
-  TICKET_PRIORITY_LABELS,
-} from "@/app/_lib/domain/ticket"
-import type { TicketPriority, TicketStatus } from "@/app/_lib/types/ticket"
+import { formatTicketNumber } from "@/app/_lib/domain/ticket"
+import type { TicketStatus } from "@/app/_lib/types/ticket"
 import type { AssumeTicketTarget } from "@/app/_lib/types/ticket-assignment"
 import type { TicketAttendTarget } from "@/app/_lib/types/ticket-transfer"
-import { cn } from "@/app/_lib/utils"
 
 import TicketStatusBadge from "../../../_components/ticket-status-badge"
 import AssumeTicketButton from "./assume-ticket-button"
@@ -15,18 +11,10 @@ import DeclineTransferDialog, {
 } from "./decline-transfer-dialog"
 import TicketEditHeading from "./ticket-edit-heading"
 
-const PRIORITY_DOT_CLASSES = {
-  baixa: "bg-prioridade-baixa",
-  media: "bg-prioridade-media",
-  alta: "bg-prioridade-alta",
-  critica: "bg-prioridade-critica",
-} satisfies Record<TicketPriority, string>
-
 interface TicketDetailHeaderProps {
   id: number
   title: string
   status: TicketStatus
-  priority: TicketPriority
   editable?: boolean
   assumeTarget?: AssumeTicketTarget | null
   attendTarget?: TicketAttendTarget | null
@@ -37,7 +25,6 @@ const TicketDetailHeader = ({
   id,
   title,
   status,
-  priority,
   editable = false,
   assumeTarget = null,
   attendTarget = null,
@@ -83,16 +70,6 @@ const TicketDetailHeader = ({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <TicketStatusBadge status={status} />
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-2 rounded-full",
-              PRIORITY_DOT_CLASSES[priority],
-            )}
-          />
-          Prioridade {TICKET_PRIORITY_LABELS[priority]}
-        </span>
       </div>
     </header>
   )
