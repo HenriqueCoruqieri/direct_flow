@@ -19,7 +19,10 @@ import type {
 import type { AssigneeOption, TicketActorFacts } from "@/app/_lib/types/ticket"
 import { queueTicketDetailHref } from "@/app/_lib/validation/ticket-detail-origin"
 
-import createTicketListColumns from "../../_components/ticket-list-columns"
+import createTicketListColumns, {
+  createTicketPriorityColumn,
+  createTicketSlaColumn,
+} from "../../_components/ticket-list-columns"
 import {
   idNameFiltersFor,
   NONE_FILTER_VALUE,
@@ -42,6 +45,7 @@ const buildColumns = (
   viewer: TicketActorFacts,
   location: DepartmentQueueLocation,
   onSend: (ticket: DepartmentQueueListItem) => void,
+  now: Date,
 ) => {
   const shared = createTicketListColumns<DepartmentQueueListItem>((ticketId) =>
     queueTicketDetailHref(location, ticketId),
@@ -62,6 +66,8 @@ const buildColumns = (
     ),
     shared.status,
     shared.createdAt,
+    createTicketPriorityColumn<DepartmentQueueListItem>(),
+    createTicketSlaColumn<DepartmentQueueListItem>(now),
     columnHelper.display({
       id: "actions",
       header: () => <span className="sr-only">Ações</span>,
@@ -99,6 +105,7 @@ interface DepartmentQueueTableProps {
   assignees: AssigneeOption[]
   toolbarFooter: React.ReactNode
   location: DepartmentQueueLocation
+  now: Date
 }
 
 const DepartmentQueueTable = ({
@@ -108,6 +115,7 @@ const DepartmentQueueTable = ({
   assignees,
   toolbarFooter,
   location,
+  now,
 }: DepartmentQueueTableProps) => {
   const [sendTarget, setSendTarget] = useState<DepartmentQueueListItem | null>(
     null,
@@ -120,8 +128,8 @@ const DepartmentQueueTable = ({
   }, [])
 
   const columns = useMemo(
-    () => buildColumns(viewer, location, openSendDialog),
-    [viewer, location, openSendDialog],
+    () => buildColumns(viewer, location, openSendDialog, now),
+    [viewer, location, openSendDialog, now],
   )
 
   const rowHref = useCallback(

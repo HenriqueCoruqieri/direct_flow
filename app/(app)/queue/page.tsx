@@ -148,6 +148,7 @@ const DepartmentQueuePage = async ({ searchParams }: PageProps<"/queue">) => {
             assignees={assignees}
             toolbarFooter={toolbarFooter}
             location={location}
+            now={now}
           />
         )}
       </div>

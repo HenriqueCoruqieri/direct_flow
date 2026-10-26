@@ -13,7 +13,10 @@ import type {
   MyTicketsTab,
 } from "@/app/_lib/types/my-tickets"
 
-import createTicketListColumns from "../../_components/ticket-list-columns"
+import createTicketListColumns, {
+  createTicketPriorityColumn,
+  createTicketSlaColumn,
+} from "../../_components/ticket-list-columns"
 import {
   TICKET_TYPE_FILTER,
   ticketRowHref,
@@ -24,29 +27,36 @@ import {
 const columnHelper = createColumnHelper<DataTableFeatures, MyTicketListItem>()
 const shared = createTicketListColumns<MyTicketListItem>(ticketDetailPath)
 
-const columns = columnHelper.columns([
-  shared.number,
-  shared.title,
-  shared.type,
-  shared.tag,
-  columnHelper.accessor("currentDepartmentName", {
-    header: "Setor atual",
-  }),
-  shared.status,
-  shared.createdAt,
-])
+const buildColumns = (now: Date) =>
+  columnHelper.columns([
+    shared.number,
+    shared.title,
+    shared.type,
+    shared.tag,
+    columnHelper.accessor("currentDepartmentName", {
+      header: "Setor atual",
+    }),
+    shared.status,
+    shared.createdAt,
+    createTicketPriorityColumn<MyTicketListItem>(),
+    createTicketSlaColumn<MyTicketListItem>(now),
+  ])
 
 interface MyTicketsTableProps {
   tab: MyTicketsTab
   tickets: MyTicketListItem[]
   periodFilter: React.ReactNode
+  now: Date
 }
 
 const MyTicketsTable = ({
   tab,
   tickets,
   periodFilter,
+  now,
 }: MyTicketsTableProps) => {
+  const columns = useMemo(() => buildColumns(now), [now])
+
   const filters = useMemo<DataTableFilter[]>(
     () => [
       ...ticketStatusFiltersFor(MY_TICKETS_TAB_RULES[tab].statuses),

@@ -64,6 +64,8 @@ export async function listQueueTickets(
       creatorName: creator.name,
       assigneeName: assignee.name,
       createdAt: ticket.createdAt,
+      priority: ticket.priority,
+      resolvedAt: ticket.resolvedAt,
     })
     .from(ticket)
     .innerJoin(creator, eq(creator.id, ticket.createdBy))

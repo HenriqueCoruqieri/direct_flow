@@ -6,11 +6,15 @@ import { formatDate } from "@/app/_lib/date"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import {
   formatTicketNumber,
+  TICKET_PRIORITY_FIELD_LABEL,
   TICKET_TYPE_LABELS,
 } from "@/app/_lib/domain/ticket"
+import { TICKET_SLA_LABEL } from "@/app/_lib/domain/ticket-due"
 
 import { NONE_FILTER_VALUE } from "./ticket-list-filters"
-import type { TicketListRow } from "./ticket-list-row"
+import type { TicketListRow, TicketSlaListRow } from "./ticket-list-row"
+import TicketPriorityText from "./ticket-priority-text"
+import TicketSlaCell from "./ticket-sla-cell"
 import TicketStatusBadge from "./ticket-status-badge"
 
 const createTicketListColumns = <TRow extends TicketListRow>(
@@ -80,5 +84,24 @@ const createTicketListColumns = <TRow extends TicketListRow>(
     }),
   }
 }
+
+export const createTicketSlaColumn = <TRow extends TicketSlaListRow>(
+  now: Date,
+) =>
+  createColumnHelper<DataTableFeatures, TRow>().display({
+    id: "sla",
+    header: TICKET_SLA_LABEL,
+    cell: ({ row }) => <TicketSlaCell facts={row.original} now={now} />,
+  })
+
+export const createTicketPriorityColumn = <TRow extends TicketSlaListRow>() =>
+  createColumnHelper<DataTableFeatures, TRow>().accessor(
+    (row) => row.priority,
+    {
+      id: "priority",
+      header: TICKET_PRIORITY_FIELD_LABEL,
+      cell: ({ getValue }) => <TicketPriorityText priority={getValue()} />,
+    },
+  )
 
 export default createTicketListColumns

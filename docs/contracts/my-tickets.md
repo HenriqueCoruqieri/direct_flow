@@ -9,6 +9,14 @@ URL, de `docs/contracts/dashboard.md`.
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `@tanstack/react-table@9.2.4`, `lucide-react@1.47.0`.
 
+> **Revisão 2026-10-26 — coluna SLA.** `MyTicketListItem` ganha
+> `priority: TicketPriority` e `resolvedAt: Date | null`; `listMyTickets`
+> passa a selecioná-los. A tabela ganha a coluna "SLA" logo após "Aberto em"
+> (`ticketSlaFor`/`describeTicketSla`, vermelho só para ativo vencido), com o
+> `now` da página. No detalhe, Prioridade e SLA vão para o card "Detalhes" e o
+> badge de prioridade sai do cabeçalho. Referência técnica:
+> `docs/contracts/ticket-priority-and-sla.md`.
+
 ## Escopo técnico em uma frase
 
 Só leitura. Nenhuma tabela, enum, coluna, índice ou migration nova; nenhuma

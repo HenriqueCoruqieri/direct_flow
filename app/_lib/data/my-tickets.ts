@@ -47,6 +47,8 @@ export async function listMyTickets(
       currentDepartmentId: ticket.currentDepartmentId,
       currentDepartmentName: department.name,
       createdAt: ticket.createdAt,
+      priority: ticket.priority,
+      resolvedAt: ticket.resolvedAt,
     })
     .from(ticket)
     .innerJoin(department, eq(department.id, ticket.currentDepartmentId))

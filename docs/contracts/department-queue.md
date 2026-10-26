@@ -1,5 +1,12 @@
 # Contrato — Fila do setor
 
+> **Revisão 2026-10-26 — coluna SLA.** `DepartmentQueueListItem` ganha
+> `priority: TicketPriority` e `resolvedAt: Date | null`; `listQueueTickets`
+> passa a selecioná-los. A tabela ganha a coluna "SLA" logo após "Aberto em"
+> (`ticketSlaFor`/`describeTicketSla`, vermelho só para ativo vencido), com o
+> `now` da página. Referência técnica:
+> `docs/contracts/ticket-priority-and-sla.md`.
+
 Entrada das ondas 1 e 2. As decisões estão no plano,
 `docs/plans/department-queue.md`, e não são repetidas aqui. Este documento é a
 referência técnica: assinaturas, consultas, sequências, textos e cenários.

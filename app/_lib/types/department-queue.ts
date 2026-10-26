@@ -1,6 +1,10 @@
 import type { DEPARTMENT_QUEUE_TABS } from "@/app/_lib/domain/department-queue-tabs"
 import type { PeriodFilterSelection } from "@/app/_lib/types/period"
-import type { TicketStatus, TicketType } from "@/app/_lib/types/ticket"
+import type {
+  TicketPriority,
+  TicketStatus,
+  TicketType,
+} from "@/app/_lib/types/ticket"
 import type { TicketAssignmentFacts } from "@/app/_lib/types/ticket-assignment"
 
 export type DepartmentQueueTab = (typeof DEPARTMENT_QUEUE_TABS)[number]
@@ -31,11 +35,13 @@ export interface DepartmentQueueListItem extends TicketAssignmentFacts {
   id: number
   title: string
   type: TicketType
+  priority: TicketPriority
   tagId: number | null
   tagName: string | null
   creatorName: string
   assigneeName: string | null
   createdAt: Date
+  resolvedAt: Date | null
 }
 
 export interface DepartmentQueueRowActions {

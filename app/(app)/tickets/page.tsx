@@ -90,6 +90,7 @@ const MyTicketsPage = async ({ searchParams }: PageProps<"/tickets">) => {
             tab={tab}
             tickets={tickets}
             periodFilter={periodFilter}
+            now={now}
           />
         )}
       </div>

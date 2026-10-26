@@ -1,5 +1,9 @@
 import type { MY_TICKETS_TABS } from "@/app/_lib/domain/my-tickets-tabs"
-import type { TicketStatus, TicketType } from "@/app/_lib/types/ticket"
+import type {
+  TicketPriority,
+  TicketStatus,
+  TicketType,
+} from "@/app/_lib/types/ticket"
 
 export type MyTicketsTab = (typeof MY_TICKETS_TABS)[number]
 
@@ -28,9 +32,11 @@ export interface MyTicketListItem {
   title: string
   type: TicketType
   status: TicketStatus
+  priority: TicketPriority
   tagId: number | null
   tagName: string | null
   currentDepartmentId: number
   currentDepartmentName: string
   createdAt: Date
+  resolvedAt: Date | null
 }
