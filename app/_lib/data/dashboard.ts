@@ -2,16 +2,13 @@ import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm"
 import { union } from "drizzle-orm/pg-core"
 
 import { countPendingApprovals } from "@/app/_lib/data/approvals"
+import { ticketDueAtSql } from "@/app/_lib/data/ticket-due"
 import {
   BACKLOG_TICKET_STATUSES,
   DASHBOARD_RESOLVED_STATUSES,
   OVERDUE_TICKET_STATUSES,
 } from "@/app/_lib/domain/dashboard"
-import { TICKET_PRIORITIES } from "@/app/_lib/domain/ticket"
-import {
-  TICKET_PRIORITY_DUE_HOURS,
-  ticketDueAt,
-} from "@/app/_lib/domain/ticket-due"
+import { ticketDueAt } from "@/app/_lib/domain/ticket-due"
 import {
   PENDING_TRANSFER_STATUS,
   REJECTED_TRANSFER_STATUS,
@@ -31,6 +28,7 @@ import { department, tag, ticket, ticketTag, ticketTransfer } from "@/db/schema"
 export async function findDashboardOverview(
   departmentId: number,
   range: DateRange,
+  now: Date,
 ): Promise<DashboardOverview> {
   const createdInRange = and(
     gte(ticket.createdAt, range.start),
@@ -71,6 +69,10 @@ export async function findDashboardOverview(
           string | null
         >`avg(extract(epoch from (${ticket.resolvedAt} - ${ticket.createdAt})) * 1000) filter (where ${resolvedInRange} and ${isResolvedStatus})`,
         backlogCount: sql<number>`(count(*) filter (where ${isBacklogStatus}))::int`,
+        backlogAgeMs: sql<
+          string | null
+        >`coalesce(sum(extract(epoch from greatest(${now}::timestamptz - ${ticket.createdAt}, interval '0')) * 1000) filter (where ${isBacklogStatus}), 0)`,
+        overdueBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${ticketDueAtSql} < ${now}))::int`,
       })
       .from(ticket)
       .where(eq(ticket.currentDepartmentId, departmentId)),
@@ -92,6 +94,8 @@ export async function findDashboardOverview(
     averageResolutionMs:
       averageResolutionMs === null ? null : Number(averageResolutionMs),
     backlogCount: ticketRow?.backlogCount ?? 0,
+    backlogAgeMs: Number(ticketRow?.backlogAgeMs ?? 0),
+    overdueBacklogCount: ticketRow?.overdueBacklogCount ?? 0,
   }
 }
 
@@ -135,15 +139,6 @@ export async function listOverdueTickets(
   now: Date,
   limit: number,
 ): Promise<DashboardOverdueTicket[]> {
-  const dueHours = sql.join(
-    TICKET_PRIORITIES.map(
-      (priority) =>
-        sql`when ${priority} then ${TICKET_PRIORITY_DUE_HOURS[priority]}::int`,
-    ),
-    sql` `,
-  )
-  const dueAt = sql`(${ticket.createdAt} + make_interval(hours => case ${ticket.priority} ${dueHours} end))`
-
   const rows = await db
     .select({
       id: ticket.id,
@@ -156,10 +151,10 @@ export async function listOverdueTickets(
       and(
         eq(ticket.currentDepartmentId, departmentId),
         inArray(ticket.status, [...OVERDUE_TICKET_STATUSES]),
-        sql`${dueAt} < ${now}`,
+        sql`${ticketDueAtSql} < ${now}`,
       ),
     )
-    .orderBy(asc(dueAt), asc(ticket.createdAt), asc(ticket.id))
+    .orderBy(asc(ticketDueAtSql), asc(ticket.createdAt), asc(ticket.id))
     .limit(limit)
 
   return rows.map((row) => ({

@@ -16,26 +16,16 @@ import {
   OVERDUE_COLUMN_LABELS,
   OVERDUE_TICKETS_LIMIT,
 } from "@/app/_lib/domain/dashboard"
-import {
-  formatTicketNumber,
-  TICKET_PRIORITY_LABELS,
-} from "@/app/_lib/domain/ticket"
+import { formatTicketNumber } from "@/app/_lib/domain/ticket"
 import type { PeriodSelection } from "@/app/_lib/types/period"
-import type { TicketPriority } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
 import { dashboardTicketDetailHref } from "@/app/_lib/validation/dashboard"
 
+import TicketPriorityText from "../../_components/ticket-priority-text"
 import DashboardOverdueHeader from "./dashboard-overdue-header"
 import DashboardPanel from "./dashboard-panel"
 
 const TITLE_ID = "dashboard-overdue-title"
-
-const PRIORITY_TEXT_CLASSES = {
-  baixa: "text-prioridade-baixa",
-  media: "text-prioridade-media",
-  alta: "text-prioridade-alta",
-  critica: "text-prioridade-critica",
-} satisfies Record<TicketPriority, string>
 
 const HEAD_CLASS = "h-10 text-xs font-semibold text-muted-foreground"
 
@@ -101,13 +91,8 @@ const DashboardOverdue = async ({
                 >
                   {ticket.title}
                 </TableCell>
-                <TableCell
-                  className={cn(
-                    "py-3 font-semibold",
-                    PRIORITY_TEXT_CLASSES[ticket.priority],
-                  )}
-                >
-                  {TICKET_PRIORITY_LABELS[ticket.priority]}
+                <TableCell className="py-3">
+                  <TicketPriorityText priority={ticket.priority} />
                 </TableCell>
                 <TableCell
                   title={formatDateTime(ticket.dueAt)}

@@ -18,6 +18,7 @@ import {
   type ActiveTicketStatus,
   CLOSED_TICKET_STATUS,
   RESOLVED_TICKET_STATUS,
+  TICKET_PRIORITY_FIELD_LABEL,
 } from "@/app/_lib/domain/ticket"
 import type {
   DashboardActivityCount,
@@ -113,16 +114,19 @@ export const ILLUSTRATIVE_DESCRIPTION =
 
 export const ILLUSTRATIVE_FIRST_RESPONSE_MS = 22 * MINUTE_MS
 
-export const ILLUSTRATIVE_HANDLING_TIME_MS = 2 * HOUR_MS
-
 export const firstResponseHint = (): string =>
   `1ª resposta em ${formatDuration(ILLUSTRATIVE_FIRST_RESPONSE_MS)}`
 
-export const illustrativeBacklogMs = (backlogCount: number): number =>
-  Math.max(backlogCount, 0) * ILLUSTRATIVE_HANDLING_TIME_MS
+export const ticketCountLabel = (count: number): string =>
+  `${count} ${count === 1 ? "chamado" : "chamados"}`
 
-export const backlogHoursHint = (backlogCount: number): string =>
-  `${formatTotalHours(illustrativeBacklogMs(backlogCount))} em backlog`
+export const backlogValueLabel = (overview: DashboardOverview): string =>
+  ticketCountLabel(Math.max(overview.overdueBacklogCount, 0))
+
+export const backlogHint = (overview: DashboardOverview): string =>
+  overview.backlogCount > 0
+    ? `${formatTotalHours(overview.backlogAgeMs)} em backlog`
+    : EMPTY_BACKLOG_HINT
 
 export const TOP_TAGS_CARD_LABEL = "Principal ofensor"
 
@@ -142,7 +146,7 @@ export const OVERDUE_TICKET_STATUSES: readonly ActiveTicketStatus[] =
 export const OVERDUE_COLUMN_LABELS = {
   number: "Nº",
   title: "Título",
-  priority: "Prioridade",
+  priority: TICKET_PRIORITY_FIELD_LABEL,
   dueAt: "Vencimento",
 } satisfies Record<DashboardOverdueColumn, string>
 
@@ -165,9 +169,6 @@ export const tagVolumePercent = (
   const tagged = Math.min(Math.max(tagCount, 0), ticketCount)
   return floorPercent(tagged, ticketCount)
 }
-
-const ticketCountLabel = (count: number): string =>
-  `${count} ${count === 1 ? "chamado" : "chamados"}`
 
 const volumeLabel = (tagCount: number, ticketCount: number): string | null => {
   const percent = tagVolumePercent(tagCount, ticketCount)

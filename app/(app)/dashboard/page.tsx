@@ -65,6 +65,7 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
             <DashboardOverview
               departmentId={actor.departmentId}
               range={range}
+              now={now}
             />
           </Suspense>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">

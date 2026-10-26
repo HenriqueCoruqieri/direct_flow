@@ -10,6 +10,8 @@ export interface DashboardOverview {
   periodResolvedCount: number
   averageResolutionMs: number | null
   backlogCount: number
+  backlogAgeMs: number
+  overdueBacklogCount: number
 }
 
 export interface DashboardMeasuredResolutionRate {

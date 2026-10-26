@@ -1,8 +1,8 @@
 import { findDashboardOverview } from "@/app/_lib/data/dashboard"
 import {
-  backlogHoursHint,
+  backlogHint,
+  backlogValueLabel,
   DASHBOARD_OVERVIEW_LABELS,
-  EMPTY_BACKLOG_HINT,
   firstResponseHint,
   formatResolutionRate,
   NO_RESOLUTIONS_IN_PERIOD_HINT,
@@ -23,13 +23,15 @@ import StatHint from "./stat-hint"
 interface DashboardOverviewProps {
   departmentId: number
   range: DateRange
+  now: Date
 }
 
 const DashboardOverview = async ({
   departmentId,
   range,
+  now,
 }: DashboardOverviewProps) => {
-  const overview = await findDashboardOverview(departmentId, range)
+  const overview = await findDashboardOverview(departmentId, range, now)
   const rate = resolutionRateFor(overview)
   const averageResolutionMs = overview.averageResolutionMs
 
@@ -96,17 +98,8 @@ const DashboardOverview = async ({
       />
       <StatCard
         label={DASHBOARD_OVERVIEW_LABELS.backlog}
-        value={overview.backlogCount}
-        footer={
-          overview.backlogCount > 0 ? (
-            <StatHint
-              text={backlogHoursHint(overview.backlogCount)}
-              illustrative
-            />
-          ) : (
-            <StatHint text={EMPTY_BACKLOG_HINT} />
-          )
-        }
+        value={backlogValueLabel(overview)}
+        footer={<StatHint text={backlogHint(overview)} />}
       />
     </div>
   )

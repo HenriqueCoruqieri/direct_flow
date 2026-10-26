@@ -8,6 +8,30 @@ documento. Fuso: ADR 009.
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 `drizzle-orm@0.45.2`.
 
+> **Revisão 2026-10-26 — prioridade e SLA.** Referência técnica em
+> `docs/contracts/ticket-priority-and-sla.md`. Superado neste documento:
+> (1) os prazos de `TICKET_PRIORITY_DUE_HOURS` passam a Crítica 3h, Alta 6h,
+> Média 12h, Baixa 24h ("Maiores atrasos" herda); (2) a linha de apoio do card
+> Backlog deixa de ser ilustrativa: saem `ILLUSTRATIVE_HANDLING_TIME_MS`,
+> `illustrativeBacklogMs` e `backlogHoursHint`, entra `backlogHint(overview)`
+> sobre os campos reais `backlogAgeMs` e `overdueBacklogCount` de
+> `DashboardOverview`, sem marca "Ilustrativo"; (3) `findDashboardOverview`
+> ganha `now`; (4) a expressão SQL de vencimento sai de `listOverdueTickets`
+> para o helper único `ticketDueAtSql` (`app/_lib/data/ticket-due.ts`). O
+> `firstResponseHint` ilustrativo do card Tempo médio continua. Cenários que
+> citam `backlog × 2`h ou 24h de prazo (OV9, RW7, RW8 e a consulta `AT`) valem
+> com os números novos.
+
+> **Revisão 2026-10-26 — card Backlog mostra os atrasados.** Superado neste
+> documento: o **valor** do card Backlog deixa de ser `backlogCount` e passa a
+> `backlogValueLabel(overview)` — quantidade de chamados do backlog **em
+> atraso** (`overdueBacklogCount`), como `X chamados` (`1 chamado`,
+> `0 chamados`). A linha de apoio é `backlogHint(overview)`: `Xh em backlog`
+> (soma de idade de todo o backlog), sem o antigo `· N em atraso`; com
+> `backlogCount = 0` ela devolve `EMPTY_BACKLOG_HINT`. `ticketCountLabel`
+> passa a ser exportado de `app/_lib/domain/dashboard.ts`. Detalhe em
+> `docs/contracts/ticket-priority-and-sla.md`.
+
 ---
 
 ## Etapa 1 — grade da página e linha 1
@@ -260,7 +284,7 @@ de apoio). Rótulos de `DASHBOARD_OVERVIEW_LABELS`.
 | Chamados no período      | `ticketCount`                                                                                                                                         | `receivedTransfersHint(receivedTransferCount)`                                                                                                                                                                                            |
 | Taxa de resolução        | `formatResolutionRate(p)`, `p = resolutionRatePercent(resolvedTicketCount, ticketCount)`; `p === null` → `—`                                          | `p !== null`: barra horizontal 0–100% (cor primária, trilho neutro, largura `p%`), `role="progressbar"` com `aria-valuenow`/`aria-valuemin`/`aria-valuemax` e nome = rótulo do card. `p === null`: `NO_TICKETS_IN_PERIOD_HINT`, sem barra |
 | Tempo médio de resolução | `averageResolutionMs !== null`: `durationParts(...)`, número no tamanho do valor e unidade menor (ex. `text-base`), espaço entre partes. `null` → `—` | não nulo: `firstResponseHint()` + marca ilustrativa. Nulo: `NO_RESOLUTIONS_IN_PERIOD_HINT`, sem marca                                                                                                                                     |
-| Backlog                  | `backlogCount`                                                                                                                                        | `> 0`: `backlogHoursHint(backlogCount)` + marca ilustrativa. `0`: `EMPTY_BACKLOG_HINT`, sem marca                                                                                                                                         |
+| Backlog                  | `backlogValueLabel(overview)` (atrasados do backlog: `X chamados`, `1 chamado`) — revisão 2026-10-26                                                  | `backlogHint(overview)`: `Xh em backlog`; `backlogCount = 0` → `EMPTY_BACKLOG_HINT`. Sem marca ilustrativa — revisão 2026-10-26                                                                                                           |
 
 - **Barra**: não existe `progress` em `app/_components/ui/`. Se usar o
   primitivo do shadcn, `npx shadcn@latest add progress` (trocar o import do
@@ -496,12 +520,15 @@ export interface DashboardOverdueTicket {
 Início: a feature de prioridade e um futuro "vence em" no detalhe reaproveitam
 daqui.
 
+> Revisão 2026-10-26: valores atualizados para 3/6/12/24h
+> (`docs/contracts/ticket-priority-and-sla.md`, ADR 019).
+
 ```ts
 export const TICKET_PRIORITY_DUE_HOURS = {
-  critica: 4,
-  alta: 8,
-  media: 24,
-  baixa: 72,
+  critica: 3,
+  alta: 6,
+  media: 12,
+  baixa: 24,
 } satisfies Record<TicketPriority, number>
 
 export const ticketDueWindowMs: (priority: TicketPriority) => number
