@@ -327,6 +327,15 @@ export const formatDuration = (durationMs: number): string =>
     .map((part) => `${part.value}${part.unit}`)
     .join(" ")
 
+export const formatSignedDuration = (durationMs: number): string => {
+  const magnitude = Math.abs(durationMs)
+  const text = magnitude < MINUTE_MS ? "<1min" : formatDuration(magnitude)
+  return durationMs < 0 ? `-${text}` : text
+}
+
+export const formatTimeUntil = (value: DateInput, now: DateInput): string =>
+  formatSignedDuration(dayjs(value).diff(dayjs(now)))
+
 export const formatTotalHours = (durationMs: number): string =>
   `${integerFormat.format(Math.floor(Math.max(durationMs, 0) / HOUR_MS))}h`
 
