@@ -134,6 +134,13 @@
       "when": 1792093759761,
       "tag": "0018_history_event_without_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793042664693,
+      "tag": "0019_tag_priority",
+      "breakpoints": true
     }
   ]
 }

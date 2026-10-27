@@ -32,9 +32,9 @@ const TagRowActions = ({ tag }: TagRowActionsProps) => {
     <RegistryRowActions
       slots={[
         {
-          id: "rename",
+          id: "edit",
           width: "fit",
-          action: <TagFormDialog mode="rename" tag={tag} />,
+          action: <TagFormDialog mode="edit" tag={tag} />,
         },
         { id: "status", width: "md", action: statusAction },
       ]}

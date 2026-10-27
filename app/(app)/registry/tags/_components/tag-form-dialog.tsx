@@ -25,10 +25,28 @@ import {
   FieldLabel,
 } from "@/app/_components/ui/field"
 import { Input } from "@/app/_components/ui/input"
-import { createTag, renameTag } from "@/app/_lib/actions/tags"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/_components/ui/select"
+import { createTag, updateTag } from "@/app/_lib/actions/tags"
+import {
+  TAG_PRIORITY_FIELD_HINT,
+  TAG_PRIORITY_SELECT_OPTIONS,
+  tagPriorityFromSelectValue,
+  tagPriorityToSelectValue,
+} from "@/app/_lib/domain/tag-priority"
+import { TICKET_PRIORITY_FIELD_LABEL } from "@/app/_lib/domain/ticket"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type { TagListItem } from "@/app/_lib/types/tag"
-import { type CreateTagInput, createTagSchema } from "@/app/_lib/validation/tag"
+import {
+  type CreateTagFormValues,
+  type CreateTagInput,
+  createTagSchema,
+} from "@/app/_lib/validation/tag"
 
 interface CreateTagWithDepartmentChoiceProps {
   mode: "create"
@@ -40,40 +58,45 @@ interface CreateTagInFixedDepartmentProps {
   departmentId: number
 }
 
-interface RenameTagFormDialogProps {
-  mode: "rename"
-  tag: Pick<TagListItem, "id" | "name" | "departmentId">
+interface EditTagFormDialogProps {
+  mode: "edit"
+  tag: Pick<TagListItem, "id" | "name" | "departmentId" | "priority">
 }
 
 type TagFormDialogProps =
   | CreateTagWithDepartmentChoiceProps
   | CreateTagInFixedDepartmentProps
-  | RenameTagFormDialogProps
+  | EditTagFormDialogProps
 
 const initialValuesFor = (
   props: TagFormDialogProps,
-): DefaultValues<CreateTagInput> => {
-  if (props.mode === "rename") {
-    return { departmentId: props.tag.departmentId, name: props.tag.name }
+): DefaultValues<CreateTagFormValues> => {
+  if (props.mode === "edit") {
+    return {
+      departmentId: props.tag.departmentId,
+      name: props.tag.name,
+      priority: props.tag.priority,
+    }
   }
   if ("departmentId" in props) {
-    return { departmentId: props.departmentId, name: "" }
+    return { departmentId: props.departmentId, name: "", priority: null }
   }
-  return { name: "" }
+  return { name: "", priority: null }
 }
 
 const TagFormDialog = (props: TagFormDialogProps) => {
   const nameId = useId()
   const departmentId = useId()
+  const priorityId = useId()
   const [open, setOpen] = useState(false)
 
-  const form = useForm<CreateTagInput>({
+  const form = useForm<CreateTagFormValues, unknown, CreateTagInput>({
     resolver: zodResolver(createTagSchema),
     defaultValues: initialValuesFor(props),
   })
 
   const isSubmitting = form.formState.isSubmitting
-  const isRename = props.mode === "rename"
+  const isEdit = props.mode === "edit"
   const departmentChoices =
     props.mode === "create" && "departments" in props ? props.departments : null
 
@@ -85,8 +108,12 @@ const TagFormDialog = (props: TagFormDialogProps) => {
 
   const onSubmit = async (values: CreateTagInput) => {
     const result =
-      props.mode === "rename"
-        ? await renameTag({ id: props.tag.id, name: values.name })
+      props.mode === "edit"
+        ? await updateTag({
+            id: props.tag.id,
+            name: values.name,
+            priority: values.priority,
+          })
         : await createTag(values)
 
     if (result.ok) {
@@ -106,19 +133,21 @@ const TagFormDialog = (props: TagFormDialogProps) => {
   const nameErrorId = `${nameId}-error`
   const nameHintId = `${nameId}-hint`
   const departmentErrorId = `${departmentId}-error`
+  const priorityErrorId = `${priorityId}-error`
+  const priorityHintId = `${priorityId}-hint`
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        {props.mode === "rename" ? (
+        {props.mode === "edit" ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            aria-label={`Renomear ${props.tag.name}`}
+            aria-label={`Editar ${props.tag.name}`}
           >
             <PencilIcon aria-hidden="true" className="size-3.5" />
-            Renomear
+            Editar
           </Button>
         ) : (
           <Button type="button">
@@ -135,10 +164,10 @@ const TagFormDialog = (props: TagFormDialogProps) => {
           className="flex flex-col gap-6"
         >
           <DialogHeader>
-            <DialogTitle>{isRename ? "Renomear tag" : "Nova tag"}</DialogTitle>
+            <DialogTitle>{isEdit ? "Editar tag" : "Nova tag"}</DialogTitle>
             <DialogDescription>
-              {isRename
-                ? "O novo nome aparece em todos os chamados que usam a tag."
+              {isEdit
+                ? "O novo nome aparece em todos os chamados que usam a tag. A prioridade vale só para chamados abertos daqui em diante."
                 : "A tag é criada ativa e passa a ser oferecida nos chamados do setor."}
             </DialogDescription>
           </DialogHeader>
@@ -206,6 +235,56 @@ const TagFormDialog = (props: TagFormDialogProps) => {
                 </Field>
               )}
             />
+
+            <Controller
+              name="priority"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid} className="gap-1.5">
+                  <FieldLabel htmlFor={priorityId}>
+                    {TICKET_PRIORITY_FIELD_LABEL}
+                  </FieldLabel>
+                  <Select
+                    name={field.name}
+                    value={tagPriorityToSelectValue(field.value ?? null)}
+                    onValueChange={(next) =>
+                      field.onChange(tagPriorityFromSelectValue(next))
+                    }
+                    disabled={field.disabled}
+                  >
+                    <SelectTrigger
+                      ref={field.ref}
+                      id={priorityId}
+                      onBlur={field.onBlur}
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={
+                        fieldState.invalid ? priorityErrorId : priorityHintId
+                      }
+                      className="w-full"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TAG_PRIORITY_SELECT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid ? (
+                    <FieldError
+                      id={priorityErrorId}
+                      errors={[fieldState.error]}
+                    />
+                  ) : (
+                    <FieldDescription id={priorityHintId}>
+                      {TAG_PRIORITY_FIELD_HINT}
+                    </FieldDescription>
+                  )}
+                </Field>
+              )}
+            />
           </div>
 
           <DialogFooter className="-mx-6 -mb-6 p-4">
@@ -227,8 +306,8 @@ const TagFormDialog = (props: TagFormDialogProps) => {
               ) : null}
               {isSubmitting
                 ? "Salvando…"
-                : isRename
-                  ? "Salvar nome"
+                : isEdit
+                  ? "Salvar alterações"
                   : "Criar tag"}
             </Button>
           </DialogFooter>

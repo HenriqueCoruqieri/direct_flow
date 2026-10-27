@@ -8,6 +8,20 @@ formulário e resultado de action reusados de `docs/contracts/registry-departmen
 Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 `zod@4.6.5`, `@tanstack/react-table@9`.
 
+> **Revisão de 2026-10-26 — prioridade na tag** (`docs/contracts/tag-priority.md`,
+> plano `docs/plans/tag-priority.md`, ADR 020): `tag` ganha `priority`
+> (enum `ticket_priority`, nullable; migration `0019_tag_priority`).
+> `createTagSchema` ganha `priority` (default `null`) e o tipo
+> `CreateTagFormValues`; **`renameTagSchema`/`RenameTagInput` dão lugar a
+> `updateTagSchema`/`UpdateTagInput`** (`id`, `name`, `priority`). Na data
+> layer, `insertTag(departmentId, values: TagValues)` e **`updateTag` substitui
+> `updateTagName`**; `UpdateTagNameOutcome` vira `UpdateTagOutcome`. Na action,
+> **`updateTag` substitui `renameTag`** (sucesso `Tag atualizada.`). O diálogo
+> passa do modo `rename` para `edit` (nome + prioridade) e a tabela ganha a
+> coluna **Prioridade** entre Status e Chamados. `TagListItem` e `TagOption`
+> ganham `priority`. As assinaturas abaixo já usam os nomes atuais; onde o
+> texto falar em renomear, leia editar (nome e prioridade).
+
 > **Atualizado pela feature Pessoas** (`docs/contracts/registry-people.md`):
 > o setor **Não alocado** (`department.is_unassigned`) não tem tags. Criar ou
 > reativar tag nele devolve `DEPARTMENT_UNASSIGNED`
@@ -127,7 +141,13 @@ export interface TagListItem {
   departmentIsActive: boolean
   isActive: boolean
   ticketCount: number
+  priority: TicketPriority | null
   createdAt: Date
+}
+
+export interface TagValues {
+  name: string
+  priority: TicketPriority | null
 }
 
 export interface AllDepartmentsTagScope {
@@ -166,7 +186,7 @@ export interface TagDepartmentInactive {
 export type InsertTagOutcome =
   TagSaved | TagNameTaken | TagDepartmentNotFound | TagDepartmentInactive
 
-export type UpdateTagNameOutcome = TagSaved | TagNameTaken | TagNotFound
+export type UpdateTagOutcome = TagSaved | TagNameTaken | TagNotFound
 
 export type UpdateTagActiveOutcome =
   TagSaved | TagNotFound | TagDepartmentInactive
@@ -285,11 +305,14 @@ Passa a montar os schemas com as fábricas acima. Mensagens idênticas.
 ```ts
 export const tagNameSchema
 
-export const createTagSchema // z.object({ departmentId, name })
-export type CreateTagInput = { departmentId: number; name: string }
+export const tagPrioritySchema // z.enum(TICKET_PRIORITIES).nullable()
 
-export const renameTagSchema // z.object({ id, name })
-export type RenameTagInput = { id: number; name: string }
+export const createTagSchema // z.object({ departmentId, name, priority: tagPrioritySchema.default(null) })
+export type CreateTagInput = z.infer<typeof createTagSchema>
+export type CreateTagFormValues = z.input<typeof createTagSchema>
+
+export const updateTagSchema // z.object({ id, name, priority: tagPrioritySchema })
+export type UpdateTagInput = z.infer<typeof updateTagSchema>
 
 export const setTagActiveSchema // z.object({ id, isActive })
 export type SetTagActiveInput = { id: number; isActive: boolean }
@@ -303,6 +326,11 @@ export type SetTagActiveInput = { id: number; isActive: boolean }
 | `departmentId` | inteiro positivo             | `Selecione o setor.`                          |
 | `id`           | inteiro positivo             | `Tag inválida.`                               |
 | `isActive`     | boolean                      | `Situação inválida.`                          |
+| `priority`     | enum ou `null` (ver abaixo)  | `Selecione uma prioridade válida.`            |
+
+`priority` é opcional na criação (ausente → `null`) e obrigatória na edição
+(pode ser `null`), para que um envio sem o campo não apague a prioridade da tag
+em silêncio. Detalhes em `docs/contracts/tag-priority.md`.
 
 `departmentId` é `number`, sem `coerce` (manteria o tipo de entrada `unknown` e
 quebraria o `zodResolver`). O campo de setor é o `Combobox`, que devolve o
@@ -362,12 +390,12 @@ export const getIsDirector: () => Promise<boolean>
 export async function listTags(scope: TagListScope): Promise<TagListItem[]>
 export async function insertTag(
   departmentId: number,
-  name: string,
+  values: TagValues,
 ): Promise<InsertTagOutcome>
-export async function updateTagName(
+export async function updateTag(
   id: number,
-  name: string,
-): Promise<UpdateTagNameOutcome>
+  values: TagValues,
+): Promise<UpdateTagOutcome>
 export async function updateTagActive(
   id: number,
   isActive: boolean,
@@ -398,11 +426,11 @@ export async function listDepartmentOptions(): Promise<DepartmentOption[]>
 - Inativos entram para o **filtro** achar tags de setor desativado; a criação usa
   `tagCreationDepartments(options)`, que deixa só os ativos.
 
-**`insertTag(departmentId, name)`** — numa transação:
+**`insertTag(departmentId, values)`** — numa transação:
 
 1. `select is_active from department where id = $1 for share`. Sem linha →
    `department_not_found`. `is_active = false` → `department_inactive`.
-2. `insert into tag (department_id, name) returning id` → `saved`.
+2. `insert into tag (department_id, name, priority) returning id` → `saved`.
 3. Violação `23505` em `tag_name_per_department_idx` → busca a tag existente
    (`department_id = $1 and lower(name) = lower($2)`) e devolve
    `{ status: "name_taken", existingIsActive }`.
@@ -418,9 +446,9 @@ receber o nome da constraint, em vez de copiar. Como a violação aborta a
 transação no Postgres, a busca da tag existente roda **fora** dela (depois do
 `catch`), com `db`.
 
-**`updateTagName(id, name)`**
+**`updateTag(id, values)`**
 
-- `update tag set name, updated_at where id returning id`. Zero linhas →
+- `update tag set name, priority, updated_at where id returning id`. Zero linhas →
   `not_found`. Violação de unicidade → mesma busca de `insertTag` (usando o
   `department_id` da própria tag) → `name_taken` com `existingIsActive`.
 - Mudar só a caixa do próprio nome (`rh` → `RH`) é permitido: o índice compara com
@@ -438,7 +466,7 @@ transação no Postgres, a busca da tag existente roda **fora** dela (depois do
 **`findTagDepartment(id)`**
 
 - `select department_id from tag where id = $1`. Devolve o número ou `null`.
-- Base da autorização de renomear e ativar/desativar. Como a tag nunca muda de
+- Base da autorização de editar e ativar/desativar. Como a tag nunca muda de
   setor, não há janela entre esta leitura e a escrita.
 
 ## `df-actions` — o que criar
@@ -469,7 +497,7 @@ export interface TagActionFailure {
 export type TagActionResult = TagActionSuccess | TagActionFailure
 
 export const createTag: (input: CreateTagInput) => Promise<TagActionResult>
-export const renameTag: (input: RenameTagInput) => Promise<TagActionResult>
+export const updateTag: (input: UpdateTagInput) => Promise<TagActionResult>
 export const setTagActive: (
   input: SetTagActiveInput,
 ) => Promise<TagActionResult>
@@ -484,7 +512,7 @@ Sequência:
 3. Autorização por setor:
    - `createTag`: `canManageTagsOf(access, data.departmentId)`; `false` →
      `FORBIDDEN` (admin mandando setor alheio).
-   - `renameTag` e `setTagActive`: `const departmentId = await
+   - `updateTag` e `setTagActive`: `const departmentId = await
 findTagDepartment(data.id)`; `null` → `NOT_FOUND`;
      `!canManageTagsOf(access, departmentId)` → `FORBIDDEN`. O setor vem do banco,
      nunca do input.
@@ -496,7 +524,7 @@ findTagDepartment(data.id)`; `null` → `NOT_FOUND`;
 | Situação                               | `code`                | Mensagem                                                     |
 | -------------------------------------- | --------------------- | ------------------------------------------------------------ |
 | tag criada                             | —                     | `Tag criada.`                                                |
-| tag renomeada                          | —                     | `Tag renomeada.`                                             |
+| tag atualizada                         | —                     | `Tag atualizada.`                                            |
 | tag ativada                            | —                     | `Tag ativada.`                                               |
 | tag desativada                         | —                     | `Tag desativada.`                                            |
 | sem acesso ou setor alheio             | `FORBIDDEN`           | `Você não tem permissão para gerenciar as tags deste setor.` |
@@ -561,7 +589,7 @@ const [tags, departmentOptions] = await Promise.all([
 - Tabela com `DataTable` de `app/_components/data-table/`. Colunas: **Nome**,
   **Setor** (só diretor; `DepartmentName` com badge "Setor inativo" quando
   `!departmentIsActive`), **Status** (`ActiveStatusBadge`),
-  **Chamados** (`ticketCount`), **Criado em** (`formatDate` de
+  **Prioridade** (`describeTagPriority`), **Chamados** (`ticketCount`), **Criado em** (`formatDate` de
   `@/app/_lib/date`), **Ações**.
 - Busca por nome (filtro de coluna `includesString`, como Setores).
 - Filtros pela prop `filters` do `DataTable` (botão "Filtros" com popover de
@@ -575,7 +603,11 @@ const [tags, departmentOptions] = await Promise.all([
   - Admin de setor: só **Status**.
   - Nenhuma opção marcada no grupo = grupo sem filtro. Dentro do grupo as opções
     somam (OU); entre grupos, todas precisam bater (E).
-- Formulário criar/renomear: React Hook Form + `zodResolver`.
+- Formulário criar/editar (`TagFormDialog`, `mode="create"` ou `mode="edit"`):
+  React Hook Form + `zodResolver(createTagSchema)`, com
+  `useForm<CreateTagFormValues, unknown, CreateTagInput>`. Os dois modos têm o
+  campo **Prioridade** (Select com `TAG_PRIORITY_SELECT_OPTIONS` e
+  `TAG_PRIORITY_FIELD_HINT`, ver `docs/contracts/tag-priority.md`).
   - Criar, diretor: `createTagSchema`, campo `departmentId` em `Combobox`
     (`app/_components/combobox.tsx`, API em "Peças compartilhadas" de
     `docs/contracts/registry-people.md`) com
@@ -584,16 +616,16 @@ const [tags, departmentOptions] = await Promise.all([
     acentos). O `onChange` já entrega o `id` numérico.
   - Criar, admin: `createTagSchema` com `departmentId` fixo em `defaultValues`
     (`access.departmentId`), sem campo visível.
-  - Renomear: só `name` no formulário (valide com `renameTagSchema.pick({ name: true })`
-    ou `createTagSchema.pick({ name: true })`); o `id` vem da linha; a action
-    valida o input completo com `renameTagSchema`.
+  - Editar: `name` e `priority` no formulário, com os valores atuais da tag em
+    `defaultValues`; o `id` vem da linha; a action recebe `{ id, name,
+priority }` e valida o input completo com `updateTagSchema`.
   - `NAME_TAKEN` → erro no campo `name` com `result.message`; resto → toast.
 - Ativar/desativar: desativar com `AlertDialog` de confirmação ("a tag deixa de
   ser oferecida em chamados novos; chamados existentes não mudam"). "Ativar"
   desabilitado quando `!departmentIsActive`, explicando com
   `TAG_DEPARTMENT_INACTIVE_MESSAGE`. A action continua sendo a autoridade.
 - Ações por linha (`tag-row-actions.tsx`) em `RegistryRowActions`, com os slots
-  `rename` (`fit`, `TagFormDialog mode="rename"`) e `status` (`md`,
+  de edição (`fit`, `TagFormDialog mode="edit"`) e `status` (`md`,
   `DeactivateRegistryDialog` ou `ReactivateRegistryButton`).
 - Client Components não importam `@/db/*`, `drizzle-orm`, `app/_lib/data` nem
   `app/_lib/auth`.
@@ -617,8 +649,8 @@ const [tags, departmentOptions] = await Promise.all([
 ## Checklist de encerramento da feature
 
 - [ ] `getRegistryAccess`, `requireRegistryAccess` em `app/_lib/auth/registry-access.ts`; `director.ts` derivado deles (`df-auth`)
-- [ ] `listTags`, `insertTag`, `updateTagName`, `updateTagActive`, `findTagDepartment` em `app/_lib/data/tags.ts`; `listDepartmentOptions` em `app/_lib/data/departments.ts` (`df-data`)
-- [ ] `createTag`, `renameTag`, `setTagActive` em `app/_lib/actions/tags.ts` (`df-actions`)
+- [ ] `listTags`, `insertTag`, `updateTag`, `updateTagActive`, `findTagDepartment` em `app/_lib/data/tags.ts`, com `priority` gravada e lida; `listDepartmentOptions` em `app/_lib/data/departments.ts` (`df-data`)
+- [ ] `createTag`, `updateTag`, `setTagActive` em `app/_lib/actions/tags.ts` (`df-actions`)
 - [ ] sidebar por acesso; `/registry` com `requireRegistryAccess`; `/registry/departments` com `requireDirector`; `/registry/tags` completa (`df-ui`)
 - [ ] membro comum: sem "Cadastros" e 404 em `/registry/tags` e `/registry/departments` (`df-debug`)
 - [ ] admin de setor: vê Pessoas e Tags; 404 em `/registry/departments`; tabela só do setor dele, sem coluna nem filtro de setor (`df-debug`)

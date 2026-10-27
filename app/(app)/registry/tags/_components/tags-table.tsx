@@ -7,9 +7,12 @@ import DataTable from "@/app/_components/data-table/data-table"
 import type { DataTableFeatures } from "@/app/_components/data-table/data-table-features"
 import type { DataTableFilter } from "@/app/_components/data-table/data-table-filters"
 import { formatDate } from "@/app/_lib/date"
+import { describeTagPriority } from "@/app/_lib/domain/tag-priority"
+import { TICKET_PRIORITY_FIELD_LABEL } from "@/app/_lib/domain/ticket"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type { TagListItem } from "@/app/_lib/types/tag"
 
+import TicketPriorityText from "../../../_components/ticket-priority-text"
 import ActiveStatusBadge from "../../_components/active-status-badge"
 import activeStatusFilter from "../../_components/active-status-filter"
 import DepartmentName from "../../_components/department-name"
@@ -41,6 +44,20 @@ const statusColumn = columnHelper.accessor("isActive", {
   cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue()} />,
 })
 
+const priorityColumn = columnHelper.accessor("priority", {
+  header: TICKET_PRIORITY_FIELD_LABEL,
+  cell: ({ getValue }) => {
+    const priority = getValue()
+    return priority === null ? (
+      <span className="text-muted-foreground">
+        {describeTagPriority(priority)}
+      </span>
+    ) : (
+      <TicketPriorityText priority={priority} />
+    )
+  },
+})
+
 const ticketCountColumn = columnHelper.accessor("ticketCount", {
   header: "Chamados",
   cell: ({ getValue }) => <span className="tabular-nums">{getValue()}</span>,
@@ -65,6 +82,7 @@ const directorColumns = columnHelper.columns([
   nameColumn,
   departmentColumn,
   statusColumn,
+  priorityColumn,
   ticketCountColumn,
   createdAtColumn,
   actionsColumn,
@@ -73,6 +91,7 @@ const directorColumns = columnHelper.columns([
 const departmentAdminColumns = columnHelper.columns([
   nameColumn,
   statusColumn,
+  priorityColumn,
   ticketCountColumn,
   createdAtColumn,
   actionsColumn,

@@ -1,3 +1,5 @@
+import type { TicketPriority } from "@/db/schema"
+
 export interface TagListItem {
   id: number
   name: string
@@ -5,6 +7,7 @@ export interface TagListItem {
   departmentName: string
   departmentIsActive: boolean
   isActive: boolean
+  priority: TicketPriority | null
   ticketCount: number
   createdAt: Date
 }
@@ -12,6 +15,22 @@ export interface TagListItem {
 export interface TagOption {
   id: number
   name: string
+  priority: TicketPriority | null
+}
+
+export interface TagValues {
+  name: string
+  priority: TicketPriority | null
+}
+
+export interface TicketPriorityLock {
+  priority: TicketPriority
+  hint: string
+}
+
+export interface TagPrioritySelectOption {
+  value: string
+  label: string
 }
 
 export interface AllDepartmentsTagScope {
@@ -65,7 +84,7 @@ export type InsertTagOutcome =
   | TagDepartmentInactive
   | TagDepartmentUnassigned
 
-export type UpdateTagNameOutcome = TagSaved | TagNameTaken | TagNotFound
+export type UpdateTagOutcome = TagSaved | TagNameTaken | TagNotFound
 
 export type UpdateTagActiveOutcome =
   TagSaved | TagNotFound | TagDepartmentInactive | TagDepartmentUnassigned

@@ -159,6 +159,7 @@ export const tag = pgTable(
       .notNull()
       .references(() => department.id, { onDelete: "restrict" }),
     isActive: boolean("is_active").default(true).notNull(),
+    priority: ticketPriorityEnum("priority"),
     ...timestamps,
   },
   (table) => [

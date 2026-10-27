@@ -6,8 +6,8 @@ import { getRegistryAccess } from "@/app/_lib/auth/registry-access"
 import {
   findTagDepartment,
   insertTag,
+  updateTag as saveTag,
   updateTagActive,
-  updateTagName,
 } from "@/app/_lib/data/tags"
 import {
   hasRegistryAccess,
@@ -23,15 +23,15 @@ import type { GrantedRegistryAccess } from "@/app/_lib/types/registry"
 import type {
   InsertTagOutcome,
   UpdateTagActiveOutcome,
-  UpdateTagNameOutcome,
+  UpdateTagOutcome,
 } from "@/app/_lib/types/tag"
 import {
   type CreateTagInput,
   createTagSchema,
-  type RenameTagInput,
-  renameTagSchema,
   type SetTagActiveInput,
   setTagActiveSchema,
+  type UpdateTagInput,
+  updateTagSchema,
 } from "@/app/_lib/validation/tag"
 
 export type TagErrorCode =
@@ -56,7 +56,7 @@ export interface TagActionFailure {
 export type TagActionResult = TagActionSuccess | TagActionFailure
 
 const TAG_CREATED_MESSAGE = "Tag criada."
-const TAG_RENAMED_MESSAGE = "Tag renomeada."
+const TAG_UPDATED_MESSAGE = "Tag atualizada."
 const TAG_ACTIVATED_MESSAGE = "Tag ativada."
 const TAG_DEACTIVATED_MESSAGE = "Tag desativada."
 const FORBIDDEN_MESSAGE =
@@ -141,7 +141,10 @@ export const createTag = async (
   let outcome: InsertTagOutcome
 
   try {
-    outcome = await insertTag(parsed.data.departmentId, parsed.data.name)
+    outcome = await insertTag(parsed.data.departmentId, {
+      name: parsed.data.name,
+      priority: parsed.data.priority,
+    })
   } catch (error) {
     console.error("[createTag]", error)
     return UNEXPECTED_FAILURE
@@ -164,24 +167,27 @@ export const createTag = async (
   return { ok: true, message: TAG_CREATED_MESSAGE }
 }
 
-export const renameTag = async (
-  input: RenameTagInput,
+export const updateTag = async (
+  input: UpdateTagInput,
 ): Promise<TagActionResult> => {
   const access = await getRegistryAccess()
   if (!hasRegistryAccess(access)) return FORBIDDEN_FAILURE
 
-  const parsed = renameTagSchema.safeParse(input)
+  const parsed = updateTagSchema.safeParse(input)
   if (!parsed.success) return invalidInput(parsed.error.issues[0]?.message)
 
-  let outcome: UpdateTagNameOutcome
+  let outcome: UpdateTagOutcome
 
   try {
     const denial = await authorizeStoredTag(access, parsed.data.id)
     if (denial) return denial
 
-    outcome = await updateTagName(parsed.data.id, parsed.data.name)
+    outcome = await saveTag(parsed.data.id, {
+      name: parsed.data.name,
+      priority: parsed.data.priority,
+    })
   } catch (error) {
-    console.error("[renameTag]", error)
+    console.error("[updateTag]", error)
     return UNEXPECTED_FAILURE
   }
 
@@ -191,7 +197,7 @@ export const renameTag = async (
 
   revalidatePath(TAGS_REGISTRY_PATH)
 
-  return { ok: true, message: TAG_RENAMED_MESSAGE }
+  return { ok: true, message: TAG_UPDATED_MESSAGE }
 }
 
 export const setTagActive = async (

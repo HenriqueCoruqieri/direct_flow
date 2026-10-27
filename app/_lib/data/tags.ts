@@ -7,8 +7,9 @@ import type {
   TagListItem,
   TagListScope,
   TagOption,
+  TagValues,
   UpdateTagActiveOutcome,
-  UpdateTagNameOutcome,
+  UpdateTagOutcome,
 } from "@/app/_lib/types/tag"
 import { db } from "@/db"
 import { department, tag, ticketTag } from "@/db/schema"
@@ -46,6 +47,7 @@ export async function listTags(scope: TagListScope): Promise<TagListItem[]> {
       departmentName: department.name,
       departmentIsActive: department.isActive,
       isActive: tag.isActive,
+      priority: tag.priority,
       ticketCount: db.$count(ticketTag, eq(ticketTag.tagId, tag.id)),
       createdAt: tag.createdAt,
     })
@@ -68,7 +70,7 @@ export async function listActiveDepartmentTags(
   departmentId: number,
 ): Promise<TagOption[]> {
   return db
-    .select({ id: tag.id, name: tag.name })
+    .select({ id: tag.id, name: tag.name, priority: tag.priority })
     .from(tag)
     .where(and(eq(tag.departmentId, departmentId), eq(tag.isActive, true)))
     .orderBy(sql`lower(${tag.name})`, tag.id)
@@ -76,7 +78,7 @@ export async function listActiveDepartmentTags(
 
 export async function insertTag(
   departmentId: number,
-  name: string,
+  values: TagValues,
 ): Promise<InsertTagOutcome> {
   try {
     return await db.transaction(async (tx) => {
@@ -100,17 +102,21 @@ export async function insertTag(
 
       const [row] = await tx
         .insert(tag)
-        .values({ departmentId, name })
+        .values({
+          departmentId,
+          name: values.name,
+          priority: values.priority,
+        })
         .returning({ id: tag.id })
 
       return { status: "saved", id: row.id }
     })
   } catch (error) {
     if (isUniqueViolation(error, TAG_NAME_PER_DEPARTMENT_CONSTRAINT)) {
-      const existing = await findExistingTagByName(departmentId, name)
+      const existing = await findExistingTagByName(departmentId, values.name)
       if (!existing) {
         throw new Error(
-          `Tag "${name}" não encontrada após violação de unicidade no setor ${departmentId}.`,
+          `Tag "${values.name}" não encontrada após violação de unicidade no setor ${departmentId}.`,
         )
       }
       return { status: "name_taken", existingIsActive: existing.isActive }
@@ -119,14 +125,18 @@ export async function insertTag(
   }
 }
 
-export async function updateTagName(
+export async function updateTag(
   id: number,
-  name: string,
-): Promise<UpdateTagNameOutcome> {
+  values: TagValues,
+): Promise<UpdateTagOutcome> {
   try {
     const [row] = await db
       .update(tag)
-      .set({ name, updatedAt: new Date() })
+      .set({
+        name: values.name,
+        priority: values.priority,
+        updatedAt: new Date(),
+      })
       .where(eq(tag.id, id))
       .returning({ id: tag.id })
 
@@ -142,10 +152,10 @@ export async function updateTagName(
         throw new Error(`Tag ${id} não encontrada ao tratar conflito de nome.`)
       }
 
-      const existing = await findExistingTagByName(tagDepartmentId, name)
+      const existing = await findExistingTagByName(tagDepartmentId, values.name)
       if (!existing) {
         throw new Error(
-          `Tag "${name}" não encontrada após violação de unicidade no setor ${tagDepartmentId}.`,
+          `Tag "${values.name}" não encontrada após violação de unicidade no setor ${tagDepartmentId}.`,
         )
       }
       return { status: "name_taken", existingIsActive: existing.isActive }
