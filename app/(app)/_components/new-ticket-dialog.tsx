@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import { Button } from "@/app/_components/ui/button"
@@ -21,6 +21,11 @@ import {
 import { Field, FieldLabel } from "@/app/_components/ui/field"
 import { Input } from "@/app/_components/ui/input"
 import { createTicket } from "@/app/_lib/actions/tickets"
+import {
+  ticketPriorityLockFor,
+  ticketPriorityOnTagChange,
+} from "@/app/_lib/domain/tag-priority"
+import { INITIAL_TICKET_PRIORITY } from "@/app/_lib/domain/ticket"
 import { TICKET_CREATOR_LABEL } from "@/app/_lib/domain/ticket-assignee"
 import type { NewTicketFormAvailable } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
@@ -67,6 +72,9 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
     resolver: zodResolver(createTicketSchema),
     defaultValues: options.defaults,
   })
+
+  const selectedTagId = useWatch({ control: form.control, name: "tagId" })
+  const priorityLock = ticketPriorityLockFor(options.tags, selectedTagId)
 
   const isSubmitting = form.formState.isSubmitting
   const submitBlockMessage = attachmentUploadsBlockMessage(uploadsBusy)
@@ -222,6 +230,9 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                   <TicketPriorityField
                     id={priorityId}
                     {...field}
+                    value={priorityLock ? priorityLock.priority : field.value}
+                    disabled={priorityLock !== null || field.disabled}
+                    hint={priorityLock?.hint}
                     fieldState={fieldState}
                   />
                 )}
@@ -236,6 +247,19 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                   id={tagId}
                   label="Tags"
                   {...field}
+                  onChange={(nextTagId) => {
+                    form.setValue(
+                      "priority",
+                      ticketPriorityOnTagChange(
+                        options.tags,
+                        field.value,
+                        nextTagId,
+                        form.getValues("priority") ?? INITIAL_TICKET_PRIORITY,
+                      ),
+                      { shouldDirty: true },
+                    )
+                    field.onChange(nextTagId)
+                  }}
                   fieldState={fieldState}
                   tags={options.tags}
                   hint={TAG_HINT}

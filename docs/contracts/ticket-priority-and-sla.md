@@ -11,6 +11,17 @@ para cá): `ticket-creation.md`, `dashboard-overview.md`, `my-tickets.md`,
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `react-hook-form@7.88`, `@hookform/resolvers@5.9`.
 
+> **Revisão de 2026-10-26 — prioridade definida pela tag**
+> (`docs/contracts/tag-priority.md`, ADR 020). A prioridade do chamado passa a
+> ser `resolveTicketPriority(tag.priority, escolhida)`: tag com prioridade
+> impõe a dela (Select travado na abertura, valor enviado ignorado no
+> servidor); tag sem prioridade mantém a escolha livre descrita aqui. A
+> prioridade é resolvida e gravada uma vez, na abertura, e o SLA deste contrato
+> parte dela; trocar a tag depois ou mudar a prioridade da tag no cadastro não
+> altera `ticket.priority` nem o vencimento de chamados existentes. O schema
+> deixa de ser "sem mudança": `tag.priority` entra pela migration
+> `0019_tag_priority`.
+
 ---
 
 ## Tabelas, enums e migration

@@ -9,6 +9,20 @@ resultado de action e de formulário vêm de `docs/contracts/registry-tags.md` e
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`.
 
+## Revisão de 2026-10-26 — prioridade definida pela tag
+
+Decidida no plano `docs/plans/tag-priority.md`; referência técnica em
+`docs/contracts/tag-priority.md`; ADR 020. A escolha do autor (revisão abaixo)
+passa a valer só quando a tag não tem prioridade. `createTicketSchema` **não
+muda**. `insertTicket` lê `tag.priority` na mesma leitura `for share` do passo
+1 e grava `resolveTicketPriority(tagRow.priority, values.priority)`
+(`app/_lib/domain/tag-priority.ts`) no ticket e no `toPriority` da `criacao`;
+onde o texto abaixo diz `values.priority` na gravação, leia a prioridade
+resolvida. `createTicket` não muda. `TagOption` ganha `priority`, e o
+formulário trava o Select quando `ticketPriorityLockFor(options.tags, tagId)`
+não é `null` (hint `Definida pela tag <nome>`). A prioridade é fixa depois da
+abertura: troca de tag não a altera.
+
 ## Revisão de 2026-10-26 — o autor escolhe a prioridade
 
 Decidida no plano `docs/plans/ticket-priority-and-sla.md`; referência técnica

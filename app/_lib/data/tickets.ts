@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { lockActorFacts } from "@/app/_lib/data/actor-facts"
+import { resolveTicketPriority } from "@/app/_lib/domain/tag-priority"
 import {
   canViewTicket,
   CLOSED_TICKET_STATUS,
@@ -235,7 +236,11 @@ export async function insertTicket(
 ): Promise<InsertTicketOutcome> {
   return db.transaction(async (tx) => {
     const [tagRow] = await tx
-      .select({ departmentId: tag.departmentId, isActive: tag.isActive })
+      .select({
+        departmentId: tag.departmentId,
+        isActive: tag.isActive,
+        priority: tag.priority,
+      })
       .from(tag)
       .where(eq(tag.id, values.tagId))
       .for("share")
@@ -243,6 +248,8 @@ export async function insertTicket(
     if (!tagRow || !isUsableTicketTag(tagRow, values.originDepartmentId)) {
       return { status: "invalid_tag" }
     }
+
+    const priority = resolveTicketPriority(tagRow.priority, values.priority)
 
     if (values.assigneeId !== null) {
       const [assigneeRow] = await tx
@@ -270,7 +277,7 @@ export async function insertTicket(
         description: values.description,
         type: values.type,
         status: initialStatus,
-        priority: values.priority,
+        priority,
         createdBy: values.createdBy,
         assignedTo: values.assigneeId,
         originDepartmentId: values.originDepartmentId,
@@ -289,7 +296,7 @@ export async function insertTicket(
       changedBy: values.createdBy,
       event: "criacao",
       toStatus: initialStatus,
-      toPriority: values.priority,
+      toPriority: priority,
       toDepartmentId: values.originDepartmentId,
       toAssigneeId: values.assigneeId,
       changedAt: created.createdAt,

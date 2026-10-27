@@ -1,6 +1,11 @@
 import type { ControllerFieldState } from "react-hook-form"
 
-import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/app/_components/ui/field"
 import {
   Select,
   SelectContent,
@@ -24,6 +29,7 @@ interface TicketPriorityFieldProps {
   onBlur: () => void
   ref?: React.Ref<HTMLButtonElement>
   fieldState: ControllerFieldState
+  hint?: string
 }
 
 const ticketPriorityFromValue = (value: string): TicketPriority | undefined =>
@@ -38,8 +44,12 @@ const TicketPriorityField = ({
   onBlur,
   ref,
   fieldState,
+  hint,
 }: TicketPriorityFieldProps) => {
   const errorId = `${id}-error`
+  const hintId = `${id}-hint`
+  const showHint = !fieldState.invalid && hint !== undefined
+  const visibleHintId = showHint ? hintId : undefined
 
   return (
     <Field data-invalid={fieldState.invalid} className="min-w-0 gap-1.5">
@@ -55,7 +65,7 @@ const TicketPriorityField = ({
           id={id}
           onBlur={onBlur}
           aria-invalid={fieldState.invalid}
-          aria-describedby={fieldState.invalid ? errorId : undefined}
+          aria-describedby={fieldState.invalid ? errorId : visibleHintId}
           className="w-full"
         >
           <SelectValue placeholder="Selecione a prioridade" />
@@ -70,6 +80,9 @@ const TicketPriorityField = ({
       </Select>
       {fieldState.invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
+      {showHint ? (
+        <FieldDescription id={hintId}>{hint}</FieldDescription>
       ) : null}
     </Field>
   )
