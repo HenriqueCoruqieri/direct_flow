@@ -1,6 +1,5 @@
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import {
-  INITIAL_TICKET_PRIORITY,
   TICKET_PRIORITIES,
   TICKET_PRIORITY_LABELS,
 } from "@/app/_lib/domain/ticket"
@@ -59,10 +58,10 @@ export const ticketPriorityOnTagChange = (
   tags: readonly TagOption[],
   previousTagId: number | null | undefined,
   nextTagId: number | null | undefined,
-  current: TicketPriority,
-): TicketPriority => {
+  current: TicketPriority | undefined,
+): TicketPriority | undefined => {
   const nextLock = ticketPriorityLockFor(tags, nextTagId)
   if (nextLock) return nextLock.priority
-  if (ticketPriorityLockFor(tags, previousTagId)) return INITIAL_TICKET_PRIORITY
+  if (ticketPriorityLockFor(tags, previousTagId)) return undefined
   return current
 }

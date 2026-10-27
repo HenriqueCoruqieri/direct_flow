@@ -108,6 +108,10 @@ export const TICKET_PRIORITIES: readonly TicketPriority[] = Object.keys(
 
 export const TICKET_PRIORITY_FIELD_LABEL = "Prioridade"
 
+export const TICKET_PRIORITY_PLACEHOLDER = "Nenhuma"
+
+export const TICKET_PRIORITY_REQUIRED_HINT = "Defina uma prioridade"
+
 export const TICKET_TYPE_LABELS = {
   duvida: "Dúvida",
   ocorrencia: "Ocorrência",
@@ -130,8 +134,6 @@ export const TICKET_TITLE_MAX_LENGTH = 200
 export const TICKET_DESCRIPTION_MIN_LENGTH = 10
 
 export const TICKET_DESCRIPTION_MAX_LENGTH = 5000
-
-export const INITIAL_TICKET_PRIORITY: TicketPriority = "media"
 
 export const RESOLVED_TICKET_STATUS =
   "resolvido" as const satisfies TicketStatus
@@ -253,7 +255,7 @@ export const buildNewTicketFormOptions = (
     defaults: {
       title: "",
       description: "",
-      priority: INITIAL_TICKET_PRIORITY,
+      priority: undefined,
       assigneeId: null,
       attachments: [],
     },

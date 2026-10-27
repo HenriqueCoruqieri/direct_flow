@@ -1,7 +1,6 @@
 import { z } from "zod"
 
 import {
-  INITIAL_TICKET_PRIORITY,
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_DESCRIPTION_MIN_LENGTH,
   TICKET_PRIORITIES,
@@ -79,7 +78,7 @@ const ticketFieldsSchema = z.object({
 })
 
 export const createTicketSchema = ticketFieldsSchema.extend({
-  priority: ticketPrioritySchema.default(INITIAL_TICKET_PRIORITY),
+  priority: ticketPrioritySchema.optional().pipe(ticketPrioritySchema),
   attachments: uploadedAttachmentsSchema.optional(),
 })
 

@@ -23,6 +23,18 @@ formulário trava o Select quando `ticketPriorityLockFor(options.tags, tagId)`
 não é `null` (hint `Definida pela tag <nome>`). A prioridade é fixa depois da
 abertura: troca de tag não a altera.
 
+## Revisão de 2026-10-26 — prioridade sem pré-seleção
+
+Referência: `docs/contracts/tag-priority.md`. O Select "Prioridade" **não vem
+mais em Média**: começa vazio, com o placeholder `Nenhuma`
+(`TICKET_PRIORITY_PLACEHOLDER`), e o autor precisa escolher, salvo quando a tag
+escolhida trava a prioridade. `createTicketSchema.priority` fica obrigatória,
+sem default (`Selecione a prioridade do chamado.` se ausente).
+`INITIAL_TICKET_PRIORITY` foi removido; `NewTicketFormDefaults.priority` é
+`TicketPriority | undefined` e `buildNewTicketFormOptions` devolve
+`undefined`. O default `media` da coluna `ticket.priority` no banco continua.
+Prevalece sobre a revisão logo abaixo onde ela fala em Média.
+
 ## Revisão de 2026-10-26 — o autor escolhe a prioridade
 
 Decidida no plano `docs/plans/ticket-priority-and-sla.md`; referência técnica
@@ -302,7 +314,6 @@ export const TICKET_TITLE_MIN_LENGTH = 3
 export const TICKET_TITLE_MAX_LENGTH = 200
 export const TICKET_DESCRIPTION_MIN_LENGTH = 10
 export const TICKET_DESCRIPTION_MAX_LENGTH = 5000
-export const INITIAL_TICKET_PRIORITY: TicketPriority // "media"
 export const TICKET_CREATION_BLOCK_MESSAGES: Record<
   TicketCreationBlockReason,
   string
@@ -324,18 +335,18 @@ export const buildNewTicketFormOptions: (
 export const describeTicketCreated: (ticketId: number) => string
 ```
 
-| Nome                        | Semântica                                                                                                                                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TICKET_TYPES`              | Os 6 valores de `ticket_type`, na ordem de exibição. Derivado das chaves de `TICKET_TYPE_LABELS`: o `satisfies Record` garante cobertura total do enum. Alimenta `z.enum` e o `Select`                   |
-| `TICKET_TYPE_LABELS`        | `Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`. Única fonte dos rótulos em todo o projeto                                                                             |
-| `TICKET_*_LENGTH`           | Limites de título e descrição, para o schema e para contador de caracteres na UI                                                                                                                         |
-| ~~`INITIAL_TICKET_STATUS`~~ | Removido na revisão de 2026-10-06. O status de criação vem de `creationStatusFor` (`app/_lib/domain/ticket-assignment.ts`): fila → `aberto`, autor → `em_andamento`, colega → `encaminhado`              |
-| `INITIAL_TICKET_PRIORITY`   | `media`. Desde 2026-10-26, só o valor inicial do Select e o `default` do schema; o autor escolhe a prioridade                                                                                            |
-| `formatTicketNumber`        | `42` → `#42`. Número visível do chamado é o `ticket.id`                                                                                                                                                  |
-| `checkTicketCreation`       | Nesta ordem: inativo → `USER_INACTIVE`; `mustChangePassword` → `PASSWORD_CHANGE_REQUIRED`; Não alocado → `DEPARTMENT_UNASSIGNED`; `activeTagCount < 1` → `DEPARTMENT_WITHOUT_TAGS`; senão `{ ok: true }` |
-| `isUsableTicketTag`         | Tag ativa **e** do setor do autor                                                                                                                                                                        |
-| `buildNewTicketFormOptions` | Bloqueado → `{ canCreate: false, reason, message }`. Liberado → `{ canCreate: true, tags }`                                                                                                              |
-| `describeTicketCreated`     | Mensagem de sucesso da action (texto abaixo)                                                                                                                                                             |
+| Nome                          | Semântica                                                                                                                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TICKET_TYPES`                | Os 6 valores de `ticket_type`, na ordem de exibição. Derivado das chaves de `TICKET_TYPE_LABELS`: o `satisfies Record` garante cobertura total do enum. Alimenta `z.enum` e o `Select`                   |
+| `TICKET_TYPE_LABELS`          | `Dúvida`, `Ocorrência`, `Solicitação`, `Sugestão de melhoria`, `Incidente`, `Bug`. Única fonte dos rótulos em todo o projeto                                                                             |
+| `TICKET_*_LENGTH`             | Limites de título e descrição, para o schema e para contador de caracteres na UI                                                                                                                         |
+| ~~`INITIAL_TICKET_STATUS`~~   | Removido na revisão de 2026-10-06. O status de criação vem de `creationStatusFor` (`app/_lib/domain/ticket-assignment.ts`): fila → `aberto`, autor → `em_andamento`, colega → `encaminhado`              |
+| ~~`INITIAL_TICKET_PRIORITY`~~ | Removido na revisão de 2026-10-26 (prioridade sem pré-seleção). O Select começa vazio, com o placeholder `TICKET_PRIORITY_PLACEHOLDER` (`Nenhuma`)                                                       |
+| `formatTicketNumber`          | `42` → `#42`. Número visível do chamado é o `ticket.id`                                                                                                                                                  |
+| `checkTicketCreation`         | Nesta ordem: inativo → `USER_INACTIVE`; `mustChangePassword` → `PASSWORD_CHANGE_REQUIRED`; Não alocado → `DEPARTMENT_UNASSIGNED`; `activeTagCount < 1` → `DEPARTMENT_WITHOUT_TAGS`; senão `{ ok: true }` |
+| `isUsableTicketTag`           | Tag ativa **e** do setor do autor                                                                                                                                                                        |
+| `buildNewTicketFormOptions`   | Bloqueado → `{ canCreate: false, reason, message }`. Liberado → `{ canCreate: true, tags }`                                                                                                              |
+| `describeTicketCreated`       | Mensagem de sucesso da action (texto abaixo)                                                                                                                                                             |
 
 Textos:
 
@@ -759,8 +770,9 @@ Os do plano, com os nomes técnicos:
 1. Membro cria com tag do próprio setor e destinatário padrão (fila; outros
    destinatários seguem `creationStatusFor`, revisão de 2026-10-06) →
    `ticket.status = aberto`,
-   `origin = current` = setor do autor, `priority` = a escolhida (Média se
-   não mudar o Select; revisão de 2026-10-26), 1 linha em
+   `origin = current` = setor do autor, `priority` = a escolhida (obrigatória:
+   sem escolha, erro `Selecione a prioridade do chamado.` no campo; revisão de
+   2026-10-26), 1 linha em
    `ticket_tag`, 1 linha em `ticket_history` (`criacao`, `to_status = aberto`),
    nenhum `ticket_transfer`; toast `Chamado #N criado.`; card "Chamados no
    período" do Início +1.

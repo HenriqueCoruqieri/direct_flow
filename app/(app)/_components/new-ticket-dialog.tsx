@@ -25,7 +25,6 @@ import {
   ticketPriorityLockFor,
   ticketPriorityOnTagChange,
 } from "@/app/_lib/domain/tag-priority"
-import { INITIAL_TICKET_PRIORITY } from "@/app/_lib/domain/ticket"
 import { TICKET_CREATOR_LABEL } from "@/app/_lib/domain/ticket-assignee"
 import type { NewTicketFormAvailable } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
@@ -254,9 +253,12 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                         options.tags,
                         field.value,
                         nextTagId,
-                        form.getValues("priority") ?? INITIAL_TICKET_PRIORITY,
+                        form.getValues("priority"),
                       ),
-                      { shouldDirty: true },
+                      {
+                        shouldDirty: true,
+                        shouldValidate: form.formState.isSubmitted,
+                      },
                     )
                     field.onChange(nextTagId)
                   }}

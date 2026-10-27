@@ -90,7 +90,7 @@ export type InsertTicketOutcome =
 export interface NewTicketFormDefaults {
   title: string
   description: string
-  priority: TicketPriority
+  priority: TicketPriority | undefined
   assigneeId: number | null
   attachments: UploadedAttachmentRef[]
 }

@@ -22,6 +22,17 @@ Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 > deixa de ser "sem mudança": `tag.priority` entra pela migration
 > `0019_tag_priority`.
 
+> **Revisão de 2026-10-26 — prioridade sem pré-seleção**
+> (`docs/contracts/tag-priority.md`). O Select de prioridade da abertura não
+> vem mais com Média: começa vazio, com o placeholder `Nenhuma`
+> (`TICKET_PRIORITY_PLACEHOLDER`), e o autor escolhe (a menos que a tag
+> trave). `createTicketSchema.priority` perde o `default` e passa a ser
+> obrigatória; `INITIAL_TICKET_PRIORITY` sai do domínio;
+> `NewTicketFormDefaults.priority` vira `TicketPriority | undefined` e
+> `buildNewTicketFormOptions` devolve `undefined`. O default `media` da coluna
+> `ticket.priority` no banco continua (sem migration). Os trechos abaixo já
+> estão atualizados.
+
 ---
 
 ## Tabelas, enums e migration
@@ -136,14 +147,15 @@ export const formatTimeUntil: (value: DateInput, now: DateInput) => string
 
 ```ts
 export const TICKET_PRIORITY_FIELD_LABEL = "Prioridade"
-export const INITIAL_TICKET_PRIORITY: TicketPriority
+export const TICKET_PRIORITY_PLACEHOLDER = "Nenhuma"
 ```
 
 - `TICKET_PRIORITY_FIELD_LABEL`: rótulo do Select no formulário de abertura e
   do campo no card Detalhes. `OVERDUE_COLUMN_LABELS.priority` passou a usá-lo.
-- `INITIAL_TICKET_PRIORITY` (`media`) agora é **só** o valor inicial do
-  formulário e o `default` do schema. `buildNewTicketFormOptions` devolve
-  `defaults.priority = INITIAL_TICKET_PRIORITY`.
+- `TICKET_PRIORITY_PLACEHOLDER`: placeholder do Select vazio. Não é opção nem
+  valor: não vira `SelectItem` e não passa na validação.
+- `INITIAL_TICKET_PRIORITY` foi removido (revisão de 2026-10-26).
+  `buildNewTicketFormOptions` devolve `defaults.priority = undefined`.
 - Ordem das opções do Select: `TICKET_PRIORITIES` (Baixa, Média, Alta,
   Crítica); rótulos de `TICKET_PRIORITY_LABELS`.
 
@@ -218,7 +230,8 @@ export interface TicketSlaCell {
 `ticket.ts`:
 
 - `InsertTicketValues` ganha `priority: TicketPriority` (obrigatório).
-- `NewTicketFormDefaults` ganha `priority: TicketPriority`.
+- `NewTicketFormDefaults` ganha `priority: TicketPriority | undefined`
+  (`undefined` = Select vazio).
 
 `my-tickets.ts` — `MyTicketListItem` ganha `priority: TicketPriority` e
 `resolvedAt: Date | null`.
@@ -243,7 +256,7 @@ export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES, {
 })
 
 export const createTicketSchema = ticketFieldsSchema.extend({
-  priority: ticketPrioritySchema.default(INITIAL_TICKET_PRIORITY),
+  priority: ticketPrioritySchema.optional().pipe(ticketPrioritySchema),
   attachments: uploadedAttachmentsSchema.optional(),
 })
 
@@ -253,8 +266,15 @@ export type CreateTicketFormValues = z.input<typeof createTicketSchema>
 
 - `priority` entra **só** em `createTicketSchema`. `editTicketSchema` não muda
   (sem edição de prioridade depois da abertura).
-- Com o `default`, a entrada e a saída do schema divergem (`priority` opcional
-  na entrada, obrigatória na saída). Por isso o tipo novo
+- `priority` é **obrigatória**, sem default. O `.optional().pipe(...)` só
+  existe para o tipo de entrada: `CreateTicketFormValues["priority"]` é
+  `TicketPriority | undefined` (o form começa vazio) e
+  `CreateTicketInput["priority"]` é `TicketPriority`. Em tempo de execução,
+  ausente ou `undefined` falha no `pipe` com `Selecione a prioridade do
+chamado.` (path `priority`), igual a um valor fora do enum. A action não
+  muda: `safeParse` já devolve o erro de campo.
+- A entrada e a saída do schema divergem (`priority` opcional na entrada,
+  obrigatória na saída). Por isso o tipo novo
   `CreateTicketFormValues`: o formulário usa
   `useForm<CreateTicketFormValues, unknown, CreateTicketInput>`, e o
   `handleSubmit` entrega `CreateTicketInput` (com `priority`). Sem isso o
@@ -372,11 +392,12 @@ extends TicketListRow, TicketSlaFacts` em `ticket-list-row.ts` e
 ### Formulário de abertura — `app/(app)/_components/new-ticket-dialog.tsx`
 
 - Select de prioridade (`Controller`), rótulo `TICKET_PRIORITY_FIELD_LABEL`,
-  opções `TICKET_PRIORITIES` com `TICKET_PRIORITY_LABELS`, pré-selecionado
-  pelo `options.defaults.priority` (Média). Mesmo padrão do `TicketTypeField`
+  opções `TICKET_PRIORITIES` com `TICKET_PRIORITY_LABELS`, começa vazio
+  (`options.defaults.priority = undefined`) com o placeholder
+  `TICKET_PRIORITY_PLACEHOLDER` (`Nenhuma`). Mesmo padrão do `TicketTypeField`
   (campo próprio, ex. `ticket-priority-field.tsx`, ao lado do tipo).
 - `useForm<CreateTicketFormValues, unknown, CreateTicketInput>` (ver
-  Validação). O `form.reset(options.defaults)` volta a Média.
+  Validação). O `form.reset(options.defaults)` volta a vazio (`Nenhuma`).
 - Depende de `df-actions` (Onda 2) para a prioridade chegar ao banco.
 
 ### Início — card Backlog (`dashboard-overview.tsx`)
@@ -402,6 +423,7 @@ extends TicketListRow, TicketSlaFacts` em `ticket-list-row.ts` e
 | Tabela, ativo no prazo    | `Expira em` / `55min` (`<1min` abaixo de 1 min) |
 | Tabela, ativo vencido     | `Expirado` / `-6min` (`-<1min` abaixo de 1 min) |
 | Rótulo do Select          | `Prioridade`                                    |
+| Placeholder do Select     | `Nenhuma`                                       |
 | Erro do Select            | `Selecione a prioridade do chamado.`            |
 | Backlog, valor            | `4 chamados` · `1 chamado` · `0 chamados`       |
 | Backlog, linha de apoio   | `36h em backlog` · `Nenhum chamado em backlog`  |
@@ -446,18 +468,18 @@ where current_department_id = :S
   and status in ('aberto','em_analise','encaminhado','recusado','em_andamento')
 ```
 
-| #    | Passo                                                                  | Esperado                                                                                                                                                                                                          |
-| ---- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PS1  | Abrir "Novo chamado"                                                   | Select "Prioridade" com Média selecionada; opções Baixa, Média, Alta, Crítica                                                                                                                                     |
-| PS2  | Criar como Crítica                                                     | banco: `priority = critica` e `to_priority = critica` na `criacao`; detalhe: Prioridade "Crítica", SLA = abertura + 3h (`DD/MM/AAAA HH:mm`)                                                                       |
-| PS3  | Fechar e reabrir o dialog                                              | volta a Média                                                                                                                                                                                                     |
-| PS4  | Detalhe                                                                | cabeçalho sem badge de prioridade; Prioridade e SLA no card Detalhes                                                                                                                                              |
-| PS5  | `/tickets` e `/queue`                                                  | colunas "Aberto em", "Prioridade", "SLA" nessa ordem; ativo no prazo: "Expira em" + tempo restante, neutro; ativo vencido: "Expirado" + `-tempo`, em vermelho; recarregar atualiza o tempo                        |
-| PS6  | Resolvido dentro e fora do prazo (conferir `resolved_at` × vencimento) | "No prazo" / "Fora do prazo", sem vermelho                                                                                                                                                                        |
-| PS7  | Cancelado sem `resolved_at`                                            | `—`                                                                                                                                                                                                               |
-| PS8  | Início, card Backlog                                                   | título "Backlog"; valor `{em_atraso} chamados` (`1 chamado`); linha `{horas}h em backlog` (`backlog = 0` → `0 chamados` e `Nenhum chamado em backlog`), sem "Ilustrativo"; Tempo médio continua com "Ilustrativo" |
-| PS9  | Aprovações                                                             | sem coluna SLA, sem erro                                                                                                                                                                                          |
-| PS10 | Console e dev server em todas as telas acima                           | nenhum erro nem aviso de hidratação                                                                                                                                                                               |
+| #    | Passo                                                                  | Esperado                                                                                                                                                                                                             |
+| ---- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PS1  | Abrir "Novo chamado"                                                   | Select "Prioridade" vazio, com o placeholder `Nenhuma`; opções Baixa, Média, Alta, Crítica (sem item "Nenhuma"). Enviar sem escolher → `Selecione a prioridade do chamado.` no campo, nenhuma linha nova em `ticket` |
+| PS2  | Criar como Crítica                                                     | banco: `priority = critica` e `to_priority = critica` na `criacao`; detalhe: Prioridade "Crítica", SLA = abertura + 3h (`DD/MM/AAAA HH:mm`)                                                                          |
+| PS3  | Fechar e reabrir o dialog                                              | volta vazio (`Nenhuma`)                                                                                                                                                                                              |
+| PS4  | Detalhe                                                                | cabeçalho sem badge de prioridade; Prioridade e SLA no card Detalhes                                                                                                                                                 |
+| PS5  | `/tickets` e `/queue`                                                  | colunas "Aberto em", "Prioridade", "SLA" nessa ordem; ativo no prazo: "Expira em" + tempo restante, neutro; ativo vencido: "Expirado" + `-tempo`, em vermelho; recarregar atualiza o tempo                           |
+| PS6  | Resolvido dentro e fora do prazo (conferir `resolved_at` × vencimento) | "No prazo" / "Fora do prazo", sem vermelho                                                                                                                                                                           |
+| PS7  | Cancelado sem `resolved_at`                                            | `—`                                                                                                                                                                                                                  |
+| PS8  | Início, card Backlog                                                   | título "Backlog"; valor `{em_atraso} chamados` (`1 chamado`); linha `{horas}h em backlog` (`backlog = 0` → `0 chamados` e `Nenhum chamado em backlog`), sem "Ilustrativo"; Tempo médio continua com "Ilustrativo"    |
+| PS9  | Aprovações                                                             | sem coluna SLA, sem erro                                                                                                                                                                                             |
+| PS10 | Console e dev server em todas as telas acima                           | nenhum erro nem aviso de hidratação                                                                                                                                                                                  |
 
 ## Checklist de encerramento
 

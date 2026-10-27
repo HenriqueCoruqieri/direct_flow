@@ -17,6 +17,8 @@ import {
   TICKET_PRIORITIES,
   TICKET_PRIORITY_FIELD_LABEL,
   TICKET_PRIORITY_LABELS,
+  TICKET_PRIORITY_PLACEHOLDER,
+  TICKET_PRIORITY_REQUIRED_HINT,
 } from "@/app/_lib/domain/ticket"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
 
@@ -49,7 +51,15 @@ const TicketPriorityField = ({
   const errorId = `${id}-error`
   const hintId = `${id}-hint`
   const showHint = !fieldState.invalid && hint !== undefined
-  const visibleHintId = showHint ? hintId : undefined
+  const requiredId = `${id}-required`
+  const showRequired = !fieldState.invalid && value === undefined
+  const describedBy = fieldState.invalid
+    ? errorId
+    : showRequired
+      ? requiredId
+      : showHint
+        ? hintId
+        : undefined
 
   return (
     <Field data-invalid={fieldState.invalid} className="min-w-0 gap-1.5">
@@ -65,10 +75,10 @@ const TicketPriorityField = ({
           id={id}
           onBlur={onBlur}
           aria-invalid={fieldState.invalid}
-          aria-describedby={fieldState.invalid ? errorId : visibleHintId}
+          aria-describedby={describedBy}
           className="w-full"
         >
-          <SelectValue placeholder="Selecione a prioridade" />
+          <SelectValue placeholder={TICKET_PRIORITY_PLACEHOLDER} />
         </SelectTrigger>
         <SelectContent>
           {TICKET_PRIORITIES.map((priority) => (
@@ -81,7 +91,12 @@ const TicketPriorityField = ({
       {fieldState.invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />
       ) : null}
-      {showHint ? (
+      {showRequired ? (
+        <FieldDescription id={requiredId} className="text-xs text-destructive">
+          {TICKET_PRIORITY_REQUIRED_HINT}
+        </FieldDescription>
+      ) : null}
+      {showHint && !showRequired ? (
         <FieldDescription id={hintId}>{hint}</FieldDescription>
       ) : null}
     </Field>
