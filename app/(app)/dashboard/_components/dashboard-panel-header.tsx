@@ -1,17 +1,15 @@
-import Link from "next/link"
+import type { ReactNode } from "react"
 
 interface DashboardPanelHeaderProps {
   title: string
-  href: string
-  linkLabel: string
   titleId?: string
+  children: ReactNode
 }
 
 const DashboardPanelHeader = ({
   title,
-  href,
-  linkLabel,
   titleId,
+  children,
 }: DashboardPanelHeaderProps) => {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -21,12 +19,7 @@ const DashboardPanelHeader = ({
       >
         {title}
       </h2>
-      <Link
-        href={href}
-        className="shrink-0 rounded-sm text-caption font-semibold text-primary transition-colors outline-none hover:text-primary-hover focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        {linkLabel}
-      </Link>
+      {children}
     </div>
   )
 }

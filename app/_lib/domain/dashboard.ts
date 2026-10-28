@@ -25,6 +25,7 @@ import type {
   DashboardActivityPoint,
   DashboardActivitySeries,
   DashboardOverdueColumn,
+  DashboardOverdueEmptyCopy,
   DashboardOverview,
   DashboardOverviewCard,
   DashboardOverviewEmptyHints,
@@ -34,6 +35,7 @@ import type {
   DashboardViewMode,
 } from "@/app/_lib/types/dashboard"
 import type { DepartmentQueueTab } from "@/app/_lib/types/department-queue"
+import type { MyTicketsTab } from "@/app/_lib/types/my-tickets"
 import type {
   DateRange,
   TimeBucket,
@@ -174,6 +176,8 @@ export const OVERDUE_QUEUE_LINK_LABEL = "Ver na fila"
 
 export const OVERDUE_QUEUE_TAB: DepartmentQueueTab = "all"
 
+export const OVERDUE_MY_TICKETS_TAB: MyTicketsTab = "assigned"
+
 export const OVERDUE_TICKETS_LIMIT = 5
 
 export const TOP_TAGS_LIMIT = OVERDUE_TICKETS_LIMIT + 1
@@ -203,6 +207,22 @@ export const EMPTY_OVERDUE_TITLE = "Nenhum chamado em atraso"
 
 export const EMPTY_OVERDUE_DESCRIPTION =
   "Os chamados do setor com vencimento já passado aparecem aqui."
+
+export const EMPTY_OWN_OVERDUE_TITLE = "Nenhum chamado seu em atraso"
+
+export const EMPTY_OWN_OVERDUE_DESCRIPTION =
+  "Os chamados do setor destinados a você com vencimento já passado aparecem aqui."
+
+export const EMPTY_OVERDUE_COPY = {
+  coletivo: {
+    title: EMPTY_OVERDUE_TITLE,
+    description: EMPTY_OVERDUE_DESCRIPTION,
+  },
+  individual: {
+    title: EMPTY_OWN_OVERDUE_TITLE,
+    description: EMPTY_OWN_OVERDUE_DESCRIPTION,
+  },
+} satisfies Record<DashboardViewMode, DashboardOverdueEmptyCopy>
 
 export const topTagsEmptyHint = (
   ticketCount: number,

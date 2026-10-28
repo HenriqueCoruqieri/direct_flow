@@ -71,6 +71,13 @@ export interface DashboardOverdueTicket {
   dueAt: Date
 }
 
+export type DashboardOverdueByMode = DashboardByMode<DashboardOverdueTicket[]>
+
+export interface DashboardOverdueEmptyCopy {
+  title: string
+  description: string
+}
+
 export type DashboardTransferCounter = "incoming" | "outgoing" | "rejected"
 
 export type DashboardTransferCounterTone = "highlight" | "alert" | "neutral"

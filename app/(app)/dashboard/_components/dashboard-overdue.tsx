@@ -1,110 +1,50 @@
-import Link from "next/link"
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/app/_components/ui/table"
 import { listOverdueTickets } from "@/app/_lib/data/dashboard"
-import { formatDateTime, formatShortDateTime } from "@/app/_lib/date"
 import {
-  EMPTY_OVERDUE_DESCRIPTION,
-  EMPTY_OVERDUE_TITLE,
-  OVERDUE_COLUMN_LABELS,
+  DASHBOARD_VIEW_MODES,
   OVERDUE_TICKETS_LIMIT,
 } from "@/app/_lib/domain/dashboard"
-import { formatTicketNumber } from "@/app/_lib/domain/ticket"
+import type { DashboardOverdueByMode } from "@/app/_lib/types/dashboard"
 import type { PeriodSelection } from "@/app/_lib/types/period"
-import { cn } from "@/app/_lib/utils"
-import { dashboardTicketDetailHref } from "@/app/_lib/validation/dashboard"
 
-import TicketPriorityText from "../../_components/ticket-priority-text"
+import DashboardOverdueContent from "./dashboard-overdue-content"
 import DashboardOverdueHeader from "./dashboard-overdue-header"
 import DashboardPanel from "./dashboard-panel"
+import DashboardViewPane from "./dashboard-view-pane"
 
 const TITLE_ID = "dashboard-overdue-title"
 
-const HEAD_CLASS = "h-10 text-xs font-semibold text-muted-foreground"
-
 interface DashboardOverdueProps {
   departmentId: number
+  userId: number
   now: Date
   selection: PeriodSelection
 }
 
 const DashboardOverdue = async ({
   departmentId,
+  userId,
   now,
   selection,
 }: DashboardOverdueProps) => {
-  const tickets = await listOverdueTickets(
-    departmentId,
-    now,
-    OVERDUE_TICKETS_LIMIT,
-  )
+  const [coletivo, individual] = await Promise.all([
+    listOverdueTickets(departmentId, now, OVERDUE_TICKETS_LIMIT),
+    listOverdueTickets(departmentId, now, OVERDUE_TICKETS_LIMIT, userId),
+  ])
+  const overdueByMode: DashboardOverdueByMode = { coletivo, individual }
 
   return (
     <DashboardPanel aria-labelledby={TITLE_ID} className="xl:col-span-2">
       <DashboardOverdueHeader titleId={TITLE_ID} />
-      {tickets.length === 0 ? (
-        <div className="mt-3 flex flex-col gap-1">
-          <p className="text-sm font-semibold">{EMPTY_OVERDUE_TITLE}</p>
-          <p className="text-caption text-muted-foreground">
-            {EMPTY_OVERDUE_DESCRIPTION}
-          </p>
-        </div>
-      ) : (
-        <Table className="mt-3">
-          <TableHeader>
-            <TableRow className="border-border-subtle hover:bg-transparent">
-              <TableHead className={cn(HEAD_CLASS, "pl-0")}>
-                {OVERDUE_COLUMN_LABELS.number}
-              </TableHead>
-              <TableHead className={HEAD_CLASS}>
-                {OVERDUE_COLUMN_LABELS.title}
-              </TableHead>
-              <TableHead className={HEAD_CLASS}>
-                {OVERDUE_COLUMN_LABELS.priority}
-              </TableHead>
-              <TableHead className={cn(HEAD_CLASS, "pr-0")}>
-                {OVERDUE_COLUMN_LABELS.dueAt}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tickets.map((ticket) => (
-              <TableRow key={ticket.id} className="border-border-subtle">
-                <TableCell className="py-3 pl-0">
-                  <Link
-                    href={dashboardTicketDetailHref(selection, ticket.id)}
-                    className="rounded-sm font-mono text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    {formatTicketNumber(ticket.id)}
-                  </Link>
-                </TableCell>
-                <TableCell
-                  title={ticket.title}
-                  className="w-full max-w-0 truncate py-3"
-                >
-                  {ticket.title}
-                </TableCell>
-                <TableCell className="py-3">
-                  <TicketPriorityText priority={ticket.priority} />
-                </TableCell>
-                <TableCell
-                  title={formatDateTime(ticket.dueAt)}
-                  className="py-3 pr-0 text-text-secondary tabular-nums"
-                >
-                  {formatShortDateTime(ticket.dueAt, now)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      {DASHBOARD_VIEW_MODES.map((mode) => (
+        <DashboardViewPane key={mode} mode={mode}>
+          <DashboardOverdueContent
+            tickets={overdueByMode[mode]}
+            mode={mode}
+            now={now}
+            selection={selection}
+          />
+        </DashboardViewPane>
+      ))}
     </DashboardPanel>
   )
 }

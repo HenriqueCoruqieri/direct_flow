@@ -674,11 +674,332 @@ padrão), então nada deixa de compilar entre as ondas.
 - [x] Cenários PO1–PO13 (`df-qa`): 13 de 13 após reteste
       (`docs/test-reports/2026-10-28-dashboard-individual-mode-top-tags.md`)
 
-Etapa 2 concluída, aguardando commit.
+Etapa 2 concluída e commitada em aacf2ed.
 
 ### Limites conhecidos da Etapa 2
 
 - **Plano de execução.** Com o volume atual (248 chamados) o planejador usa
   Seq Scan e não `ticket_assigned_to_idx`. Esperado em tabela pequena; o
   índice entra quando o volume crescer.
+- **Diretoria não executada.** Login do Diretor recusado no QA.
+
+---
+
+## Etapa 3 — Maiores atrasos
+
+### O que muda e o que não muda
+
+- O card "Maiores atrasos" passa a ter as duas versões, trocadas pelo switch
+  da Etapa 1 (mesmo provider, mesmo `DashboardViewPane`).
+- O Coletivo do card fica **idêntico** ao de hoje (Etapa 2 de
+  `docs/contracts/dashboard-overview.md`, com as revisões de 2026-10-24 e
+  2026-10-26): mesmas linhas, ordem, limite, colunas, link do Nº e link
+  "Ver na fila" (`/queue?tab=all&periodo=todos`).
+- No Individual, o link "Ver na fila" do cabeçalho leva a Meus chamados, aba
+  "Atribuídos a mim". O texto do link é o mesmo nos dois modos.
+- Gráfico e Transferências **não mudam**: no Individual continuam mostrando o
+  Coletivo.
+- Rótulo do card, `OVERDUE_TICKETS_LIMIT` (5), colunas, formato do
+  vencimento, esqueleto (um só), `col-span` (`xl:col-span-2`) e altura:
+  iguais. O card continua **independente do período** (o `Suspense` dele
+  segue sem `key`).
+
+### Tabelas, enums e migration
+
+Sem mudança de schema, sem migration, sem índice novo. Coluna lida além das
+de hoje: `ticket.assigned_to` (índice `ticket_assigned_to_idx`).
+
+### Definições (Individual, "eu" = usuário da sessão)
+
+| Termo                       | Definição                                                                                                                                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Meus chamados atrasados** | `ticket.current_department_id` = setor **e** `ticket.assigned_to` = eu **e** status em `OVERDUE_TICKET_STATUSES` (os do backlog) **e** vencimento `<` agora. É o critério do Coletivo com `assigned_to` = eu, nada mais |
+| **Ordem e limite**          | os do Coletivo: vencimento mais antigo primeiro, depois `created_at`, depois `id`; `limit` = `OVERDUE_TICKETS_LIMIT`                                                                                                    |
+| **Vencimento**              | o do Coletivo: `ticketDueAtSql` / `ticketDueAt` (`created_at` + horas da prioridade, `TICKET_PRIORITY_DUE_HOURS`), comparação estrita `<`                                                                               |
+
+"Meu" é o destinatário **atual**, como nas Etapas 1 e 2. A contagem
+`overdueBacklogCount` do card Backlog no Individual (Etapa 1) usa o mesmo
+critério, então o valor do Backlog no Individual e a tabela de atrasos do
+Individual descrevem o mesmo conjunto (a tabela mostra até 5).
+
+### Tipos — `app/_lib/types/dashboard.ts` (acréscimo)
+
+```ts
+export type DashboardOverdueByMode = DashboardByMode<DashboardOverdueTicket[]>
+
+export interface DashboardOverdueEmptyCopy {
+  title: string
+  description: string
+}
+```
+
+`DashboardOverdueTicket` **não muda**.
+
+### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo)
+
+| Export                          | Valor / semântica                                                                                                                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OVERDUE_MY_TICKETS_TAB`        | `"assigned"` (`MyTicketsTab`) — aba "Atribuídos a mim" de Meus chamados, destino do "Ver na fila" no Individual. Par de `OVERDUE_QUEUE_TAB` (inalterado)                                |
+| `EMPTY_OWN_OVERDUE_TITLE`       | `"Nenhum chamado seu em atraso"`                                                                                                                                                        |
+| `EMPTY_OWN_OVERDUE_DESCRIPTION` | `"Os chamados do setor destinados a você com vencimento já passado aparecem aqui."`                                                                                                     |
+| `EMPTY_OVERDUE_COPY`            | por modo (`satisfies Record<DashboardViewMode, DashboardOverdueEmptyCopy>`): `coletivo` = `EMPTY_OVERDUE_TITLE`/`EMPTY_OVERDUE_DESCRIPTION` (inalterados), `individual` = as duas acima |
+
+Sem mudança: `OVERDUE_CARD_LABEL`, `OVERDUE_QUEUE_LINK_LABEL`,
+`OVERDUE_QUEUE_TAB`, `OVERDUE_TICKETS_LIMIT`, `OVERDUE_TICKET_STATUSES`,
+`OVERDUE_COLUMN_LABELS`, `EMPTY_OVERDUE_TITLE`, `EMPTY_OVERDUE_DESCRIPTION`.
+A aba é constante própria, e não `DEFAULT_MY_TICKETS_TAB`: o destino é uma
+decisão deste card, não "a aba padrão de Meus chamados", que pode mudar.
+
+### Validação — `app/_lib/validation/dashboard.ts` (acréscimo)
+
+| Export                    | Valor / semântica                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OVERDUE_MY_TICKETS_HREF` | `myTicketsTabHref(OVERDUE_MY_TICKETS_TAB, DEFAULT_MY_TICKETS_PERIOD)` → `/tickets?tab=assigned&periodo=todos`. Mesmo montador que as abas de Meus chamados usam em `app/(app)/tickets/page.tsx` |
+| `OVERDUE_QUEUE_HREFS`     | por modo (`satisfies Record<DashboardViewMode, string>`): `coletivo` = `OVERDUE_QUEUE_HREF` (inalterado), `individual` = `OVERDUE_MY_TICKETS_HREF`                                              |
+
+Mora em `validation/` pelo mesmo motivo do `OVERDUE_QUEUE_HREF`: os montadores
+de URL (`departmentQueueHref`, `myTicketsTabHref`) moram lá. Período "Todos"
+porque o atraso não depende do período, como no Coletivo. A aba "Atribuídos a
+mim" lista **todos** os meus ativos, de qualquer setor e inclusive aguardando
+aprovação; a tabela do Individual é um subconjunto dela (do setor, atrasados).
+
+### `df-data` — `app/_lib/data/dashboard.ts`
+
+Assinatura alterada (parâmetro opcional no fim; sem ele, comportamento e SQL
+**idênticos** aos de hoje):
+
+```ts
+export async function listOverdueTickets(
+  departmentId: number,
+  now: Date,
+  limit: number,
+  assigneeId?: number,
+): Promise<DashboardOverdueTicket[]>
+```
+
+- Com `assigneeId`, o `and(...)` do `where` ganha
+  `assigneeId === undefined ? undefined : eq(ticket.assignedTo, assigneeId)`;
+  o `and` descarta `undefined`, então o Coletivo sai com o SQL de hoje. Nada de
+  função duplicada; `orderBy`, `limit` e o mapeamento de `dueAt` não mudam.
+- Sem atrasados meus: `[]`.
+- Rodar `EXPLAIN ANALYZE` com e sem `assigneeId` para o Administrador de QA
+  Suporte e colar na resposta; o plano do Coletivo não pode mudar.
+
+### `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que fazer
+
+`DashboardOverdue` (servidor) passa a receber `userId` (o `actor.id` de
+`page.tsx`, como `DashboardTopTags`) e faz **duas** chamadas num
+`Promise.all`:
+
+```ts
+const [coletivo, individual] = await Promise.all([
+  listOverdueTickets(departmentId, now, OVERDUE_TICKETS_LIMIT),
+  listOverdueTickets(departmentId, now, OVERDUE_TICKETS_LIMIT, userId),
+])
+const overdueByMode: DashboardOverdueByMode = { coletivo, individual }
+```
+
+**Estrutura.** Diferente da Etapa 2, aqui o cabeçalho também varia (o link),
+então são **dois** pontos com `DashboardViewPane`, ambos **dentro** de um
+único `DashboardPanel`:
+
+```tsx
+<DashboardPanel aria-labelledby={TITLE_ID} className="xl:col-span-2">
+  <DashboardOverdueHeader titleId={TITLE_ID} />
+  {DASHBOARD_VIEW_MODES.map((mode) => (
+    <DashboardViewPane key={mode} mode={mode}>
+      <DashboardOverdueContent
+        tickets={overdueByMode[mode]}
+        mode={mode}
+        now={now}
+        selection={selection}
+      />
+    </DashboardViewPane>
+  ))}
+</DashboardPanel>
+```
+
+- O `DashboardPanel` fica **um só** (item da grade da linha 2, com o
+  `col-span`), e o `h2` com `TITLE_ID` fica **um só**, fora dos painéis de
+  modo. Nenhum `id` dentro de `DashboardViewPane`.
+- **Cabeçalho.** `DashboardPanelHeader` deixa de receber `href`/`linkLabel`
+  e passa a receber o título e a ação como `children`:
+  `{ title: string; titleId?: string; children: ReactNode }`, desenhando a
+  mesma linha de hoje (`flex items-center justify-between gap-3`, `h2` à
+  esquerda, `children` à direita). O link sai para uma peça nova,
+  `_components/dashboard-panel-link.tsx` (servidor),
+  `{ href: string; label: string }`, com as classes do link de hoje mais
+  `whitespace-nowrap`. Motivo do `whitespace-nowrap`: no Atrasos o item do
+  flex passa a ser o `div` do `DashboardViewPane`, não o `Link`, e o
+  `shrink-0` do link deixa de valer; sem quebra de linha, a largura mínima do
+  `div` é o texto inteiro e o link não quebra, como hoje.
+- `DashboardOverdueHeader` (servidor, sem props novas):
+
+  ```tsx
+  <DashboardPanelHeader title={OVERDUE_CARD_LABEL} titleId={titleId}>
+    {DASHBOARD_VIEW_MODES.map((mode) => (
+      <DashboardViewPane key={mode} mode={mode}>
+        <DashboardPanelLink
+          href={OVERDUE_QUEUE_HREFS[mode]}
+          label={OVERDUE_QUEUE_LINK_LABEL}
+        />
+      </DashboardViewPane>
+    ))}
+  </DashboardPanelHeader>
+  ```
+
+- `DashboardTransfersHeader` passa a passar
+  `<DashboardPanelLink href={TRANSFERS_APPROVALS_HREF} label={TRANSFERS_APPROVALS_LINK_LABEL} />`
+  como `children`; visual idêntico (o `Link` continua item direto do flex,
+  com `shrink-0`).
+- `OVERDUE_QUEUE_HREF` deixa de ser importado pela UI (o Coletivo chega por
+  `OVERDUE_QUEUE_HREFS.coletivo`, mesmo valor).
+- **Conteúdo.** Peça extraída: `_components/dashboard-overdue-content.tsx`
+  (servidor), recebendo `tickets: DashboardOverdueTicket[]`,
+  `mode: DashboardViewMode`, `now: Date` e `selection: PeriodSelection`, e
+  desenhando exatamente o que o card desenha hoje abaixo do cabeçalho (estado
+  vazio com `mt-3` ou a `Table` com `mt-3`). O link do Nº continua
+  `dashboardTicketDetailHref(selection, ticket.id)` (origem `dashboard`) nos
+  dois modos.
+
+| Onde              | Antes                       | Agora                                  |
+| ----------------- | --------------------------- | -------------------------------------- |
+| vazio, título     | `EMPTY_OVERDUE_TITLE`       | `EMPTY_OVERDUE_COPY[mode].title`       |
+| vazio, descrição  | `EMPTY_OVERDUE_DESCRIPTION` | `EMPTY_OVERDUE_COPY[mode].description` |
+| link do cabeçalho | `OVERDUE_QUEUE_HREF`        | `OVERDUE_QUEUE_HREFS[mode]`            |
+
+**Modo inativo.** Como nas Etapas 1 e 2: `hidden` no `div` do
+`DashboardViewPane`, sem classe de `display` nele. Nos dois pontos (link e
+conteúdo) o painel oculto sai do layout, da árvore de acessibilidade e do
+foco. A tabela não tem `id`; não há `id` duplicado.
+
+**Suspense e esqueleto.** `page.tsx`: só acrescenta `userId={actor.id}` em
+`DashboardOverdue`; o `Suspense` continua sem `key`. O
+`DashboardOverdueSkeleton` **não muda de código**: ele já desenha
+`<DashboardOverdueHeader />`, que passa a trazer o link por modo. Funciona
+porque o provider envolve todo o conteúdo da página, fora dos `Suspense`
+(Etapa 1); o esqueleto continua um só, com as linhas de hoje.
+
+### Consultas de conferência (`df-qa`)
+
+Contas, ids e banco só leitura como na Etapa 1 deste contrato. As horas de
+vencimento são as **atuais** (`TICKET_PRIORITY_DUE_HOURS`: crítica 3, alta 6,
+média 12, baixa 24) — a `AT(dep)` de `docs/contracts/dashboard-overview.md`
+ainda traz as horas antigas; use as daqui também para o Coletivo.
+
+Consulta `IAT(dep, eu)` — atrasos (situação atual). Sem a linha
+`and t.assigned_to = :eu` ela é a `AT(dep)` do Coletivo:
+
+```sql
+with v as (
+  select t.id, t.title, t.priority, t.created_at,
+    t.created_at + case t.priority
+      when 'critica' then interval '3 hours'
+      when 'alta'    then interval '6 hours'
+      when 'media'   then interval '12 hours'
+      when 'baixa'   then interval '24 hours' end as vencimento
+  from ticket t
+  where t.current_department_id = :dep
+    and t.assigned_to = :eu
+    and t.status in ('aberto','em_analise','encaminhado','recusado','em_andamento')
+)
+select id, title, priority,
+  to_char(vencimento at time zone 'America/Sao_Paulo', 'YYYY-MM-DD HH24:MI') as vencimento_sp
+from v
+where vencimento < now()
+order by vencimento asc, created_at asc, id asc
+limit 5
+```
+
+Esperado no Individual: linhas = `IAT`, mesma ordem; colunas e formato do
+Vencimento como no Coletivo (`D mmm, HH:mm`, com ano fora do ano corrente).
+Total de meus atrasados (a mesma consulta sem `limit`) = coluna `em_atraso`
+de `IM` da Etapa 1. `IAT` vazio: `Nenhum chamado seu em atraso` +
+`Os chamados do setor destinados a você com vencimento já passado aparecem aqui.`,
+sem tabela, link "Ver na fila" presente.
+
+### Cenários do `df-qa`
+
+| #    | Quem   | Ação                                                                                                                  | Esperado                                                                                                                                                                                                          |
+| ---- | ------ | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MA1  | A      | `/dashboard`, Coletivo                                                                                                | card igual ao de antes: linhas = `AT(S)` (horas atuais), mesma ordem e limite; "Ver na fila" → `/queue?tab=all&periodo=todos`                                                                                     |
+| MA2  | A      | Individual                                                                                                            | linhas = `IAT(S, A)`, mesma ordem, no máximo 5; total sem `limit` = `em_atraso` de `IM`; nenhuma linha com destinatário diferente de A                                                                            |
+| MA3  | M      | Individual e Coletivo                                                                                                 | Individual = `IAT(S, M)`, diferente do de A quando os destinatários diferem; Coletivo de M igual ao de A                                                                                                          |
+| MA4  | A ou M | Individual com `IAT` vazio (achar a conta pela consulta; se nenhuma tiver `IAT` vazio, NÃO EXECUTADO, sem criar dado) | `Nenhum chamado seu em atraso` + descrição pessoal, sem tabela, link "Ver na fila" presente                                                                                                                       |
+| MA5  | A      | Individual, clicar "Ver na fila"                                                                                      | `/tickets?tab=assigned&periodo=todos`, Meus chamados com a aba "Atribuídos a mim" ativa; os chamados da tabela do Individual estão na lista                                                                       |
+| MA6  | A      | Coletivo, clicar "Ver na fila"                                                                                        | `/queue?tab=all&periodo=todos`, como hoje (RW9 do contrato do Coletivo)                                                                                                                                           |
+| MA7  | A      | Individual, clicar o Nº de uma linha; depois o "voltar" do chamado                                                    | abre `/tickets/{id}` com origem `dashboard` (`from=dashboard` e o período do Início na URL), como no Coletivo; o voltar leva ao Início no mesmo período                                                           |
+| MA8  | A      | DevTools → Rede, limpar; alternar Coletivo ↔ Individual várias vezes                                                  | **nenhuma** requisição; console sem erro; tabela, vazio e link do cabeçalho trocam junto com a linha 1 e o Principal ofensor                                                                                      |
+| MA9  | A      | marcar Individual; F5                                                                                                 | volta a Coletivo, card com `AT(S)` e link da Fila; URL inalterada                                                                                                                                                 |
+| MA10 | A      | Individual, trocar o período pelo filtro                                                                              | continua em Individual; tabela inalterada (`IAT` não depende do período); links do Nº com o novo período                                                                                                          |
+| MA11 | A      | árvore de acessibilidade (Playwright `getByRole` / snapshot), nos dois modos                                          | **um** título "Maiores atrasos" (um `h2`, um `section` rotulado); **um** link "Ver na fila" e **uma** tabela expostos; links e linhas do modo oculto fora da árvore e do foco (Tab); nenhum `id` duplicado no DOM |
+| MA12 | A      | 390×844, nos dois modos                                                                                               | título pode quebrar em linhas; "Ver na fila" numa linha só, ao lado do título, sem quebrar nem ser espremido; sem rolagem horizontal da página                                                                    |
+| MA13 | A      | 1280 px, nos dois modos                                                                                               | card na mesma posição e largura (~2/5) da linha 2, mesma altura do Principal ofensor; cabeçalho de Transferências igual ao de antes (link à direita, sem quebra)                                                  |
+| MA14 | A      | recarregar `/dashboard` com rede lenta (DevTools, throttling) e olhar o esqueleto de atrasos                          | um esqueleto só, com cabeçalho "Maiores atrasos" e um "Ver na fila" exposto; sem erro de hidratação                                                                                                               |
+| MA15 | todos  | toda a bateria                                                                                                        | console e dev server (`next-devtools`) sem erro nem aviso de hidratação; nenhuma escrita no banco                                                                                                                 |
+
+Não executáveis nesta rodada: Diretoria (login do Diretor recusado).
+
+Notas para não reportar como defeito:
+
+- A aba "Atribuídos a mim" mostra mais chamados que a tabela: todos os meus
+  ativos, de qualquer setor, inclusive aguardando aprovação e não atrasados.
+- O card não muda com o período, nos dois modos; só os links do Nº levam o
+  período.
+- Gráfico e Transferências ainda no Coletivo no Individual.
+
+### Critério de pronto da Etapa 3
+
+1. Individual bate com `IAT` e com `em_atraso` de `IM` (MA2, MA3).
+2. Coletivo idêntico ao de antes (MA1, MA6).
+3. Estado vazio do Individual (MA4).
+4. Links: "Ver na fila" por modo e Nº com origem `dashboard` (MA5, MA6, MA7).
+5. Troca sem requisição; F5 volta a Coletivo; modo sobrevive à troca de
+   período (MA8, MA9, MA10).
+6. Um título, um link e uma tabela expostos; modo oculto fora da árvore e do
+   foco; sem `id` duplicado (MA11, MA14).
+7. 390 px sem rolagem horizontal; layout da linha 2 e cabeçalho de
+   Transferências inalterados (MA12, MA13).
+8. `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem
+   bloqueante; `df-qa` aprova MA1–MA15 (Diretoria não executada).
+
+### `tsc` entre ondas
+
+`listOverdueTickets` ganha parâmetro opcional no fim: compatível. A troca de
+`href`/`linkLabel` por `children` em `DashboardPanelHeader` quebra os dois
+chamadores (`dashboard-overdue-header.tsx`, `dashboard-transfers-header.tsx`),
+que são do `df-ui` e mudam na mesma onda; nada fora do `df-ui` depende disso.
+
+### Checklist da Etapa 3
+
+- [x] Este contrato e o plano; `DashboardOverdueByMode`,
+      `DashboardOverdueEmptyCopy`; `OVERDUE_MY_TICKETS_TAB`,
+      `EMPTY_OWN_OVERDUE_TITLE`, `EMPTY_OWN_OVERDUE_DESCRIPTION`,
+      `EMPTY_OVERDUE_COPY`; `OVERDUE_MY_TICKETS_HREF`, `OVERDUE_QUEUE_HREFS`
+      (`df-architect`)
+- [x] `listOverdueTickets` com `assigneeId?`, `EXPLAIN ANALYZE` com e sem
+      pessoa na resposta (`df-data`)
+- [x] `DashboardOverdue` com `userId`, duas chamadas em `Promise.all`,
+      `DashboardOverdueContent` por modo, `DashboardPanelHeader` com
+      `children`, `DashboardPanelLink`, link por modo no
+      `DashboardOverdueHeader`, `page.tsx` (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`
+      (aprovado com atenções: MA12 ajustado neste contrato; `shrink-0` sem
+      efeito no cabeçalho de atrasos fica só como observação)
+- [x] Cenários MA1–MA15 (`df-qa`): 14 de 15, MA14 em parte
+      (`docs/test-reports/2026-10-28-dashboard-individual-mode-overdue.md`)
+
+Etapa 3 concluída, aguardando commit.
+
+### Limites conhecidos da Etapa 3
+
+- **MA14 em parte.** O render é rápido demais para flagrar o esqueleto de
+  carregamento no navegador.
+- **Só o Membro distingue os modos.** Todos os atrasados atuais do setor estão
+  com o Administrador, então para ele Coletivo e Individual mostram a mesma
+  lista.
 - **Diretoria não executada.** Login do Diretor recusado no QA.

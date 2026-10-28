@@ -1,17 +1,24 @@
 import { z } from "zod"
 
 import { DEFAULT_APPROVALS_PERIOD } from "@/app/_lib/domain/approvals"
-import { DASHBOARD_PATH, OVERDUE_QUEUE_TAB } from "@/app/_lib/domain/dashboard"
+import {
+  DASHBOARD_PATH,
+  OVERDUE_MY_TICKETS_TAB,
+  OVERDUE_QUEUE_TAB,
+} from "@/app/_lib/domain/dashboard"
 import { DEFAULT_DEPARTMENT_QUEUE_PERIOD } from "@/app/_lib/domain/department-queue"
+import { DEFAULT_MY_TICKETS_PERIOD } from "@/app/_lib/domain/my-tickets"
 import { DEFAULT_PERIOD, PRESET_PERIODS } from "@/app/_lib/domain/period"
 import { ticketDetailPath } from "@/app/_lib/domain/ticket"
 import {
   TICKET_DETAIL_FROM_DASHBOARD,
   TICKET_DETAIL_FROM_PARAM,
 } from "@/app/_lib/domain/ticket-detail-origin"
+import type { DashboardViewMode } from "@/app/_lib/types/dashboard"
 import type { DateKey, PeriodSelection } from "@/app/_lib/types/period"
 import { approvalsHref } from "@/app/_lib/validation/approvals"
 import { departmentQueueHref } from "@/app/_lib/validation/department-queue"
+import { myTicketsTabHref } from "@/app/_lib/validation/my-tickets"
 import {
   customPeriodSchema,
   periodFilterHref,
@@ -74,5 +81,15 @@ export const OVERDUE_QUEUE_HREF = departmentQueueHref({
   period: DEFAULT_DEPARTMENT_QUEUE_PERIOD,
   departmentId: null,
 })
+
+export const OVERDUE_MY_TICKETS_HREF = myTicketsTabHref(
+  OVERDUE_MY_TICKETS_TAB,
+  DEFAULT_MY_TICKETS_PERIOD,
+)
+
+export const OVERDUE_QUEUE_HREFS = {
+  coletivo: OVERDUE_QUEUE_HREF,
+  individual: OVERDUE_MY_TICKETS_HREF,
+} satisfies Record<DashboardViewMode, string>
 
 export const TRANSFERS_APPROVALS_HREF = approvalsHref(DEFAULT_APPROVALS_PERIOD)

@@ -93,8 +93,9 @@ continuam mostrando o Coletivo. É esperado e não é defeito.
 
 - [x] Etapa 1 — switch e linha 1 (concluída e commitada em 001ed83; limites
       conhecidos e decisões pós-QA no contrato)
-- [x] Etapa 2 — Principal ofensor (concluída, aguardando commit; limites
+- [x] Etapa 2 — Principal ofensor (concluída e commitada em aacf2ed; limites
       conhecidos no contrato)
-- [ ] Etapa 3 — Maiores atrasos (a seguir)
-- [ ] Etapa 4 — Abertos × resolvidos
+- [x] Etapa 3 — Maiores atrasos (concluída, aguardando commit; limites
+      conhecidos no contrato)
+- [ ] Etapa 4 — Abertos × resolvidos (a seguir)
 - [ ] Etapa 5 — Transferências

@@ -188,6 +188,7 @@ export async function listOverdueTickets(
   departmentId: number,
   now: Date,
   limit: number,
+  assigneeId?: number,
 ): Promise<DashboardOverdueTicket[]> {
   const rows = await db
     .select({
@@ -200,6 +201,9 @@ export async function listOverdueTickets(
     .where(
       and(
         eq(ticket.currentDepartmentId, departmentId),
+        assigneeId === undefined
+          ? undefined
+          : eq(ticket.assignedTo, assigneeId),
         inArray(ticket.status, [...OVERDUE_TICKET_STATUSES]),
         sql`${ticketDueAtSql} < ${now}`,
       ),
