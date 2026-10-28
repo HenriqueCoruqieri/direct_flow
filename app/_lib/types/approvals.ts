@@ -1,4 +1,8 @@
-import type { TicketStatus, TicketType } from "@/app/_lib/types/ticket"
+import type {
+  TicketStatus,
+  TicketTransferRecipient,
+  TicketType,
+} from "@/app/_lib/types/ticket"
 
 export interface ApprovalsAccessFacts {
   departmentId: number
@@ -16,6 +20,8 @@ export interface ApprovalListItem {
   transferId: number
   fromDepartmentId: number
   fromDepartmentName: string
+  toDepartmentId: number
+  recipient: TicketTransferRecipient | null
   sentAt: Date
 }
 

@@ -85,3 +85,17 @@ na fila do destino e **qualquer pessoa do setor de destino** o aceita
 > fila do destino", no Contexto) e passa a ser listado só em "Aprovações". A
 > posse continua mudando no envio (decisão 1): `current_department_id` é o
 > destino e a visibilidade do detalhe não muda.
+>
+> Revisão de 2026-10-27, destinatário no envio
+> (`docs/contracts/department-transfer.md`, seção "Revisão de 2026-10-27"): o
+> envio pode indicar uma pessoa do setor de destino
+> (`ticket_transfer.to_user_id`, anulável). A posse continua mudando no envio
+> como na decisão 1 (`assigned_to = null`, `aguardando_aprovacao`); a decisão 4
+> passa a valer só **sem destinatário**. Com destinatário, só ele atende ou
+> recusa (`NOT_TRANSFER_RECIPIENT`, conflito). Se ele deixar de ser elegível
+> durante a pendência (inativo ou fora do setor), o envio volta a valer como
+> fila do setor, decidido na leitura. A Diretoria não ganha poder novo: fora
+> do setor de destino continua sem aceitar; para a Diretoria com destinatário,
+> só aquele diretor. A linha `transferencia_solicitada` grava o destinatário
+> indicado em `to_assignee_id` (o único evento em que esse campo não é o
+> `assigned_to` resultante), para que o ciclo de vida registre para quem foi.

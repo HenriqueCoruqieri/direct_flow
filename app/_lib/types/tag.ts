@@ -25,7 +25,7 @@ export interface TagValues {
 
 export interface TicketPriorityLock {
   priority: TicketPriority
-  hint: string
+  lockedMessage: string
 }
 
 export interface TagPrioritySelectOption {

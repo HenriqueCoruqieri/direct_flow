@@ -10,10 +10,13 @@ import {
   TICKET_ASSIGNEE_LABEL,
   TICKET_CREATOR_LABEL,
 } from "@/app/_lib/domain/ticket-assignee"
-import { TICKET_SLA_LABEL } from "@/app/_lib/domain/ticket-due"
+import {
+  describeTicketSlaDetail,
+  ticketSlaFor,
+} from "@/app/_lib/domain/ticket-due"
 import type { TicketDetail } from "@/app/_lib/types/ticket"
+import { cn } from "@/app/_lib/utils"
 
-import TicketSlaValue from "../../../_components/ticket-sla-value"
 import TicketDetailFieldList from "./ticket-detail-field-list"
 import TicketEditAssignee from "./ticket-edit-assignee"
 import TicketEditClassification from "./ticket-edit-classification"
@@ -29,6 +32,22 @@ const TicketDetailFields = ({
   now,
   editable = false,
 }: TicketDetailFieldsProps) => {
+  const slaDetail = describeTicketSlaDetail(ticketSlaFor(ticket, now))
+  const slaValue = (
+    <span
+      className={cn(
+        "whitespace-nowrap tabular-nums",
+        slaDetail.status === "overdue" && "text-destructive",
+      )}
+    >
+      {"dueAt" in slaDetail ? (
+        <time dateTime={toISO(slaDetail.dueAt)}>{slaDetail.value}</time>
+      ) : (
+        slaDetail.value
+      )}
+    </span>
+  )
+
   const classification = (
     <TicketDetailFieldList
       fields={[
@@ -105,8 +124,8 @@ const TicketDetailFields = ({
               value: TICKET_PRIORITY_LABELS[ticket.priority],
             },
             {
-              label: TICKET_SLA_LABEL,
-              value: <TicketSlaValue facts={ticket} now={now} />,
+              label: slaDetail.label,
+              value: slaValue,
             },
           ]}
         />

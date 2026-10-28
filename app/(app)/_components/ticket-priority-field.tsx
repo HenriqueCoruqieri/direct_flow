@@ -1,4 +1,6 @@
+import { useState } from "react"
 import type { ControllerFieldState } from "react-hook-form"
+import { toast } from "sonner"
 
 import {
   Field,
@@ -21,6 +23,7 @@ import {
   TICKET_PRIORITY_REQUIRED_HINT,
 } from "@/app/_lib/domain/ticket"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
+import { cn } from "@/app/_lib/utils"
 
 interface TicketPriorityFieldProps {
   id: string
@@ -31,7 +34,7 @@ interface TicketPriorityFieldProps {
   onBlur: () => void
   ref?: React.Ref<HTMLButtonElement>
   fieldState: ControllerFieldState
-  hint?: string
+  lockedMessage?: string
 }
 
 const ticketPriorityFromValue = (value: string): TicketPriority | undefined =>
@@ -46,20 +49,35 @@ const TicketPriorityField = ({
   onBlur,
   ref,
   fieldState,
-  hint,
+  lockedMessage,
 }: TicketPriorityFieldProps) => {
   const errorId = `${id}-error`
-  const hintId = `${id}-hint`
-  const showHint = !fieldState.invalid && hint !== undefined
+  const lockedId = `${id}-locked`
   const requiredId = `${id}-required`
+  const [open, setOpen] = useState(false)
+  const locked = lockedMessage !== undefined
   const showRequired = !fieldState.invalid && value === undefined
-  const describedBy = fieldState.invalid
-    ? errorId
-    : showRequired
-      ? requiredId
-      : showHint
-        ? hintId
-        : undefined
+  const describedBy =
+    [
+      fieldState.invalid ? errorId : null,
+      showRequired ? requiredId : null,
+      locked ? lockedId : null,
+    ]
+      .filter((entry) => entry !== null)
+      .join(" ") || undefined
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && lockedMessage !== undefined) {
+      toast.info(lockedMessage, { id: lockedId })
+      return
+    }
+    setOpen(nextOpen)
+  }
+
+  const handleValueChange = (next: string) => {
+    if (locked) return
+    onChange(ticketPriorityFromValue(next))
+  }
 
   return (
     <Field data-invalid={fieldState.invalid} className="min-w-0 gap-1.5">
@@ -67,16 +85,22 @@ const TicketPriorityField = ({
       <Select
         name={name}
         value={value ?? ""}
-        onValueChange={(next) => onChange(ticketPriorityFromValue(next))}
+        onValueChange={handleValueChange}
         disabled={disabled}
+        open={open && !locked}
+        onOpenChange={handleOpenChange}
       >
         <SelectTrigger
           ref={ref}
           id={id}
           onBlur={onBlur}
           aria-invalid={fieldState.invalid}
+          aria-disabled={locked || undefined}
           aria-describedby={describedBy}
-          className="w-full"
+          className={cn(
+            "w-full",
+            locked && "cursor-not-allowed opacity-50 dark:hover:bg-input/30",
+          )}
         >
           <SelectValue placeholder={TICKET_PRIORITY_PLACEHOLDER} />
         </SelectTrigger>
@@ -96,8 +120,10 @@ const TicketPriorityField = ({
           {TICKET_PRIORITY_REQUIRED_HINT}
         </FieldDescription>
       ) : null}
-      {showHint && !showRequired ? (
-        <FieldDescription id={hintId}>{hint}</FieldDescription>
+      {locked ? (
+        <span id={lockedId} className="sr-only">
+          {lockedMessage}
+        </span>
       ) : null}
     </Field>
   )

@@ -115,6 +115,9 @@ const describeAssignment = (entry: TicketHistoryEntry): string => {
 
 const describeTransferRequest = (entry: TicketHistoryEntry): string => {
   const actor = describeActorOfDepartment(entry, entry.fromDepartmentName)
+  if (entry.toAssigneeName && entry.toDepartmentName) {
+    return `${actor} encaminhou o chamado para ${entry.toAssigneeName}, de ${entry.toDepartmentName}.`
+  }
   return entry.toDepartmentName
     ? `${actor} encaminhou o chamado para a fila de ${entry.toDepartmentName}.`
     : `${actor} encaminhou o chamado para outro setor.`

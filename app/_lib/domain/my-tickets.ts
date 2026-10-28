@@ -24,7 +24,7 @@ export const DEFAULT_MY_TICKETS_TAB: MyTicketsTab = "assigned"
 export const MY_TICKETS_PERIOD_PRESETS = ALL_TIME_PERIOD_PRESETS
 
 export const DEFAULT_MY_TICKETS_PERIOD: PeriodFilterSelection = {
-  periodo: "hoje",
+  periodo: "todos",
 }
 
 export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy = {

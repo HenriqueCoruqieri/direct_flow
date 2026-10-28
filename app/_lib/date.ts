@@ -54,6 +54,9 @@ export const formatDate = (value: DateInput): string =>
 export const formatDateTime = (value: DateInput): string =>
   inAppZone(value).format("DD/MM/YYYY HH:mm")
 
+export const formatDateDashTime = (value: DateInput): string =>
+  inAppZone(value).format("DD/MM/YYYY [-] HH:mm")
+
 export const formatShortDateTime = (
   value: DateInput,
   now: DateInput = new Date(),

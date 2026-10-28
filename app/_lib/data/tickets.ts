@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { lockActorFacts } from "@/app/_lib/data/actor-facts"
+import { toTransferRecipient } from "@/app/_lib/data/transfer-recipient"
 import { resolveTicketPriority } from "@/app/_lib/domain/tag-priority"
 import {
   canViewTicket,
@@ -43,8 +44,10 @@ import {
   canViewTicketAfterDecline,
   canViewTicketAfterTransfer,
   declineReturnAssigneeFor,
+  effectiveTransferRecipient,
   isTicketDepartmentSendConflict,
   isTicketTransferReviewConflict,
+  isUsableTransferAssignee,
   isUsableTransferTarget,
   REJECTED_TRANSFER_STATUS,
   ticketDepartmentSendBlockFor,
@@ -58,6 +61,7 @@ import type {
   InsertTicketOutcome,
   InsertTicketValues,
   TicketDetail,
+  TicketTransferRecipient,
 } from "@/app/_lib/types/ticket"
 import type {
   AssignTicketOutcome,
@@ -109,6 +113,7 @@ export async function findTicketDetail(
   const transferFrom = alias(department, "transfer_from")
   const transferTo = alias(department, "transfer_to")
   const requester = alias(user, "requester")
+  const transferRecipient = alias(user, "transfer_recipient")
 
   const changer = alias(user, "changer")
   const changerDepartment = alias(department, "history_changer_department")
@@ -163,6 +168,10 @@ export async function findTicketDetail(
         fromDepartmentName: transferFrom.name,
         toDepartmentId: ticketTransfer.toDepartmentId,
         toDepartmentName: transferTo.name,
+        recipientId: transferRecipient.id,
+        recipientName: transferRecipient.name,
+        recipientIsActive: transferRecipient.isActive,
+        recipientDepartmentId: transferRecipient.departmentId,
         requestedByName: requester.name,
         requestedAt: ticketTransfer.createdAt,
         requestReason: ticketTransfer.requestReason,
@@ -174,6 +183,10 @@ export async function findTicketDetail(
       )
       .innerJoin(transferTo, eq(transferTo.id, ticketTransfer.toDepartmentId))
       .innerJoin(requester, eq(requester.id, ticketTransfer.requestedBy))
+      .leftJoin(
+        transferRecipient,
+        eq(transferRecipient.id, ticketTransfer.toUserId),
+      )
       .where(
         and(
           eq(ticketTransfer.ticketId, id),
@@ -224,9 +237,22 @@ export async function findTicketDetail(
   const ticketRow = ticketRows[0]
   if (!ticketRow) return null
 
+  const transferRow = transferRows[0]
+
   return {
     ...ticketRow,
-    pendingTransfer: transferRows[0] ?? null,
+    pendingTransfer: transferRow
+      ? {
+          id: transferRow.id,
+          fromDepartmentName: transferRow.fromDepartmentName,
+          toDepartmentId: transferRow.toDepartmentId,
+          toDepartmentName: transferRow.toDepartmentName,
+          recipient: toTransferRecipient(transferRow),
+          requestedByName: transferRow.requestedByName,
+          requestedAt: transferRow.requestedAt,
+          requestReason: transferRow.requestReason,
+        }
+      : null,
     history: historyRows,
   }
 }
@@ -1046,8 +1072,14 @@ export async function startTicketWork(
 export async function requestTicketTransfer(
   values: RequestTicketTransferValues,
 ): Promise<RequestTicketTransferOutcome> {
-  const { ticketId, actorId, toDepartmentId, expectedDepartmentId, comment } =
-    values
+  const {
+    ticketId,
+    actorId,
+    toDepartmentId,
+    assigneeId,
+    expectedDepartmentId,
+    comment,
+  } = values
 
   return db.transaction(async (tx) => {
     const [ticketRow] = await tx
@@ -1128,6 +1160,21 @@ export async function requestTicketTransfer(
       return { status: "invalid_target" }
     }
 
+    let recipientName: string | null = null
+
+    if (assigneeId !== null) {
+      const recipientRow = await findTransferRecipient(tx, assigneeId)
+
+      if (
+        !recipientRow ||
+        !isUsableTransferAssignee(recipientRow, toDepartmentId)
+      ) {
+        return { status: "invalid_assignee" }
+      }
+
+      recipientName = recipientRow.name
+    }
+
     const changedAt = new Date()
 
     await tx.insert(message).values({
@@ -1153,6 +1200,7 @@ export async function requestTicketTransfer(
       ticketId,
       fromDepartmentId: ticketRow.currentDepartmentId,
       toDepartmentId,
+      toUserId: assigneeId,
       requestedBy: actorId,
       requestReason: comment,
       status: "pendente",
@@ -1169,7 +1217,7 @@ export async function requestTicketTransfer(
       fromDepartmentId: ticketRow.currentDepartmentId,
       toDepartmentId,
       fromAssigneeId: ticketRow.assignedTo,
-      toAssigneeId: null,
+      toAssigneeId: assigneeId,
       changedAt,
     })
 
@@ -1177,6 +1225,7 @@ export async function requestTicketTransfer(
       status: "saved",
       ticketId,
       toDepartmentName: targetRow.name,
+      recipientName,
       actorKeepsAccess: canViewTicketAfterTransfer(
         actor,
         ticketRow,
@@ -1184,6 +1233,26 @@ export async function requestTicketTransfer(
       ),
     }
   })
+}
+
+async function findTransferRecipient(
+  tx: Transaction,
+  userId: number | null,
+): Promise<TicketTransferRecipient | null> {
+  if (userId === null) return null
+
+  const [row] = await tx
+    .select({
+      id: user.id,
+      name: user.name,
+      isActive: user.isActive,
+      departmentId: user.departmentId,
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .for("share")
+
+  return row ?? null
 }
 
 async function findReviewedTransfer(
@@ -1245,6 +1314,7 @@ export async function approveTicketTransfer(
         id: ticketTransfer.id,
         fromDepartmentId: ticketTransfer.fromDepartmentId,
         toDepartmentId: ticketTransfer.toDepartmentId,
+        toUserId: ticketTransfer.toUserId,
       })
       .from(ticketTransfer)
       .where(
@@ -1256,9 +1326,20 @@ export async function approveTicketTransfer(
       .limit(1)
       .for("update")
 
+    const recipient = await findTransferRecipient(
+      tx,
+      pendingTransfer?.toUserId ?? null,
+    )
+
     const reason = ticketTransferReviewBlockFor(actor, {
       ...ticketRow,
-      pendingTransfer: pendingTransfer ?? null,
+      pendingTransfer: pendingTransfer
+        ? {
+            id: pendingTransfer.id,
+            toDepartmentId: pendingTransfer.toDepartmentId,
+            recipient,
+          }
+        : null,
     })
 
     if (reason !== null && !isTicketTransferReviewConflict(reason)) {
@@ -1296,6 +1377,12 @@ export async function approveTicketTransfer(
         currentDepartmentName: currentDepartmentRow?.name ?? "",
         currentAssigneeId: ticketRow.assignedTo,
         currentAssigneeName,
+        recipientName: pendingTransfer
+          ? (effectiveTransferRecipient(
+              recipient,
+              pendingTransfer.toDepartmentId,
+            )?.name ?? null)
+          : null,
       }
     }
 
@@ -1375,6 +1462,7 @@ export async function rejectTicketTransfer(
         id: ticketTransfer.id,
         fromDepartmentId: ticketTransfer.fromDepartmentId,
         toDepartmentId: ticketTransfer.toDepartmentId,
+        toUserId: ticketTransfer.toUserId,
         requestedBy: ticketTransfer.requestedBy,
       })
       .from(ticketTransfer)
@@ -1387,9 +1475,20 @@ export async function rejectTicketTransfer(
       .limit(1)
       .for("update")
 
+    const recipient = await findTransferRecipient(
+      tx,
+      pendingTransfer?.toUserId ?? null,
+    )
+
     const reason = ticketTransferDeclineBlockFor(actor, {
       ...ticketRow,
-      pendingTransfer: pendingTransfer ?? null,
+      pendingTransfer: pendingTransfer
+        ? {
+            id: pendingTransfer.id,
+            toDepartmentId: pendingTransfer.toDepartmentId,
+            recipient,
+          }
+        : null,
     })
 
     if (reason !== null && !isTicketTransferReviewConflict(reason)) {
@@ -1427,6 +1526,12 @@ export async function rejectTicketTransfer(
         currentDepartmentName: currentDepartmentRow?.name ?? "",
         currentAssigneeId: ticketRow.assignedTo,
         currentAssigneeName,
+        recipientName: pendingTransfer
+          ? (effectiveTransferRecipient(
+              recipient,
+              pendingTransfer.toDepartmentId,
+            )?.name ?? null)
+          : null,
       }
     }
 

@@ -42,8 +42,8 @@ export const resolveTicketPriority = (
   chosen: TicketPriority,
 ): TicketPriority => tagPriority ?? chosen
 
-export const tagPriorityHint = (tagName: string): string =>
-  `Definida pela tag ${tagName}`
+export const tagPriorityLockedMessage = (tagName: string): string =>
+  `A prioridade está fixada na tag ${tagName}.`
 
 export const ticketPriorityLockFor = (
   tags: readonly TagOption[],
@@ -51,7 +51,10 @@ export const ticketPriorityLockFor = (
 ): TicketPriorityLock | null => {
   const selected = tags.find((option) => option.id === tagId)
   if (!selected || selected.priority === null) return null
-  return { priority: selected.priority, hint: tagPriorityHint(selected.name) }
+  return {
+    priority: selected.priority,
+    lockedMessage: tagPriorityLockedMessage(selected.name),
+  }
 }
 
 export const ticketPriorityOnTagChange = (

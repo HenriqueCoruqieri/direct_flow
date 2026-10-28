@@ -1,4 +1,9 @@
-import { formatDateTime, formatTimeUntil, HOUR_MS } from "@/app/_lib/date"
+import {
+  formatDateDashTime,
+  formatDateTime,
+  formatTimeUntil,
+  HOUR_MS,
+} from "@/app/_lib/date"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import { isActiveTicketStatus } from "@/app/_lib/domain/ticket"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
@@ -9,6 +14,7 @@ import type {
   TicketSettledSlaStatus,
   TicketSla,
   TicketSlaCell,
+  TicketSlaDetail,
   TicketSlaFacts,
 } from "@/app/_lib/types/ticket-due"
 
@@ -86,4 +92,25 @@ export const describeTicketSlaCell = (
     }
   }
   return { label: null, value: describeTicketSla(sla) }
+}
+
+export const TICKET_SLA_DETAIL_RUNNING_LABELS = {
+  on_time: "Vence em",
+  overdue: "Vencido em",
+} satisfies Record<TicketRunningSlaStatus, string>
+
+export const describeTicketSlaDetail = (sla: TicketSla): TicketSlaDetail => {
+  if (isTicketSlaRunning(sla)) {
+    return {
+      status: sla.status,
+      label: TICKET_SLA_DETAIL_RUNNING_LABELS[sla.status],
+      value: formatDateDashTime(sla.dueAt),
+      dueAt: sla.dueAt,
+    }
+  }
+  return {
+    status: sla.status,
+    label: TICKET_SLA_LABEL,
+    value: describeTicketSla(sla),
+  }
 }

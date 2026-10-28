@@ -9,6 +9,12 @@ URL, de `docs/contracts/dashboard.md`.
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `@tanstack/react-table@9.2.4`, `lucide-react@1.47.0`.
 
+> **Revisão 2026-10-27 — período padrão volta a `Todos`.**
+> `DEFAULT_MY_TICKETS_PERIOD = { periodo: "todos" }`, como a Fila do setor.
+> Ausência de `periodo` ou valor inválido na URL de `/tickets` cai em `Todos`
+> (não mais em `Hoje`); `periodo=todos` continua sendo escrito na URL. Onde o
+> texto abaixo diz que o padrão desta tela é `Hoje`, vale `Todos`.
+
 > **Revisão 2026-10-26 — coluna SLA.** `MyTicketListItem` ganha
 > `priority: TicketPriority` e `resolvedAt: Date | null`; `listMyTickets`
 > passa a selecioná-los. A tabela ganha a coluna "SLA" logo após "Aberto em"

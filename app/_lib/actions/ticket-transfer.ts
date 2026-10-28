@@ -26,6 +26,7 @@ import {
   describeTicketTransferReviewConflict,
   TICKET_NOT_DECLINABLE_MESSAGE,
   TICKET_NOT_SENDABLE_TO_DEPARTMENT_MESSAGE,
+  UNAVAILABLE_TRANSFER_ASSIGNEE_MESSAGE,
   UNAVAILABLE_TRANSFER_TARGET_MESSAGE,
 } from "@/app/_lib/domain/ticket-transfer"
 import type { StaleTicketCode } from "@/app/_lib/types/ticket"
@@ -47,7 +48,7 @@ import {
 } from "@/app/_lib/validation/ticket-transfer"
 
 export type SendTicketToDepartmentErrorCode =
-  "INVALID_INPUT" | "INVALID_TARGET" | StaleTicketCode
+  "INVALID_INPUT" | "INVALID_TARGET" | "INVALID_ASSIGNEE" | StaleTicketCode
 
 export interface SendTicketToDepartmentSuccess {
   ok: true
@@ -156,6 +157,11 @@ const SEND_STATIC_OUTCOME_FAILURES = {
     ok: false,
     code: "INVALID_TARGET",
     message: UNAVAILABLE_TRANSFER_TARGET_MESSAGE,
+  },
+  invalid_assignee: {
+    ok: false,
+    code: "INVALID_ASSIGNEE",
+    message: UNAVAILABLE_TRANSFER_ASSIGNEE_MESSAGE,
   },
 } satisfies Record<SendStaticFailureStatus, SendTicketToDepartmentFailure>
 
@@ -309,6 +315,7 @@ export const sendTicketToDepartment = async (
     message: describeTicketSentToDepartment(
       outcome.ticketId,
       outcome.toDepartmentName,
+      outcome.recipientName,
     ),
     keepsAccess: outcome.actorKeepsAccess,
   }

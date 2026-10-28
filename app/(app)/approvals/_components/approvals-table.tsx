@@ -13,6 +13,12 @@ import {
   APPROVALS_SENT_AT_LABEL,
 } from "@/app/_lib/domain/approvals"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
+import {
+  describeTransferRecipient,
+  effectiveTransferRecipient,
+  TRANSFER_QUEUE_ASSIGNEE_LABEL,
+  TRANSFER_RECIPIENT_LABEL,
+} from "@/app/_lib/domain/ticket-transfer"
 import type { ApprovalListItem } from "@/app/_lib/types/approvals"
 import type { PeriodFilterSelection } from "@/app/_lib/types/period"
 import { approvalsTicketDetailHref } from "@/app/_lib/validation/ticket-detail-origin"
@@ -20,6 +26,7 @@ import { approvalsTicketDetailHref } from "@/app/_lib/validation/ticket-detail-o
 import createTicketListColumns from "../../_components/ticket-list-columns"
 import {
   idNameFiltersFor,
+  NONE_FILTER_VALUE,
   TICKET_TYPE_FILTER,
   ticketTagFiltersFor,
 } from "../../_components/ticket-list-filters"
@@ -27,6 +34,11 @@ import {
 const columnHelper = createColumnHelper<DataTableFeatures, ApprovalListItem>()
 
 const FROM_DEPARTMENT_COLUMN_ID = "fromDepartment"
+
+const RECIPIENT_COLUMN_ID = "recipient"
+
+const recipientOf = (row: ApprovalListItem) =>
+  effectiveTransferRecipient(row.recipient, row.toDepartmentId)
 
 const buildColumns = (period: PeriodFilterSelection) => {
   const shared = createTicketListColumns<ApprovalListItem>((ticketId) =>
@@ -44,6 +56,22 @@ const buildColumns = (period: PeriodFilterSelection) => {
       filterFn: "inValues",
       cell: ({ row }) => row.original.fromDepartmentName,
     }),
+    columnHelper.accessor(
+      (row) => {
+        const recipient = recipientOf(row)
+        return recipient === null ? NONE_FILTER_VALUE : String(recipient.id)
+      },
+      {
+        id: RECIPIENT_COLUMN_ID,
+        header: TRANSFER_RECIPIENT_LABEL,
+        filterFn: "inValues",
+        cell: ({ row }) =>
+          describeTransferRecipient(
+            row.original.recipient,
+            row.original.toDepartmentId,
+          ),
+      },
+    ),
     shared.status,
     shared.createdAt,
     columnHelper.accessor((row) => row.sentAt, {
@@ -74,6 +102,22 @@ const fromDepartmentFiltersFor = (
     },
   )
 
+const recipientFiltersFor = (
+  tickets: readonly ApprovalListItem[],
+): DataTableFilter[] =>
+  idNameFiltersFor(
+    tickets,
+    (ticket) => {
+      const recipient = recipientOf(ticket)
+      return { id: recipient?.id ?? null, name: recipient?.name ?? null }
+    },
+    {
+      columnId: RECIPIENT_COLUMN_ID,
+      label: TRANSFER_RECIPIENT_LABEL,
+      noneLabel: TRANSFER_QUEUE_ASSIGNEE_LABEL,
+    },
+  )
+
 interface ApprovalsTableProps {
   tickets: ApprovalListItem[]
   period: PeriodFilterSelection
@@ -97,6 +141,7 @@ const ApprovalsTable = ({
       TICKET_TYPE_FILTER,
       ...ticketTagFiltersFor(tickets),
       ...fromDepartmentFiltersFor(tickets),
+      ...recipientFiltersFor(tickets),
     ],
     [tickets],
   )

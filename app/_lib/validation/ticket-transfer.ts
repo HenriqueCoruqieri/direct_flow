@@ -18,6 +18,14 @@ const toDepartmentIdSchema = registryIdSchema(
   SELECT_TARGET_DEPARTMENT_MESSAGE,
 ).max(POSTGRES_INTEGER_MAX, { error: SELECT_TARGET_DEPARTMENT_MESSAGE })
 
+const SELECT_TRANSFER_ASSIGNEE_MESSAGE = "Selecione o destinatário."
+
+const transferAssigneeIdSchema = registryIdSchema(
+  SELECT_TRANSFER_ASSIGNEE_MESSAGE,
+)
+  .max(POSTGRES_INTEGER_MAX, { error: SELECT_TRANSFER_ASSIGNEE_MESSAGE })
+  .nullable()
+
 const expectedDepartmentIdSchema = registryIdSchema(
   STALE_DEPARTMENT_MESSAGE,
 ).max(POSTGRES_INTEGER_MAX, { error: STALE_DEPARTMENT_MESSAGE })
@@ -26,6 +34,7 @@ export const sendTicketToDepartmentSchema = z
   .object({
     ticketId: ticketIdSchema,
     toDepartmentId: toDepartmentIdSchema,
+    assigneeId: transferAssigneeIdSchema,
     expectedDepartmentId: expectedDepartmentIdSchema,
     comment: handoffCommentSchema,
   })

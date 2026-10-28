@@ -8,6 +8,15 @@ Contratos alterados por este (cada um ganhou uma nota de revisão apontando
 para cá): `registry-tags.md`, `ticket-creation.md`,
 `ticket-priority-and-sla.md`.
 
+> **Revisão de 2026-10-27 — aviso só ao tentar mudar.** O texto fixo
+> `Definida pela tag <nome>` abaixo do Select travado sai. A UI avisa só quando
+> a pessoa tenta mudar a prioridade travada (`BlockedActionTrigger` +
+> `toast.info`), com `TicketPriorityLock.lockedMessage` =
+> `tagPriorityLockedMessage(nome)`: `A prioridade está fixada na tag <nome>.`
+> (redação definida pelo usuário). `hint`/`tagPriorityHint` saíram (a UI já
+> não os usa).
+> Sem mudança de regra.
+
 > **Revisão de 2026-10-26 — prioridade sem pré-seleção.** Na abertura, sem tag
 > escolhida ou com tag sem prioridade, o Select de prioridade começa **vazio**
 > e mostra o placeholder `Nenhuma` (`TICKET_PRIORITY_PLACEHOLDER`). "Nenhuma"

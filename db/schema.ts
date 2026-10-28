@@ -246,6 +246,9 @@ export const ticketTransfer = pgTable(
     toDepartmentId: integer("to_department_id")
       .notNull()
       .references(() => department.id, { onDelete: "restrict" }),
+    toUserId: integer("to_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     requestedBy: integer("requested_by")
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),
@@ -266,6 +269,7 @@ export const ticketTransfer = pgTable(
     ),
     index("transfer_ticket_idx").on(table.ticketId, table.createdAt.desc()),
     index("transfer_from_department_idx").on(table.fromDepartmentId),
+    index("transfer_to_user_idx").on(table.toUserId),
     index("transfer_requested_by_idx").on(table.requestedBy),
     index("transfer_reviewed_by_idx").on(table.reviewedBy),
     uniqueIndex("transfer_one_pending_per_ticket_idx")
@@ -458,6 +462,9 @@ export const userRelations = relations(user, ({ one, many }) => ({
   }),
   createdTickets: many(ticket, { relationName: "ticket_creator" }),
   assignedTickets: many(ticket, { relationName: "ticket_assignee" }),
+  receivedTransfers: many(ticketTransfer, {
+    relationName: "transfer_to_user",
+  }),
   requestedTransfers: many(ticketTransfer, {
     relationName: "transfer_requested_by",
   }),
@@ -542,6 +549,11 @@ export const ticketTransferRelations = relations(ticketTransfer, ({ one }) => ({
     fields: [ticketTransfer.toDepartmentId],
     references: [department.id],
     relationName: "transfer_to_department",
+  }),
+  recipient: one(user, {
+    fields: [ticketTransfer.toUserId],
+    references: [user.id],
+    relationName: "transfer_to_user",
   }),
   requester: one(user, {
     fields: [ticketTransfer.requestedBy],

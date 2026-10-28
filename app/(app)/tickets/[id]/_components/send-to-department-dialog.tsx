@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import ComboboxField from "@/app/_components/combobox-field"
@@ -26,21 +26,28 @@ import {
   SEND_TO_DEPARTMENT_PENDING_LABEL,
   SEND_TO_DEPARTMENT_SUBMIT_LABEL,
   sendToDepartmentDialogTitle,
+  TRANSFER_QUEUE_ASSIGNEE_LABEL,
   TRANSFER_TARGET_LABEL,
   TRANSFER_TARGET_PLACEHOLDER,
+  transferAssigneeOptionsFor,
 } from "@/app/_lib/domain/ticket-transfer"
 import type { DepartmentOption } from "@/app/_lib/types/department"
-import type { SendToDepartmentFormDefaults } from "@/app/_lib/types/ticket-transfer"
+import type {
+  SendToDepartmentFormDefaults,
+  TransferAssigneeOption,
+} from "@/app/_lib/types/ticket-transfer"
 import {
   type SendTicketToDepartmentInput,
   sendTicketToDepartmentSchema,
 } from "@/app/_lib/validation/ticket-transfer"
 
 import HandoffCommentField from "../../../_components/handoff-comment-field"
+import TicketAssigneeField from "../../../_components/ticket-assignee-field"
 
 export interface SendToDepartmentSetup {
   defaults: SendToDepartmentFormDefaults
   options: DepartmentOption[]
+  assignees: TransferAssigneeOption[]
   leaveHref: string
 }
 
@@ -52,11 +59,13 @@ interface SendToDepartmentDialogProps extends SendToDepartmentSetup {
 const SendToDepartmentDialog = ({
   defaults,
   options,
+  assignees,
   leaveHref,
   open,
   onOpenChange,
 }: SendToDepartmentDialogProps) => {
   const targetFieldId = useId()
+  const assigneeFieldId = useId()
   const commentFieldId = useId()
   const router = useRouter()
   const [isLeaving, setIsLeaving] = useState(false)
@@ -66,8 +75,23 @@ const SendToDepartmentDialog = ({
     defaultValues: defaults,
   })
 
+  const toDepartmentId = useWatch({
+    control: form.control,
+    name: "toDepartmentId",
+  })
+
   const isBusy = form.formState.isSubmitting || isLeaving
   const hasTargets = options.length > 0
+
+  const changeTarget = (
+    nextDepartmentId: number,
+    onChange: (value: number) => void,
+  ) => {
+    onChange(nextDepartmentId)
+    if (nextDepartmentId === toDepartmentId) return
+    form.setValue("assigneeId", null)
+    form.clearErrors("assigneeId")
+  }
 
   const close = () => {
     form.reset(defaults)
@@ -100,6 +124,16 @@ const SendToDepartmentDialog = ({
     if (result.code === "INVALID_TARGET") {
       form.setError(
         "toDepartmentId",
+        { message: result.message },
+        { shouldFocus: true },
+      )
+      router.refresh()
+      return
+    }
+
+    if (result.code === "INVALID_ASSIGNEE") {
+      form.setError(
+        "assigneeId",
         { message: result.message },
         { shouldFocus: true },
       )
@@ -141,6 +175,7 @@ const SendToDepartmentDialog = ({
                   <ComboboxField
                     id={targetFieldId}
                     {...field}
+                    onChange={(value) => changeTarget(value, field.onChange)}
                     disabled={isBusy}
                     fieldState={fieldState}
                     label={TRANSFER_TARGET_LABEL}
@@ -154,6 +189,25 @@ const SendToDepartmentDialog = ({
                   />
                 )}
               />
+              {toDepartmentId !== undefined ? (
+                <Controller
+                  name="assigneeId"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <TicketAssigneeField
+                      id={assigneeFieldId}
+                      {...field}
+                      disabled={isBusy}
+                      fieldState={fieldState}
+                      assignees={transferAssigneeOptionsFor(
+                        assignees,
+                        toDepartmentId,
+                      )}
+                      queueLabel={TRANSFER_QUEUE_ASSIGNEE_LABEL}
+                    />
+                  )}
+                />
+              ) : null}
               <Controller
                 name="comment"
                 control={form.control}

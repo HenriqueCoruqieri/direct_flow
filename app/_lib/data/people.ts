@@ -14,6 +14,7 @@ import type {
   UpdatePersonValues,
 } from "@/app/_lib/types/person"
 import type { AssigneeOption } from "@/app/_lib/types/ticket"
+import type { TransferAssigneeOption } from "@/app/_lib/types/ticket-transfer"
 import { db, type Transaction } from "@/db"
 import { account } from "@/db/auth-schema"
 import { department, user } from "@/db/schema"
@@ -101,6 +102,24 @@ export async function listTicketAssigneeOptions(
     .select({ id: user.id, name: user.name })
     .from(user)
     .where(and(eq(user.departmentId, departmentId), eq(user.isActive, true)))
+    .orderBy(sql`lower(${user.name})`, user.id)
+}
+
+export async function listTransferAssigneeOptions(
+  excludeDepartmentId: number,
+): Promise<TransferAssigneeOption[]> {
+  return db
+    .select({ id: user.id, name: user.name, departmentId: user.departmentId })
+    .from(user)
+    .innerJoin(department, eq(user.departmentId, department.id))
+    .where(
+      and(
+        eq(user.isActive, true),
+        eq(department.isActive, true),
+        eq(department.isUnassigned, false),
+        ne(department.id, excludeDepartmentId),
+      ),
+    )
     .orderBy(sql`lower(${user.name})`, user.id)
 }
 

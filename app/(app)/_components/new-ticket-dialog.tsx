@@ -230,8 +230,8 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
                     id={priorityId}
                     {...field}
                     value={priorityLock ? priorityLock.priority : field.value}
-                    disabled={priorityLock !== null || field.disabled}
-                    hint={priorityLock?.hint}
+                    disabled={field.disabled}
+                    lockedMessage={priorityLock?.lockedMessage}
                     fieldState={fieldState}
                   />
                 )}

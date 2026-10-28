@@ -20,9 +20,13 @@ import {
 import { EMPTY_HANDOFF_COMMENT } from "@/app/_lib/domain/ticket-handoff"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type {
+  AssigneeOption,
   TicketActorFacts,
   TicketAssigneeFacts,
+  TicketPendingTransfer,
   TicketStatus,
+  TicketTransferRecipient,
+  TicketTransferRecipientFacts,
   TicketViewerFacts,
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
@@ -50,6 +54,7 @@ import type {
   TicketTransferReviewSource,
   TicketTransferReviewStateBlockReason,
   TicketTransferSource,
+  TransferAssigneeOption,
   TransferTargetFacts,
 } from "@/app/_lib/types/ticket-transfer"
 
@@ -76,7 +81,7 @@ export const SEND_TO_DEPARTMENT_SUBMIT_LABEL = "Enviar"
 
 export const SEND_TO_DEPARTMENT_PENDING_LABEL = "Enviando…"
 
-export const SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION = `O chamado sai da fila deste setor e vai para a lista de ${APPROVALS_LABEL} do setor escolhido, aguardando aprovação até alguém de lá atendê-lo. O comentário fica público no chamado e aparece no aviso de aprovação.`
+export const SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION = `O chamado sai da fila deste setor e vai para a lista de ${APPROVALS_LABEL} do setor escolhido, aguardando aprovação até alguém de lá atendê-lo. Se você escolher um destinatário, só essa pessoa pode atender ou recusar. O comentário fica público no chamado e aparece no aviso de aprovação.`
 
 export const TRANSFER_TARGET_LABEL = "Setor de destino"
 
@@ -90,6 +95,50 @@ export const TICKET_NOT_SENDABLE_TO_DEPARTMENT_MESSAGE =
 
 export const UNAVAILABLE_TRANSFER_TARGET_MESSAGE =
   "Este setor não está disponível. Escolha outro setor ativo."
+
+export const TRANSFER_QUEUE_ASSIGNEE_LABEL = "Fila do setor"
+
+export const TRANSFER_RECIPIENT_LABEL = "Para"
+
+export const UNAVAILABLE_TRANSFER_ASSIGNEE_MESSAGE =
+  "Esta pessoa não está disponível no setor escolhido. Escolha outra pessoa ou a Fila do setor."
+
+export const isUsableTransferAssignee = (
+  person: TicketAssigneeFacts,
+  toDepartmentId: number,
+): boolean => isUsableTicketAssignee(person, toDepartmentId)
+
+export const transferAssigneeOptionsFor = (
+  options: readonly TransferAssigneeOption[],
+  toDepartmentId: number | undefined,
+): AssigneeOption[] =>
+  toDepartmentId === undefined
+    ? []
+    : options
+        .filter((option) => option.departmentId === toDepartmentId)
+        .map((option) => ({ id: option.id, name: option.name }))
+
+export const effectiveTransferRecipient = <
+  TRecipient extends TicketTransferRecipientFacts,
+>(
+  recipient: TRecipient | null,
+  toDepartmentId: number,
+): TRecipient | null =>
+  recipient !== null && isUsableTransferAssignee(recipient, toDepartmentId)
+    ? recipient
+    : null
+
+export const describeTransferRecipient = (
+  recipient: TicketTransferRecipient | null,
+  toDepartmentId: number,
+): string =>
+  effectiveTransferRecipient(recipient, toDepartmentId)?.name ??
+  TRANSFER_QUEUE_ASSIGNEE_LABEL
+
+export const describePendingTransferRecipient = (
+  transfer: TicketPendingTransfer,
+): string =>
+  `${TRANSFER_RECIPIENT_LABEL}: ${describeTransferRecipient(transfer.recipient, transfer.toDepartmentId)}`
 
 const TICKET_DEPARTMENT_SEND_BLOCK_IS_CONFLICT = {
   ACTOR_INACTIVE: false,
@@ -172,6 +221,7 @@ export const buildSendToDepartmentFormDefaults = (
 ): SendToDepartmentFormDefaults => ({
   ticketId: ticket.id,
   expectedDepartmentId: ticket.currentDepartmentId,
+  assigneeId: null,
   comment: EMPTY_HANDOFF_COMMENT,
 })
 
@@ -181,8 +231,11 @@ export const sendToDepartmentDialogTitle = (ticketId: number): string =>
 export const describeTicketSentToDepartment = (
   ticketId: number,
   departmentName: string,
+  recipientName: string | null,
 ): string =>
-  `Chamado ${formatTicketNumber(ticketId)} enviado para a fila de ${departmentName}.`
+  recipientName === null
+    ? `Chamado ${formatTicketNumber(ticketId)} enviado para a fila de ${departmentName}.`
+    : `Chamado ${formatTicketNumber(ticketId)} enviado para ${recipientName}, de ${departmentName}.`
 
 export const describeTicketTransferConflict = (
   conflict: TicketTransferConflict,
@@ -205,6 +258,7 @@ const TICKET_TRANSFER_REVIEW_BLOCK_IS_CONFLICT = {
   NO_PENDING_TRANSFER: true,
   OUTSIDE_TARGET_DEPARTMENT: false,
   STATUS_NOT_AWAITING: true,
+  NOT_TRANSFER_RECIPIENT: true,
 } as const satisfies Record<TicketTransferReviewBlockReason, boolean>
 
 export const ticketTransferReviewBlockFor = (
@@ -223,6 +277,13 @@ export const ticketTransferReviewBlockFor = (
   }
   if (ticket.status !== AWAITING_APPROVAL_TICKET_STATUS) {
     return "STATUS_NOT_AWAITING"
+  }
+  const recipient = effectiveTransferRecipient(
+    pending.recipient,
+    pending.toDepartmentId,
+  )
+  if (recipient !== null && recipient.id !== actor.userId) {
+    return "NOT_TRANSFER_RECIPIENT"
   }
   return null
 }
@@ -303,6 +364,11 @@ export const describeTicketTransferReviewConflict = (
     return conflict.currentStatus === ATTENDED_TICKET_STATUS
       ? "Você já está atendendo este chamado."
       : "Este chamado já está com você. Confira a página atualizada."
+  }
+  if (conflict.reason === "NOT_TRANSFER_RECIPIENT") {
+    return conflict.recipientName !== null
+      ? `Este chamado foi enviado para ${conflict.recipientName}. Só essa pessoa pode atendê-lo ou recusá-lo.`
+      : "Este chamado foi enviado para outra pessoa do setor. Só ela pode atendê-lo ou recusá-lo."
   }
   if (conflict.reason === "TRANSFER_CHANGED") {
     return "O envio deste chamado mudou. Confira a página atualizada."

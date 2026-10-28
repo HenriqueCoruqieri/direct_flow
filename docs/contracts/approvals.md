@@ -12,6 +12,18 @@ setor de destino. Esta aba é só a **lista** das transferências pendentes
 recebidas pelo setor de quem vê, com atalho para o detalhe. O ADR ganhou nota de
 revisão de 2026-10-15 apontando para cá.
 
+> Revisão de 2026-10-27 (`docs/contracts/department-transfer.md`, seção
+> "Revisão de 2026-10-27 — Destinatário no envio", que prevalece no que
+> diverge): o envio pode indicar um **destinatário** do setor de destino. A
+> lista continua com **todas** as pendentes do setor, inclusive as endereçadas
+> a outra pessoa, e ganha a coluna e o filtro **"Para"**
+> (`TRANSFER_RECIPIENT_LABEL`), com o nome do destinatário efetivo ou
+> `Fila do setor` (`describeTransferRecipient`). `ApprovalListItem` ganhou
+> `toDepartmentId` e `recipient`. Com destinatário, só ele atende ou recusa no
+> detalhe; os colegas só veem. O contador não muda (conta todas). Onde este
+> documento diz "por qualquer pessoa do setor de destino", leia "sem
+> destinatário".
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `@tanstack/react-table@9.2.4`.
 

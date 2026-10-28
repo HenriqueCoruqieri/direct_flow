@@ -11,6 +11,13 @@ para cá): `ticket-creation.md`, `dashboard-overview.md`, `my-tickets.md`,
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `react-hook-form@7.88`, `@hookform/resolvers@5.9`.
 
+> **Revisão de 2026-10-27 — rótulo do SLA no detalhe.** No card "Detalhes" de
+> `/tickets/[id]` o campo usa `describeTicketSlaDetail(ticketSlaFor(ticket, now))`:
+> ativo vencido → rótulo `Vencido em`, valor `DD/MM/AAAA - HH:mm`
+> (`formatDateDashTime`), em vermelho; ativo no prazo → `Vence em` + mesmo
+> formato; resolvido/fechado → rótulo `SLA` com `No prazo`/`Fora do prazo`;
+> neutro → `SLA` com `—`. A coluna "SLA" das tabelas não muda.
+
 > **Revisão de 2026-10-26 — prioridade definida pela tag**
 > (`docs/contracts/tag-priority.md`, ADR 020). A prioridade do chamado passa a
 > ser `resolveTicketPriority(tag.priority, escolhida)`: tag com prioridade

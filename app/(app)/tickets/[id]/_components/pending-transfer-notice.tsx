@@ -2,6 +2,7 @@ import { HourglassIcon } from "lucide-react"
 
 import { formatDateTime, toISO } from "@/app/_lib/date"
 import { describePendingTransfer } from "@/app/_lib/domain/ticket"
+import { describePendingTransferRecipient } from "@/app/_lib/domain/ticket-transfer"
 import type { TicketPendingTransfer } from "@/app/_lib/types/ticket"
 
 interface PendingTransferNoticeProps {
@@ -16,6 +17,9 @@ const PendingTransferNotice = ({ transfer }: PendingTransferNoticeProps) => {
         <h2 className="text-sm font-bold">
           {describePendingTransfer(transfer)}
         </h2>
+        <p className="text-sm font-semibold">
+          {describePendingTransferRecipient(transfer)}
+        </p>
         <p className="text-caption">
           Solicitada por {transfer.requestedByName} em{" "}
           <time dateTime={toISO(transfer.requestedAt)} className="tabular-nums">

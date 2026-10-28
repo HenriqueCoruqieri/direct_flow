@@ -1,7 +1,12 @@
 "use client"
 
 import type { ReactNode } from "react"
-import type { DotItemDotProps, TooltipContentProps } from "recharts"
+import type {
+  DotItemDotProps,
+  TooltipContentProps,
+  TooltipPayloadEntry,
+  TooltipValueType,
+} from "recharts"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
 import {
@@ -72,6 +77,35 @@ const renderLastPoint = (
   )
 }
 
+const activitySeriesFor = (
+  dataKey: TooltipPayloadEntry["dataKey"],
+): DashboardActivitySeries | undefined =>
+  ACTIVITY_SERIES.find((series) => series === dataKey)
+
+const renderTooltipItem = (
+  value: TooltipValueType | undefined,
+  item: TooltipPayloadEntry,
+): ReactNode => {
+  const series = activitySeriesFor(item.dataKey)
+  if (series === undefined) return null
+  return (
+    <>
+      <div
+        className="w-1 shrink-0 rounded-xs"
+        style={{ backgroundColor: `var(--color-${series})` }}
+      />
+      <div className="flex flex-1 items-center justify-between gap-4 leading-none">
+        <span className="text-muted-foreground">
+          {ACTIVITY_SERIES_LABELS[series]}
+        </span>
+        <span className="font-sans font-medium text-foreground tabular-nums">
+          {String(value ?? 0)}
+        </span>
+      </div>
+    </>
+  )
+}
+
 interface ActivityChartProps {
   points: DashboardActivityPoint[]
 }
@@ -98,6 +132,7 @@ const ActivityChart = ({ points }: ActivityChartProps) => {
         label={label}
         indicator="line"
         labelFormatter={() => point.longLabel}
+        formatter={(value, _name, item) => renderTooltipItem(value, item)}
       />
     )
   }

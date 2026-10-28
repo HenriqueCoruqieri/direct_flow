@@ -72,6 +72,17 @@ Padrões de outcome, trava, conflito e resultado de action vêm de
 > todo cenário que procura o chamado pendente na Fila do destino (procurar em
 > `/approvals`). Cenários novos em `department-queue.md` (QA1–QA3).
 
+> Revisão de 2026-10-27, destinatário no envio (seção "Revisão de 2026-10-27 —
+> Destinatário no envio", no fim deste documento, que prevalece no que
+> diverge): o diálogo ganha o campo **"Destinatário"** ("Fila do setor" ou uma
+> pessoa ativa do setor de destino). Com pessoa escolhida, só ela atende ou
+> recusa. Coluna nova `ticket_transfer.to_user_id` (migration `0020`).
+> **Ficam superados**: a linha "Aceite pela diretoria" e "Recusa: quem pode" da
+> tabela de decisões no que diz "qualquer pessoa do setor de destino" (vale só
+> sem destinatário), a frase `encaminhou o chamado para a fila de {destino}`
+> quando há destinatário, e a assinatura de `describeTicketSentToDepartment`
+> (ganhou `recipientName`).
+
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `react-hook-form@7.88`.
 
@@ -1833,6 +1844,354 @@ existir no seed.
 | RJ21 | qualquer  | toda a bateria                                                                                                                                              | sem e-mail; sem erro de hidratação                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 Ao final: M e A ativos em QA Suporte.
+
+---
+
+## Revisão de 2026-10-27 — Destinatário no envio
+
+Aprovada pelo usuário em 2026-10-27 (opção A), sem plano. Prevalece sobre as
+etapas acima no que diverge. Código do `df-architect` publicado nesta data.
+
+### Regra
+
+- No diálogo "Enviar chamado para outro setor", depois do **setor de destino**,
+  aparece o campo **"Destinatário"**: padrão **"Fila do setor"** ou uma pessoa
+  do setor escolhido. A lista muda quando o setor muda.
+- **Fila do setor** (`assigneeId = null`): exatamente o fluxo de hoje (ADR 016).
+- **Pessoa escolhida**: o chamado vai para o setor de destino como hoje
+  (`current_department_id = destino`, `assigned_to = null`,
+  `aguardando_aprovacao`), aparece nas **Aprovações** do setor com "Para: Nome",
+  e **só essa pessoa** atende ou recusa. Os colegas do setor veem o chamado,
+  sem "Atender" nem "Recusar". Aceite: o chamado fica com ela (`em_andamento`).
+  Recusa: volta ao setor de origem, como hoje.
+
+### Decisões do arquiteto
+
+| Tema                                    | Decisão                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Onde mora o destinatário                | `ticket_transfer.to_user_id` (anulável). **Não** em `ticket.assigned_to`: enquanto pendente o chamado continua sem destinatário, e todas as travas de hoje (editar, atribuir, resolver, reenviar) seguem valendo sem mudança                                                                                                                                     |
+| `on delete`                             | `set null`, como `ticket.assigned_to` e `ticket_transfer.reviewed_by`. Pessoa apagada (o projeto desativa, não apaga) transforma o envio em "Fila do setor", que é exatamente a regra de fallback abaixo                                                                                                                                                         |
+| Índice                                  | `transfer_to_user_idx` em `to_user_id`, como toda FK de `ticket_transfer`                                                                                                                                                                                                                                                                                        |
+| Quem é elegível                         | O critério de destinatário que o sistema já usa: `isUsableTicketAssignee(pessoa, toDepartmentId)` (ativa e do setor), exposto como `isUsableTransferAssignee`. A lista do diálogo usa a mesma condição da `listTicketAssigneeOptions` (ativos do setor)                                                                                                          |
+| Destinatário que deixou de ser elegível | Se, durante a pendência, a pessoa for desativada ou mudar de setor, o envio passa a valer como **Fila do setor** (`effectiveTransferRecipient` devolve `null`): qualquer pessoa do setor atende ou recusa, e Aprovações e o aviso mostram "Fila do setor". Sem isso o chamado ficaria parado sem ninguém que pudesse agir. Nada é gravado: é decidido na leitura |
+| Diretoria                               | Sem mudança no ADR 016: o poder global da Diretoria não alcança o aceite. Diretor fora do setor de destino continua `OUTSIDE_TARGET_DEPARTMENT`. Envio **para** a Diretoria com destinatário: só aquele diretor atende ou recusa. Como remetente (despachante global), o diretor escolhe qualquer pessoa elegível do destino                                     |
+| Quem envia pode escolher a si mesmo     | Pode, se for elegível no destino (ex.: diretor de outro setor não; diretor enviando para a Diretoria, sim). Não há regra pedindo o contrário                                                                                                                                                                                                                     |
+| Bloqueio de quem não é o destinatário   | Motivo novo `NOT_TRANSFER_RECIPIENT`, classificado como **conflito** (estado da transferência, não permissão fixa da pessoa): o clique forjado ou atrasado de um colega recebe `CONFLICT` com `Este chamado foi enviado para {nome}. Só essa pessoa pode atendê-lo ou recusá-lo.` Vem depois de `STATUS_NOT_AWAITING` em `ticketTransferReviewBlockFor`          |
+| Histórico                               | A linha `transferencia_solicitada` grava `to_assignee_id = destinatário escolhido` (nulo na Fila do setor). Para este evento, `to_assignee` passa a significar "destinatário indicado", não `ticket.assigned_to` (que fica nulo). É o que mantém o ciclo de vida documentado e permite a frase da linha do tempo. Linhas antigas ficam como estão (nulo)         |
+| Frase da linha do tempo                 | Com destinatário: `{usuário} do setor {setor} encaminhou o chamado para {pessoa}, de {destino}.` Sem: a de hoje                                                                                                                                                                                                                                                  |
+| Como a UI obtém as pessoas por setor    | O Server Component do detalhe entrega, junto das opções de setor, uma lista plana `TransferAssigneeOption[]` (`id`, `name`, `departmentId`) das pessoas elegíveis de **todos** os setores de destino; o cliente filtra com `transferAssigneeOptionsFor`. Sem chamada nova do cliente, sem ADR                                                                    |
+| Volume                                  | Uma consulta, só quando quem vê pode enviar (`canSendToDepartment`), com as pessoas ativas dos setores ativos menos o atual. Na escala do projeto (dezenas a poucas centenas de pessoas) são poucos KB no payload. Se passar de ~1.500 pessoas, rever (busca por setor via action exigiria ADR, como o 015)                                                      |
+| Contador de Aprovações                  | Sem mudança: conta todas as pendentes do setor, inclusive as endereçadas a outra pessoa (a lista as mostra)                                                                                                                                                                                                                                                      |
+| E-mail                                  | O envio não dispara e-mail hoje e continua não disparando. Avisar o destinatário por e-mail seria pedido novo (`df-email`)                                                                                                                                                                                                                                       |
+
+### Schema e migration
+
+`db/schema.ts`: `ticket_transfer.toUserId` (`to_user_id`, `integer`, anulável,
+FK `users.id` `on delete set null`), índice `transfer_to_user_idx`; relations
+`ticketTransfer.recipient` e `user.receivedTransfers` (`relationName:
+"transfer_to_user"`).
+
+`db/migrations/0020_transfer_recipient.sql` (gerada, **não aplicada**; o
+usuário aplica com `npm run db:migrate`). Só aditiva:
+
+```sql
+ALTER TABLE "ticket_transfer" ADD COLUMN "to_user_id" integer;
+ALTER TABLE "ticket_transfer" ADD CONSTRAINT "ticket_transfer_to_user_id_users_id_fk" FOREIGN KEY ("to_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+CREATE INDEX "transfer_to_user_idx" ON "ticket_transfer" USING btree ("to_user_id");
+```
+
+Transferências existentes ficam com `to_user_id` nulo (= Fila do setor), que é
+o comportamento de antes.
+
+### Tipos
+
+`app/_lib/types/ticket.ts`:
+
+```ts
+export interface TicketTransferRecipientFacts extends TicketAssigneeFacts {
+  id: number
+}
+
+export interface TicketTransferRecipient extends TicketTransferRecipientFacts {
+  name: string
+}
+
+export interface TicketPendingTransfer {
+  id: number
+  fromDepartmentName: string
+  toDepartmentId: number
+  toDepartmentName: string
+  recipient: TicketTransferRecipient | null
+  requestedByName: string
+  requestedAt: Date
+  requestReason: string | null
+}
+```
+
+`app/_lib/types/ticket-transfer.ts` (acréscimos):
+
+```ts
+export interface RequestTicketTransferValues {
+  ticketId: number
+  actorId: number
+  toDepartmentId: number
+  assigneeId: number | null
+  expectedDepartmentId: number
+  comment: string
+}
+
+export interface TransferAssigneeOption extends AssigneeOption {
+  departmentId: number
+}
+
+export interface TicketTransferRequested {
+  status: "saved"
+  ticketId: number
+  toDepartmentName: string
+  recipientName: string | null
+  actorKeepsAccess: boolean
+}
+
+export interface TicketInvalidTransferAssignee {
+  status: "invalid_assignee"
+}
+
+export type RequestTicketTransferOutcome =
+  | TicketTransferRequested
+  | TicketNotFound
+  | TicketNotTransferable
+  | TicketTransferConflict
+  | TicketInvalidTransferTarget
+  | TicketInvalidTransferAssignee
+
+export interface SendToDepartmentFormDefaults {
+  ticketId: number
+  expectedDepartmentId: number
+  toDepartmentId?: number
+  assigneeId: number | null
+  comment: string
+}
+
+export interface TicketPendingTransferReview {
+  id: number
+  toDepartmentId: number
+  recipient: TicketTransferRecipientFacts | null
+}
+
+export type TicketTransferReviewStateBlockReason =
+  "NO_PENDING_TRANSFER" | "STATUS_NOT_AWAITING" | "NOT_TRANSFER_RECIPIENT"
+
+export interface TicketTransferReviewConflict {
+  status: "conflict"
+  reason: TicketTransferReviewConflictReason
+  currentStatus: TicketStatus
+  currentDepartmentName: string
+  currentAssigneeId: number | null
+  currentAssigneeName: string | null
+  recipientName: string | null
+}
+```
+
+`app/_lib/types/approvals.ts` — `ApprovalListItem` ganha
+`toDepartmentId: number` e `recipient: TicketTransferRecipient | null`.
+
+### Domínio — `app/_lib/domain/ticket-transfer.ts`
+
+| Função / constante                                                                   | Semântica                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRANSFER_QUEUE_ASSIGNEE_LABEL`                                                      | `"Fila do setor"` — opção padrão do campo (passar como `queueLabel` do `TicketAssigneeField`) e texto de "sem destinatário" em Aprovações e no aviso                                                                              |
+| `TRANSFER_RECIPIENT_LABEL`                                                           | `"Para"` — cabeçalho da coluna e do filtro em Aprovações, prefixo do aviso                                                                                                                                                        |
+| `UNAVAILABLE_TRANSFER_ASSIGNEE_MESSAGE`                                              | `Esta pessoa não está disponível no setor escolhido. Escolha outra pessoa ou a Fila do setor.`                                                                                                                                    |
+| `isUsableTransferAssignee(person, toDepartmentId)`                                   | `isUsableTicketAssignee` (ativa e do setor de destino)                                                                                                                                                                            |
+| `transferAssigneeOptionsFor(options, toDepartmentId)`                                | Pessoas do setor escolhido (`AssigneeOption[]`, na ordem recebida); `[]` com `toDepartmentId` `undefined`                                                                                                                         |
+| `effectiveTransferRecipient(recipient, toDepartmentId)`                              | O destinatário se ainda for elegível; senão `null` (vale como Fila do setor). Genérico: devolve o mesmo tipo que recebe                                                                                                           |
+| `describeTransferRecipient(recipient, toDepartmentId)`                               | Nome do destinatário efetivo ou `Fila do setor`                                                                                                                                                                                   |
+| `describePendingTransferRecipient(transfer)`                                         | `Para: {nome}` ou `Para: Fila do setor` (aviso do detalhe)                                                                                                                                                                        |
+| `ticketTransferReviewBlockFor(actor, ticket)` (alterada)                             | Depois das checagens de hoje: com destinatário efetivo diferente de `actor.userId` → `NOT_TRANSFER_RECIPIENT`. Aceite, recusa, `ticketAttendTargetFor` e `ticketDeclineTargetFor` passam por ela, então UI e action decidem igual |
+| `describeTicketSentToDepartment(ticketId, departmentName, recipientName)` (alterada) | Sem destinatário: a de hoje. Com: `Chamado {n} enviado para {pessoa}, de {setor}.`                                                                                                                                                |
+| `describeTicketTransferReviewConflict` (alterada)                                    | `NOT_TRANSFER_RECIPIENT`: `Este chamado foi enviado para {nome}. Só essa pessoa pode atendê-lo ou recusá-lo.` (sem nome: `…para outra pessoa do setor. Só ela…`)                                                                  |
+| `buildSendToDepartmentFormDefaults` (alterada)                                       | `assigneeId: null`                                                                                                                                                                                                                |
+| `SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION` (alterada)                                   | Ganhou `Se você escolher um destinatário, só essa pessoa pode atender ou recusar.` antes da frase do comentário                                                                                                                   |
+
+`app/_lib/domain/ticket-history.ts`: `transferencia_solicitada` com
+`toAssigneeName` → `{ator} encaminhou o chamado para {pessoa}, de {destino}.`
+
+Rótulo do campo: `TICKET_ASSIGNEE_LABEL` (`Destinatário`), que o
+`TicketAssigneeField` já usa.
+
+### Validação — `app/_lib/validation/ticket-transfer.ts`
+
+`sendTicketToDepartmentSchema` ganha `assigneeId`: id positivo até
+`POSTGRES_INTEGER_MAX` ou `null` (`null` = Fila do setor), mensagem
+`Selecione o destinatário.` O tipo `SendTicketToDepartmentInput` acompanha. O
+schema não sabe se a pessoa é do setor: isso é do banco (abaixo).
+
+### `df-data`
+
+**`app/_lib/data/people.ts` — `listTransferAssigneeOptions` (novo)**
+
+```ts
+export async function listTransferAssigneeOptions(
+  excludeDepartmentId: number,
+): Promise<TransferAssigneeOption[]>
+```
+
+`users` ativos (`is_active`) cujo `department` é ativo, não é "Não alocado" e
+não é `excludeDepartmentId` (o setor atual do chamado). Colunas `id`, `name`,
+`department_id`. Ordem `lower(name), id`, como `listTicketAssigneeOptions`.
+
+**`app/_lib/data/tickets.ts` — `requestTicketTransfer` (alterado)**
+
+Depois de validar o setor de destino (`invalid_target`) e antes de gravar:
+se `assigneeId !== null`, ler `users` (`name`, `is_active`, `department_id`)
+`for share`; sem linha ou `!isUsableTransferAssignee(row, toDepartmentId)` →
+`{ status: "invalid_assignee" }`, nada gravado. Na gravação:
+`ticket_transfer.to_user_id = assigneeId`;
+`ticket_history.to_assignee_id = assigneeId` na `transferencia_solicitada`
+(`ticket.assigned_to` continua `null`). Retorno `saved` ganha
+`recipientName` (`null` na Fila do setor).
+
+**`approveTicketTransfer` e `rejectTicketTransfer` (alterados)**
+
+A leitura da transferência pendente (`for update`) passa a trazer
+`to_user_id`. Se não for nulo, ler o destinatário (`id`, `name`, `is_active`,
+`department_id`) `for share` numa consulta **separada** (o Postgres recusa
+`FOR UPDATE` no lado anulável de um `left join`; ou use
+`.for("update", { of: ticketTransfer })`). Passar
+`pendingTransfer: { ...pendente, recipient }` a `ticketTransferReviewBlockFor`
+/ `ticketTransferDeclineBlockFor` — a regra decide, a função de dados não
+compara ids. O conflito ganha `recipientName` (nome do destinatário efetivo,
+`effectiveTransferRecipient(...)?.name ?? null`; `null` quando não há). O resto
+das travas e da gravação não muda.
+
+**`findTicketDetail` (alterado)** — `pendingTransfer.recipient`: `left join`
+de `users` em `ticket_transfer.to_user_id` com `id`, `name`, `isActive`,
+`departmentId`; `null` sem destinatário.
+
+**`app/_lib/data/approvals.ts` — `listPendingApprovals` (alterado)** — cada item
+ganha `toDepartmentId` e `recipient` (mesmo `left join`). `countPendingApprovals`
+não muda.
+
+### `df-actions` — `app/_lib/actions/ticket-transfer.ts`
+
+- `SendTicketToDepartmentErrorCode` ganha `"INVALID_ASSIGNEE"`.
+- `SEND_STATIC_OUTCOME_FAILURES.invalid_assignee`:
+  `{ ok: false, code: "INVALID_ASSIGNEE", message: UNAVAILABLE_TRANSFER_ASSIGNEE_MESSAGE }`.
+  A elegibilidade é conferida dentro da transação do `df-data` (a action não
+  lê banco); a action só traduz o outcome.
+- Sucesso: `describeTicketSentToDepartment(ticketId, toDepartmentName, recipientName)`.
+- Aceite e recusa: sem mudança de código; o conflito `NOT_TRANSFER_RECIPIENT`
+  sai como `CONFLICT` pelo `describeTicketTransferReviewConflict` existente.
+  Revalidação igual à de hoje.
+
+### `df-ui`
+
+- **Página do detalhe** (`app/(app)/tickets/[id]/page.tsx`): quando
+  `canSendToDepartment`, buscar `listTransferAssigneeOptions(ticket.currentDepartmentId)`
+  junto de `listDepartmentOptions()`; `SendToDepartmentSetup` ganha
+  `assignees: TransferAssigneeOption[]`.
+- **Diálogo** (`send-to-department-dialog.tsx`): campo `assigneeId` com
+  `TicketAssigneeField`, `queueLabel={TRANSFER_QUEUE_ASSIGNEE_LABEL}` e
+  `assignees={transferAssigneeOptionsFor(assignees, toDepartmentId)}`
+  (`form.watch`/`useWatch` de `toDepartmentId`). **Só aparece depois de escolher
+  o setor.** Padrão `null` (Fila do setor). Trocar o setor volta o campo para
+  `null`. `INVALID_ASSIGNEE` → `form.setError("assigneeId", …)` com foco e
+  `router.refresh()` (como `INVALID_TARGET`).
+- **Aviso do detalhe** (`pending-transfer-notice.tsx`): linha
+  `describePendingTransferRecipient(transfer)` abaixo do título.
+- **Aprovações** (`approvals-table.tsx`): coluna `TRANSFER_RECIPIENT_LABEL`
+  ("Para") depois de "Veio de", com `describeTransferRecipient(row.recipient,
+row.toDepartmentId)`; filtro "Para" por `idNameFiltersFor` sobre
+  `effectiveTransferRecipient(...)`, `noneLabel: TRANSFER_QUEUE_ASSIGNEE_LABEL`.
+- **Atender / Recusar**: nada a codar. `ticketAttendTargetFor` e
+  `ticketDeclineTargetFor` já devolvem `null` para quem não é o destinatário,
+  assim que o `df-data` preencher `recipient`.
+
+### `tsc` entre ondas
+
+Resolvido. Entre a Onda 0 e a Onda 2 o `tsc` falhou nos arquivos do `df-data`
+e do `df-actions`, que ainda não tinham o campo novo; depois das ondas 1 e 2,
+`npx tsc --noEmit`, `npm run lint` e `npm run build` passam.
+
+### Cenários para o `df-qa`
+
+Contas: **D** = `heoliveirac@gmail.com` (Diretor, Diretoria); **A** =
+`cazalbe@gmail.com` (Administrador, Suporte); **M** = `rodalv@gmail.com`
+(Membro, Suporte). Chamados criados só com título `[QA] …`; comentários
+`[QA] …`. Antes: `npm run db:migrate` aplicado pelo usuário.
+
+**Preparação:** como D, criar na Diretoria `[QA] Dest pessoa`, `[QA] Dest
+recusa`, `[QA] Dest fila` e `[QA] Dest fallback` (fila da Diretoria).
+
+| #    | Quem     | Ação                                                                                                                               | Esperado                                                                                                                                                                                                                                                       |
+| ---- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DS1  | banco    | `\d ticket_transfer`                                                                                                               | coluna `to_user_id integer` anulável, FK `on delete set null`, índice `transfer_to_user_idx`; transferências antigas com `to_user_id` nulo                                                                                                                     |
+| DS2  | D        | abrir "Enviar para outro setor" em `[QA] Dest pessoa`                                                                              | campo "Destinatário" **ausente** até escolher o setor; ao escolher Suporte, aparece com `Fila do setor` selecionado; a lista mostra só pessoas ativas de Suporte (A, M…), em ordem alfabética; trocar para outro setor volta a `Fila do setor` e troca a lista |
+| DS3  | D        | enviar `[QA] Dest pessoa` para Suporte com destinatário M e comentário                                                             | toast `Chamado #N enviado para {M}, de Suporte.`; D continua no detalhe porque é Diretor e autor (`canViewTicket`), não por ter enviado; aviso amarelo com `Para: {M}`                                                                                         |
+| DS4  | banco    | depois do DS3                                                                                                                      | `ticket`: setor Suporte, `assigned_to` nulo, `aguardando_aprovacao`; `ticket_transfer` pendente com `to_user_id = M`; **uma** `transferencia_solicitada` com `to_assignee_id = M`                                                                              |
+| DS5  | A        | `/approvals` e o detalhe de `[QA] Dest pessoa`                                                                                     | linha com "Para" = M; filtro "Para" lista M; no detalhe, `Para: {M}`, **sem** "Atender" e "Recusar"; linha do tempo `{D} do setor Diretoria encaminhou o chamado para {M}, de Suporte.`                                                                        |
+| DS6  | A        | request forjada de `acceptTicketTransfer` e de `declineTicketTransfer` (com motivo) para `[QA] Dest pessoa`                        | `CONFLICT`, `Este chamado foi enviado para {M}. Só essa pessoa pode atendê-lo ou recusá-lo.`; nada gravado                                                                                                                                                     |
+| DS7  | M        | detalhe de `[QA] Dest pessoa` → "Atender"                                                                                          | sucesso; `em_andamento`, `assigned_to = M`; transferência `aprovado`; sai de `/approvals`                                                                                                                                                                      |
+| DS8  | D, A     | D envia `[QA] Dest recusa` para Suporte com destinatário A; A recusa com motivo `[QA] …`                                           | M não vê "Atender"/"Recusar"; A vê os dois; recusa volta o chamado à Diretoria como `recusado`, como hoje                                                                                                                                                      |
+| DS9  | D, A, M  | D envia `[QA] Dest fila` para Suporte com `Fila do setor`                                                                          | `/approvals` "Para" = `Fila do setor`; A e M veem "Atender" e "Recusar"; toast `…enviado para a fila de Suporte.`; `to_user_id` nulo; linha do tempo com a frase de hoje                                                                                       |
+| DS10 | D        | requests forjadas de `sendTicketToDepartment` para `[QA] Dest fallback` → Suporte: `assigneeId` = id de D; `assigneeId` `"abc"`    | o primeiro: `INVALID_ASSIGNEE`, `Esta pessoa não está disponível no setor escolhido. Escolha outra pessoa ou a Fila do setor.`; o segundo: `INVALID_INPUT`; nada gravado nos dois                                                                              |
+| DS11 | D, A     | D envia `[QA] Dest fallback` para Suporte com destinatário M; D desativa M em Cadastros → Pessoas; A abre `/approvals` e o detalhe | "Para" = `Fila do setor`; A vê "Atender" e "Recusar" e consegue atender; depois D reativa M. Se a desativação de M for barrada pela regra de pessoas, registrar e pular                                                                                        |
+| DS12 | A        | contador de Aprovações durante DS3–DS6                                                                                             | conta o chamado endereçado a M                                                                                                                                                                                                                                 |
+| DS13 | qualquer | toda a bateria; diálogo a 390×844                                                                                                  | nenhum e-mail; sem erro de hidratação; diálogo cabe com o campo novo                                                                                                                                                                                           |
+
+Ao final: M ativo em Suporte.
+
+### Checklist
+
+- [x] coluna, relations, migration `0020` gerada (não aplicada), tipos, regra,
+      textos, schema Zod, frase da linha do tempo, contrato (`df-architect`,
+      2026-10-27)
+- [x] `npm run db:migrate` (usuário; conferido no banco)
+- [x] `listTransferAssigneeOptions`, `requestTicketTransfer`,
+      `approveTicketTransfer`, `rejectTicketTransfer`, `findTicketDetail`,
+      `listPendingApprovals` (`df-data`; leitura do destinatário centralizada
+      em `toTransferRecipient`, `app/_lib/data/transfer-recipient.ts`, e o
+      envio reaproveita `findTransferRecipient`)
+- [x] `sendTicketToDepartment` (`df-actions`)
+- [x] página do detalhe, diálogo, aviso, Aprovações (`df-ui`)
+- [x] `df-reviewer`: APROVADO COM ATENÇÕES (as duas de DRY no `df-data`
+      corrigidas; a do `tsc` entre ondas, atualizada acima)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [ ] cenários DS (`df-qa`): 6 de 13 executados, todos passaram (DS1, DS2,
+      DS3, DS4, DS10, DS13 — os de envio adaptados para Suporte →
+      Administrativo); 7 não executados —
+      `docs/test-reports/2026-10-27-transfer-recipient.md`
+
+### Limites conhecidos
+
+O lado do **destino** não foi exercitado no navegador: DS5, DS6, DS7, DS8,
+DS12 e a visão do destino no DS9. O login do Diretor foi recusado com a senha
+entregue e o QA não tinha conta em nenhum setor de destino; por isso os envios
+saíram de Suporte para Administrativo. A regra que esses cenários cobrem
+(`ticketTransferReviewBlockFor` com `NOT_TRANSFER_RECIPIENT`, consumida por
+`ticketAttendTargetFor`, `ticketDeclineTargetFor` e pelas funções de dados) é
+a mesma na UI e na action, mas segue sem verificação ponta a ponta.
+
+DS11 (destinatário desativado volta a valer como Fila do setor) não foi
+executado: exige desativar uma conta real. Fica pendente até existir conta de
+QA descartável.
+
+No DS13, a ausência de e-mail não foi confirmada em log (`RESEND_API_KEY`
+preenchida no `.env`); o envio não chama `app/_lib/email/` por contrato.
+
+Os chamados #274 (`Para: Lucas Carlos`) e #275 (Fila do setor) ficaram
+pendentes em Administrativo e servem para rodar o lado do destino com uma
+conta desse setor.
+
+**Quem continua vendo o chamado depois do envio.** `canViewTicket`
+(`app/_lib/domain/ticket.ts:186`) libera autor, responsável, quem é do setor
+atual e Diretor; não há regra por `origin_department_id` nem por papel de
+administrador. Depois do envio o setor atual é o de destino e `assigned_to`
+fica nulo (`canViewTicketAfterTransfer`), então quem envia só continua no
+detalhe se for o autor ou Diretor. No teste adaptado, o administrador de
+Suporte ficou no detalhe por ser o autor dos chamados `[QA]`, não por ser
+administrador do setor de origem; um administrador da origem que não seja
+autor perde o acesso, como no envio normal.
 
 ---
 

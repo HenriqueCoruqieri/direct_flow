@@ -1,6 +1,8 @@
 import type { DepartmentAvailability } from "@/app/_lib/types/department"
 import type {
+  AssigneeOption,
   TicketStatus,
+  TicketTransferRecipientFacts,
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
 import type {
@@ -28,14 +30,20 @@ export interface RequestTicketTransferValues {
   ticketId: number
   actorId: number
   toDepartmentId: number
+  assigneeId: number | null
   expectedDepartmentId: number
   comment: string
+}
+
+export interface TransferAssigneeOption extends AssigneeOption {
+  departmentId: number
 }
 
 export interface TicketTransferRequested {
   status: "saved"
   ticketId: number
   toDepartmentName: string
+  recipientName: string | null
   actorKeepsAccess: boolean
 }
 
@@ -45,6 +53,10 @@ export interface TicketNotTransferable {
 
 export interface TicketInvalidTransferTarget {
   status: "invalid_target"
+}
+
+export interface TicketInvalidTransferAssignee {
+  status: "invalid_assignee"
 }
 
 export type TicketTransferConflictReason =
@@ -64,6 +76,7 @@ export type RequestTicketTransferOutcome =
   | TicketNotTransferable
   | TicketTransferConflict
   | TicketInvalidTransferTarget
+  | TicketInvalidTransferAssignee
 
 export interface TicketTransferSource {
   id: number
@@ -74,12 +87,14 @@ export interface SendToDepartmentFormDefaults {
   ticketId: number
   expectedDepartmentId: number
   toDepartmentId?: number
+  assigneeId: number | null
   comment: string
 }
 
 export interface TicketPendingTransferReview {
   id: number
   toDepartmentId: number
+  recipient: TicketTransferRecipientFacts | null
 }
 
 export interface TicketTransferReviewFacts extends TicketVisibilityFacts {
@@ -95,7 +110,7 @@ export type TicketTransferReviewActorBlockReason =
   TicketAssignmentActorBlockReason | "OUTSIDE_TARGET_DEPARTMENT"
 
 export type TicketTransferReviewStateBlockReason =
-  "NO_PENDING_TRANSFER" | "STATUS_NOT_AWAITING"
+  "NO_PENDING_TRANSFER" | "STATUS_NOT_AWAITING" | "NOT_TRANSFER_RECIPIENT"
 
 export type TicketTransferReviewBlockReason =
   TicketTransferReviewActorBlockReason | TicketTransferReviewStateBlockReason
@@ -146,6 +161,7 @@ export interface TicketTransferReviewConflict {
   currentDepartmentName: string
   currentAssigneeId: number | null
   currentAssigneeName: string | null
+  recipientName: string | null
 }
 
 export type ApproveTicketTransferOutcome =

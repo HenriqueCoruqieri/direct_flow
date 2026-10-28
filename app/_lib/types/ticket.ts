@@ -54,6 +54,14 @@ export interface AssigneeOption {
   name: string
 }
 
+export interface TicketTransferRecipientFacts extends TicketAssigneeFacts {
+  id: number
+}
+
+export interface TicketTransferRecipient extends TicketTransferRecipientFacts {
+  name: string
+}
+
 export interface TicketCreatorFacts {
   id: number
   name: string
@@ -135,6 +143,7 @@ export interface TicketPendingTransfer {
   fromDepartmentName: string
   toDepartmentId: number
   toDepartmentName: string
+  recipient: TicketTransferRecipient | null
   requestedByName: string
   requestedAt: Date
   requestReason: string | null
