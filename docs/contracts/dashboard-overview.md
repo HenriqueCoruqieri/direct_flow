@@ -32,6 +32,16 @@ Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 > passa a ser exportado de `app/_lib/domain/dashboard.ts`. Detalhe em
 > `docs/contracts/ticket-priority-and-sla.md`.
 
+> **Revisão 2026-10-27 — modo Individual.** Contrato em
+> `docs/contracts/dashboard-individual-mode.md` (plano
+> `docs/plans/dashboard-individual-mode.md`). O que está aqui passa a ser o
+> modo **Coletivo** e não muda. Superado neste documento:
+> `findDashboardOverview` recebe `userId` e devolve `DashboardOverviewByMode`
+> (`{ coletivo, individual }`); a leitura de recebidos troca `union` por
+> `union all` + `count(distinct)`, com o mesmo resultado para o Coletivo;
+> `receivedTransfersHint` e `backlogHint` ganham `mode` com padrão
+> `"coletivo"`.
+
 ---
 
 ## Etapa 1 — grade da página e linha 1

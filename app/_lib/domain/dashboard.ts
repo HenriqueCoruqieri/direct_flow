@@ -27,9 +27,11 @@ import type {
   DashboardOverdueColumn,
   DashboardOverview,
   DashboardOverviewCard,
+  DashboardOverviewEmptyHints,
   DashboardResolutionRate,
   DashboardTransferCounter,
   DashboardTransferCounterTone,
+  DashboardViewMode,
 } from "@/app/_lib/types/dashboard"
 import type { DepartmentQueueTab } from "@/app/_lib/types/department-queue"
 import type {
@@ -42,6 +44,17 @@ import type { TicketStatus } from "@/app/_lib/types/ticket"
 export const DASHBOARD_PATH = "/dashboard"
 
 export const DASHBOARD_LABEL = "Início"
+
+export { DASHBOARD_VIEW_MODES } from "@/app/_lib/domain/dashboard-view-modes"
+
+export const DEFAULT_DASHBOARD_VIEW_MODE: DashboardViewMode = "coletivo"
+
+export const DASHBOARD_VIEW_MODE_LABELS = {
+  coletivo: "Coletivo",
+  individual: "Individual",
+} satisfies Record<DashboardViewMode, string>
+
+export const DASHBOARD_VIEW_MODE_GROUP_LABEL = "Visão dos indicadores"
 
 export const DASHBOARD_OVERVIEW_LABELS = {
   ticketCount: "Chamados no período",
@@ -65,7 +78,27 @@ export const NO_RESOLUTIONS_IN_PERIOD_HINT =
 
 export const EMPTY_BACKLOG_HINT = "Nenhum chamado em backlog"
 
-export const receivedTransfersHint = (count: number): string => {
+export const DASHBOARD_OVERVIEW_EMPTY_HINTS = {
+  coletivo: {
+    noTickets: NO_TICKETS_IN_PERIOD_HINT,
+    noResolutions: NO_RESOLUTIONS_IN_PERIOD_HINT,
+    emptyBacklog: EMPTY_BACKLOG_HINT,
+  },
+  individual: {
+    noTickets: "Nenhum chamado seu no período",
+    noResolutions: "Nenhum resolvido por você no período",
+    emptyBacklog: "Nenhum chamado seu em backlog",
+  },
+} satisfies Record<DashboardViewMode, DashboardOverviewEmptyHints>
+
+export const receivedTransfersHint = (
+  count: number,
+  mode: DashboardViewMode = DEFAULT_DASHBOARD_VIEW_MODE,
+): string => {
+  if (mode === "individual") {
+    if (count <= 0) return "Nenhum aceito por você"
+    return `+${count} ${count === 1 ? "aceito" : "aceitos"} por você`
+  }
   if (count <= 0) return "Nenhum recebido de outros setores"
   return `+${count} ${count === 1 ? "recebido" : "recebidos"} de outros setores`
 }
@@ -123,10 +156,13 @@ export const ticketCountLabel = (count: number): string =>
 export const backlogValueLabel = (overview: DashboardOverview): string =>
   ticketCountLabel(Math.max(overview.overdueBacklogCount, 0))
 
-export const backlogHint = (overview: DashboardOverview): string =>
+export const backlogHint = (
+  overview: DashboardOverview,
+  mode: DashboardViewMode = DEFAULT_DASHBOARD_VIEW_MODE,
+): string =>
   overview.backlogCount > 0
     ? `${formatTotalHours(overview.backlogAgeMs)} em backlog`
-    : EMPTY_BACKLOG_HINT
+    : DASHBOARD_OVERVIEW_EMPTY_HINTS[mode].emptyBacklog
 
 export const TOP_TAGS_CARD_LABEL = "Principal ofensor"
 

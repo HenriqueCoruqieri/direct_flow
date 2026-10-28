@@ -1,4 +1,9 @@
+import type { DASHBOARD_VIEW_MODES } from "@/app/_lib/domain/dashboard-view-modes"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
+
+export type DashboardViewMode = (typeof DASHBOARD_VIEW_MODES)[number]
+
+export type DashboardByMode<T> = Record<DashboardViewMode, T>
 
 export type DashboardOverviewCard =
   "ticketCount" | "resolutionRate" | "averageResolution" | "backlog"
@@ -12,6 +17,14 @@ export interface DashboardOverview {
   backlogCount: number
   backlogAgeMs: number
   overdueBacklogCount: number
+}
+
+export type DashboardOverviewByMode = DashboardByMode<DashboardOverview>
+
+export interface DashboardOverviewEmptyHints {
+  noTickets: string
+  noResolutions: string
+  emptyBacklog: string
 }
 
 export interface DashboardMeasuredResolutionRate {

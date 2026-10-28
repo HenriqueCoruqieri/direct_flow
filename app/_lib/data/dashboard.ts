@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm"
-import { union } from "drizzle-orm/pg-core"
+import { unionAll } from "drizzle-orm/pg-core"
 
 import { countPendingApprovals } from "@/app/_lib/data/approvals"
 import { ticketDueAtSql } from "@/app/_lib/data/ticket-due"
@@ -17,7 +17,7 @@ import type {
   DashboardActivityCount,
   DashboardIncomingTransfer,
   DashboardOverdueTicket,
-  DashboardOverview,
+  DashboardOverviewByMode,
   DashboardTopTags,
   DashboardTransferSummary,
 } from "@/app/_lib/types/dashboard"
@@ -29,7 +29,8 @@ export async function findDashboardOverview(
   departmentId: number,
   range: DateRange,
   now: Date,
-): Promise<DashboardOverview> {
+  userId: number,
+): Promise<DashboardOverviewByMode> {
   const createdInRange = and(
     gte(ticket.createdAt, range.start),
     lt(ticket.createdAt, range.end),
@@ -49,14 +50,27 @@ export async function findDashboardOverview(
   ])
   const isBacklogStatus = inArray(ticket.status, [...BACKLOG_TICKET_STATUSES])
 
-  const received = union(
+  const isMine = eq(ticket.assignedTo, userId)
+  const isMineInDepartment = and(
+    isMine,
+    eq(ticket.currentDepartmentId, departmentId),
+  )
+
+  const received = unionAll(
     db
-      .select({ ticketId: ticket.id })
+      .select({
+        ticketId: ticket.id,
+        mine: sql<boolean | null>`${isMineInDepartment}`.as("mine"),
+      })
       .from(ticket)
       .where(and(eq(ticket.originDepartmentId, departmentId), createdInRange)),
     db
-      .select({ ticketId: ticketTransfer.ticketId })
+      .select({
+        ticketId: ticketTransfer.ticketId,
+        mine: sql<boolean | null>`${isMineInDepartment}`.as("mine"),
+      })
       .from(ticketTransfer)
+      .innerJoin(ticket, eq(ticket.id, ticketTransfer.ticketId))
       .where(acceptedInRange),
   ).as("received")
 
@@ -73,29 +87,63 @@ export async function findDashboardOverview(
           string | null
         >`coalesce(sum(extract(epoch from greatest(${now}::timestamptz - ${ticket.createdAt}, interval '0')) * 1000) filter (where ${isBacklogStatus}), 0)`,
         overdueBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${ticketDueAtSql} < ${now}))::int`,
+        mineTicketCount: sql<number>`(count(*) filter (where ${createdInRange} and ${isMine}))::int`,
+        minePeriodResolvedCount: sql<number>`(count(*) filter (where ${resolvedInRange} and ${isResolvedStatus} and ${isMine}))::int`,
+        mineAverageResolutionMs: sql<
+          string | null
+        >`avg(extract(epoch from (${ticket.resolvedAt} - ${ticket.createdAt})) * 1000) filter (where ${resolvedInRange} and ${isResolvedStatus} and ${isMine})`,
+        mineBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${isMine}))::int`,
+        mineBacklogAgeMs: sql<
+          string | null
+        >`coalesce(sum(extract(epoch from greatest(${now}::timestamptz - ${ticket.createdAt}, interval '0')) * 1000) filter (where ${isBacklogStatus} and ${isMine}), 0)`,
+        mineOverdueBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${ticketDueAtSql} < ${now} and ${isMine}))::int`,
       })
       .from(ticket)
       .where(eq(ticket.currentDepartmentId, departmentId)),
     db
-      .select({ value: sql<number>`(${count()})::int` })
+      .select({
+        value: sql<number>`(${count()})::int`,
+        mineValue: sql<number>`(count(*) filter (where ${eq(ticketTransfer.reviewedBy, userId)}))::int`,
+      })
       .from(ticketTransfer)
       .where(acceptedInRange),
-    db.select({ value: sql<number>`(${count()})::int` }).from(received),
+    db
+      .select({
+        value: sql<number>`(count(distinct ${received.ticketId}))::int`,
+        mineValue: sql<number>`(count(distinct ${received.ticketId}) filter (where ${received.mine}))::int`,
+      })
+      .from(received),
   ])
 
   const ticketRow = ticketRows[0]
   const averageResolutionMs = ticketRow?.averageResolutionMs ?? null
+  const mineAverageResolutionMs = ticketRow?.mineAverageResolutionMs ?? null
 
   return {
-    ticketCount: ticketRow?.ticketCount ?? 0,
-    receivedTransferCount: transferRows[0]?.value ?? 0,
-    periodReceivedCount: receivedRows[0]?.value ?? 0,
-    periodResolvedCount: ticketRow?.periodResolvedCount ?? 0,
-    averageResolutionMs:
-      averageResolutionMs === null ? null : Number(averageResolutionMs),
-    backlogCount: ticketRow?.backlogCount ?? 0,
-    backlogAgeMs: Number(ticketRow?.backlogAgeMs ?? 0),
-    overdueBacklogCount: ticketRow?.overdueBacklogCount ?? 0,
+    coletivo: {
+      ticketCount: ticketRow?.ticketCount ?? 0,
+      receivedTransferCount: transferRows[0]?.value ?? 0,
+      periodReceivedCount: receivedRows[0]?.value ?? 0,
+      periodResolvedCount: ticketRow?.periodResolvedCount ?? 0,
+      averageResolutionMs:
+        averageResolutionMs === null ? null : Number(averageResolutionMs),
+      backlogCount: ticketRow?.backlogCount ?? 0,
+      backlogAgeMs: Number(ticketRow?.backlogAgeMs ?? 0),
+      overdueBacklogCount: ticketRow?.overdueBacklogCount ?? 0,
+    },
+    individual: {
+      ticketCount: ticketRow?.mineTicketCount ?? 0,
+      receivedTransferCount: transferRows[0]?.mineValue ?? 0,
+      periodReceivedCount: receivedRows[0]?.mineValue ?? 0,
+      periodResolvedCount: ticketRow?.minePeriodResolvedCount ?? 0,
+      averageResolutionMs:
+        mineAverageResolutionMs === null
+          ? null
+          : Number(mineAverageResolutionMs),
+      backlogCount: ticketRow?.mineBacklogCount ?? 0,
+      backlogAgeMs: Number(ticketRow?.mineBacklogAgeMs ?? 0),
+      overdueBacklogCount: ticketRow?.mineOverdueBacklogCount ?? 0,
+    },
   }
 }
 

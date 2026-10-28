@@ -1,107 +1,38 @@
 import { findDashboardOverview } from "@/app/_lib/data/dashboard"
-import {
-  backlogHint,
-  backlogValueLabel,
-  DASHBOARD_OVERVIEW_LABELS,
-  firstResponseHint,
-  formatResolutionRate,
-  NO_RESOLUTIONS_IN_PERIOD_HINT,
-  NO_TICKETS_IN_PERIOD_HINT,
-  receivedTransfersHint,
-  resolutionRateFor,
-  resolvedOfReceivedHint,
-  resolvedWithoutReceivedHint,
-} from "@/app/_lib/domain/dashboard"
-import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
+import { DASHBOARD_VIEW_MODES } from "@/app/_lib/domain/dashboard"
 import type { DateRange } from "@/app/_lib/types/period"
 
-import DurationValue from "./duration-value"
-import ResolutionProgress from "./resolution-progress"
-import StatCard from "./stat-card"
-import StatHint from "./stat-hint"
+import DashboardOverviewCards from "./dashboard-overview-cards"
+import DashboardViewPane from "./dashboard-view-pane"
 
 interface DashboardOverviewProps {
   departmentId: number
+  userId: number
   range: DateRange
   now: Date
 }
 
 const DashboardOverview = async ({
   departmentId,
+  userId,
   range,
   now,
 }: DashboardOverviewProps) => {
-  const overview = await findDashboardOverview(departmentId, range, now)
-  const rate = resolutionRateFor(overview)
-  const averageResolutionMs = overview.averageResolutionMs
+  const overviews = await findDashboardOverview(
+    departmentId,
+    range,
+    now,
+    userId,
+  )
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard
-        label={DASHBOARD_OVERVIEW_LABELS.ticketCount}
-        value={overview.ticketCount}
-        footer={
-          <StatHint
-            text={receivedTransfersHint(overview.receivedTransferCount)}
-          />
-        }
-      />
-      <StatCard
-        label={DASHBOARD_OVERVIEW_LABELS.resolutionRate}
-        value={
-          rate.kind === "measured"
-            ? formatResolutionRate(rate.percent)
-            : EMPTY_VALUE_LABEL
-        }
-        footer={
-          rate.kind === "measured" ? (
-            <div className="flex w-full min-w-0 flex-col">
-              <ResolutionProgress
-                percent={rate.percent}
-                barPercent={rate.barPercent}
-                label={DASHBOARD_OVERVIEW_LABELS.resolutionRate}
-              />
-              <StatHint
-                text={resolvedOfReceivedHint(
-                  rate.resolvedCount,
-                  rate.receivedCount,
-                )}
-              />
-            </div>
-          ) : (
-            <StatHint
-              text={
-                rate.kind === "unreceived"
-                  ? resolvedWithoutReceivedHint(rate.resolvedCount)
-                  : NO_TICKETS_IN_PERIOD_HINT
-              }
-            />
-          )
-        }
-      />
-      <StatCard
-        label={DASHBOARD_OVERVIEW_LABELS.averageResolution}
-        value={
-          averageResolutionMs === null ? (
-            EMPTY_VALUE_LABEL
-          ) : (
-            <DurationValue durationMs={averageResolutionMs} />
-          )
-        }
-        footer={
-          averageResolutionMs === null ? (
-            <StatHint text={NO_RESOLUTIONS_IN_PERIOD_HINT} />
-          ) : (
-            <StatHint text={firstResponseHint()} illustrative />
-          )
-        }
-      />
-      <StatCard
-        label={DASHBOARD_OVERVIEW_LABELS.backlog}
-        value={backlogValueLabel(overview)}
-        footer={<StatHint text={backlogHint(overview)} />}
-      />
-    </div>
+    <>
+      {DASHBOARD_VIEW_MODES.map((mode) => (
+        <DashboardViewPane key={mode} mode={mode}>
+          <DashboardOverviewCards overview={overviews[mode]} mode={mode} />
+        </DashboardViewPane>
+      ))}
+    </>
   )
 }
 
