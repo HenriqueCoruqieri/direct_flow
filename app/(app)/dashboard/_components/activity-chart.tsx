@@ -25,7 +25,10 @@ import {
 import type {
   DashboardActivityPoint,
   DashboardActivitySeries,
+  DashboardViewMode,
 } from "@/app/_lib/types/dashboard"
+
+import { useDashboardViewMode } from "../_hooks/use-dashboard-view-mode"
 
 const CHART_CONFIG = {
   opened: {
@@ -108,9 +111,11 @@ const renderTooltipItem = (
 
 interface ActivityChartProps {
   points: DashboardActivityPoint[]
+  mode: DashboardViewMode
 }
 
-const ActivityChart = ({ points }: ActivityChartProps) => {
+const ActivityChart = ({ points, mode }: ActivityChartProps) => {
+  const { mode: activeMode } = useDashboardViewMode()
   const lastIndex = activityLastPointIndex(points)
   const pointsByKey = new Map(points.map((point) => [point.key, point]))
   const showAllTicks = points.length <= MAX_POINTS_WITH_ALL_TICKS
@@ -136,6 +141,8 @@ const ActivityChart = ({ points }: ActivityChartProps) => {
       />
     )
   }
+
+  if (mode !== activeMode) return null
 
   return (
     <ChartContainer

@@ -993,7 +993,7 @@ que são do `df-ui` e mudam na mesma onda; nada fora do `df-ui` depende disso.
 - [x] Cenários MA1–MA15 (`df-qa`): 14 de 15, MA14 em parte
       (`docs/test-reports/2026-10-28-dashboard-individual-mode-overdue.md`)
 
-Etapa 3 concluída, aguardando commit.
+Etapa 3 concluída e commitada em 704b725.
 
 ### Limites conhecidos da Etapa 3
 
@@ -1003,3 +1003,502 @@ Etapa 3 concluída, aguardando commit.
   com o Administrador, então para ele Coletivo e Individual mostram a mesma
   lista.
 - **Diretoria não executada.** Login do Diretor recusado no QA.
+
+---
+
+## Etapa 4 — Abertos × resolvidos
+
+### O que muda e o que não muda
+
+- O card "Abertos × resolvidos" passa a ter as duas versões, trocadas pelo
+  switch da Etapa 1 (mesmo provider, mesmo `DashboardViewPane`).
+- O Coletivo do card fica **idêntico** ao de hoje (revisão 2026-10-24 de
+  `docs/contracts/dashboard-overview.md`, "o gráfico da linha 3 segue o
+  período"): baldes por granularidade, baldes futuros `null`, último ponto,
+  eixo, tooltip, tabela acessível, vazio, esqueleto.
+- Transferências **não muda**: no Individual continua mostrando o Coletivo.
+- Título, linha do período (`activityPeriodLabel`), granularidade, baldes,
+  legenda (séries, rótulos e cores), `col-span` (`xl:col-span-3`), altura,
+  `Suspense` com `key` e esqueleto: iguais nos dois modos.
+
+### Tabelas, enums e migration
+
+Sem mudança de schema, sem migration, sem índice novo. Coluna lida além das
+de hoje: `ticket.assigned_to` (índice `ticket_assigned_to_idx`).
+
+### Definições (Individual, "eu" = usuário da sessão)
+
+| Termo          | Definição                                                                                                                                                                                    |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Baldes**     | os do Coletivo: `timeBuckets(range, activityGranularityFor(range))`, mesma granularidade e mesmos baldes futuros `null` nos dois modos                                                       |
+| **Abertos**    | por balde: `ticket.current_department_id` = setor **e** `ticket.assigned_to` = eu **e** `created_at` no balde, todos os status. É a série do Coletivo com `assigned_to` = eu                 |
+| **Resolvidos** | por balde: `current_department_id` = setor **e** `assigned_to` = eu **e** `resolved_at` no balde **e** status em `DASHBOARD_RESOLVED_STATUSES`. É a série do Coletivo com `assigned_to` = eu |
+| **Vazio**      | `isActivityEmpty(points)` sobre os pontos do modo: todos os registrados em `0`                                                                                                               |
+
+"Meu" é o destinatário **atual**, como nas Etapas 1 a 3.
+
+**Coerência com a linha 1 (verificada, sem divergência).** As definições do
+gráfico coletivo e da linha 1 coincidem hoje, e por isso coincidem também no
+Individual:
+
+- `timeBuckets` cobre `[range.start, range.end)` sem buraco nem sobreposição
+  (`app/_lib/date.ts:218`, com `spanBuckets` em `:203`: dias contíguos de
+  `firstDayKey` a `lastDayKey`).
+- Abertos usa `created_at` no balde com `current_department_id` = setor, todos
+  os status: é o `createdInRange` de "Chamados no período"
+  (`app/_lib/data/dashboard.ts:80` no Coletivo, `:90` no Individual, ambos sob
+  o `where current_department_id = $dep` de `:102`).
+- Resolvidos usa `resolved_at` no balde + `DASHBOARD_RESOLVED_STATUSES` com o
+  mesmo setor: é o `periodResolvedCount` (`:81` e `:91`), numerador da Taxa
+  (`resolutionRateFor`).
+- Baldes futuros viram `null`, mas não há `created_at` nem `resolved_at` no
+  futuro, então nada se perde na soma.
+
+Portanto: **soma de Abertos = "Chamados no período"** e **soma de Resolvidos =
+numerador "X resolvidos de Y" da Taxa**, em cada modo e em qualquer período.
+O **denominador** da Taxa ("recebidos") **não** é série do gráfico: aceites de
+outro setor no período entram nos recebidos e só entram em Abertos se o
+chamado foi criado no período. Não comparar.
+
+### Tipos — `app/_lib/types/dashboard.ts` (acréscimo, já publicado)
+
+```ts
+export type DashboardActivityByMode = DashboardByMode<DashboardActivityPoint[]>
+
+export interface DashboardActivityEmptyCopy {
+  title: string
+  descriptions: Record<TimeBucketGranularity, string>
+}
+```
+
+`DashboardActivityCount`, `DashboardActivityPoint` e `DashboardActivitySeries`
+**não mudam**: cada modo é uma lista completa de pontos, então
+`buildActivitySeries`, `isActivityEmpty`, `recordedActivityPoints`,
+`activityLastPointIndex` e o `ActivityChart` servem aos dois modos.
+
+### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo, já publicado)
+
+| Export                                                        | Valor / semântica                                                                                                                                                                                    |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMPTY_ACTIVITY_DESCRIPTIONS`                                 | **mesmo valor** de hoje (`Os chamados abertos e resolvidos no setor aparecem aqui, hora a hora.` etc.), agora montado por um auxiliar privado com a cadência (`hora a hora` … `mês a mês`)           |
+| `EMPTY_OWN_ACTIVITY_TITLE`                                    | `"Nenhum chamado seu aberto ou resolvido no período"`                                                                                                                                                |
+| `EMPTY_OWN_ACTIVITY_DESCRIPTIONS`                             | por granularidade: `Os chamados do setor destinados a você abertos e resolvidos aparecem aqui, hora a hora.` (e `dia a dia`, `semana a semana`, `mês a mês`), pelo mesmo auxiliar, sem repetir texto |
+| `EMPTY_ACTIVITY_COPY`                                         | por modo (`satisfies Record<DashboardViewMode, DashboardActivityEmptyCopy>`): `coletivo` = `EMPTY_ACTIVITY_TITLE`/`EMPTY_ACTIVITY_DESCRIPTIONS` (inalterados), `individual` = as duas acima          |
+| `ACTIVITY_OWN_SCOPE_LABEL`                                    | `"seus chamados"`                                                                                                                                                                                    |
+| `activityTableCaption(range, granularity, mode = "coletivo")` | Coletivo igual a hoje (`Abertos × resolvidos, 24 out 2026 · por hora`). Individual: `Abertos × resolvidos, seus chamados, 24 out 2026 · por hora`                                                    |
+
+Decisões:
+
+- **Legenda não muda por modo.** Mesmas séries, rótulos e cores; o que varia é
+  só se ela aparece (depende do vazio do modo).
+- **Caption muda por modo.** A tabela é `sr-only` e quem navega por tabelas
+  ouve só o `caption`, sem passar pelo switch; sem o escopo, as duas versões
+  teriam o mesmo nome com números diferentes. O título visível continua o
+  mesmo nos dois modos, como nos outros cards.
+
+Sem mudança: `ACTIVITY_CARD_LABEL`, `ACTIVITY_LOADING_LABEL`,
+`ACTIVITY_SERIES*`, `ACTIVITY_GRANULARITY_LABELS`,
+`ACTIVITY_BUCKET_COLUMN_LABELS`, `ACTIVITY_TODAY_LABEL`, `EMPTY_ACTIVITY_TITLE`,
+`activityGranularityFor`, `activityPeriodLabel`, `buildActivitySeries` e
+auxiliares. A chamada atual `activityTableCaption(range, granularity)` continua
+compilando e igual.
+
+### `df-data` — `app/_lib/data/dashboard.ts`
+
+Assinatura alterada (parâmetro opcional no fim; sem ele, comportamento e SQL
+**idênticos** aos de hoje):
+
+```ts
+export async function listActivityBuckets(
+  departmentId: number,
+  buckets: readonly TimeBucket[],
+  assigneeId?: number,
+): Promise<DashboardActivityCount[]>
+```
+
+- **Onde entra o filtro: no `on` do `left join`**, entre a condição de setor e
+  o `or` das datas, nunca no `where`. No `where`, a linha do balde sem
+  chamado meu (`t.*` nulo) seria descartada e o balde sumiria do resultado;
+  no `on`, o balde continua saindo com `0`, como no Coletivo.
+
+  ```sql
+  left join ticket t
+    on t.current_department_id = $dep
+    and t.assigned_to = $assigneeId
+    and (
+      (t.created_at >= b.bucket_start and t.created_at < b.bucket_end)
+      or (t.resolved_at >= b.bucket_start and t.resolved_at < b.bucket_end)
+    )
+  ```
+
+  (a linha `and t.assigned_to = $assigneeId` só existe com `assigneeId`).
+
+- Em Drizzle, um fragmento condicional interpolado nessa posição:
+
+  ```ts
+  const assigneeFilter =
+    assigneeId === undefined
+      ? sql.empty()
+      : sql`and t.assigned_to = ${assigneeId}`
+  ```
+
+  Escrever `t.assigned_to` cru, como o resto do
+  `on`: `${ticket.assignedTo}` sairia qualificado pelo nome da tabela e não
+  casaria com o alias `t`. Sem pessoa, o texto do SQL é o de hoje (a menos de
+  espaço em branco). Nada de função duplicada; `filter`, `group by`,
+  `order by` e o mapeamento não mudam.
+
+- `buckets` vazio → `[]`, sem consulta, nos dois modos.
+- Rodar `EXPLAIN ANALYZE` com e sem `assigneeId`, com 24 baldes (Hoje) e 53
+  (Personalizado de um ano), para o Administrador de QA Suporte, e colar na
+  resposta; o plano do Coletivo não pode mudar.
+
+### `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que fazer
+
+`DashboardActivity` (servidor) passa a receber `userId` (o `actor.id` de
+`page.tsx`, como os outros cards) e faz **duas** leituras num `Promise.all`,
+sobre os **mesmos** baldes:
+
+```ts
+const granularity = activityGranularityFor(range)
+const buckets = timeBuckets(range, granularity)
+const [coletivo, individual] = await Promise.all([
+  listActivityBuckets(departmentId, buckets),
+  listActivityBuckets(departmentId, buckets, userId),
+])
+const pointsByMode: DashboardActivityByMode = {
+  coletivo: buildActivitySeries(buckets, granularity, coletivo, now),
+  individual: buildActivitySeries(buckets, granularity, individual, now),
+}
+```
+
+**Estrutura.** Como na Etapa 3, o cabeçalho também varia (a legenda depende do
+vazio de cada modo), então são **dois** pontos com `DashboardViewPane`, ambos
+**dentro** de um único `DashboardPanel`:
+
+```tsx
+<DashboardPanel aria-labelledby={TITLE_ID} className="xl:col-span-3">
+  <DashboardActivityHeader
+    titleId={TITLE_ID}
+    periodLabel={activityPeriodLabel(range, granularity)}
+  >
+    {DASHBOARD_VIEW_MODES.filter(
+      (mode) => !isActivityEmpty(pointsByMode[mode]),
+    ).map((mode) => (
+      <DashboardViewPane key={mode} mode={mode}>
+        <ActivityLegend />
+      </DashboardViewPane>
+    ))}
+  </DashboardActivityHeader>
+  {DASHBOARD_VIEW_MODES.map((mode) => (
+    <DashboardViewPane key={mode} mode={mode} className="flex flex-1 flex-col">
+      <DashboardActivityContent
+        points={pointsByMode[mode]}
+        mode={mode}
+        range={range}
+        granularity={granularity}
+      />
+    </DashboardViewPane>
+  ))}
+</DashboardPanel>
+```
+
+- `DashboardPanel` um só (item da grade da linha 3, com o `col-span`); `h2`
+  com `TITLE_ID` um só, fora dos painéis de modo. Nenhum `id` dentro de
+  `DashboardViewPane`.
+- **Legenda.** Só os modos com dados ganham painel no cabeçalho (`filter`):
+  modo vazio não tem legenda, e não fica um `div` vazio como item do
+  `flex-wrap` (sem largura mas com `gap-x-3`, ele poderia quebrar para a linha
+  de baixo em 390 px e somar o `gap-y-1` à altura). Com o modo vazio ativo e o
+  outro com dados, o painel do outro está `hidden`: o cabeçalho mostra só
+  título e período, como o vazio de hoje.
+- **Conteúdo.** Peça extraída: `_components/dashboard-activity-content.tsx`
+  (servidor), recebendo `points: DashboardActivityPoint[]`,
+  `mode: DashboardViewMode`, `range: DateRange` e
+  `granularity: TimeBucketGranularity`, e desenhando exatamente o que o card
+  desenha hoje abaixo do cabeçalho (o vazio com `mt-3 … min-h-56 flex-1`, ou o
+  `div relative mt-3 min-h-56 flex-1` do gráfico e a `div sr-only` da tabela).
+
+| Onde          | Antes                                      | Agora                                                 |
+| ------------- | ------------------------------------------ | ----------------------------------------------------- |
+| vazio, título | `EMPTY_ACTIVITY_TITLE`                     | `EMPTY_ACTIVITY_COPY[mode].title`                     |
+| vazio, texto  | `EMPTY_ACTIVITY_DESCRIPTIONS[granularity]` | `EMPTY_ACTIVITY_COPY[mode].descriptions[granularity]` |
+| `caption`     | `activityTableCaption(range, granularity)` | `activityTableCaption(range, granularity, mode)`      |
+| gráfico       | `<ActivityChart points={points} />`        | `<ActivityChart points={points} mode={mode} />`       |
+| legenda       | `isEmpty ? null : <ActivityLegend />`      | painel por modo com dados (acima)                     |
+
+**Altura e `flex-1`: `className` em `DashboardViewPane`.** Hoje a área do
+gráfico (e o vazio) é `flex-1` dentro do `DashboardPanel`
+(`flex h-full flex-col`); em `xl+` quem dita a altura da linha é o card de
+transferências e o gráfico preenche o resto. Com o `div` do painel de modo no
+meio, o `flex-1` do filho deixaria de valer (o `div` é bloco) e o gráfico
+ficaria em `min-h-56`, mudando o Coletivo. Por isso `DashboardViewPane` ganha
+`className?: string`, aplicado no `div`, e este card passa
+`"flex flex-1 flex-col"`. Isto **revisa** a regra da Etapa 1 ("o `div` não
+leva classe de `display`") para este caso, verificado: o preflight do
+Tailwind v4 instalado declara
+`[hidden]:where(:not([hidden='until-found'])) { display: none !important; }`
+(`node_modules/tailwindcss/preflight.css:396`), e o `!important` vence a
+utilidade `flex` de qualquer camada. O painel oculto continua
+`display: none`. Proibido: `!flex` ou qualquer `display` com `!` no
+`className` do painel. Os outros chamadores não passam `className` e ficam
+iguais.
+
+**Gráfico em painel oculto: mitigação obrigatória.** Verificado no código do
+Recharts instalado (`recharts@3.8.0`):
+
+- `ResponsiveContainer` mede no `useEffect` com `getBoundingClientRect()` e
+  observa com `ResizeObserver`
+  (`node_modules/recharts/es6/component/ResponsiveContainer.js`). Dentro de
+  `display: none` a medida é `0 × 0`: o contexto não desenha o gráfico
+  (`ResponsiveContainerContextProvider` devolve `null`) e `warn(...)` emite
+  `console.warn("The width(0) and height(0) of chart should be greater than 0 …")`.
+  O `warn` tem `isDev = true` fixo (`es6/util/LogUtils.js:2`), então o aviso
+  sai também no build de produção. Viola AP16 do contrato do Coletivo.
+- Ao revelar, o `ResizeObserver` dispararia (mudança de `0 × 0` para o tamanho
+  real) e o gráfico re-mediria; o risco não é tamanho final errado, é o aviso
+  e o trabalho inútil no modo oculto.
+
+Mitigação: **o gráfico só é montado no modo ativo.** `ActivityChart`
+(cliente) ganha a prop `mode: DashboardViewMode`, lê `useDashboardViewMode()`
+e devolve `null` quando `mode !== activeMode` (hooks antes do retorno).
+Consequências:
+
+- Ao trocar de modo, o gráfico do modo novo monta já visível e mede o tamanho
+  real; o do modo anterior desmonta. Nada de `ResizeObserver` em elemento
+  oculto, nenhum aviso. Trocar o período remonta o card (`Suspense` com `key`)
+  e só o modo ativo monta.
+- Os pontos já vieram do servidor como props: montar não faz requisição.
+- Hidratação: o estado inicial é `"coletivo"` no servidor e no cliente, então
+  o HTML do servidor já sai com o gráfico do Coletivo e sem o do Individual;
+  não há diferença.
+- O `div relative mt-3 min-h-56 flex-1` e a tabela `sr-only` continuam no DOM
+  nos dois modos (a tabela do modo oculto fica fora da árvore pelo `hidden`).
+- O primeiro quadro do gráfico recém-montado usa o `initialDimension` do
+  primitivo (320 × 200, `app/_components/ui/chart.tsx:10`) até o efeito medir,
+  como já acontece na carga da página. Efeitos de atualização vinda de evento
+  discreto (o `change` do rádio) rodam antes da pintura, então não se espera
+  quadro visível no tamanho provisório; se o QA perceber um salto, é
+  observação, não falha, desde que o tamanho final esteja certo (AR9).
+- Por que no `ActivityChart` e não no `DashboardViewPane`: só o Recharts
+  precisa medir; os outros cards seguem com o conteúdo no DOM, que é o que dá
+  troca instantânea sem remontar. O primitivo `chart.tsx` não é editado.
+
+**`id` duplicado.** Não há: o `ChartContainer` gera o identificador com
+`React.useId()` (`chart.tsx:58`) e o usa só em `data-chart` e no `<style>`
+escopado, não em atributo `id`; o `ResponsiveContainer` só emite `id` se
+recebe a prop, e o primitivo não passa (`chart.tsx:73`); os `clipPath` do
+Recharts vêm de `React.useId` (`es6/util/useId.js`), únicos por instância. E,
+com a mitigação, há **um** gráfico montado por vez.
+
+**Suspense e esqueleto.** `page.tsx`: só acrescenta `userId={actor.id}` em
+`DashboardActivity`; o `Suspense` continua com
+`key={serializeDashboardParams(selection)}`. `DashboardActivitySkeleton`
+**não muda**: o cabeçalho dele não tem painéis de modo e o esqueleto continua
+um só.
+
+### Consultas de conferência (`df-qa`)
+
+Contas, ids, banco só leitura e bordas como na Etapa 1 deste contrato. Sem a
+linha `and t.assigned_to = :eu` (nas **duas** subconsultas), cada consulta
+abaixo é a do Coletivo (`AH`, `AD`, `AW` da revisão 2026-10-24 do contrato do
+Coletivo). Para Semana e Mês, `:ate` = hoje (os dias seguintes são baldes
+futuros, sem valor no gráfico).
+
+Consulta `IAH(dep, eu, dia)` — por hora:
+
+```sql
+with horas as (
+  select :dia::date + make_interval(hours => n) as ini
+  from generate_series(0, 23) as n
+)
+select extract(hour from h.ini)::int as hora,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.assigned_to = :eu
+      and t.created_at >= h.ini at time zone 'America/Sao_Paulo'
+      and t.created_at < (h.ini + interval '1 hour') at time zone 'America/Sao_Paulo'
+  ) as abertos,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.assigned_to = :eu
+      and t.status in ('resolvido', 'fechado')
+      and t.resolved_at >= h.ini at time zone 'America/Sao_Paulo'
+      and t.resolved_at < (h.ini + interval '1 hour') at time zone 'America/Sao_Paulo'
+  ) as resolvidos
+from horas h
+order by h.ini
+```
+
+Consulta `IAD(dep, eu, de, ate)` — por dia:
+
+```sql
+with dias as (
+  select d::date as dia
+  from generate_series(:de::date, :ate::date, interval '1 day') d
+)
+select d.dia,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.assigned_to = :eu
+      and t.created_at >= d.dia::timestamp at time zone 'America/Sao_Paulo'
+      and t.created_at < (d.dia + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as abertos,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.assigned_to = :eu
+      and t.status in ('resolvido', 'fechado')
+      and t.resolved_at >= d.dia::timestamp at time zone 'America/Sao_Paulo'
+      and t.resolved_at < (d.dia + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as resolvidos
+from dias d
+order by d.dia
+```
+
+Consulta `IAS(dep, eu, de, ate, unidade)` — por semana (`unidade = 'week'`)
+ou por mês (`unidade = 'month'`), cortados nas pontas:
+
+```sql
+with dias as (
+  select d::date as dia
+  from generate_series(:de::date, :ate::date, interval '1 day') d
+), baldes as (
+  select min(dia) as ini, max(dia) as fim from dias
+  group by date_trunc(:unidade, dia)
+)
+select b.ini, b.fim,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.assigned_to = :eu
+      and t.created_at >= b.ini::timestamp at time zone 'America/Sao_Paulo'
+      and t.created_at < (b.fim + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as abertos,
+  (select count(*) from ticket t
+    where t.current_department_id = :dep
+      and t.assigned_to = :eu
+      and t.status in ('resolvido', 'fechado')
+      and t.resolved_at >= b.ini::timestamp at time zone 'America/Sao_Paulo'
+      and t.resolved_at < (b.fim + 1)::timestamp at time zone 'America/Sao_Paulo'
+  ) as resolvidos
+from baldes b
+order by b.ini
+```
+
+Coerência: `sum(abertos)` = `chamados` e `sum(resolvidos)` = `resolvidos` de
+`IM(dep, eu, inicio, fim)` da Etapa 1, no mesmo período.
+
+Esperado no Individual: pontos registrados = linhas da consulta do período
+(até o balde atual), mesma ordem e rótulos do Coletivo; tabela `sr-only` com
+`caption` `Abertos × resolvidos, seus chamados, <período> · por <unidade>`,
+primeira coluna `Hora`/`Dia`/`Semana`/`Mês`. Todos os registrados em `0`:
+sem legenda, `Nenhum chamado seu aberto ou resolvido no período` +
+`Os chamados do setor destinados a você abertos e resolvidos aparecem aqui, <cadência>.`
+
+### Cenários do `df-qa`
+
+| #    | Quem   | Ação                                                                                                                                     | Esperado                                                                                                                                                                                                                                                                   |
+| ---- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AR1  | A      | Coletivo em Hoje, Semana, Mês e Personalizado 2026-08-01 a hoje                                                                          | idêntico ao de antes: valores = `AH`/`AD`/`AW` do contrato do Coletivo; `caption` `Abertos × resolvidos, <período>` (sem "seus chamados"); vazio, se houver, com os textos de hoje (AP15)                                                                                  |
+| AR2  | A      | Individual em Hoje                                                                                                                       | 24 pontos (`0h`–`23h`), valores até a hora atual = `IAH(S, A, hoje)`, linhas param na hora atual, marcador nela. Se A não tiver atividade hoje, o card cai no vazio (AR8) e AR2 fica NÃO EXECUTADO para "por hora com dados" (coberto por AR5)                             |
+| AR3  | A      | Individual em Semana e em Mês                                                                                                            | `por dia`; valores = `IAD(S, A, <início>, hoje)`; nada desenhado nos dias futuros; marcador em "Hoje"                                                                                                                                                                      |
+| AR4  | A      | Individual em Personalizado 2026-08-01 a hoje; depois Personalizado 2025-01-01 a hoje                                                    | o primeiro `por semana`, valores = `IAS(…, 'week')`; o segundo (mais de 53 semanas) `por mês`, valores = `IAS(…, 'month')`; primeiro e último baldes cortados pelo intervalo, como no Coletivo                                                                             |
+| AR5  | A      | Individual em Personalizado de um dia passado com atividade de A (achar com `IAH`)                                                       | `<dia> · por hora`; 24 pontos registrados, marcador em `23h`; valores = `IAH(S, A, dia)`. Sem dia assim: NÃO EXECUTADO, com a consulta                                                                                                                                     |
+| AR6  | A      | Coerência, em cada período de AR2–AR5                                                                                                    | soma de Abertos (tabela `sr-only`) = "Chamados no período" do Individual = `chamados` de `IM`; soma de Resolvidos = o `X` de "X resolvidos de Y" da Taxa do Individual = `resolvidos` de `IM`                                                                              |
+| AR7  | M      | Individual em Hoje e Mês; Coletivo em Mês                                                                                                | Individual = consultas com `:eu` do Membro, diferente do de A quando os destinatários diferem; Coletivo de M igual ao de A                                                                                                                                                 |
+| AR8  | A ou M | período com atividade do setor e nenhuma minha (achar com `AD`/`IAD` ou `AH`/`IAH`), nos dois modos                                      | Individual: sem legenda; `Nenhum chamado seu aberto ou resolvido no período` + texto pessoal com a cadência da granularidade; card sem encolher (mesma altura do Coletivo). Coletivo no mesmo período: gráfico e legenda. Sem período assim: NÃO EXECUTADO, sem criar dado |
+| AR9  | A      | 1280 px: Coletivo → Individual → Coletivo; depois, em Individual, trocar o período; depois redimensionar a janela em Individual e voltar | em cada troca o gráfico visível preenche a área do card (largura do card menos o padding; altura ≥ 224 px e igual à de antes), sem área em branco nem gráfico preso em 320 × 200; eixo e último ponto corretos; tooltip funciona depois de cada troca                      |
+| AR10 | A      | árvore de acessibilidade, nos dois modos                                                                                                 | **uma** tabela exposta, com `caption` `Abertos × resolvidos, <período>` no Coletivo e `Abertos × resolvidos, seus chamados, <período>` no Individual; linhas = pontos registrados do modo, valores das consultas                                                           |
+| AR11 | A      | DevTools → Rede, limpar; alternar Coletivo ↔ Individual várias vezes                                                                     | **nenhuma** requisição; o card troca junto com a linha 1, Principal ofensor e Maiores atrasos                                                                                                                                                                              |
+| AR12 | A      | marcar Individual; F5                                                                                                                    | volta a Coletivo, gráfico do Coletivo; URL inalterada                                                                                                                                                                                                                      |
+| AR13 | A      | Individual, trocar o período pelo filtro                                                                                                 | continua em Individual; gráfico com as séries Individuais do período novo                                                                                                                                                                                                  |
+| AR14 | A      | 390×844, nos dois modos, Hoje e Mês                                                                                                      | sem rolagem horizontal; legenda pode quebrar para baixo; título, período e legenda sem `…`; rótulos do último ponto inteiros                                                                                                                                               |
+| AR15 | A      | árvore e foco (Playwright snapshot e Tab), nos dois modos                                                                                | **um** título "Abertos × resolvidos" (um `h2`, um `section` rotulado); **no máximo uma** legenda exposta; tabela e legenda do modo oculto fora da árvore; nada do modo oculto recebe foco                                                                                  |
+| AR16 | A      | DOM, nos dois modos: ids repetidos e `[data-slot="chart"]`                                                                               | nenhum `id` duplicado no documento; **exatamente um** `[data-slot="chart"]` quando o modo ativo tem dados, nenhum quando está vazio                                                                                                                                        |
+| AR17 | A      | 1280 px, nos dois modos                                                                                                                  | card na mesma posição e largura (~3/5) da linha 3, mesma altura externa do card de Transferências; Transferências mostra o Coletivo também no Individual — não é defeito                                                                                                   |
+| AR18 | A      | recarregar `/dashboard` com rede lenta (throttling) e olhar o esqueleto do gráfico                                                       | um esqueleto só, com título e período, como antes                                                                                                                                                                                                                          |
+| AR19 | todos  | toda a bateria                                                                                                                           | console e dev server (`next-devtools`) sem erro, sem aviso de hidratação e **sem aviso do Recharts de largura/altura `0`/`-1`** (na carga, depois de cada troca de modo e de período); nenhuma escrita no banco                                                            |
+
+Não executáveis nesta rodada: Diretoria (login do Diretor recusado).
+
+Notas para não reportar como defeito:
+
+- Soma de Abertos ≠ denominador da Taxa ("recebidos"): os aceites de outro
+  setor entram nos recebidos e só entram em Abertos se o chamado foi criado no
+  período.
+- Um chamado que eu resolvi e que hoje está com outra pessoa sai da minha
+  série de Resolvidos (destinatário atual).
+- Legenda igual nos dois modos; só o `caption` da tabela acessível cita
+  "seus chamados".
+- Transferências ainda no Coletivo no Individual.
+- Os cosméticos aceitos do Coletivo (cursor sobre balde futuro, rótulos densos
+  por hora, sobrepasso do `monotone`) valem igual no Individual.
+
+### Riscos da Etapa 4
+
+- **Aviso do Recharts em painel oculto.** Coberto pela montagem só no modo
+  ativo (AR9, AR16, AR19).
+- **Coletivo com altura diferente** se o painel de modo não levar
+  `flex flex-1 flex-col` (AR17).
+- **Hoje sem atividade** do setor ou da conta, como no AP2 do Coletivo: AR2
+  pode ficar NÃO EXECUTADO, coberto em parte por AR5.
+
+### Critério de pronto da Etapa 4
+
+1. Individual bate com `IAH`/`IAD`/`IAS` em Hoje, Semana, Mês e Personalizado
+   longo, semanal e mensal (AR2–AR5, AR7).
+2. Somas coerentes com a linha 1 do Individual (AR6).
+3. Coletivo idêntico ao de antes (AR1, AR17).
+4. Estado vazio do Individual (AR8).
+5. Gráfico no tamanho certo ao trocar de modo e de período (AR9).
+6. Tabela `sr-only` correta por modo; um título, no máximo uma legenda e uma
+   tabela expostos; modo oculto fora da árvore e do foco; sem `id` duplicado
+   (AR10, AR15, AR16).
+7. Troca sem requisição; F5 volta a Coletivo; modo sobrevive à troca de
+   período (AR11, AR12, AR13).
+8. 390 px sem rolagem horizontal; esqueleto inalterado (AR14, AR18).
+9. Console sem erro, sem aviso de hidratação nem do Recharts (AR19).
+10. `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem
+    bloqueante; `df-qa` aprova AR1–AR19 (Diretoria não executada).
+
+### `tsc` entre ondas
+
+`listActivityBuckets` ganha parâmetro opcional no fim e `activityTableCaption`
+ganha `mode` com padrão: compatíveis. `DashboardViewPane` ganha `className`
+opcional. A prop `mode` obrigatória em `ActivityChart` só afeta o `df-ui`, que
+muda o chamador na mesma onda.
+
+### Checklist da Etapa 4
+
+- [x] Este contrato e o plano; `DashboardActivityByMode`,
+      `DashboardActivityEmptyCopy`; `EMPTY_OWN_ACTIVITY_TITLE`,
+      `EMPTY_OWN_ACTIVITY_DESCRIPTIONS`, `EMPTY_ACTIVITY_COPY`,
+      `ACTIVITY_OWN_SCOPE_LABEL`, `activityTableCaption` com `mode`
+      (`df-architect`)
+- [x] `listActivityBuckets` com `assigneeId?` no `on` do `left join`,
+      `EXPLAIN ANALYZE` com e sem pessoa, 24 e 53 baldes, na resposta
+      (`df-data`)
+- [x] `DashboardActivity` com `userId`, duas leituras em `Promise.all`,
+      legenda por modo no cabeçalho, `DashboardActivityContent` por modo,
+      `className` em `DashboardViewPane`, `ActivityChart` com `mode` montado
+      só no modo ativo, `page.tsx` (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`
+      (aprovado sem atenções)
+- [x] Cenários AR1–AR19 (`df-qa`): 16 de 19 passaram, 0 falhas; AR17 e AR18
+      parciais, AR2 não executado
+      (`docs/test-reports/2026-10-28-dashboard-individual-mode-activity.md`)
+
+Etapa 4 concluída, aguardando commit.
+
+### Limites conhecidos da Etapa 4
+
+- **AR2 não executado.** Não havia chamados hoje; o recorte hora a hora fica
+  coberto pelo AR5.
+- **AR17 parcial.** A proporção de ~3/5 do gráfico não foi medida.
+- **AR18 parcial.** O esqueleto de carregamento não foi capturado.
+- **Diretoria não executada.** Login do Diretor recusado no QA.
+- **Sem índice no plano.** Com 248 chamados o planejador não usa índice;
+  esperado nesse volume.

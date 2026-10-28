@@ -22,6 +22,7 @@ import {
 } from "@/app/_lib/domain/ticket"
 import type {
   DashboardActivityCount,
+  DashboardActivityEmptyCopy,
   DashboardActivityPoint,
   DashboardActivitySeries,
   DashboardOverdueColumn,
@@ -346,12 +347,45 @@ export const ACTIVITY_TODAY_LABEL = "Hoje"
 export const EMPTY_ACTIVITY_TITLE =
   "Nenhum chamado aberto ou resolvido no período"
 
-export const EMPTY_ACTIVITY_DESCRIPTIONS = {
-  hour: "Os chamados abertos e resolvidos no setor aparecem aqui, hora a hora.",
-  day: "Os chamados abertos e resolvidos no setor aparecem aqui, dia a dia.",
-  week: "Os chamados abertos e resolvidos no setor aparecem aqui, semana a semana.",
-  month: "Os chamados abertos e resolvidos no setor aparecem aqui, mês a mês.",
+const ACTIVITY_CADENCE_LABELS = {
+  hour: "hora a hora",
+  day: "dia a dia",
+  week: "semana a semana",
+  month: "mês a mês",
 } satisfies Record<TimeBucketGranularity, string>
+
+const activityEmptyDescriptions = (
+  subject: string,
+): Record<TimeBucketGranularity, string> => ({
+  hour: `${subject}, ${ACTIVITY_CADENCE_LABELS.hour}.`,
+  day: `${subject}, ${ACTIVITY_CADENCE_LABELS.day}.`,
+  week: `${subject}, ${ACTIVITY_CADENCE_LABELS.week}.`,
+  month: `${subject}, ${ACTIVITY_CADENCE_LABELS.month}.`,
+})
+
+export const EMPTY_ACTIVITY_DESCRIPTIONS = activityEmptyDescriptions(
+  "Os chamados abertos e resolvidos no setor aparecem aqui",
+)
+
+export const EMPTY_OWN_ACTIVITY_TITLE =
+  "Nenhum chamado seu aberto ou resolvido no período"
+
+export const EMPTY_OWN_ACTIVITY_DESCRIPTIONS = activityEmptyDescriptions(
+  "Os chamados do setor destinados a você abertos e resolvidos aparecem aqui",
+)
+
+export const EMPTY_ACTIVITY_COPY = {
+  coletivo: {
+    title: EMPTY_ACTIVITY_TITLE,
+    descriptions: EMPTY_ACTIVITY_DESCRIPTIONS,
+  },
+  individual: {
+    title: EMPTY_OWN_ACTIVITY_TITLE,
+    descriptions: EMPTY_OWN_ACTIVITY_DESCRIPTIONS,
+  },
+} satisfies Record<DashboardViewMode, DashboardActivityEmptyCopy>
+
+export const ACTIVITY_OWN_SCOPE_LABEL = "seus chamados"
 
 export const activityGranularityFor = (
   range: DateRange,
@@ -372,8 +406,13 @@ export const activityPeriodLabel = (
 export const activityTableCaption = (
   range: DateRange,
   granularity: TimeBucketGranularity,
-): string =>
-  `${ACTIVITY_CARD_LABEL}, ${activityPeriodLabel(range, granularity)}`
+  mode: DashboardViewMode = DEFAULT_DASHBOARD_VIEW_MODE,
+): string => {
+  const periodLabel = activityPeriodLabel(range, granularity)
+  return mode === "individual"
+    ? `${ACTIVITY_CARD_LABEL}, ${ACTIVITY_OWN_SCOPE_LABEL}, ${periodLabel}`
+    : `${ACTIVITY_CARD_LABEL}, ${periodLabel}`
+}
 
 export const isFutureBucket = (bucket: TimeBucket, now: Date): boolean =>
   bucket.start.getTime() > now.getTime()

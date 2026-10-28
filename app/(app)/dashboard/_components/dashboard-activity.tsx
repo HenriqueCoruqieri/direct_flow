@@ -1,43 +1,46 @@
 import { listActivityBuckets } from "@/app/_lib/data/dashboard"
 import { timeBuckets } from "@/app/_lib/date"
 import {
-  ACTIVITY_BUCKET_COLUMN_LABELS,
-  ACTIVITY_SERIES,
-  ACTIVITY_SERIES_LABELS,
   activityGranularityFor,
   activityPeriodLabel,
-  activityTableCaption,
   buildActivitySeries,
-  EMPTY_ACTIVITY_DESCRIPTIONS,
-  EMPTY_ACTIVITY_TITLE,
+  DASHBOARD_VIEW_MODES,
   isActivityEmpty,
-  recordedActivityPoints,
 } from "@/app/_lib/domain/dashboard"
+import type { DashboardActivityByMode } from "@/app/_lib/types/dashboard"
 import type { DateRange } from "@/app/_lib/types/period"
 
-import ActivityChart from "./activity-chart"
 import ActivityLegend from "./activity-legend"
+import DashboardActivityContent from "./dashboard-activity-content"
 import DashboardActivityHeader from "./dashboard-activity-header"
 import DashboardPanel from "./dashboard-panel"
+import DashboardViewPane from "./dashboard-view-pane"
 
 const TITLE_ID = "dashboard-activity-title"
 
 interface DashboardActivityProps {
   departmentId: number
+  userId: number
   range: DateRange
   now: Date
 }
 
 const DashboardActivity = async ({
   departmentId,
+  userId,
   range,
   now,
 }: DashboardActivityProps) => {
   const granularity = activityGranularityFor(range)
   const buckets = timeBuckets(range, granularity)
-  const counts = await listActivityBuckets(departmentId, buckets)
-  const points = buildActivitySeries(buckets, granularity, counts, now)
-  const isEmpty = isActivityEmpty(points)
+  const [coletivo, individual] = await Promise.all([
+    listActivityBuckets(departmentId, buckets),
+    listActivityBuckets(departmentId, buckets, userId),
+  ])
+  const pointsByMode: DashboardActivityByMode = {
+    coletivo: buildActivitySeries(buckets, granularity, coletivo, now),
+    individual: buildActivitySeries(buckets, granularity, individual, now),
+  }
 
   return (
     <DashboardPanel aria-labelledby={TITLE_ID} className="xl:col-span-3">
@@ -45,49 +48,28 @@ const DashboardActivity = async ({
         titleId={TITLE_ID}
         periodLabel={activityPeriodLabel(range, granularity)}
       >
-        {isEmpty ? null : <ActivityLegend />}
+        {DASHBOARD_VIEW_MODES.filter(
+          (mode) => !isActivityEmpty(pointsByMode[mode]),
+        ).map((mode) => (
+          <DashboardViewPane key={mode} mode={mode}>
+            <ActivityLegend />
+          </DashboardViewPane>
+        ))}
       </DashboardActivityHeader>
-      {isEmpty ? (
-        <div className="mt-3 flex min-h-56 flex-1 flex-col items-center justify-center gap-1 text-center">
-          <p className="text-sm font-semibold">{EMPTY_ACTIVITY_TITLE}</p>
-          <p className="text-caption text-muted-foreground">
-            {EMPTY_ACTIVITY_DESCRIPTIONS[granularity]}
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="relative mt-3 min-h-56 flex-1">
-            <ActivityChart points={points} />
-          </div>
-          <div className="sr-only">
-            <table>
-              <caption>{activityTableCaption(range, granularity)}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">
-                    {ACTIVITY_BUCKET_COLUMN_LABELS[granularity]}
-                  </th>
-                  {ACTIVITY_SERIES.map((series) => (
-                    <th key={series} scope="col">
-                      {ACTIVITY_SERIES_LABELS[series]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recordedActivityPoints(points).map((point) => (
-                  <tr key={point.key}>
-                    <th scope="row">{point.longLabel}</th>
-                    {ACTIVITY_SERIES.map((series) => (
-                      <td key={series}>{point[series]}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      {DASHBOARD_VIEW_MODES.map((mode) => (
+        <DashboardViewPane
+          key={mode}
+          mode={mode}
+          className="flex flex-1 flex-col"
+        >
+          <DashboardActivityContent
+            points={pointsByMode[mode]}
+            mode={mode}
+            range={range}
+            granularity={granularity}
+          />
+        </DashboardViewPane>
+      ))}
     </DashboardPanel>
   )
 }

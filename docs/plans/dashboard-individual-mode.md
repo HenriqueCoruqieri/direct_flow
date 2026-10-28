@@ -95,7 +95,8 @@ continuam mostrando o Coletivo. É esperado e não é defeito.
       conhecidos e decisões pós-QA no contrato)
 - [x] Etapa 2 — Principal ofensor (concluída e commitada em aacf2ed; limites
       conhecidos no contrato)
-- [x] Etapa 3 — Maiores atrasos (concluída, aguardando commit; limites
+- [x] Etapa 3 — Maiores atrasos (concluída e commitada em 704b725; limites
       conhecidos no contrato)
-- [ ] Etapa 4 — Abertos × resolvidos (a seguir)
-- [ ] Etapa 5 — Transferências
+- [x] Etapa 4 — Abertos × resolvidos (concluída, aguardando commit; limites
+      conhecidos no contrato)
+- [ ] Etapa 5 — Transferências (a seguir)

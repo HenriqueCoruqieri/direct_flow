@@ -102,6 +102,7 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
               >
                 <DashboardActivity
                   departmentId={actor.departmentId}
+                  userId={actor.id}
                   range={range}
                   now={now}
                 />

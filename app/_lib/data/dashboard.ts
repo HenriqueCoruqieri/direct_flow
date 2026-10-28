@@ -228,8 +228,14 @@ interface ActivityCountRow extends Record<string, unknown> {
 export async function listActivityBuckets(
   departmentId: number,
   buckets: readonly TimeBucket[],
+  assigneeId?: number,
 ): Promise<DashboardActivityCount[]> {
   if (buckets.length === 0) return []
+
+  const assigneeFilter =
+    assigneeId === undefined
+      ? sql.empty()
+      : sql`and t.assigned_to = ${assigneeId}`
 
   const bucketRows = sql.join(
     buckets.map(
@@ -255,6 +261,7 @@ export async function listActivityBuckets(
     from (values ${bucketRows}) as b(bucket_key, bucket_start, bucket_end)
     left join ${ticket} t
       on t.current_department_id = ${departmentId}
+      ${assigneeFilter}
       and (
         (t.created_at >= b.bucket_start and t.created_at < b.bucket_end)
         or (t.resolved_at >= b.bucket_start and t.resolved_at < b.bucket_end)
