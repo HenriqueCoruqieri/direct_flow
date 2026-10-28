@@ -799,11 +799,11 @@ ofensor`, `Carregando maiores atrasos`).
 
 ### Riscos da Etapa 2
 
-1. **Tabela sempre cheia.** Todo chamado nasce `media` (24h) e QA Suporte tem
+1. **Tabela sempre cheia.** Todo chamado nasce `media` (12h) e QA Suporte tem
    ~104 ativos: a lista terá 5 linhas desde o primeiro dia, praticamente "os
    mais antigos". Aceito no plano; o limite curto (5) contém o efeito. Muda
    sozinho quando a feature de prioridade existir, sem tocar na tela.
-2. **Prazo corrido.** 24h inclui noite e fim de semana. Calendário útil é outra
+2. **Prazo corrido.** 12h inclui noite e fim de semana. Calendário útil é outra
    decisão.
 3. **Ofensor × "Chamados no período".** O denominador é o número do card 1; a
    soma dos percentuais pode ser menor que 100% (chamado sem tag do setor).
@@ -837,10 +837,10 @@ Consulta `AT(dep)` (atrasos, situação atual):
 with v as (
   select t.id, t.title, t.priority, t.created_at,
     t.created_at + case t.priority
-      when 'critica' then interval '4 hours'
-      when 'alta'    then interval '8 hours'
-      when 'media'   then interval '24 hours'
-      when 'baixa'   then interval '72 hours' end as vencimento
+      when 'critica' then interval '3 hours'
+      when 'alta'    then interval '6 hours'
+      when 'media'   then interval '12 hours'
+      when 'baixa'   then interval '24 hours' end as vencimento
   from ticket t
   where t.current_department_id = :dep
     and t.status in ('aberto','em_analise','encaminhado','recusado','em_andamento')
@@ -873,7 +873,7 @@ Preparação (interface), em ordem:
 | RW5  | A     | Personalizado 2026-01-01                                           | ofensor: `—` e `Nenhum chamado no período`, sem lista; atrasos inalterado                                                                                                                                                 |
 | RW6  | A     | Período com `chamados > 0` e `TT` vazio (procurar pelas consultas) | `—` e `Nenhum chamado com tag no período`. Se nenhum período assim existir no banco: NÃO EXECUTADO, com a consulta que mostrou                                                                                            |
 | RW7  | A     | Maiores atrasos                                                    | linhas = `AT(S)`, mesma ordem; Nº `#id` mono discreto com link para `/tickets/{id}`; Título truncado com `title`; Prioridade "Média" na cor `prioridade-media`; Vencimento = `vencimento_sp` no formato acima             |
-| RW8  | A     | Chamados da preparação e `#V2` (#254)                              | **não** aparecem nos atrasos (vencem 24h após a criação)                                                                                                                                                                  |
+| RW8  | A     | Chamados da preparação e `#V2` (#254)                              | **não** aparecem nos atrasos (vencem 12h após a criação)                                                                                                                                                                  |
 | RW9  | A     | Clicar "Ver na fila"                                               | `/queue?tab=all&periodo=todos`, aba "Todos", setor QA Suporte; os chamados da tabela de atrasos estão na lista                                                                                                            |
 | RW10 | A     | Clicar no Nº de uma linha                                          | detalhe do chamado certo                                                                                                                                                                                                  |
 | RW11 | I     | `/dashboard` Hoje e Mês                                            | ofensor = `TT(F, …)`; atrasos = `AT(F)`; nada de QA Suporte                                                                                                                                                               |
@@ -1045,18 +1045,18 @@ export const incomingTransferOriginLabel: (departmentName: string) => string
 export const isStaleIncomingTransfer: (sentAt: Date, now: Date) => boolean
 ```
 
-| Nome                                   | Semântica                                                                                                                                                                                                      |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRANSFER_COUNTER_LABELS`              | `incoming` → `Aguardando nosso aceite` · `outgoing` → `Enviados, pendentes` · `rejected` → `Recusados por outros`. Ordem na tela: incoming, outgoing, rejected                                                 |
-| `REJECTED_TRANSFERS_SCOPE_HINT`        | Marca, no mini-card de recusados, que só ele segue o período. Os outros dois não levam marca (situação atual é o padrão do card, como em "Maiores atrasos")                                                    |
-| `TRANSFERS_APPROVALS_LINK_LABEL`       | `Ver em ` + `APPROVALS_LABEL`                                                                                                                                                                                  |
-| `INCOMING_TRANSFERS_LIMIT`             | 5 itens, igual a `OVERDUE_TICKETS_LIMIT` por coerência entre as linhas. A regra de altura contra o gráfico é da 3b; se ela pedir outro número, muda aqui, nunca na UI                                          |
-| `INCOMING_TRANSFER_STALE_HOURS`        | 4h: o mesmo valor do menor prazo de atendimento (`critica`), como teto para um chamado ficar parado sem ninguém aceitar. Constante própria, não derivada de `TICKET_PRIORITY_DUE_HOURS`: são regras diferentes |
-| `STALE_INCOMING_TRANSFER_LABEL`        | Texto acessível do item destacado; montado com `formatDuration`, então acompanha a constante                                                                                                                   |
-| `EMPTY_INCOMING_TRANSFERS_DESCRIPTION` | `Os chamados enviados por outros setores aparecem aqui até alguém do setor atender ou recusar.`                                                                                                                |
-| `transferCounterToneFor`               | `count ≤ 0` → `neutral` (qualquer contador). `incoming` com `count > 0` → `highlight` (fundo e número `warning`). `rejected` com `count > 0` → `alert` (só o número `warning`). `outgoing` → sempre `neutral`  |
-| `incomingTransferOriginLabel`          | `RH` → `de RH`                                                                                                                                                                                                 |
-| `isStaleIncomingTransfer`              | `elapsedMs(sentAt, now) ≥ INCOMING_TRANSFER_STALE_MS`, **inclusivo**. Vale para **todo** item acima do limite, não só o primeiro; como a lista é "mais antigas primeiro", os destacados ficam juntos no topo   |
+| Nome                                   | Semântica                                                                                                                                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRANSFER_COUNTER_LABELS`              | `incoming` → `Aguardando nosso aceite` · `outgoing` → `Enviados, pendentes` · `rejected` → `Recusados por outros`. Ordem na tela: incoming, outgoing, rejected                                                |
+| `REJECTED_TRANSFERS_SCOPE_HINT`        | Marca, no mini-card de recusados, que só ele segue o período. Os outros dois não levam marca (situação atual é o padrão do card, como em "Maiores atrasos")                                                   |
+| `TRANSFERS_APPROVALS_LINK_LABEL`       | `Ver em ` + `APPROVALS_LABEL`                                                                                                                                                                                 |
+| `INCOMING_TRANSFERS_LIMIT`             | 5 itens, igual a `OVERDUE_TICKETS_LIMIT` por coerência entre as linhas. A regra de altura contra o gráfico é da 3b; se ela pedir outro número, muda aqui, nunca na UI                                         |
+| `INCOMING_TRANSFER_STALE_HOURS`        | 4h: teto para um chamado ficar parado sem ninguém aceitar. Constante própria, não derivada de `TICKET_PRIORITY_DUE_HOURS`: são regras diferentes                                                              |
+| `STALE_INCOMING_TRANSFER_LABEL`        | Texto acessível do item destacado; montado com `formatDuration`, então acompanha a constante                                                                                                                  |
+| `EMPTY_INCOMING_TRANSFERS_DESCRIPTION` | `Os chamados enviados por outros setores aparecem aqui até alguém do setor atender ou recusar.`                                                                                                               |
+| `transferCounterToneFor`               | `count ≤ 0` → `neutral` (qualquer contador). `incoming` com `count > 0` → `highlight` (fundo e número `warning`). `rejected` com `count > 0` → `alert` (só o número `warning`). `outgoing` → sempre `neutral` |
+| `incomingTransferOriginLabel`          | `RH` → `de RH`                                                                                                                                                                                                |
+| `isStaleIncomingTransfer`              | `elapsedMs(sentAt, now) ≥ INCOMING_TRANSFER_STALE_MS`, **inclusivo**. Vale para **todo** item acima do limite, não só o primeiro; como a lista é "mais antigas primeiro", os destacados ficam juntos no topo  |
 
 Por que o destaque do "Aguardando" some com `0`: no print o mini-card está
 destacado porque há o que aceitar; com zero não há alerta a dar, e manter o
