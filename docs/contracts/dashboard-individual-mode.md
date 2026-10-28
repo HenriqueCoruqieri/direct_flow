@@ -1491,7 +1491,7 @@ muda o chamador na mesma onda.
       parciais, AR2 não executado
       (`docs/test-reports/2026-10-28-dashboard-individual-mode-activity.md`)
 
-Etapa 4 concluída, aguardando commit.
+Etapa 4 concluída e commitada em 6fe687c.
 
 ### Limites conhecidos da Etapa 4
 
@@ -1502,3 +1502,461 @@ Etapa 4 concluída, aguardando commit.
 - **Diretoria não executada.** Login do Diretor recusado no QA.
 - **Sem índice no plano.** Com 248 chamados o planejador não usa índice;
   esperado nesse volume.
+
+---
+
+## Etapa 5 — Transferências entre setores
+
+Última etapa do plano. Depois dela, **nenhum card** mostra o Coletivo no modo
+Individual.
+
+### O que muda e o que não muda
+
+- O card "Transferências entre setores" passa a ter as duas versões, trocadas
+  pelo switch da Etapa 1 (mesmo provider, mesmo `DashboardViewPane`).
+- O Coletivo do card fica **idêntico** ao de hoje (Etapa 3a de
+  `docs/contracts/dashboard-overview.md`, com a revisão de 2026-10-24 do
+  voltar): mesmos contadores, tons, marca "no período", lista, limite, ordem,
+  destaque de parado, link de cada item (origem `dashboard`), vazio e link do
+  cabeçalho.
+- Título, `INCOMING_TRANSFERS_LIMIT` (5), `INCOMING_TRANSFER_STALE_HOURS` (4),
+  `STALE_INCOMING_TRANSFER_LABEL`, `REJECTED_TRANSFERS_SCOPE_HINT`,
+  `transferCounterToneFor`, `incomingTransferOriginLabel`, link do cabeçalho,
+  `col-span`/`col-start`, esqueleto (um só) e `Suspense` **sem** `key`: iguais
+  nos dois modos.
+
+### Tabelas, enums e migration
+
+Sem mudança de schema, sem migration, sem índice novo. Colunas lidas além das
+de hoje: `ticket_transfer.to_user_id` (índice `transfer_to_user_idx`) e
+`ticket_transfer.requested_by` (índice `transfer_requested_by_idx`). Os
+índices de hoje (`transfer_inbox_idx`, `transfer_from_department_idx`)
+continuam atendendo; com o volume atual o planejador deve preferir Seq Scan,
+como na Etapa 3a.
+
+### Definições (Individual, "eu" = usuário da sessão, "setor" = setor da sessão)
+
+| Contador / lista        | Coletivo (hoje, inalterado)                                                        | Individual                                                                           | Período                        |
+| ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------ |
+| **Aguardando**          | `pendente`, `to_department_id` = setor (= selo de Aprovações)                      | o mesmo **e** `to_user_id` = eu                                                      | não (situação atual)           |
+| **Enviados, pendentes** | `pendente`, `from_department_id` = setor                                           | o mesmo **e** `requested_by` = eu                                                    | não (situação atual)           |
+| **Recusados**           | `rejeitado`, `from_department_id` = setor, `reviewed_at` no período `[start, end)` | o mesmo **e** `requested_by` = eu                                                    | **sim**, o do filtro do Início |
+| **Lista**               | as pendentes de "Aguardando", `created_at` asc, `id` asc, até 5                    | as pendentes do "Aguardando" do Individual (`to_user_id` = eu), mesma ordem e limite | não (situação atual)           |
+
+Cada número do Individual é um **subconjunto** do número do Coletivo do mesmo
+setor, como nas Etapas 1 a 4.
+
+Decisões:
+
+1. **"Aguardando meu aceite" = `to_user_id` = eu, como no plano.** Pendente
+   endereçada à "Fila do setor" (`to_user_id` nulo) **não** conta no
+   Individual, embora eu possa aceitá-la; ela aparece no Coletivo. Decidido
+   pelo usuário em 2026-10-28 (ver "Pergunta para o usuário — decidida"
+   abaixo).
+2. **`to_user_id` = eu coincide com o destinatário efetivo.** Aprovações e o
+   detalhe usam `effectiveTransferRecipient` (pessoa ativa e do setor de
+   destino; senão, "Fila do setor"). Com `to_department_id` = setor da sessão
+   **e** `to_user_id` = eu, eu sou do setor de destino, e só pessoa ativa tem
+   sessão. Portanto a condição em SQL é exatamente "o destinatário efetivo sou
+   eu", sem repetir a regra no banco. A pendente endereçada a um colega que
+   saiu do setor ou foi desativado vira "Fila do setor" na leitura e, como a
+   fila, **não** entra no meu "Aguardando" (mesma regra da decisão 1).
+3. **"Enviados" e "Recusados" do Individual ficam dentro do setor**
+   (`from_department_id` = setor **e** `requested_by` = eu), e não "tudo o que
+   eu enviei de qualquer setor". Motivos: é o mesmo recorte de "meu dentro do
+   setor" das Etapas 1 a 4, mantém o Individual como subconjunto do Coletivo e
+   sai da **mesma consulta** de hoje (um `filter` a mais). Casos que ficam de
+   fora, aceitos: diretor que envia chamado de outro setor
+   (`from_department_id` é o setor do chamado, não a Diretoria) e envios
+   feitos antes de a pessoa mudar de setor.
+4. **"Recusados por outros"**: a recusa é sempre de alguém do setor de destino
+   (`to_department_id` ≠ `from_department_id`, `check` do schema), então "por
+   outros" não exige condição a mais.
+5. **Tom igual nos dois modos.** `transferCounterToneFor(counter, count)` não
+   depende de modo: "Aguardando" > 0 destaca porque há o que aceitar, seja do
+   setor ou meu; "Recusados" > 0 alerta. Nenhum motivo para divergir.
+6. **Link do cabeçalho igual nos dois modos** (`TRANSFERS_APPROVALS_HREF` →
+   `/approvals?periodo=todos`). Aprovações não tem aba nem parâmetro de URL
+   para "destinadas a mim": o filtro "Para" de lá é estado da tabela no
+   cliente (`app/(app)/approvals/_components/approvals-table.tsx:38`,
+   `RECIPIENT_COLUMN_ID`), sem montador de URL. Criar parâmetro novo seria
+   mudança em Aprovações, fora desta etapa. Por isso o cabeçalho **não** leva
+   `DashboardViewPane` (diferente da Etapa 3).
+7. **`countPendingApprovals` ganha `recipientId?` opcional** (abaixo). Sem ele,
+   SQL e resultado idênticos para o selo do menu (`app/(app)/layout.tsx:41`),
+   para o Coletivo do card e para Aprovações. Escolhido em vez de "contar na
+   consulta do dashboard" porque o "Aguardando" do Coletivo **não** sai da
+   varredura de saída (`from_department_id` = setor, conjunto disjunto do de
+   chegada) e sim de `countPendingApprovals`, reaproveitada para garantir o
+   mesmo número do selo: o filtro de pendência recebida continua num lugar só
+   (DRY). Contar ali dentro exigiria copiar esse filtro ou mudar o `where` da
+   varredura de saída do Coletivo. O custo é **uma** leitura a mais (contagem
+   pelo prefixo de `transfer_inbox_idx` mais `to_user_id`), no mesmo
+   `Promise.all`.
+
+#### Pergunta para o usuário — decidida em 2026-10-28
+
+**A pendente enviada à "Fila do setor" conta como "aguardando meu aceite"?**
+**Decisão do usuário (2026-10-28): não.** No Individual, "Aguardando seu
+aceite" conta e lista só as transferências com `to_user_id` = eu; a pendente
+de fila (`to_user_id` nulo) fica visível só no Coletivo. A alternativa abaixo
+foi descartada.
+
+Contexto registrado antes da decisão — pelo plano, não: só as endereçadas a
+mim. Consequência: no Individual, um
+Membro pode ver `0` em "Aguardando seu aceite" e lista vazia enquanto o setor
+tem pendentes de fila que ele mesmo poderia atender (no Coletivo elas
+aparecem). Alternativa: Individual = `to_user_id` = eu **ou** destinatário
+efetivo nulo (fila, ou destinatário que deixou de ser elegível). Ela exigiria
+na lista e na contagem um `left join users` com a regra de elegibilidade (ou
+aceitar só `to_user_id is null` e deixar de fora o caso do colega
+inelegível), e o Individual deixaria de ser "só o que é meu". Descartada
+pela decisão acima.
+
+### Tipos — `app/_lib/types/dashboard.ts` (acréscimo, já publicado)
+
+```ts
+export type DashboardTransferSummaryByMode =
+  DashboardByMode<DashboardTransferSummary>
+
+export type DashboardIncomingTransfersByMode = DashboardByMode<
+  DashboardIncomingTransfer[]
+>
+
+export interface DashboardIncomingTransfersEmptyCopy {
+  title: string
+  description: string
+}
+```
+
+`DashboardTransferSummary`, `DashboardIncomingTransfer`,
+`DashboardTransferCounter` e `DashboardTransferCounterTone` **não mudam**.
+
+### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo, já publicado)
+
+| Export                                     | Valor / semântica                                                                                                                                                                               |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OWN_TRANSFER_COUNTER_LABELS`              | `incoming` → `Aguardando seu aceite` · `outgoing` → `Seus envios pendentes` · `rejected` → `Seus envios recusados` (`satisfies Record<DashboardTransferCounter, string>`)                       |
+| `TRANSFER_COUNTER_LABELS_BY_MODE`          | por modo: `coletivo` = `TRANSFER_COUNTER_LABELS` (inalterado), `individual` = `OWN_TRANSFER_COUNTER_LABELS`                                                                                     |
+| `EMPTY_OWN_INCOMING_TRANSFERS_TITLE`       | `"Nenhum chamado aguardando seu aceite"`                                                                                                                                                        |
+| `EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION` | `"Os chamados que outros setores enviarem para você aparecem aqui até você atender ou recusar."`                                                                                                |
+| `EMPTY_INCOMING_TRANSFERS_COPY`            | por modo (`satisfies Record<DashboardViewMode, DashboardIncomingTransfersEmptyCopy>`): `coletivo` = `EMPTY_INCOMING_TRANSFERS_TITLE`/`_DESCRIPTION` (inalterados), `individual` = as duas acima |
+
+Rótulos do Individual com até 21 caracteres, como os do Coletivo (o maior,
+`Aguardando nosso aceite`, tem 23): cabem em até 2 linhas no mini-card de
+390 px. Sem mudança: `TRANSFERS_CARD_LABEL`, `TRANSFER_COUNTER_LABELS`,
+`REJECTED_TRANSFERS_SCOPE_HINT` (a marca "no período" vale igual nos dois
+modos, então **não** há mapa por modo para ela),
+`TRANSFERS_APPROVALS_LINK_LABEL`, `INCOMING_TRANSFERS_LIMIT`,
+`INCOMING_TRANSFER_STALE_*`, `STALE_INCOMING_TRANSFER_LABEL`,
+`EMPTY_INCOMING_TRANSFERS_TITLE`, `EMPTY_INCOMING_TRANSFERS_DESCRIPTION`,
+`transferCounterToneFor`, `incomingTransferOriginLabel`,
+`isStaleIncomingTransfer`.
+
+### Validação — `app/_lib/validation/dashboard.ts`
+
+Nada. `TRANSFERS_APPROVALS_HREF` serve aos dois modos (decisão 6).
+
+### `df-data`
+
+**`app/_lib/data/approvals.ts`** — parâmetro opcional no fim:
+
+```ts
+export async function countPendingApprovals(
+  departmentId: number,
+  recipientId?: number,
+): Promise<number>
+```
+
+- Com `recipientId`, o `and(...)` do `where` ganha
+  `recipientId === undefined ? undefined : eq(ticketTransfer.toUserId, recipientId)`;
+  o `and` descarta `undefined`, então sem ele o SQL é o de hoje. Os chamadores
+  atuais (`app/(app)/layout.tsx:41` e `findTransferSummary`) não mudam.
+- `listPendingApprovals` não muda.
+
+**`app/_lib/data/dashboard.ts`** — assinaturas alteradas:
+
+```ts
+export async function findTransferSummary(
+  departmentId: number,
+  range: DateRange,
+  userId: number,
+): Promise<DashboardTransferSummaryByMode>
+
+export async function listOldestIncomingTransfers(
+  departmentId: number,
+  limit: number,
+  recipientId?: number,
+): Promise<DashboardIncomingTransfer[]>
+```
+
+**`findTransferSummary`** devolve `{ coletivo, individual }`; o `coletivo`
+tem de sair **idêntico** ao retorno de hoje. Três leituras num `Promise.all`:
+
+1. `countPendingApprovals(departmentId)` → `coletivo.incomingPendingCount`
+   (como hoje).
+2. `countPendingApprovals(departmentId, userId)` →
+   `individual.incomingPendingCount`.
+3. A varredura de saída de hoje, com duas colunas gêmeas (mesmo `where`):
+
+```sql
+select
+  count(*) filter (where tr.status = $pending)::int                               as outgoing_pending_count,
+  count(*) filter (where <isRejectedInRange>)::int                                as rejected_count,
+  count(*) filter (where tr.status = $pending and tr.requested_by = $userId)::int as mine_outgoing_pending_count,
+  count(*) filter (where <isRejectedInRange> and tr.requested_by = $userId)::int  as mine_rejected_count
+from ticket_transfer tr
+where tr.from_department_id = $departmentId
+```
+
+Em Drizzle: `const isMine = eq(ticketTransfer.requestedBy, userId)` e
+`and(isPending, isMine)` / `and(isRejectedInRange, isMine)` nos `sql<…>`, como
+os outros. Sem linha: `0` em todos.
+
+**`listOldestIncomingTransfers`** com `recipientId`: o `and(...)` do `where`
+ganha `recipientId === undefined ? undefined : eq(ticketTransfer.toUserId, recipientId)`.
+Joins, `orderBy`, `limit` e o mapeamento não mudam; sem pessoa, SQL de hoje.
+Assim `lista.length = min(individual.incomingPendingCount, limit)`.
+
+Rodar `EXPLAIN ANALYZE` de `countPendingApprovals` e
+`listOldestIncomingTransfers` com e sem pessoa e da varredura de saída, para o
+Administrador de QA Suporte, e colar na resposta; o plano do Coletivo não pode
+mudar.
+
+### `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que fazer
+
+`DashboardTransfers` (servidor) passa a receber `userId` (o `actor.id` de
+`page.tsx`, como os outros cards) e faz **uma** espera:
+
+```ts
+const [summaryByMode, coletivo, individual] = await Promise.all([
+  findTransferSummary(departmentId, range, userId),
+  listOldestIncomingTransfers(departmentId, INCOMING_TRANSFERS_LIMIT),
+  listOldestIncomingTransfers(departmentId, INCOMING_TRANSFERS_LIMIT, userId),
+])
+const transfersByMode: DashboardIncomingTransfersByMode = {
+  coletivo,
+  individual,
+}
+```
+
+**Estrutura.** Como na Etapa 2 (o cabeçalho **não** varia, decisão 6): um
+`DashboardPanel`, um cabeçalho, e só o conteúdo abaixo dele por modo.
+
+```tsx
+<DashboardPanel
+  aria-labelledby={TITLE_ID}
+  className="xl:col-span-2 xl:col-start-4"
+>
+  <DashboardTransfersHeader titleId={TITLE_ID} />
+  {DASHBOARD_VIEW_MODES.map((mode) => (
+    <DashboardViewPane key={mode} mode={mode}>
+      <DashboardTransfersContent
+        summary={summaryByMode[mode]}
+        transfers={transfersByMode[mode]}
+        mode={mode}
+        now={now}
+        selection={selection}
+      />
+    </DashboardViewPane>
+  ))}
+</DashboardPanel>
+```
+
+- `DashboardPanel` um só (item da grade da linha 3, com
+  `xl:col-span-2 xl:col-start-4`); `h2` com `TITLE_ID` um só, fora dos
+  painéis de modo. Nenhum `id` dentro de `DashboardViewPane`.
+- `DashboardTransfersHeader` **não muda** (link único, item direto do flex,
+  com `shrink-0`).
+- **Conteúdo.** Peça extraída: `_components/dashboard-transfers-content.tsx`
+  (servidor), recebendo `summary: DashboardTransferSummary`,
+  `transfers: DashboardIncomingTransfer[]`, `mode: DashboardViewMode`,
+  `now: Date` e `selection: PeriodSelection`, e desenhando exatamente o que o
+  card desenha hoje abaixo do cabeçalho (o `dl mt-3 grid grid-cols-3 gap-2`
+  com os três `TransferCounter`, e o vazio `mt-3` ou a `ul mt-2`). O
+  `COUNTER_ORDER` e o mapa `counts` vão junto.
+- `DashboardViewPane` **sem** `className`: o conteúdo flui em bloco dentro do
+  `div`, como hoje dentro do `DashboardPanel` (nada aqui é `flex-1`).
+
+| Onde               | Antes                                  | Agora                                             |
+| ------------------ | -------------------------------------- | ------------------------------------------------- |
+| rótulo do contador | `TRANSFER_COUNTER_LABELS[counter]`     | `TRANSFER_COUNTER_LABELS_BY_MODE[mode][counter]`  |
+| vazio, título      | `EMPTY_INCOMING_TRANSFERS_TITLE`       | `EMPTY_INCOMING_TRANSFERS_COPY[mode].title`       |
+| vazio, descrição   | `EMPTY_INCOMING_TRANSFERS_DESCRIPTION` | `EMPTY_INCOMING_TRANSFERS_COPY[mode].description` |
+
+Iguais nos dois modos: `transferCounterToneFor`, a marca
+`REJECTED_TRANSFERS_SCOPE_HINT` só no "Recusados" e `IncomingTransferItem`
+(link `dashboardTicketDetailHref(selection, ticketId)`, origem `dashboard`).
+
+**`id` duplicado.** Não há: `TransferCounter` desenha `div` + `dt` + `dd` sem
+atributo `id` (`transfer-counter.tsx`), e `IncomingTransferItem` também não
+gera `id`. Os dois `dl` e as duas `ul` existem no DOM; a do modo inativo fica
+oculta por `hidden`.
+
+**Altura.** Em `xl+` a altura da linha 3 é a do maior entre o gráfico e este
+card. No Individual a lista pode ter menos itens (ou o vazio), então a linha
+pode ficar mais baixa nesse modo; o gráfico acompanha (Etapa 4: o painel dele
+é `flex flex-1 flex-col`). Esperado, não é defeito.
+
+**Suspense e esqueleto.** `page.tsx`: só acrescenta `userId={actor.id}` em
+`DashboardTransfers`; o `Suspense` continua **sem** `key` (motivo da Etapa 3a:
+só o "Recusados" depende do período, e o card atualiza no lugar). O
+`DashboardTransfersSkeleton` **não muda**: o cabeçalho dele não tem painéis de
+modo e o esqueleto continua um só.
+
+### Consultas de conferência (`df-qa`)
+
+Contas, ids, banco só leitura e bordas `:inicio`/`:fim` como na Etapa 1 deste
+contrato. `TS(dep, inicio, fim)` e `TL(dep)` da Etapa 3a do contrato do
+Coletivo continuam sendo o Coletivo.
+
+Consulta `ITS(dep, eu, inicio, fim)` — contadores do Individual:
+
+```sql
+select
+  (select count(*) from ticket_transfer
+    where to_department_id = :dep and status = 'pendente'
+      and to_user_id = :eu) as aguardando,
+  (select count(*) from ticket_transfer
+    where from_department_id = :dep and status = 'pendente'
+      and requested_by = :eu) as enviados,
+  (select count(*) from ticket_transfer
+    where from_department_id = :dep and status = 'rejeitado'
+      and requested_by = :eu
+      and reviewed_at >= :inicio and reviewed_at < :fim) as recusados
+```
+
+Consulta `ITL(dep, eu)` — lista do Individual:
+
+```sql
+select t.id, d.name as origem, t.title,
+  to_char(tr.created_at at time zone 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI') as enviado_sp,
+  floor(extract(epoch from (now() - tr.created_at)) / 60) as minutos
+from ticket_transfer tr
+join department d on d.id = tr.from_department_id
+join ticket t on t.id = tr.ticket_id
+where tr.to_department_id = :dep and tr.status = 'pendente'
+  and tr.to_user_id = :eu
+order by tr.created_at asc, tr.id asc
+limit 5
+```
+
+Apoio (para achar casos e explicar diferenças; não é número da tela):
+
+```sql
+select tr.id, tr.ticket_id, tr.status, tr.from_department_id,
+  tr.to_department_id, tr.to_user_id, tr.requested_by, tr.reviewed_by,
+  tr.created_at, tr.reviewed_at
+from ticket_transfer tr
+where (tr.to_department_id = :dep or tr.from_department_id = :dep)
+  and tr.status in ('pendente', 'rejeitado')
+order by tr.created_at desc
+```
+
+Esperado no Individual: mini-cards `Aguardando seu aceite` · `Seus envios
+pendentes` · `Seus envios recusados` = `aguardando`/`enviados`/`recusados` de
+`ITS`; "no período" só no terceiro; tons pela mesma regra do Coletivo; lista =
+`ITL` com "há X" e destaque pela regra da Etapa 3a; `ITL` vazio →
+`Nenhum chamado aguardando seu aceite` +
+`Os chamados que outros setores enviarem para você aparecem aqui até você atender ou recusar.`,
+sem lista.
+
+### Cenários do `df-qa`
+
+| #    | Quem   | Ação                                                                                                                                                | Esperado                                                                                                                                                                                                                                                |
+| ---- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TI1  | A      | `/dashboard` Hoje e Mês, Coletivo                                                                                                                   | card igual ao de antes: contadores = `TS(S, …)` com os rótulos de hoje; "Aguardando nosso aceite" = selo de Aprovações; lista = `TL(S)`                                                                                                                 |
+| TI2  | A      | Individual em Hoje                                                                                                                                  | rótulos `Aguardando seu aceite` · `Seus envios pendentes` · `Seus envios recusados`; números = `ITS(S, A, hoje)`; lista = `ITL(S, A)`, mesma ordem, "há X" e destaque pela regra da Etapa 3a; cada número ≤ o do Coletivo no mesmo período              |
+| TI3  | M      | Individual e Coletivo, Hoje e Mês                                                                                                                   | Individual = `ITS`/`ITL` com `:eu` do Membro, diferente do de A quando `to_user_id`/`requested_by` diferem; Coletivo de M igual ao de A                                                                                                                 |
+| TI4  | A      | Individual: Hoje → Semana → Mês → Personalizado de 3 dias com hoje → Personalizado 2026-01-01                                                       | continua em Individual em todas as trocas; só "Seus envios recusados" muda, = `recusados` de `ITS` de cada período; "Aguardando", "Enviados" e a lista iguais; o card não mostra esqueleto                                                              |
+| TI5  | A ou M | Individual com `ITL` vazio (achar a conta pela consulta; se nenhuma tiver, NÃO EXECUTADO, sem criar dado)                                           | `Nenhum chamado aguardando seu aceite` + descrição pessoal, sem lista; "Aguardando seu aceite" `0` e neutro; link "Ver em Aprovações" presente                                                                                                          |
+| TI6  | A ou M | Individual de quem tem `aguardando` = 0 enquanto o setor tem pendente de "Fila do setor" (`to_user_id` nulo; consulta de apoio)                     | o Individual **não** mostra a pendente de fila (nem na contagem "Aguardando seu aceite" nem na lista); o Coletivo do mesmo setor **mostra** a pendente (contagem e lista). Regra decidida pelo usuário em 2026-10-28. Sem caso assim, NÃO EXECUTADO     |
+| TI7  | A ou M | Individual, clicar num item da lista (conta com `ITL` não vazio; se nenhuma tiver, NÃO EXECUTADO); depois o voltar do chamado                       | `/tickets/{id}?from=dashboard&periodo=…` com o período do Início; o voltar leva ao Início no mesmo período (como VD3 do Coletivo)                                                                                                                       |
+| TI8  | A      | Clicar "Ver em Aprovações" nos dois modos                                                                                                           | `/approvals?periodo=todos` nos dois; no Individual, os chamados da lista aparecem lá com "Para" = A                                                                                                                                                     |
+| TI9  | A      | DevTools → Rede, limpar; alternar Coletivo ↔ Individual várias vezes                                                                                | **nenhuma** requisição; console sem erro; o card troca junto com os outros blocos                                                                                                                                                                       |
+| TI10 | A      | marcar Individual; F5                                                                                                                               | volta a Coletivo, card com `TS`/`TL`; URL inalterada                                                                                                                                                                                                    |
+| TI11 | A      | árvore de acessibilidade (Playwright `getByRole` / snapshot) e Tab, nos dois modos                                                                  | **um** título "Transferências entre setores" (um `h2`, um `section` rotulado); **um** link "Ver em Aprovações"; **uma** lista de definições com 3 termos e no máximo **uma** lista de itens expostas; nada do modo oculto na árvore nem no foco         |
+| TI12 | A      | DOM, nos dois modos                                                                                                                                 | nenhum `id` duplicado no documento                                                                                                                                                                                                                      |
+| TI13 | A      | 390×844, nos dois modos                                                                                                                             | 3 mini-cards lado a lado; rótulos do Individual em até 2 linhas, sem `…`; números inteiros; nome do setor de origem trunca, "há X" inteiro; sem rolagem horizontal                                                                                      |
+| TI14 | A      | 1280 px, nos dois modos                                                                                                                             | card na mesma posição e largura (~2/5) da linha 3; cabeçalho igual ao de antes (link à direita, sem quebra). Linha mais baixa no Individual quando a lista é menor: esperado                                                                            |
+| TI15 | A      | **Fechamento da feature.** Individual, percorrer todos os cards (linha 1, Principal ofensor, Maiores atrasos, Abertos × resolvidos, Transferências) | **nenhum** card mostra o Coletivo: cada um bate com a consulta Individual da sua etapa (`IM`/`IA`/`IR`, `ITT`, `IAT`, `IAH`/`IAD`/`IAS`, `ITS`/`ITL`) ou mostra o vazio pessoal; nenhum rótulo ou vazio do Coletivo ("nosso", "no setor") no Individual |
+| TI16 | todos  | toda a bateria                                                                                                                                      | console e dev server (`next-devtools`) sem erro nem aviso de hidratação (nem do Recharts); nenhuma escrita no banco                                                                                                                                     |
+
+Não executáveis nesta rodada: Diretoria (login do Diretor recusado).
+
+Notas para não reportar como defeito:
+
+- Pendente enviada à "Fila do setor" aparece só no Coletivo (TI6; decidido
+  pelo usuário em 2026-10-28).
+- Envio feito por diretor a partir de outro setor, ou feito antes de a pessoa
+  mudar de setor, não entra em "Seus envios" (decisão 3).
+- O link "Ver em Aprovações" é o mesmo nos dois modos e Aprovações mostra o
+  setor inteiro; o filtro "Para" de lá é manual.
+- "Seus envios recusados" conta pela data da recusa (`reviewed_at`), como no
+  Coletivo.
+- A lista para em 5 mesmo que "Aguardando seu aceite" seja maior.
+
+### Critério de pronto da Etapa 5
+
+1. Individual bate com `ITS`/`ITL` (TI2, TI3), e "Recusados" segue o período
+   sem sair do modo (TI4).
+2. Coletivo idêntico ao de antes (TI1).
+3. Estado vazio do Individual (TI5); pendente de "Fila do setor" só no
+   Coletivo, decidido em 2026-10-28 (TI6).
+4. Links: item com origem `dashboard` e "Ver em Aprovações" (TI7, TI8).
+5. Troca sem requisição; F5 volta a Coletivo (TI9, TI10).
+6. Um título, um link, uma lista de definições e no máximo uma lista de itens
+   expostos; modo oculto fora da árvore e do foco; sem `id` duplicado (TI11,
+   TI12).
+7. 390 px sem rolagem horizontal; layout da linha 3 inalterado (TI13, TI14).
+8. **Fechamento:** no Individual nenhum card mostra o Coletivo (TI15).
+9. `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem
+   bloqueante; `df-qa` aprova TI1–TI16 (Diretoria não executada).
+
+### `tsc` entre ondas
+
+`countPendingApprovals` e `listOldestIncomingTransfers` ganham parâmetro
+opcional no fim: compatíveis. `findTransferSummary` ganha `userId`
+obrigatório e passa a devolver `{ coletivo, individual }`: depois do
+`df-data`, `app/(app)/dashboard/_components/dashboard-transfers.tsx` deixa de
+compilar até o `df-ui` entrar. Esperado entre as ondas; os dois fecham juntos.
+
+### Checklist da Etapa 5
+
+- [x] Este contrato e o plano; `DashboardTransferSummaryByMode`,
+      `DashboardIncomingTransfersByMode`,
+      `DashboardIncomingTransfersEmptyCopy`; `OWN_TRANSFER_COUNTER_LABELS`,
+      `TRANSFER_COUNTER_LABELS_BY_MODE`, `EMPTY_OWN_INCOMING_TRANSFERS_TITLE`,
+      `EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION`,
+      `EMPTY_INCOMING_TRANSFERS_COPY`; notas nos contratos do Coletivo e de
+      Aprovações (`df-architect`)
+- [x] `countPendingApprovals` com `recipientId?`; `findTransferSummary` com
+      `userId` e `{ coletivo, individual }`; `listOldestIncomingTransfers` com
+      `recipientId?`; `EXPLAIN ANALYZE` com e sem pessoa na resposta
+      (`df-data`)
+- [x] `DashboardTransfers` com `userId`, uma espera com três leituras,
+      `DashboardTransfersContent` por modo, `page.tsx` (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`
+      (aprovado com atenções: registro da decisão da fila, já feito)
+- [x] Cenários TI1–TI16 (`df-qa`): 14 de 16 passaram, 0 falhas; TI6 e TI7 não
+      executados
+      (`docs/test-reports/2026-10-28-dashboard-individual-mode-transfers.md`)
+- [x] Pendente de "Fila do setor" no Individual decidida pelo usuário
+      (2026-10-28: não conta no Individual; fica no Coletivo)
+- [x] **Fechamento da feature:** no modo Individual nenhum card mostra mais o
+      Coletivo (TI15 passou); plano com todas as etapas marcadas
+
+Etapa 5 concluída, aguardando commit.
+
+### Limites conhecidos da Etapa 5
+
+- **TI6 não executado.** O Suporte não tinha pendente de "Fila do setor", e
+  não havia conta de outro setor para testar.
+- **TI7 não executado.** A lista do Individual estava vazia para as duas
+  contas.
+- **Diretoria não executada.** Login do Diretor recusado no QA.
+- **Sem índice no plano.** Tabela pequena; Seq Scan esperado nesse volume.

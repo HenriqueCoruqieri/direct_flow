@@ -19,7 +19,7 @@ import type {
   DashboardOverdueTicket,
   DashboardOverviewByMode,
   DashboardTopTags,
-  DashboardTransferSummary,
+  DashboardTransferSummaryByMode,
 } from "@/app/_lib/types/dashboard"
 import type { DateRange, TimeBucket } from "@/app/_lib/types/period"
 import { db } from "@/db"
@@ -280,35 +280,51 @@ export async function listActivityBuckets(
 export async function findTransferSummary(
   departmentId: number,
   range: DateRange,
-): Promise<DashboardTransferSummary> {
+  userId: number,
+): Promise<DashboardTransferSummaryByMode> {
   const isPending = eq(ticketTransfer.status, PENDING_TRANSFER_STATUS)
   const isRejectedInRange = and(
     eq(ticketTransfer.status, REJECTED_TRANSFER_STATUS),
     gte(ticketTransfer.reviewedAt, range.start),
     lt(ticketTransfer.reviewedAt, range.end),
   )
+  const isMine = eq(ticketTransfer.requestedBy, userId)
 
-  const [incomingPendingCount, outgoingRows] = await Promise.all([
-    countPendingApprovals(departmentId),
-    db
-      .select({
-        outgoingPendingCount: sql<number>`(count(*) filter (where ${isPending}))::int`,
-        rejectedCount: sql<number>`(count(*) filter (where ${isRejectedInRange}))::int`,
-      })
-      .from(ticketTransfer)
-      .where(eq(ticketTransfer.fromDepartmentId, departmentId)),
-  ])
+  const [incomingPendingCount, ownIncomingPendingCount, outgoingRows] =
+    await Promise.all([
+      countPendingApprovals(departmentId),
+      countPendingApprovals(departmentId, userId),
+      db
+        .select({
+          outgoingPendingCount: sql<number>`(count(*) filter (where ${isPending}))::int`,
+          rejectedCount: sql<number>`(count(*) filter (where ${isRejectedInRange}))::int`,
+          ownOutgoingPendingCount: sql<number>`(count(*) filter (where ${isPending} and ${isMine}))::int`,
+          ownRejectedCount: sql<number>`(count(*) filter (where ${isRejectedInRange} and ${isMine}))::int`,
+        })
+        .from(ticketTransfer)
+        .where(eq(ticketTransfer.fromDepartmentId, departmentId)),
+    ])
+
+  const outgoing = outgoingRows[0]
 
   return {
-    incomingPendingCount,
-    outgoingPendingCount: outgoingRows[0]?.outgoingPendingCount ?? 0,
-    rejectedCount: outgoingRows[0]?.rejectedCount ?? 0,
+    coletivo: {
+      incomingPendingCount,
+      outgoingPendingCount: outgoing?.outgoingPendingCount ?? 0,
+      rejectedCount: outgoing?.rejectedCount ?? 0,
+    },
+    individual: {
+      incomingPendingCount: ownIncomingPendingCount,
+      outgoingPendingCount: outgoing?.ownOutgoingPendingCount ?? 0,
+      rejectedCount: outgoing?.ownRejectedCount ?? 0,
+    },
   }
 }
 
 export async function listOldestIncomingTransfers(
   departmentId: number,
   limit: number,
+  recipientId?: number,
 ): Promise<DashboardIncomingTransfer[]> {
   return db
     .select({
@@ -325,6 +341,9 @@ export async function listOldestIncomingTransfers(
       and(
         eq(ticketTransfer.toDepartmentId, departmentId),
         eq(ticketTransfer.status, PENDING_TRANSFER_STATUS),
+        recipientId === undefined
+          ? undefined
+          : eq(ticketTransfer.toUserId, recipientId),
       ),
     )
     .orderBy(asc(ticketTransfer.createdAt), asc(ticketTransfer.id))

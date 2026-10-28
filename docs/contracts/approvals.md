@@ -230,6 +230,11 @@ where tr.to_department_id = $departmentId
   and tr.status = 'pendente'
 ```
 
+> Revisão de 2026-10-28 (`docs/contracts/dashboard-individual-mode.md`,
+> Etapa 5): `countPendingApprovals(departmentId, recipientId?)`. Com
+> `recipientId`, acrescenta `and tr.to_user_id = $recipientId` (usado só pelo
+> modo Individual do Início). Sem ele, este SQL e o selo do menu não mudam.
+
 - O intervalo é semiaberto (`>= start`, `< end`), como `ticketPeriodCondition`,
   mas sobre `ticket_transfer.created_at`. Sugestão: `transferPeriodCondition`
   ao lado de `ticketPeriodCondition` em `app/_lib/data/period-condition.ts`.

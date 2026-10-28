@@ -97,6 +97,10 @@ continuam mostrando o Coletivo. É esperado e não é defeito.
       conhecidos no contrato)
 - [x] Etapa 3 — Maiores atrasos (concluída e commitada em 704b725; limites
       conhecidos no contrato)
-- [x] Etapa 4 — Abertos × resolvidos (concluída, aguardando commit; limites
+- [x] Etapa 4 — Abertos × resolvidos (concluída e commitada em 6fe687c;
+      limites conhecidos no contrato)
+- [x] Etapa 5 — Transferências (concluída, aguardando commit; limites
       conhecidos no contrato)
-- [ ] Etapa 5 — Transferências (a seguir)
+
+Feature concluída após o commit da Etapa 5: no modo Individual nenhum card
+mostra mais o Coletivo (TI15).

@@ -89,12 +89,24 @@ export interface DashboardTransferSummary {
   rejectedCount: number
 }
 
+export type DashboardTransferSummaryByMode =
+  DashboardByMode<DashboardTransferSummary>
+
 export interface DashboardIncomingTransfer {
   transferId: number
   ticketId: number
   ticketTitle: string
   fromDepartmentName: string
   sentAt: Date
+}
+
+export type DashboardIncomingTransfersByMode = DashboardByMode<
+  DashboardIncomingTransfer[]
+>
+
+export interface DashboardIncomingTransfersEmptyCopy {
+  title: string
+  description: string
 }
 
 export type DashboardActivitySeries = "opened" | "resolved"

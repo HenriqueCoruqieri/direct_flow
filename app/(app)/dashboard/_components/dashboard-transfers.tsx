@@ -3,31 +3,22 @@ import {
   listOldestIncomingTransfers,
 } from "@/app/_lib/data/dashboard"
 import {
-  EMPTY_INCOMING_TRANSFERS_DESCRIPTION,
-  EMPTY_INCOMING_TRANSFERS_TITLE,
+  DASHBOARD_VIEW_MODES,
   INCOMING_TRANSFERS_LIMIT,
-  REJECTED_TRANSFERS_SCOPE_HINT,
-  TRANSFER_COUNTER_LABELS,
-  transferCounterToneFor,
 } from "@/app/_lib/domain/dashboard"
-import type { DashboardTransferCounter } from "@/app/_lib/types/dashboard"
+import type { DashboardIncomingTransfersByMode } from "@/app/_lib/types/dashboard"
 import type { DateRange, PeriodSelection } from "@/app/_lib/types/period"
 
 import DashboardPanel from "./dashboard-panel"
+import DashboardTransfersContent from "./dashboard-transfers-content"
 import DashboardTransfersHeader from "./dashboard-transfers-header"
-import IncomingTransferItem from "./incoming-transfer-item"
-import TransferCounter from "./transfer-counter"
+import DashboardViewPane from "./dashboard-view-pane"
 
 const TITLE_ID = "dashboard-transfers-title"
 
-const COUNTER_ORDER: DashboardTransferCounter[] = [
-  "incoming",
-  "outgoing",
-  "rejected",
-]
-
 interface DashboardTransfersProps {
   departmentId: number
+  userId: number
   range: DateRange
   now: Date
   selection: PeriodSelection
@@ -35,20 +26,20 @@ interface DashboardTransfersProps {
 
 const DashboardTransfers = async ({
   departmentId,
+  userId,
   range,
   now,
   selection,
 }: DashboardTransfersProps) => {
-  const [summary, transfers] = await Promise.all([
-    findTransferSummary(departmentId, range),
+  const [summaryByMode, coletivo, individual] = await Promise.all([
+    findTransferSummary(departmentId, range, userId),
     listOldestIncomingTransfers(departmentId, INCOMING_TRANSFERS_LIMIT),
+    listOldestIncomingTransfers(departmentId, INCOMING_TRANSFERS_LIMIT, userId),
   ])
-
-  const counts = {
-    incoming: summary.incomingPendingCount,
-    outgoing: summary.outgoingPendingCount,
-    rejected: summary.rejectedCount,
-  } satisfies Record<DashboardTransferCounter, number>
+  const transfersByMode: DashboardIncomingTransfersByMode = {
+    coletivo,
+    individual,
+  }
 
   return (
     <DashboardPanel
@@ -56,40 +47,17 @@ const DashboardTransfers = async ({
       className="xl:col-span-2 xl:col-start-4"
     >
       <DashboardTransfersHeader titleId={TITLE_ID} />
-      <dl className="mt-3 grid grid-cols-3 gap-2">
-        {COUNTER_ORDER.map((counter) => (
-          <TransferCounter
-            key={counter}
-            label={TRANSFER_COUNTER_LABELS[counter]}
-            count={counts[counter]}
-            tone={transferCounterToneFor(counter, counts[counter])}
-            hint={
-              counter === "rejected" ? REJECTED_TRANSFERS_SCOPE_HINT : undefined
-            }
+      {DASHBOARD_VIEW_MODES.map((mode) => (
+        <DashboardViewPane key={mode} mode={mode}>
+          <DashboardTransfersContent
+            summary={summaryByMode[mode]}
+            transfers={transfersByMode[mode]}
+            mode={mode}
+            now={now}
+            selection={selection}
           />
-        ))}
-      </dl>
-      {transfers.length === 0 ? (
-        <div className="mt-3 flex flex-col gap-1">
-          <p className="text-sm font-semibold">
-            {EMPTY_INCOMING_TRANSFERS_TITLE}
-          </p>
-          <p className="text-caption text-muted-foreground">
-            {EMPTY_INCOMING_TRANSFERS_DESCRIPTION}
-          </p>
-        </div>
-      ) : (
-        <ul className="mt-2 flex flex-col">
-          {transfers.map((transfer) => (
-            <IncomingTransferItem
-              key={transfer.transferId}
-              transfer={transfer}
-              now={now}
-              selection={selection}
-            />
-          ))}
-        </ul>
-      )}
+        </DashboardViewPane>
+      ))}
     </DashboardPanel>
   )
 }

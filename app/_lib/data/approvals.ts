@@ -76,6 +76,7 @@ export async function listPendingApprovals(
 
 export async function countPendingApprovals(
   departmentId: number,
+  recipientId?: number,
 ): Promise<number> {
   const [row] = await db
     .select({ total: sql<number>`count(*)::int`.mapWith(Number) })
@@ -84,6 +85,9 @@ export async function countPendingApprovals(
       and(
         eq(ticketTransfer.toDepartmentId, departmentId),
         eq(ticketTransfer.status, "pendente"),
+        recipientId === undefined
+          ? undefined
+          : eq(ticketTransfer.toUserId, recipientId),
       ),
     )
 

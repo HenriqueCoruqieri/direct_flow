@@ -110,6 +110,7 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
               <Suspense fallback={<DashboardTransfersSkeleton />}>
                 <DashboardTransfers
                   departmentId={actor.departmentId}
+                  userId={actor.id}
                   range={range}
                   now={now}
                   selection={selection}

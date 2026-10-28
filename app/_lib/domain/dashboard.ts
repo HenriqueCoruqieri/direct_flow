@@ -25,6 +25,7 @@ import type {
   DashboardActivityEmptyCopy,
   DashboardActivityPoint,
   DashboardActivitySeries,
+  DashboardIncomingTransfersEmptyCopy,
   DashboardOverdueColumn,
   DashboardOverdueEmptyCopy,
   DashboardOverview,
@@ -271,6 +272,17 @@ export const TRANSFER_COUNTER_LABELS = {
   rejected: "Recusados por outros",
 } satisfies Record<DashboardTransferCounter, string>
 
+export const OWN_TRANSFER_COUNTER_LABELS = {
+  incoming: "Aguardando seu aceite",
+  outgoing: "Seus envios pendentes",
+  rejected: "Seus envios recusados",
+} satisfies Record<DashboardTransferCounter, string>
+
+export const TRANSFER_COUNTER_LABELS_BY_MODE = {
+  coletivo: TRANSFER_COUNTER_LABELS,
+  individual: OWN_TRANSFER_COUNTER_LABELS,
+} satisfies Record<DashboardViewMode, Record<DashboardTransferCounter, string>>
+
 export const REJECTED_TRANSFERS_SCOPE_HINT = "no período"
 
 export const TRANSFERS_APPROVALS_LINK_LABEL = `Ver em ${APPROVALS_LABEL}`
@@ -288,6 +300,23 @@ export const EMPTY_INCOMING_TRANSFERS_TITLE = "Nenhum chamado aguardando aceite"
 
 export const EMPTY_INCOMING_TRANSFERS_DESCRIPTION =
   "Os chamados enviados por outros setores aparecem aqui até alguém do setor atender ou recusar."
+
+export const EMPTY_OWN_INCOMING_TRANSFERS_TITLE =
+  "Nenhum chamado aguardando seu aceite"
+
+export const EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION =
+  "Os chamados que outros setores enviarem para você aparecem aqui até você atender ou recusar."
+
+export const EMPTY_INCOMING_TRANSFERS_COPY = {
+  coletivo: {
+    title: EMPTY_INCOMING_TRANSFERS_TITLE,
+    description: EMPTY_INCOMING_TRANSFERS_DESCRIPTION,
+  },
+  individual: {
+    title: EMPTY_OWN_INCOMING_TRANSFERS_TITLE,
+    description: EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION,
+  },
+} satisfies Record<DashboardViewMode, DashboardIncomingTransfersEmptyCopy>
 
 export const transferCounterToneFor = (
   counter: DashboardTransferCounter,

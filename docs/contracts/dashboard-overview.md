@@ -40,7 +40,10 @@ Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 > (`{ coletivo, individual }`); a leitura de recebidos troca `union` por
 > `union all` + `count(distinct)`, com o mesmo resultado para o Coletivo;
 > `receivedTransfersHint` e `backlogHint` ganham `mode` com padrão
-> `"coletivo"`.
+> `"coletivo"`. Etapa 5 (Transferências): `findTransferSummary` recebe
+> `userId` e devolve `DashboardTransferSummaryByMode`;
+> `listOldestIncomingTransfers` e `countPendingApprovals` ganham
+> `recipientId?` opcional (sem ele, SQL e números da Etapa 3a inalterados).
 
 ---
 
