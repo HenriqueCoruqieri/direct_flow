@@ -42,6 +42,9 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
 
   const initials = getInitials(profile.name)
   const membership = describeMembership(profile.departmentName, profile.role)
+  const registryItems = registryNavItemsFor(registryAccess)
+  const showDepartmentQueue = hasDepartmentQueue(accountFacts)
+  const approvalsBadge = approvalsNavBadgeFor(pendingApprovals)
 
   return (
     <div className="flex min-h-dvh flex-1 bg-background text-foreground">
@@ -50,9 +53,9 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
         initials={initials}
         image={profile.image}
         membership={membership}
-        registryItems={registryNavItemsFor(registryAccess)}
-        showDepartmentQueue={hasDepartmentQueue(accountFacts)}
-        approvalsBadge={approvalsNavBadgeFor(pendingApprovals)}
+        registryItems={registryItems}
+        showDepartmentQueue={showDepartmentQueue}
+        approvalsBadge={approvalsBadge}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileHeader
@@ -60,6 +63,9 @@ const AppLayout = async ({ children }: LayoutProps<"/">) => {
           initials={initials}
           image={profile.image}
           membership={membership}
+          registryItems={registryItems}
+          showDepartmentQueue={showDepartmentQueue}
+          approvalsBadge={approvalsBadge}
         />
         <main className="flex flex-1 flex-col">{children}</main>
       </div>

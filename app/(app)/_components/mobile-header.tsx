@@ -1,3 +1,7 @@
+import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
+import type { RegistryNavItem } from "@/app/_lib/types/registry"
+
+import MobileNav from "./mobile-nav"
 import UserAvatar from "./user-avatar"
 import UserMenu from "./user-menu"
 
@@ -6,6 +10,9 @@ interface MobileHeaderProps {
   initials: string
   image: string | null
   membership: string
+  registryItems: RegistryNavItem[]
+  showDepartmentQueue: boolean
+  approvalsBadge: ApprovalsNavBadge | null
 }
 
 const MobileHeader = ({
@@ -13,9 +20,17 @@ const MobileHeader = ({
   initials,
   image,
   membership,
+  registryItems,
+  showDepartmentQueue,
+  approvalsBadge,
 }: MobileHeaderProps) => {
   return (
     <header className="flex items-center gap-3 pt-safe-5 px-safe-5 pb-3.5 lg:hidden">
+      <MobileNav
+        registryItems={registryItems}
+        showDepartmentQueue={showDepartmentQueue}
+        approvalsBadge={approvalsBadge}
+      />
       <UserMenu
         label="Abrir menu do usuário"
         triggerClassName="rounded-full"
