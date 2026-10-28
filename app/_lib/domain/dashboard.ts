@@ -78,6 +78,8 @@ export const NO_RESOLUTIONS_IN_PERIOD_HINT =
 
 export const EMPTY_BACKLOG_HINT = "Nenhum chamado em backlog"
 
+export const NO_OWN_TICKETS_IN_PERIOD_HINT = "Nenhum chamado seu no período"
+
 export const DASHBOARD_OVERVIEW_EMPTY_HINTS = {
   coletivo: {
     noTickets: NO_TICKETS_IN_PERIOD_HINT,
@@ -85,7 +87,7 @@ export const DASHBOARD_OVERVIEW_EMPTY_HINTS = {
     emptyBacklog: EMPTY_BACKLOG_HINT,
   },
   individual: {
-    noTickets: "Nenhum chamado seu no período",
+    noTickets: NO_OWN_TICKETS_IN_PERIOD_HINT,
     noResolutions: "Nenhum resolvido por você no período",
     emptyBacklog: "Nenhum chamado seu em backlog",
   },
@@ -189,13 +191,26 @@ export const OVERDUE_COLUMN_LABELS = {
 export const NO_TAGGED_TICKETS_IN_PERIOD_HINT =
   "Nenhum chamado com tag no período"
 
+export const NO_OWN_TAGGED_TICKETS_IN_PERIOD_HINT =
+  "Nenhum chamado seu com tag no período"
+
+export const NO_TAGGED_TICKETS_IN_PERIOD_HINTS = {
+  coletivo: NO_TAGGED_TICKETS_IN_PERIOD_HINT,
+  individual: NO_OWN_TAGGED_TICKETS_IN_PERIOD_HINT,
+} satisfies Record<DashboardViewMode, string>
+
 export const EMPTY_OVERDUE_TITLE = "Nenhum chamado em atraso"
 
 export const EMPTY_OVERDUE_DESCRIPTION =
   "Os chamados do setor com vencimento já passado aparecem aqui."
 
-export const topTagsEmptyHint = (ticketCount: number): string =>
-  ticketCount > 0 ? NO_TAGGED_TICKETS_IN_PERIOD_HINT : NO_TICKETS_IN_PERIOD_HINT
+export const topTagsEmptyHint = (
+  ticketCount: number,
+  mode: DashboardViewMode = DEFAULT_DASHBOARD_VIEW_MODE,
+): string =>
+  ticketCount > 0
+    ? NO_TAGGED_TICKETS_IN_PERIOD_HINTS[mode]
+    : DASHBOARD_OVERVIEW_EMPTY_HINTS[mode].noTickets
 
 export const tagVolumePercent = (
   tagCount: number,

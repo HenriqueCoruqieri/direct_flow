@@ -82,6 +82,7 @@ const DashboardPage = async ({ searchParams }: PageProps<"/dashboard">) => {
               >
                 <DashboardTopTags
                   departmentId={actor.departmentId}
+                  userId={actor.id}
                   range={range}
                 />
               </Suspense>

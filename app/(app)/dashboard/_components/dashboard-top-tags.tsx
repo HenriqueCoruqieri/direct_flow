@@ -1,33 +1,34 @@
 import { listDashboardTopTags } from "@/app/_lib/data/dashboard"
 import {
+  DASHBOARD_VIEW_MODES,
   TOP_TAGS_CARD_LABEL,
   TOP_TAGS_LIMIT,
-  topTagsEmptyHint,
-  topTagVolumeHint,
 } from "@/app/_lib/domain/dashboard"
-import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
+import type { DashboardTopTagsByMode } from "@/app/_lib/types/dashboard"
 import type { DateRange } from "@/app/_lib/types/period"
 
 import DashboardPanel from "./dashboard-panel"
-import TopTagItem from "./top-tag-item"
+import DashboardTopTagsContent from "./dashboard-top-tags-content"
+import DashboardViewPane from "./dashboard-view-pane"
 
 const TITLE_ID = "dashboard-top-tags-title"
 
 interface DashboardTopTagsProps {
   departmentId: number
+  userId: number
   range: DateRange
 }
 
 const DashboardTopTags = async ({
   departmentId,
+  userId,
   range,
 }: DashboardTopTagsProps) => {
-  const { ticketCount, tags } = await listDashboardTopTags(
-    departmentId,
-    range,
-    TOP_TAGS_LIMIT,
-  )
-  const [leader] = tags
+  const [coletivo, individual] = await Promise.all([
+    listDashboardTopTags(departmentId, range, TOP_TAGS_LIMIT),
+    listDashboardTopTags(departmentId, range, TOP_TAGS_LIMIT, userId),
+  ])
+  const topTagsByMode: DashboardTopTagsByMode = { coletivo, individual }
 
   return (
     <DashboardPanel aria-labelledby={TITLE_ID} className="xl:col-span-3">
@@ -37,38 +38,11 @@ const DashboardTopTags = async ({
       >
         {TOP_TAGS_CARD_LABEL}
       </h2>
-      {leader === undefined ? (
-        <>
-          <p className="mt-1.5 font-heading text-title font-semibold">
-            {EMPTY_VALUE_LABEL}
-          </p>
-          <p className="mt-1.5 text-xs font-bold text-text-tertiary">
-            {topTagsEmptyHint(ticketCount)}
-          </p>
-        </>
-      ) : (
-        <>
-          <p
-            title={leader.name}
-            className="mt-1.5 line-clamp-2 font-heading text-title font-semibold wrap-break-word"
-          >
-            {leader.name}
-          </p>
-          <p className="mt-1.5 text-xs font-bold text-text-tertiary">
-            {topTagVolumeHint(leader.ticketCount, ticketCount)}
-          </p>
-          <ul className="mt-4 flex flex-col gap-2.5">
-            {tags.map((tag) => (
-              <TopTagItem
-                key={tag.id}
-                name={tag.name}
-                count={tag.ticketCount}
-                maxCount={leader.ticketCount}
-              />
-            ))}
-          </ul>
-        </>
-      )}
+      {DASHBOARD_VIEW_MODES.map((mode) => (
+        <DashboardViewPane key={mode} mode={mode}>
+          <DashboardTopTagsContent topTags={topTagsByMode[mode]} mode={mode} />
+        </DashboardViewPane>
+      ))}
     </DashboardPanel>
   )
 }

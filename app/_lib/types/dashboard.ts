@@ -62,6 +62,8 @@ export interface DashboardTopTags {
   tags: DashboardTopTag[]
 }
 
+export type DashboardTopTagsByMode = DashboardByMode<DashboardTopTags>
+
 export interface DashboardOverdueTicket {
   id: number
   title: string

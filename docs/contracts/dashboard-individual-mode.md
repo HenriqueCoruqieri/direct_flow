@@ -433,7 +433,7 @@ até o `df-ui` entrar. Esperado entre as ondas; os dois fecham juntos.
 - [x] Cenários IM1–IM14 (`df-qa`): 13 de 14, 0 falhas, IM12 em parte
       (`docs/test-reports/2026-10-27-dashboard-individual-mode.md`)
 
-Etapa 1 concluída, aguardando commit.
+Etapa 1 concluída e commitada (001ed83).
 
 ### Limites conhecidos da Etapa 1
 
@@ -455,3 +455,230 @@ Etapa 1 concluída, aguardando commit.
   idade somada de **todo** o backlog, nos dois modos, pelas mesmas funções
   (`backlogValueLabel`, `backlogHint`). Backlog sem atraso mostra `0 chamados`
   com horas. Coerente com o Coletivo; não é defeito.
+
+---
+
+## Etapa 2 — Principal ofensor
+
+### O que muda e o que não muda
+
+- O card "Principal ofensor" passa a ter as duas versões, trocadas pelo
+  switch da Etapa 1 (mesmo provider, mesmo `DashboardViewPane`).
+- O Coletivo do card fica **idêntico** ao de hoje (Etapa 2 de
+  `docs/contracts/dashboard-overview.md`).
+- Maiores atrasos, gráfico e Transferências **não mudam**: no Individual
+  continuam mostrando o Coletivo.
+- Rótulo do card, `TOP_TAGS_LIMIT`, ordenação, barras, esqueleto, `col-span`
+  e altura: iguais.
+
+### Tabelas, enums e migration
+
+Sem mudança de schema, sem migration, sem índice novo. Coluna lida além das
+de hoje: `ticket.assigned_to` (índice `ticket_assigned_to_idx`).
+
+### Definições (Individual, "eu" = usuário da sessão)
+
+| Termo                                | Definição                                                                                                                                     |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Meus chamados no período**         | `ticket.current_department_id` = setor **e** `ticket.assigned_to` = eu **e** `created_at` no período, todos os status. É o `chamados` de `IM` |
+| **Ranking**                          | tags do setor (`tag.department_id` = setor) nos meus chamados do período, mesma ordenação e mesmo `limit` do Coletivo                         |
+| **Denominador do "% do volume"**     | meus chamados no período (linha acima): o critério do Coletivo com `assigned_to` = eu                                                         |
+| **Tag de outro setor / tag inativa** | mesmas regras do Coletivo: inativa conta; de outro setor não entra no ranking, mas o chamado entra no denominador                             |
+
+O mesmo recorte vale para as duas leituras (total e ranking). "Meu" é o
+destinatário **atual**, como na Etapa 1.
+
+### Tipos — `app/_lib/types/dashboard.ts` (acréscimo)
+
+```ts
+export type DashboardTopTagsByMode = DashboardByMode<DashboardTopTags>
+```
+
+`DashboardTopTags` e `DashboardTopTag` **não mudam**: cada modo é um
+`DashboardTopTags` completo, então `topTagVolumeHint`, `tagBarPercent` e
+`TopTagItem` servem aos dois modos sem mudança.
+
+### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo)
+
+| Export                                             | Valor / semântica                                                                                                                               |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NO_OWN_TICKETS_IN_PERIOD_HINT`                    | `"Nenhum chamado seu no período"` — a string da Etapa 1, agora constante; `DASHBOARD_OVERVIEW_EMPTY_HINTS.individual.noTickets` aponta para ela |
+| `NO_OWN_TAGGED_TICKETS_IN_PERIOD_HINT`             | `"Nenhum chamado seu com tag no período"`                                                                                                       |
+| `NO_TAGGED_TICKETS_IN_PERIOD_HINTS`                | por modo: `coletivo` = `NO_TAGGED_TICKETS_IN_PERIOD_HINT` (inalterado), `individual` = `NO_OWN_TAGGED_TICKETS_IN_PERIOD_HINT`                   |
+| `topTagsEmptyHint(ticketCount, mode = "coletivo")` | `ticketCount > 0` → `NO_TAGGED_TICKETS_IN_PERIOD_HINTS[mode]`; senão → `DASHBOARD_OVERVIEW_EMPTY_HINTS[mode].noTickets`. Coletivo igual a hoje  |
+
+Sem mudança: `TOP_TAGS_CARD_LABEL`, `TOP_TAGS_LIMIT`, `tagVolumePercent`,
+`topTagVolumeHint`, `tagBarPercent`, `NO_TAGGED_TICKETS_IN_PERIOD_HINT`,
+`NO_TICKETS_IN_PERIOD_HINT`. A chamada atual `topTagsEmptyHint(ticketCount)`
+continua compilando e igual.
+
+"Meus chamados sem tag" inclui o caso de chamados meus só com tag de outro
+setor (aceitos de fora), como no Coletivo. Não é defeito.
+
+### `df-data` — `app/_lib/data/dashboard.ts`
+
+Assinatura alterada (parâmetro opcional no fim; sem ele, comportamento e SQL
+**idênticos** aos de hoje):
+
+```ts
+export async function listDashboardTopTags(
+  departmentId: number,
+  range: DateRange,
+  limit: number,
+  assigneeId?: number,
+): Promise<DashboardTopTags>
+```
+
+- Com `assigneeId`, as **duas** leituras do `Promise.all` (total e ranking)
+  ganham `and t.assigned_to = $assigneeId` no predicado de recorte que já
+  existe (`createdInRange`). Em Drizzle:
+  `assigneeId === undefined ? undefined : eq(ticket.assignedTo, assigneeId)`
+  dentro do `and(...)` — o `and` descarta `undefined`, então o Coletivo sai
+  com o SQL de hoje. Nada de função duplicada.
+- Índice: `ticket_assigned_to_idx` ou o de setor de hoje, à escolha do
+  planejador; o ranking mantém o `join` de hoje, com o filtro no lado de
+  `ticket`.
+- Sem chamados meus: `{ ticketCount: 0, tags: [] }`.
+- Rodar `EXPLAIN ANALYZE` das duas leituras com e sem `assigneeId` para o
+  Administrador de QA Suporte e colar na resposta; o plano do Coletivo não
+  pode mudar.
+
+### `df-actions`, `df-auth`, `df-email`
+
+Nada.
+
+### `df-ui` — o que fazer
+
+`DashboardTopTags` (servidor) passa a receber `userId` (o `actor.id` de
+`page.tsx`, como `DashboardOverview`) e faz **duas** chamadas num
+`Promise.all`:
+
+```ts
+const [coletivo, individual] = await Promise.all([
+  listDashboardTopTags(departmentId, range, TOP_TAGS_LIMIT),
+  listDashboardTopTags(departmentId, range, TOP_TAGS_LIMIT, userId),
+])
+const topTags: DashboardTopTagsByMode = { coletivo, individual }
+```
+
+**Estrutura.** O `DashboardPanel` (com `xl:col-span-3`, `aria-labelledby` e o
+`h2` de `TOP_TAGS_CARD_LABEL`) fica **um só**, fora dos painéis de modo; só o
+**conteúdo** abaixo do título vai em `DashboardViewPane`, um por modo
+(`DASHBOARD_VIEW_MODES.map`). Motivos: o `DashboardPanel` é o item da grade
+da linha 2 (um `div hidden` em volta dele perderia o `col-span`), e o `h2` tem
+`id` fixo (`TITLE_ID`), que duplicaria. Nome sugerido para a peça extraída:
+`_components/dashboard-top-tags-content.tsx` (servidor), recebendo
+`topTags: DashboardTopTags` e `mode: DashboardViewMode` e desenhando
+exatamente o que o card desenha hoje abaixo do título.
+
+| Onde           | Antes                           | Agora                                 |
+| -------------- | ------------------------------- | ------------------------------------- |
+| linha de vazio | `topTagsEmptyHint(ticketCount)` | `topTagsEmptyHint(ticketCount, mode)` |
+
+O resto (destaque, `topTagVolumeHint`, lista, barras, `EMPTY_VALUE_LABEL`) é
+o mesmo nos dois modos, cada um com os próprios números.
+
+**Modo inativo.** Como na Etapa 1: `hidden` no `div` do `DashboardViewPane`,
+sem classe de `display` nele. O `DashboardPanel` é `flex flex-col`; o `div`
+do painel é um item comum do flex e o conteúdo dentro dele segue o fluxo de
+bloco, como hoje.
+
+**Suspense e esqueleto.** O `Suspense` com `key` de `page.tsx` e o
+`DashboardTopTagsSkeleton` ficam como estão: um esqueleto só.
+
+### Consultas de conferência (`df-qa`)
+
+Contas, ids, banco só leitura e bordas `:inicio`/`:fim` como na Etapa 1 deste
+contrato.
+
+Consulta `ITT(dep, eu, inicio, fim)` — ranking do Individual:
+
+```sql
+select tg.id, tg.name, count(*)::int as n
+from ticket_tag tt
+join tag tg on tg.id = tt.tag_id
+join ticket t on t.id = tt.ticket_id
+where t.current_department_id = :dep and tg.department_id = :dep
+  and t.assigned_to = :eu
+  and t.created_at >= :inicio and t.created_at < :fim
+group by tg.id, tg.name
+order by n desc, lower(tg.name) asc, tg.id asc
+limit 6
+```
+
+Denominador: coluna `chamados` de `IM(dep, eu, inicio, fim)` da Etapa 1.
+
+Esperado no Individual: lista = `ITT`, mesma ordem e contagens; destaque = 1ª
+linha; `N chamado(s) · X% do volume` com `X = floor(100 × n / chamados)`
+(`< 1%` se `n > 0` e o floor der 0). `ITT` vazio: `—` e
+`Nenhum chamado seu com tag no período` se `chamados > 0`, ou
+`Nenhum chamado seu no período` se `chamados = 0`; sem lista.
+
+### Cenários do `df-qa`
+
+| #    | Quem   | Ação                                                                                                                                          | Esperado                                                                                                                                                                          |
+| ---- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PO1  | A      | `/dashboard` Hoje, Coletivo                                                                                                                   | card igual ao de antes: bate com `TT(S, hoje)` e `OV(S, hoje)` do contrato do Coletivo                                                                                            |
+| PO2  | A      | Individual em Hoje, Semana, Mês e Personalizado de 3 dias com hoje                                                                            | em cada período, lista = `ITT`, percentual pelo `chamados` de `IM`; linha 1 continua batendo com a Etapa 1                                                                        |
+| PO3  | A      | Coletivo em Semana e Mês                                                                                                                      | idêntico ao Coletivo de antes (`TT`/`OV`)                                                                                                                                         |
+| PO4  | M      | Individual em Hoje e Mês                                                                                                                      | lista = `ITT` com `:eu` do Membro, diferente da de A quando os destinatários diferem; Coletivo de M igual ao de A                                                                 |
+| PO5  | A      | Individual num Personalizado sem chamado meu (conferir com `IM`, ex. 2026-01-01)                                                              | `—` + `Nenhum chamado seu no período`, sem lista                                                                                                                                  |
+| PO6  | A ou M | Individual num período com `chamados > 0` e `ITT` vazio (achar com `IM` + `ITT`; se não houver, registrar como não executado, sem criar dado) | `—` + `Nenhum chamado seu com tag no período`, sem lista                                                                                                                          |
+| PO7  | A      | DevTools → Rede, limpar; alternar Coletivo ↔ Individual várias vezes                                                                          | **nenhuma** requisição; console sem erro; o card troca junto com a linha 1                                                                                                        |
+| PO8  | A      | marcar Individual; F5                                                                                                                         | volta a Coletivo, card com os números do Coletivo; URL inalterada                                                                                                                 |
+| PO9  | A      | Individual, trocar o período pelo filtro                                                                                                      | continua em Individual; card com o `ITT` do novo período                                                                                                                          |
+| PO10 | A      | árvore de acessibilidade (Playwright `getByRole` / snapshot), nos dois modos                                                                  | **um** título "Principal ofensor" (um `h2`, um `section` rotulado); só **uma** lista do card exposta; itens do modo oculto fora da árvore e do foco; nenhum `id` duplicado no DOM |
+| PO11 | A      | 390×844, nos dois modos                                                                                                                       | sem rolagem horizontal; destaque e lista sem estourar                                                                                                                             |
+| PO12 | A      | 1280 px, nos dois modos                                                                                                                       | card na mesma posição e largura (~3/5) da linha 2; Maiores atrasos mostra o Coletivo também no Individual — não é defeito                                                         |
+| PO13 | todos  | toda a bateria                                                                                                                                | console e dev server (`next-devtools`) sem erro nem aviso de hidratação; nenhuma escrita no banco                                                                                 |
+
+Não executáveis nesta rodada: Diretoria (login do Diretor recusado).
+
+Notas para não reportar como defeito:
+
+- A soma dos percentuais pode ser menor que 100% (chamado sem tag ou com tag
+  de outro setor), como no Coletivo.
+- Um chamado meu aceito de outro setor com tag da origem conta no
+  denominador e não no ranking.
+- Maiores atrasos, gráfico e Transferências ainda no Coletivo no Individual.
+
+### Critério de pronto da Etapa 2
+
+1. Individual bate com `ITT`/`IM` em todos os períodos (PO2, PO4).
+2. Coletivo idêntico ao de antes (PO1, PO3).
+3. Estados vazios do Individual (PO5, PO6).
+4. Troca sem requisição; F5 volta a Coletivo; modo sobrevive à troca de
+   período (PO7, PO8, PO9).
+5. Um título só; modo oculto fora da árvore e do foco (PO10).
+6. 390 px sem rolagem horizontal; layout da linha 2 inalterado (PO11, PO12).
+7. `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem
+   bloqueante; `df-qa` aprova PO1–PO13 (Diretoria não executada).
+
+### `tsc` entre ondas
+
+A assinatura nova é compatível (parâmetro opcional no fim, `mode` com
+padrão), então nada deixa de compilar entre as ondas.
+
+### Checklist da Etapa 2
+
+- [x] Este contrato e o plano; `DashboardTopTagsByMode`;
+      `NO_OWN_TICKETS_IN_PERIOD_HINT`, `NO_OWN_TAGGED_TICKETS_IN_PERIOD_HINT`,
+      `NO_TAGGED_TICKETS_IN_PERIOD_HINTS`, `topTagsEmptyHint` com `mode`
+      (`df-architect`)
+- [x] `listDashboardTopTags` com `assigneeId?`, `EXPLAIN ANALYZE` com e sem
+      pessoa na resposta (`df-data`)
+- [x] `DashboardTopTags` com `userId`, duas chamadas em `Promise.all`,
+      conteúdo por modo em `DashboardViewPane`, `page.tsx` (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`
+      (aprovado, sem atenções)
+- [x] Cenários PO1–PO13 (`df-qa`): 13 de 13 após reteste
+      (`docs/test-reports/2026-10-28-dashboard-individual-mode-top-tags.md`)
+
+Etapa 2 concluída, aguardando commit.
+
+### Limites conhecidos da Etapa 2
+
+- **Plano de execução.** Com o volume atual (248 chamados) o planejador usa
+  Seq Scan e não `ticket_assigned_to_idx`. Esperado em tabela pequena; o
+  índice entra quando o volume crescer.
+- **Diretoria não executada.** Login do Diretor recusado no QA.

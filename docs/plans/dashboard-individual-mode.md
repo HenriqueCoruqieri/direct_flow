@@ -91,9 +91,10 @@ continuam mostrando o Coletivo. É esperado e não é defeito.
 
 ## Andamento
 
-- [x] Etapa 1 — switch e linha 1 (concluída, aguardando commit; limites
+- [x] Etapa 1 — switch e linha 1 (concluída e commitada em 001ed83; limites
       conhecidos e decisões pós-QA no contrato)
-- [ ] Etapa 2 — Principal ofensor
-- [ ] Etapa 3 — Maiores atrasos
+- [x] Etapa 2 — Principal ofensor (concluída, aguardando commit; limites
+      conhecidos no contrato)
+- [ ] Etapa 3 — Maiores atrasos (a seguir)
 - [ ] Etapa 4 — Abertos × resolvidos
 - [ ] Etapa 5 — Transferências

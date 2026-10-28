@@ -151,9 +151,11 @@ export async function listDashboardTopTags(
   departmentId: number,
   range: DateRange,
   limit: number,
+  assigneeId?: number,
 ): Promise<DashboardTopTags> {
   const createdInRange = and(
     eq(ticket.currentDepartmentId, departmentId),
+    assigneeId === undefined ? undefined : eq(ticket.assignedTo, assigneeId),
     gte(ticket.createdAt, range.start),
     lt(ticket.createdAt, range.end),
   )
