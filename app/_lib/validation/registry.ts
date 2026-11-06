@@ -5,6 +5,8 @@ import {
   REGISTRY_NAME_MIN_LENGTH,
 } from "@/app/_lib/domain/registry"
 
+export const REGISTRY_EMAIL_MAX_LENGTH = 254
+
 export const registryNameSchema = (requiredMessage: string) =>
   z
     .string({ error: requiredMessage })
@@ -16,6 +18,16 @@ export const registryNameSchema = (requiredMessage: string) =>
     .max(REGISTRY_NAME_MAX_LENGTH, {
       error: `O nome precisa ter no máximo ${REGISTRY_NAME_MAX_LENGTH} caracteres.`,
     })
+
+export const registryEmailSchema = z
+  .string({ error: "Informe o e-mail." })
+  .trim()
+  .toLowerCase()
+  .min(1, { error: "Informe o e-mail." })
+  .max(REGISTRY_EMAIL_MAX_LENGTH, {
+    error: `O e-mail precisa ter no máximo ${REGISTRY_EMAIL_MAX_LENGTH} caracteres.`,
+  })
+  .pipe(z.email({ error: "E-mail inválido." }))
 
 export const registryIdSchema = (message: string) =>
   z

@@ -2,24 +2,18 @@ import { z } from "zod"
 
 import { ROLES } from "@/app/_lib/domain/user"
 import {
+  REGISTRY_EMAIL_MAX_LENGTH,
   registryActiveSchema,
+  registryEmailSchema,
   registryIdSchema,
   registryNameSchema,
 } from "@/app/_lib/validation/registry"
 
-export const PERSON_EMAIL_MAX_LENGTH = 254
+export const PERSON_EMAIL_MAX_LENGTH = REGISTRY_EMAIL_MAX_LENGTH
 
 export const personNameSchema = registryNameSchema("Informe o nome da pessoa.")
 
-export const personEmailSchema = z
-  .string({ error: "Informe o e-mail." })
-  .trim()
-  .toLowerCase()
-  .min(1, { error: "Informe o e-mail." })
-  .max(PERSON_EMAIL_MAX_LENGTH, {
-    error: `O e-mail precisa ter no máximo ${PERSON_EMAIL_MAX_LENGTH} caracteres.`,
-  })
-  .pipe(z.email({ error: "E-mail inválido." }))
+export const personEmailSchema = registryEmailSchema
 
 export const personRoleSchema = z.enum(ROLES, { error: "Papel inválido." })
 
