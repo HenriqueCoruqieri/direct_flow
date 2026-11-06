@@ -187,6 +187,12 @@ Os helpers `requireDirector`, `getDirector` e `getIsDirector` ficam em
 `docs/contracts/registry-departments.md` (ADR 011). `Actor` não ganha campo para
 isso: ser diretor é consultado no banco a cada checagem.
 
+Rotas protegidas por `requireDirector` (404 para quem não é diretor):
+`/registry/departments` (Setores) e `/registry/companies` (Empresas,
+`docs/contracts/registry-companies.md`). As actions das duas seções usam
+`getDirector` e devolvem `FORBIDDEN`. Nenhuma das duas precisa de mudança em
+`app/_lib/auth/`.
+
 Todos são `async` e só rodam no servidor.
 
 Além desses, `app/_lib/auth/session.ts` publica os dois wrappers que a action

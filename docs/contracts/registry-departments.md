@@ -29,6 +29,11 @@ Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 > especiais por `departmentBadgeFor` e esconde "Desativar" nos dois. Quem está na
 > Diretoria passa a ser sempre admin (ADR 011, nota de Pessoas).
 
+> **Atualizado pela feature Empresas** (`docs/contracts/registry-companies.md`,
+> 2026-11-06): `/registry/companies` é a segunda rota só do diretor, com a
+> mesma guarda desta tela (`requireDirector` na página, `getDirector` nas
+> actions). O menu do diretor passa a ser Pessoas, Setores, Tags, **Empresas**.
+
 ## Revisão de 2026-10-05 — bloqueio que cita só o que bloqueia e atalho para Pessoas
 
 Plano: `docs/plans/pending-improvements.md`, Entrega A. Os filtros pela URL do

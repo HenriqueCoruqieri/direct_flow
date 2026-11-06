@@ -81,3 +81,15 @@ admin`, ativo, fora da Diretoria) entra em Cadastros com alcance limitado ao
   mantém o papel, mas `resolveRegistryAccess` devolve `none`: o poder volta
   quando um diretor o realoca.
 - `must_change_password = true` também resulta em `none` (ADR 012).
+
+## Nota — Cadastros → Empresas (2026-11-06)
+
+- Empresas é a segunda seção de Cadastros exclusiva da Diretoria, ao lado de
+  Setores. O que só o diretor pode, em Cadastros: **Setores** e **Empresas**
+  (listar, criar, editar, desativar e reativar). Pessoas e Tags continuam
+  abertas ao admin de setor, com alcance limitado.
+- Mesma forma de guarda de Setores: `requireDirector` na página
+  (`/registry/companies`, 404 para quem não é diretor) e `getDirector` nas
+  actions (`FORBIDDEN`). O item de menu só aparece para o diretor
+  (`registryNavItemsFor`).
+- Contrato em `docs/contracts/registry-companies.md`.

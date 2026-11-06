@@ -135,6 +135,47 @@ maior `id` de cada título que ainda esteja `resolvido`.
 > Nenhum usuário, setor ou tag novo. A tabela "Campos comuns" acima vale com
 > essa troca em `assigned_to`; a tabela "Histórico" ganha a linha do meio.
 
+## Empresas
+
+Acrescentado em 2026-11-06 (`docs/contracts/registry-companies.md`, Etapa 1).
+Três empresas fixas para os cenários de lista, busca, filtro UF e CNPJ
+duplicado de Cadastros → Empresas. Criadas na mesma transação do `seedQa`.
+
+Idempotência: empresa já existente com o mesmo `cnpj` é ignorada, sem
+alteração (nem dados, nem `is_active`, nem telefones).
+
+| Campo                | `QA Alfa`                                                                    | `QA Beta`                             | `QA Gama`                                              |
+| -------------------- | ---------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| `cnpj`               | `12345678000195`                                                             | `AB12CD34000184`                      | `45678901000175`                                       |
+| `legal_name`         | `QA Alfa Comércio de Peças Ltda`                                             | `QA Beta Serviços de Tecnologia S.A.` | `QA Gama Distribuidora Ltda`                           |
+| `email`              | `contato@qa-alfa.test`                                                       | `contato@qa-beta.test`                | `contato@qa-gama.test`                                 |
+| `cep`                | `01310100`                                                                   | `20040020`                            | `30130010`                                             |
+| `state`              | `SP`                                                                         | `RJ`                                  | `MG`                                                   |
+| `street`, `number`   | `Avenida Paulista`, `1000`                                                   | `Rua da Assembleia`, `S/N`            | `Avenida Afonso Pena`, `500`                           |
+| `district`, `city`   | `Bela Vista`, `São Paulo`                                                    | `Centro`, `Rio de Janeiro`            | `Centro`, `Belo Horizonte`                             |
+| `complement`         | `Sala 101`                                                                   | nulo                                  | nulo                                                   |
+| `manager_name`       | `Ana Responsável Alfa`                                                       | `Bruno Responsável Beta`              | `Carla Responsável Gama`                               |
+| `manager_phone`      | `11912345678`                                                                | `2133334444`                          | `31987654321`                                          |
+| telefone `primary`   | `1133334444`                                                                 | `21987654321`                         | `3132221111`                                           |
+| telefone `secondary` | `11998887777`                                                                | nenhum                                | nenhum                                                 |
+| expediente           | Seg a Sex (`{1,2,3,4,5}`), 08:00–18:00, `notes` = `Portaria pede documento.` | nenhum (tudo nulo)                    | Seg a Sáb (`{1,2,3,4,5,6}`), 07:00–17:00, `notes` nulo |
+| `is_active`          | `true`                                                                       | `true`                                | **`false`**                                            |
+
+- Três UFs diferentes (SP, RJ, MG) para o filtro UF; uma inativa para o filtro
+  Status padrão (Ativo) e para a mensagem de CNPJ duplicado de empresa
+  inativa.
+- Os três CNPJs passam no dígito verificador (`isValidCnpj`); os telefones,
+  em `isValidPhone`. `QA Beta` tem CNPJ **alfanumérico** (`AB.12C.D34/0001-84`,
+  DV conferido pelo cálculo ASCII − 48), para os cenários de exibição, busca e
+  duplicidade do formato novo; as outras duas, numérico. O seed grava como a
+  data layer gravaria: CNPJ em maiúsculas sem máscara, CEP e telefones só
+  dígitos.
+- Nome com `QA ` sem colchetes, como os setores do seed: são dados fixos e
+  **só leitura** para o teste. O `df-qa` só cria, edita, desativa e reativa
+  empresas que ele mesmo criou, com nome fantasia começando por `[QA] ` (ver
+  "Dados criados pelos testes").
+- Domínio `.test` nos e-mails (RFC 2606), como os usuários QA.
+
 ## Variáveis de ambiente
 
 | Variável           | Para quê                                                                                              |
@@ -159,6 +200,11 @@ Acrescentado em 2026-10-15 (pós-QA de `docs/contracts/approvals.md`).
 - Todo ticket, tag ou registro criado pelo `df-qa` começa com `[QA]` no título
   ou no nome.
 - Criação só nos setores QA. Na Diretoria o teste apenas lê e aprova.
+- Empresas (`docs/contracts/registry-companies.md`): o teste cria, edita,
+  desativa e reativa só as que ele mesmo criou, com nome fantasia começando
+  por `[QA] ` e CNPJ da lista de reserva do contrato. As do seed (`QA Alfa`,
+  `QA Beta`, `QA Gama`) são só leitura. Ao fim da rodada, as empresas `[QA]`
+  criadas ficam desativadas (empresa não é excluída).
 - Exceção: a chamada ao cron de encerramento
   (`docs/contracts/ticket-edit-window.md`) fecha **todo** `resolvido` vencido
   do banco, inclusive os do seed demo na Diretoria. É o comportamento de

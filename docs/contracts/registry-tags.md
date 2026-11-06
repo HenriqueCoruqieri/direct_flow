@@ -40,6 +40,12 @@ Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 > "Peças compartilhadas" do contrato de Pessoas. As seções abaixo descrevem a
 > feature Tags já com essas mudanças; onde divergirem, vale o contrato de Pessoas.
 
+> **Atualizado pela feature Empresas** (`docs/contracts/registry-companies.md`,
+> 2026-11-06): `RegistrySection` ganha `"companies"`, `COMPANIES_REGISTRY_PATH`
+> = `/registry/companies` e o menu do diretor passa a ser Pessoas, Setores,
+> Tags, **Empresas**. O do admin de setor não muda. Onde as tabelas abaixo
+> listam os itens do diretor, leia com Empresas no fim.
+
 ## Decisões fixadas pelo usuário (resumo do plano)
 
 | Tema          | Decisão                                                                                                                                                      |
