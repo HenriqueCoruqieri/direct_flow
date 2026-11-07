@@ -24,6 +24,7 @@ import type { DateKey, DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { account } from "@/db/auth-schema"
 import type {
+  NewCompany,
   NewTicket,
   NewTicketHistory,
   NewUser,
@@ -32,6 +33,8 @@ import type {
   TicketStatus,
 } from "@/db/schema"
 import {
+  company,
+  companyContact,
   department,
   tag,
   ticket,
@@ -335,6 +338,130 @@ async function seedQaWindowTickets(
   }
 }
 
+interface QaCompanyBlueprint {
+  company: NewCompany
+  primaryPhone: string
+  secondaryPhone: string | null
+}
+
+const QA_COMPANIES: QaCompanyBlueprint[] = [
+  {
+    company: {
+      cnpj: "12345678000195",
+      legalName: "QA Alfa Comércio de Peças Ltda",
+      tradeName: "QA Alfa",
+      email: "contato@qa-alfa.test",
+      cep: "01310100",
+      state: "SP",
+      street: "Avenida Paulista",
+      number: "1000",
+      district: "Bela Vista",
+      city: "São Paulo",
+      complement: "Sala 101",
+      managerName: "Ana Responsável Alfa",
+      managerPhone: "11912345678",
+      businessDays: [1, 2, 3, 4, 5],
+      opensAt: "08:00",
+      closesAt: "18:00",
+      notes: "Portaria pede documento.",
+      isActive: true,
+    },
+    primaryPhone: "1133334444",
+    secondaryPhone: "11998887777",
+  },
+  {
+    company: {
+      cnpj: "AB12CD34000184",
+      legalName: "QA Beta Serviços de Tecnologia S.A.",
+      tradeName: "QA Beta",
+      email: "contato@qa-beta.test",
+      cep: "20040020",
+      state: "RJ",
+      street: "Rua da Assembleia",
+      number: "S/N",
+      district: "Centro",
+      city: "Rio de Janeiro",
+      complement: null,
+      managerName: "Bruno Responsável Beta",
+      managerPhone: "2133334444",
+      businessDays: null,
+      opensAt: null,
+      closesAt: null,
+      notes: null,
+      isActive: true,
+    },
+    primaryPhone: "21987654321",
+    secondaryPhone: null,
+  },
+  {
+    company: {
+      cnpj: "45678901000175",
+      legalName: "QA Gama Distribuidora Ltda",
+      tradeName: "QA Gama",
+      email: "contato@qa-gama.test",
+      cep: "30130010",
+      state: "MG",
+      street: "Avenida Afonso Pena",
+      number: "500",
+      district: "Centro",
+      city: "Belo Horizonte",
+      complement: null,
+      managerName: "Carla Responsável Gama",
+      managerPhone: "31987654321",
+      businessDays: [1, 2, 3, 4, 5, 6],
+      opensAt: "07:00",
+      closesAt: "17:00",
+      notes: null,
+      isActive: false,
+    },
+    primaryPhone: "3132221111",
+    secondaryPhone: null,
+  },
+]
+
+async function seedQaCompanies(tx: Transaction): Promise<void> {
+  for (const blueprint of QA_COMPANIES) {
+    const [existing] = await tx
+      .select({ id: company.id })
+      .from(company)
+      .where(eq(company.cnpj, blueprint.company.cnpj))
+      .limit(1)
+
+    if (existing) {
+      console.log(
+        `Seed QA ignorado: já existe uma empresa com o CNPJ ${blueprint.company.cnpj}.`,
+      )
+      continue
+    }
+
+    const [created] = await tx
+      .insert(company)
+      .values(blueprint.company)
+      .returning({ id: company.id })
+
+    await tx.insert(companyContact).values([
+      {
+        companyId: created.id,
+        position: "primary",
+        phone: blueprint.primaryPhone,
+      },
+      ...(blueprint.secondaryPhone === null
+        ? []
+        : [
+            {
+              companyId: created.id,
+              position: "secondary" as const,
+              phone: blueprint.secondaryPhone,
+            },
+          ]),
+    ])
+
+    console.log(
+      `Seed QA: empresa "${blueprint.company.tradeName}" (id ${created.id}) criada.`,
+    )
+  }
+}
+
 async function seedQa(): Promise<void> {
   if (process.env.SEED_QA !== "true") return
 
@@ -422,6 +549,7 @@ async function seedQa(): Promise<void> {
     }
 
     await seedQaWindowTickets(tx, windowDepartmentId, new Date())
+    await seedQaCompanies(tx)
   })
 }
 
