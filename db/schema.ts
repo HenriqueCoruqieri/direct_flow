@@ -8,7 +8,9 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
+  time,
   timestamp,
   unique,
   uniqueIndex,
@@ -92,6 +94,41 @@ export const messageHistoryEventEnum = pgEnum("message_history_event", [
 export const attachmentHistoryEventEnum = pgEnum("attachment_history_event", [
   "inclusao",
   "exclusao",
+])
+
+export const brazilianStateEnum = pgEnum("brazilian_state", [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+])
+
+export const companyContactPositionEnum = pgEnum("company_contact_position", [
+  "primary",
+  "secondary",
 ])
 
 export const department = pgTable(
@@ -440,6 +477,73 @@ export const attachmentHistory = pgTable(
   ],
 )
 
+export const company = pgTable(
+  "company",
+  {
+    id: pk(),
+    cnpj: text("cnpj").notNull(),
+    legalName: text("legal_name").notNull(),
+    tradeName: text("trade_name").notNull(),
+    email: text("email").notNull(),
+    cep: text("cep").notNull(),
+    state: brazilianStateEnum("state").notNull(),
+    street: text("street").notNull(),
+    number: text("number").notNull(),
+    district: text("district").notNull(),
+    city: text("city").notNull(),
+    complement: text("complement"),
+    managerName: text("manager_name").notNull(),
+    managerPhone: text("manager_phone").notNull(),
+    businessDays: smallint("business_days").array(),
+    opensAt: time("opens_at"),
+    closesAt: time("closes_at"),
+    notes: text("notes"),
+    isActive: boolean("is_active").default(true).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("company_cnpj_idx").on(table.cnpj),
+    check("company_cnpj_format", sql`cnpj ~ '^[0-9A-Z]{12}[0-9]{2}$'`),
+    check("company_cep_digits", sql`cep ~ '^[0-9]{8}$'`),
+    check(
+      "company_manager_phone_digits",
+      sql`manager_phone ~ '^[1-9][0-9]{9,10}$'`,
+    ),
+    check(
+      "company_business_hours_complete",
+      sql`(business_days is null and opens_at is null and closes_at is null) or (cardinality(business_days) > 0 and opens_at is not null and closes_at is not null)`,
+    ),
+    check(
+      "company_business_hours_order",
+      sql`closes_at is null or opens_at is null or closes_at > opens_at`,
+    ),
+    check(
+      "company_business_days_range",
+      sql`business_days is null or business_days <@ array[1,2,3,4,5,6,7]::smallint[]`,
+    ),
+  ],
+)
+
+export const companyContact = pgTable(
+  "company_contact",
+  {
+    id: pk(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => company.id, { onDelete: "cascade" }),
+    position: companyContactPositionEnum("position").notNull(),
+    phone: text("phone").notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("company_contact_company_position_idx").on(
+      table.companyId,
+      table.position,
+    ),
+    check("company_contact_phone_digits", sql`phone ~ '^[1-9][0-9]{9,10}$'`),
+  ],
+)
+
 export const departmentRelations = relations(department, ({ many }) => ({
   users: many(user),
   tags: many(tag),
@@ -661,6 +765,17 @@ export const attachmentHistoryRelations = relations(
   }),
 )
 
+export const companyRelations = relations(company, ({ many }) => ({
+  contacts: many(companyContact),
+}))
+
+export const companyContactRelations = relations(companyContact, ({ one }) => ({
+  company: one(company, {
+    fields: [companyContact.companyId],
+    references: [company.id],
+  }),
+}))
+
 export type Department = typeof department.$inferSelect
 export type NewDepartment = typeof department.$inferInsert
 export type User = typeof user.$inferSelect
@@ -683,6 +798,10 @@ export type Attachment = typeof attachment.$inferSelect
 export type NewAttachment = typeof attachment.$inferInsert
 export type AttachmentHistory = typeof attachmentHistory.$inferSelect
 export type NewAttachmentHistory = typeof attachmentHistory.$inferInsert
+export type Company = typeof company.$inferSelect
+export type NewCompany = typeof company.$inferInsert
+export type CompanyContact = typeof companyContact.$inferSelect
+export type NewCompanyContact = typeof companyContact.$inferInsert
 
 export type Role = (typeof roleEnum.enumValues)[number]
 export type TicketType = (typeof ticketTypeEnum.enumValues)[number]
@@ -696,3 +815,6 @@ export type MessageHistoryEvent =
   (typeof messageHistoryEventEnum.enumValues)[number]
 export type AttachmentHistoryEvent =
   (typeof attachmentHistoryEventEnum.enumValues)[number]
+export type BrazilianState = (typeof brazilianStateEnum.enumValues)[number]
+export type CompanyContactPosition =
+  (typeof companyContactPositionEnum.enumValues)[number]

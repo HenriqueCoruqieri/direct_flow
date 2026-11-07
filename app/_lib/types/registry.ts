@@ -27,7 +27,7 @@ export type GrantedRegistryAccess = DirectorAccess | DepartmentAdminAccess
 
 export type RegistryAccess = GrantedRegistryAccess | NoRegistryAccess
 
-export type RegistrySection = "people" | "departments" | "tags"
+export type RegistrySection = "people" | "departments" | "tags" | "companies"
 
 export interface RegistryNavItem {
   section: RegistrySection
