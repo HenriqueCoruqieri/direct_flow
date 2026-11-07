@@ -192,5 +192,9 @@ Etapa 2:
 ## Andamento
 
 - [x] Commit 0 — plano e contrato (`docs:`)
-- [ ] Etapa 1 — lista e criação
-- [ ] Etapa 2 — edição, desativar e reativar
+- [x] Etapa 1 — lista e criação, concluída em 2026-11-06: `df-reviewer`
+      aprovado com atenções (refletidas no contrato); `df-qa` 28/28
+      (`docs/test-reports/2026-11-06-registry-companies-etapa-1.md`)
+- [ ] Etapa 2 — edição, desativar e reativar. As quatro empresas `[QA]`
+      criadas pela rodada da Etapa 1 (ids 4, 5, 9 e 10) são desativadas no
+      cenário E12

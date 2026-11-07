@@ -222,8 +222,11 @@ export type UpdateCompanyOutcome =
 export type UpdateCompanyActiveOutcome = CompanySaved | CompanyNotFound
 ```
 
-- Se o `typeof ...enumValues` exigir import de valor, a forma permitida é a de
-  `TicketStatus` hoje (`import type` de `@/db/schema`, seção 2 do `stack.md`).
+- `BrazilianState` e `CompanyContactPosition` são declarados em `db/schema.ts`
+  (`typeof ...enumValues`, como `TicketStatus`) e reexportados por
+  `app/_lib/types/company.ts` com `import type`. O schema também exporta
+  `Company`, `NewCompany`, `CompanyContact` e `NewCompanyContact`
+  (`$inferSelect`/`$inferInsert`).
 - `CompanyValues` é o que entra em `insertCompany`/`updateCompany` e é a saída
   do Zod (sem `id`): CNPJ em maiúsculas e sem máscara; CEP e telefones **só dígitos**; opcionais vazios
   como `null`; `opensAt`/`closesAt` em `HH:MM`; `businessDays` ordenado e sem
@@ -269,6 +272,8 @@ export const PHONE_PLACEHOLDER = "(00) 00000-0000"
 
 export const onlyDigits: (value: string) => string
 export const cleanCnpj: (value: string) => string
+export const cleanCep: (value: string) => string
+export const cleanPhone: (value: string) => string
 export const isBrazilianState: (value: string) => value is BrazilianState
 export const brazilianStateLabel: (state: BrazilianState) => string
 
@@ -287,6 +292,8 @@ export const formatPhone: (digits: string) => string
 | `BRAZILIAN_STATES`      | As 27 siglas, derivadas das chaves de `BRAZILIAN_STATE_NAMES`, na ordem do enum (alfabética do nome)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `onlyDigits`            | Remove tudo o que não é `0-9`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `cleanCnpj`             | Passa para maiúsculas, tira tudo o que não é `0-9A-Z` e monta o valor em ordem: nas posições 1–12 aceita letra ou dígito, nas 13–14 só dígito (letra ali é descartada); corta em 14. `12.abc.345/01de-35` → `12ABC34501DE35`. Base do Zod e do `MaskedInput` do CNPJ                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `cleanCep`              | `onlyDigits` cortado em `CEP_DIGITS`. É o `clean` do `MaskedInput` do CEP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `cleanPhone`            | `onlyDigits` cortado em `PHONE_MAX_DIGITS`. É o `clean` do `MaskedInput` dos três telefones                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `isBrazilianState`      | Type guard sobre `BRAZILIAN_STATES`. Usado pelo Zod e pela data layer (sem `as`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `brazilianStateLabel`   | `SP — São Paulo`. Rótulo de opção do select e do filtro                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `isValidCnpj`           | Recebe o valor limpo (`cleanCnpj`). `true` só se casa com `CNPJ_PATTERN`, **não** é um caractere repetido 14 vezes (`00000000000000` passa no cálculo e é recusado aqui) e os dois DVs batem pelo cálculo oficial: valor de cada caractere = código ASCII − 48 (`0`–`9` → 0–9, `A` → 17 … `Z` → 42); pesos `5,4,3,2,9,8,7,6,5,4,3,2` sobre os 12 primeiros e `6,5,4,3,2,9,8,7,6,5,4,3,2` sobre os 13; resto `< 2` → 0, senão `11 − resto`. Um CNPJ só numérico dá o mesmo resultado do cálculo tradicional, então os dois tipos passam pela mesma função. Conferido: `12ABC34501DE35` (exemplo oficial da Receita) e `11222333000181` válidos; `12ABC34501DE36` inválido |
@@ -469,10 +476,19 @@ Forma de `createCompanySchema` (entrada → saída):
   cada problema no campo dele: `DAYS_WITHOUT_OPENS_AT` → `opensAt`;
   `DAYS_WITHOUT_CLOSES_AT` e `CLOSES_NOT_AFTER_OPENS` → `closesAt`;
   `TIMES_WITHOUT_DAYS` → `businessDays`. Mensagens de `BUSINESS_HOURS_MESSAGES`.
+- O `superRefine` do expediente roda com `when`: dispara mesmo que outros
+  campos estejam inválidos (o formulário vazio com Seg marcada mostra os erros
+  do expediente junto com os demais), e só é pulado quando `businessDays`,
+  `opensAt` ou `closesAt` já falharam no próprio campo.
+- O schema limpa CEP e telefones com `onlyDigits` **sem cortar**: um valor com
+  dígitos a mais vindo direto da action é recusado, não truncado. Quem corta
+  enquanto se digita é o `MaskedInput` (`cleanCep`, `cleanPhone`). O CNPJ usa
+  `cleanCnpj`, que corta em 14.
 - Sem `coerce` (manteria a entrada `unknown` e quebraria o `zodResolver`).
-- E-mail: mesma regra de `personEmailSchema` (`trim`, minúsculas, até 254,
-  `z.email`). Reaproveitar a regra (por exemplo, extraindo uma fábrica para
-  `validation/registry.ts`), não copiar.
+- E-mail: `registryEmailSchema` (`validation/registry.ts`, com
+  `REGISTRY_EMAIL_MAX_LENGTH = 254`), a regra que era de `personEmailSchema`.
+  `personEmailSchema` e `PERSON_EMAIL_MAX_LENGTH` continuam exportados, agora
+  como aliases.
 - Unicidade do CNPJ **não** é checada no schema; quem descobre é `df-data`.
 
 | Campo                 | Regra                                            | Mensagem                                                                                                                                                      |
@@ -555,7 +571,9 @@ export async function updateCompanyActive(
 
 - Todas as empresas, ativas e inativas. Ordem `lower(trade_name)`, `id`.
 - Telefones por `left join` (ou subconsulta) em `company_contact` por
-  `position`. Empresa sem secundário → `secondaryPhone: null`.
+  `position`. Empresa sem secundário → `secondaryPhone: null`. Empresa sem
+  primário (não deveria ocorrer: o Zod exige o campo e `insertCompany` grava o
+  primário na mesma transação) → `primaryPhone: ""`.
 - `business_days` volta como `number[]`: filtrar com `isWeekday` (sem `as`);
   `null` continua `null`.
 - `opens_at`/`closes_at` voltam do driver como `HH:MM:SS`: devolver `HH:MM`
@@ -757,12 +775,18 @@ interface MaskedInputProps extends Omit<
   texto encolheu mas o número de caracteres válidos não mudou, apaga o
   caractere válido imediatamente à esquerda do cursor e reformata. O mesmo
   para Delete com o caractere à direita.
-- Usos: CNPJ (`cleanCnpj` + `formatCnpj`), CEP (`onlyDigits` cortado em
-  `CEP_DIGITS` + `formatCep`), os três telefones (`onlyDigits` cortado em
-  `PHONE_MAX_DIGITS` + `formatPhone`). O corte pode vir de um helper do
-  domínio por formato, para o `df-ui` não montar a função.
+- Usos: CNPJ (`cleanCnpj` + `formatCnpj`), CEP (`cleanCep` + `formatCep`), os
+  três telefones (`cleanPhone` + `formatPhone`), todos de
+  `app/_lib/domain/brazilian-formats.ts`.
 
 ### `app/(app)/registry/companies/_components/company-form-dialog.tsx` — Etapa 1 (criar), Etapa 2 (editar)
+
+Na Etapa 1 o componente **não recebe props** (só cria): `page.tsx` o usa como
+`<CompanyFormDialog />`. A união discriminada por `mode` abaixo nasce na Etapa
+2, quando `page.tsx` passa a usar `mode="create"` e `CompanyRowActions`,
+`mode="edit"`.
+
+Etapa 2:
 
 ```ts
 interface CreateCompanyFormDialogProps {
@@ -809,34 +833,36 @@ Cabeçalho, corpo e rodapé:
   rodapé) e é ele o contêiner em coluna. Largura `sm:max-w-2xl`.
 - O rodapé fica **fora** do contêiner que rola: o navegador traz o campo
   focado para dentro da área visível do corpo, e o rodapé não o cobre.
-- Duas colunas a partir de `sm`, uma no celular.
+- Duas colunas a partir de `sm`, uma no celular. Exceção: o grupo Endereço usa
+  grade de **4 colunas** a partir de `sm` (larguras em frações de 4 na tabela
+  abaixo) e uma coluna abaixo de `sm`.
 - Cada grupo é `FieldSet` com `FieldLegend`. O asterisco é parte do rótulo,
   com `aria-hidden="true"`; o input obrigatório leva `aria-required="true"`.
   `FieldError` por campo, ligado por `aria-describedby`, como no Dialog de Tags.
 - **Sem** botões "Buscar" ao lado de CNPJ ou CEP. **Sem** seletor de tipo de
   telefone.
 
-| Grupo         | Campo (rótulo)            | Controle                                                                                                           | Largura | Placeholder                        |
-| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------- | ---------------------------------- |
-| Identificação | CNPJ \*                   | `MaskedInput` CNPJ                                                                                                 | total   | `CNPJ_PLACEHOLDER`                 |
-|               | Razão social \*           | `Input`                                                                                                            | total   | —                                  |
-|               | Nome fantasia \*          | `Input`                                                                                                            | metade  | —                                  |
-|               | E-mail \*                 | `Input type="email"`                                                                                               | metade  | —                                  |
-| Contatos      | Primário \*               | `MaskedInput` telefone                                                                                             | metade  | `PHONE_PLACEHOLDER`                |
-|               | Secundário                | `MaskedInput` telefone                                                                                             | metade  | `PHONE_PLACEHOLDER`                |
-| Endereço      | CEP \*                    | `MaskedInput` CEP                                                                                                  | metade  | `CEP_PLACEHOLDER`                  |
-|               | UF \*                     | `Select` com `BRAZILIAN_STATES` e `brazilianStateLabel`, placeholder `Selecione`                                   | metade  | —                                  |
-|               | Logradouro \*             | `Input`                                                                                                            | metade  | —                                  |
-|               | Número \*                 | `Input`                                                                                                            | metade  | —                                  |
-|               | Bairro \*                 | `Input`                                                                                                            | metade  | —                                  |
-|               | Cidade \*                 | `Input`                                                                                                            | metade  | —                                  |
-|               | Complemento               | `Input`                                                                                                            | total   | `COMPANY_COMPLEMENT_PLACEHOLDER`   |
-| Responsável   | Responsável \*            | `Input`                                                                                                            | metade  | `COMPANY_MANAGER_NAME_PLACEHOLDER` |
-|               | Contato do responsável \* | `MaskedInput` telefone                                                                                             | metade  | `PHONE_PLACEHOLDER`                |
-| Expediente    | Dias                      | `ToggleGroup type="multiple"`, um item por `WEEKDAYS`, texto `WEEKDAY_SHORT_LABELS`, `aria-label` `WEEKDAY_LABELS` | total   | —                                  |
-|               | Das                       | `Input type="time"`                                                                                                | metade  | —                                  |
-|               | Às                        | `Input type="time"`                                                                                                | metade  | —                                  |
-|               | Observação                | `Textarea`                                                                                                         | total   | `COMPANY_NOTES_PLACEHOLDER`        |
+| Grupo         | Campo (rótulo)            | Controle                                                                                                           | Largura     | Placeholder                        |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------- | ---------------------------------- |
+| Identificação | CNPJ \*                   | `MaskedInput` CNPJ                                                                                                 | total       | `CNPJ_PLACEHOLDER`                 |
+|               | Razão social \*           | `Input`                                                                                                            | total       | —                                  |
+|               | Nome fantasia \*          | `Input`                                                                                                            | metade      | —                                  |
+|               | E-mail \*                 | `Input type="email"`                                                                                               | metade      | —                                  |
+| Contatos      | Primário \*               | `MaskedInput` telefone                                                                                             | metade      | `PHONE_PLACEHOLDER`                |
+|               | Secundário                | `MaskedInput` telefone                                                                                             | metade      | `PHONE_PLACEHOLDER`                |
+| Endereço      | CEP \*                    | `MaskedInput` CEP                                                                                                  | 2/4         | `CEP_PLACEHOLDER`                  |
+|               | UF \*                     | `Select` com `BRAZILIAN_STATES` e `brazilianStateLabel`, placeholder `Selecione`                                   | 2/4         | —                                  |
+|               | Logradouro \*             | `Input`                                                                                                            | 3/4         | —                                  |
+|               | Número \*                 | `Input`                                                                                                            | 1/4         | —                                  |
+|               | Bairro \*                 | `Input`                                                                                                            | 2/4         | —                                  |
+|               | Cidade \*                 | `Input`                                                                                                            | 2/4         | —                                  |
+|               | Complemento               | `Input`                                                                                                            | 4/4 (total) | `COMPANY_COMPLEMENT_PLACEHOLDER`   |
+| Responsável   | Responsável \*            | `Input`                                                                                                            | metade      | `COMPANY_MANAGER_NAME_PLACEHOLDER` |
+|               | Contato do responsável \* | `MaskedInput` telefone                                                                                             | metade      | `PHONE_PLACEHOLDER`                |
+| Expediente    | Dias                      | `ToggleGroup type="multiple"`, um item por `WEEKDAYS`, texto `WEEKDAY_SHORT_LABELS`, `aria-label` `WEEKDAY_LABELS` | total       | —                                  |
+|               | Das                       | `Input type="time"`                                                                                                | metade      | —                                  |
+|               | Às                        | `Input type="time"`                                                                                                | metade      | —                                  |
+|               | Observação                | `Textarea`                                                                                                         | total       | `COMPANY_NOTES_PLACEHOLDER`        |
 
 - UF é `Select`, não `Combobox`: lista fixa e curta, regra de
   `docs/contracts/registry-people.md` ("Combobox").
@@ -981,17 +1007,20 @@ pelo navegador: ficam para o `df-debug` (checklist).
 
 ## Checklist de encerramento
 
-Etapa 1:
+Etapa 1 — concluída em 2026-11-06 (`df-reviewer` aprovado com atenções;
+`df-qa` 28/28 em `docs/test-reports/2026-11-06-registry-companies-etapa-1.md`):
 
-- [ ] `npm run db:migrate` aplicado (usuário); `company` e `company_contact` existem
-- [ ] schema, migration `0021_company`, tipos, domínio, `createCompanySchema` (`df-architect`)
-- [ ] `listCompanies`, `insertCompany`; seed com `QA Alfa`, `QA Beta`, `QA Gama` (`df-data`)
-- [ ] `createCompany` (`df-actions`)
-- [ ] página, tabela, filtros, `MaskedInput`, Dialog de criação, `toggle-group` (`df-ui`)
-- [ ] não-diretor chamando `createCompany` → `FORBIDDEN`, antes da validação (`df-debug`)
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`; cenários C aprovados
+- [x] `npm run db:migrate` aplicado (usuário); `company` e `company_contact` existem
+- [x] schema, migration `0021_company`, tipos, domínio, `createCompanySchema` (`df-architect`)
+- [x] `listCompanies`, `insertCompany`; seed com `QA Alfa`, `QA Beta`, `QA Gama` (`df-data`)
+- [x] `createCompany` (`df-actions`)
+- [x] página, tabela, filtros, `MaskedInput`, Dialog de criação, `toggle-group` (`df-ui`)
+- [ ] não-diretor chamando `createCompany` → `FORBIDDEN`, antes da validação (`df-debug`) — sem registro de execução no relatório da Etapa 1
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; cenários C aprovados
 
 Etapa 2:
+
+- [ ] E12: desativar as quatro empresas `[QA]` criadas pela rodada da Etapa 1 (ids 4, 5, 9 e 10), além das criadas na rodada da Etapa 2
 
 - [ ] `updateCompanySchema`, `setCompanyActiveSchema` (`df-architect`)
 - [ ] `updateCompany`, `updateCompanyActive` (`df-data`)
