@@ -1,12 +1,15 @@
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { isUniqueViolation } from "@/app/_lib/data/db-errors"
 import { isWeekday } from "@/app/_lib/domain/company"
 import type {
+  CompanyContactPosition,
   CompanyListItem,
   CompanyValues,
   InsertCompanyOutcome,
+  UpdateCompanyActiveOutcome,
+  UpdateCompanyOutcome,
   Weekday,
 } from "@/app/_lib/types/company"
 import { db } from "@/db"
@@ -20,6 +23,26 @@ const toWeekdays = (days: number[] | null): Weekday[] | null =>
 
 const toClockTime = (time: string | null): string | null =>
   time ? time.slice(0, TIME_MINUTES_LENGTH) : null
+
+const toCompanyColumns = (values: CompanyValues) => ({
+  cnpj: values.cnpj,
+  legalName: values.legalName,
+  tradeName: values.tradeName,
+  email: values.email,
+  cep: values.cep,
+  state: values.state,
+  street: values.street,
+  number: values.number,
+  district: values.district,
+  city: values.city,
+  complement: values.complement,
+  managerName: values.managerName,
+  managerPhone: values.managerPhone,
+  businessDays: values.businessDays,
+  opensAt: values.opensAt,
+  closesAt: values.closesAt,
+  notes: values.notes,
+})
 
 interface ExistingCompany {
   isActive: boolean
@@ -93,25 +116,7 @@ export async function insertCompany(
     const id = await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(company)
-        .values({
-          cnpj: values.cnpj,
-          legalName: values.legalName,
-          tradeName: values.tradeName,
-          email: values.email,
-          cep: values.cep,
-          state: values.state,
-          street: values.street,
-          number: values.number,
-          district: values.district,
-          city: values.city,
-          complement: values.complement,
-          managerName: values.managerName,
-          managerPhone: values.managerPhone,
-          businessDays: values.businessDays,
-          opensAt: values.opensAt,
-          closesAt: values.closesAt,
-          notes: values.notes,
-        })
+        .values(toCompanyColumns(values))
         .returning({ id: company.id })
 
       await tx.insert(companyContact).values([
@@ -147,4 +152,73 @@ export async function insertCompany(
 
     return { status: "cnpj_taken", existingIsActive: existing.isActive }
   }
+}
+
+export async function updateCompany(
+  id: number,
+  values: CompanyValues,
+): Promise<UpdateCompanyOutcome> {
+  try {
+    return await db.transaction(async (tx): Promise<UpdateCompanyOutcome> => {
+      const [updated] = await tx
+        .update(company)
+        .set({ ...toCompanyColumns(values), updatedAt: new Date() })
+        .where(eq(company.id, id))
+        .returning({ id: company.id })
+
+      if (!updated) {
+        return { status: "not_found" }
+      }
+
+      const upsertContact = (position: CompanyContactPosition, phone: string) =>
+        tx
+          .insert(companyContact)
+          .values({ companyId: id, position, phone })
+          .onConflictDoUpdate({
+            target: [companyContact.companyId, companyContact.position],
+            set: { phone, updatedAt: new Date() },
+          })
+
+      await upsertContact("primary", values.primaryPhone)
+
+      if (values.secondaryPhone === null) {
+        await tx
+          .delete(companyContact)
+          .where(
+            and(
+              eq(companyContact.companyId, id),
+              eq(companyContact.position, "secondary"),
+            ),
+          )
+      } else {
+        await upsertContact("secondary", values.secondaryPhone)
+      }
+
+      return { status: "saved", id }
+    })
+  } catch (error) {
+    if (!isUniqueViolation(error, COMPANY_CNPJ_CONSTRAINT)) {
+      throw error
+    }
+
+    const existing = await findExistingCompanyByCnpj(values.cnpj)
+    if (!existing) {
+      throw error
+    }
+
+    return { status: "cnpj_taken", existingIsActive: existing.isActive }
+  }
+}
+
+export async function updateCompanyActive(
+  id: number,
+  isActive: boolean,
+): Promise<UpdateCompanyActiveOutcome> {
+  const [updated] = await db
+    .update(company)
+    .set({ isActive, updatedAt: new Date() })
+    .where(eq(company.id, id))
+    .returning({ id: company.id })
+
+  return updated ? { status: "saved", id } : { status: "not_found" }
 }

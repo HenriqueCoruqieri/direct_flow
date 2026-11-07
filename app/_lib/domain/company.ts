@@ -86,10 +86,22 @@ export const checkBusinessHours = (
   return problems.length === 0 ? { ok: true } : { ok: false, problems }
 }
 
+const COMPANY_CNPJ_TAKEN_MESSAGE = "Já existe uma empresa com este CNPJ."
+
+const COMPANY_INACTIVE_CNPJ_TAKEN_MESSAGE =
+  "Já existe uma empresa inativa com este CNPJ."
+
 export const describeCompanyCnpjTaken = (existingIsActive: boolean): string =>
   existingIsActive
-    ? "Já existe uma empresa com este CNPJ."
-    : "Já existe uma empresa inativa com este CNPJ. Reative-a em vez de cadastrar de novo."
+    ? COMPANY_CNPJ_TAKEN_MESSAGE
+    : `${COMPANY_INACTIVE_CNPJ_TAKEN_MESSAGE} Reative-a em vez de cadastrar de novo.`
+
+export const describeCompanyCnpjTakenOnUpdate = (
+  existingIsActive: boolean,
+): string =>
+  existingIsActive
+    ? COMPANY_CNPJ_TAKEN_MESSAGE
+    : COMPANY_INACTIVE_CNPJ_TAKEN_MESSAGE
 
 export const companySearchText = (company: CompanySearchable): string =>
   `${company.tradeName}\n${company.legalName}\n${company.cnpj}\n${formatCnpj(company.cnpj)}`

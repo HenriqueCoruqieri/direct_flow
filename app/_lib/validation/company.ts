@@ -26,7 +26,11 @@ import {
   REGISTRY_NAME_MIN_LENGTH,
 } from "@/app/_lib/domain/registry"
 import type { BusinessHoursProblem } from "@/app/_lib/types/company"
-import { registryEmailSchema } from "@/app/_lib/validation/registry"
+import {
+  registryActiveSchema,
+  registryEmailSchema,
+  registryIdSchema,
+} from "@/app/_lib/validation/registry"
 
 const PHONE_INVALID_MESSAGE =
   "Telefone inválido. Informe DDD e número, com 10 ou 11 dígitos."
@@ -243,13 +247,25 @@ const refineBusinessHours = (
   }
 }
 
-const companyObjectSchema = z.object(companyFields)
+const companyIdSchema = registryIdSchema("Empresa inválida.")
 
-export const createCompanySchema = companyObjectSchema.superRefine(
-  refineBusinessHours,
-  { when: businessHoursFieldsAreParsed },
-)
+export const createCompanySchema = z
+  .object(companyFields)
+  .superRefine(refineBusinessHours, { when: businessHoursFieldsAreParsed })
 
 export type CompanyFormValues = z.input<typeof createCompanySchema>
 
 export type CreateCompanyInput = z.infer<typeof createCompanySchema>
+
+export const updateCompanySchema = z
+  .object({ id: companyIdSchema, ...companyFields })
+  .superRefine(refineBusinessHours, { when: businessHoursFieldsAreParsed })
+
+export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>
+
+export const setCompanyActiveSchema = z.object({
+  id: companyIdSchema,
+  isActive: registryActiveSchema,
+})
+
+export type SetCompanyActiveInput = z.infer<typeof setCompanyActiveSchema>

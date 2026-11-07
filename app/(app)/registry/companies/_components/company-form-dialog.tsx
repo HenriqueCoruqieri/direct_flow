@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, PlusIcon } from "lucide-react"
+import { Loader2Icon, PencilIcon, PlusIcon } from "lucide-react"
 import { useId, useState } from "react"
 import { Controller, type DefaultValues, useForm } from "react-hook-form"
 import { toast } from "sonner"
@@ -35,7 +35,7 @@ import {
 } from "@/app/_components/ui/select"
 import { Textarea } from "@/app/_components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/app/_components/ui/toggle-group"
-import { createCompany } from "@/app/_lib/actions/companies"
+import { createCompany, updateCompany } from "@/app/_lib/actions/companies"
 import {
   BRAZILIAN_STATES,
   brazilianStateLabel,
@@ -60,6 +60,7 @@ import {
   WEEKDAY_SHORT_LABELS,
   WEEKDAYS,
 } from "@/app/_lib/domain/company"
+import type { CompanyListItem } from "@/app/_lib/types/company"
 import {
   type CompanyFormValues,
   type CreateCompanyInput,
@@ -90,6 +91,46 @@ const EMPTY_VALUES: DefaultValues<CompanyFormValues> = {
   notes: "",
 }
 
+interface CreateCompanyFormDialogProps {
+  mode: "create"
+}
+
+interface EditCompanyFormDialogProps {
+  mode: "edit"
+  company: CompanyListItem
+}
+
+type CompanyFormDialogProps =
+  CreateCompanyFormDialogProps | EditCompanyFormDialogProps
+
+const initialValuesFor = (
+  props: CompanyFormDialogProps,
+): DefaultValues<CompanyFormValues> => {
+  if (props.mode === "create") return EMPTY_VALUES
+  const { company } = props
+  return {
+    cnpj: formatCnpj(company.cnpj),
+    legalName: company.legalName,
+    tradeName: company.tradeName,
+    email: company.email,
+    primaryPhone: formatPhone(company.primaryPhone),
+    secondaryPhone: formatPhone(company.secondaryPhone ?? ""),
+    cep: formatCep(company.cep),
+    state: company.state,
+    street: company.street,
+    number: company.number,
+    district: company.district,
+    city: company.city,
+    complement: company.complement ?? "",
+    managerName: company.managerName,
+    managerPhone: formatPhone(company.managerPhone),
+    businessDays: company.businessDays ?? [],
+    opensAt: company.opensAt ?? "",
+    closesAt: company.closesAt ?? "",
+    notes: company.notes ?? "",
+  }
+}
+
 const LEGEND_CLASS =
   "mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
 
@@ -97,7 +138,7 @@ const TWO_COLUMNS = "grid grid-cols-1 gap-4 sm:grid-cols-2"
 
 const FOUR_COLUMNS = "grid grid-cols-1 gap-4 sm:grid-cols-4"
 
-const CompanyFormDialog = () => {
+const CompanyFormDialog = (props: CompanyFormDialogProps) => {
   const baseId = useId()
   const idFor = (name: keyof CompanyFormValues) => `${baseId}-${name}`
   const daysLabelId = `${baseId}-days-label`
@@ -106,19 +147,23 @@ const CompanyFormDialog = () => {
 
   const form = useForm<CompanyFormValues, unknown, CreateCompanyInput>({
     resolver: zodResolver(createCompanySchema),
-    defaultValues: EMPTY_VALUES,
+    defaultValues: initialValuesFor(props),
   })
 
   const isSubmitting = form.formState.isSubmitting
+  const isEdit = props.mode === "edit"
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting) return
-    if (nextOpen) form.reset(EMPTY_VALUES)
+    if (nextOpen) form.reset(initialValuesFor(props))
     setOpen(nextOpen)
   }
 
   const onSubmit = async (values: CreateCompanyInput) => {
-    const result = await createCompany(values)
+    const result =
+      props.mode === "edit"
+        ? await updateCompany({ id: props.company.id, ...values })
+        : await createCompany(values)
 
     if (result.ok) {
       toast.success(result.message)
@@ -137,10 +182,22 @@ const CompanyFormDialog = () => {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button">
-          <PlusIcon aria-hidden="true" className="size-4" />
-          Nova empresa
-        </Button>
+        {props.mode === "edit" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={`Editar ${props.company.tradeName}`}
+          >
+            <PencilIcon aria-hidden="true" className="size-3.5" />
+            Editar
+          </Button>
+        ) : (
+          <Button type="button">
+            <PlusIcon aria-hidden="true" className="size-4" />
+            Nova empresa
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 p-0 sm:max-w-2xl">
@@ -150,7 +207,9 @@ const CompanyFormDialog = () => {
           className="flex min-h-0 flex-1 flex-col"
         >
           <DialogHeader className="shrink-0 border-b border-border-subtle px-6 pt-6 pb-4">
-            <DialogTitle>Nova empresa</DialogTitle>
+            <DialogTitle>
+              {isEdit ? "Editar empresa" : "Nova empresa"}
+            </DialogTitle>
             <DialogDescription>
               {COMPANY_REQUIRED_FIELDS_HINT}
             </DialogDescription>
@@ -654,7 +713,11 @@ const CompanyFormDialog = () => {
                   className="size-4 animate-spin motion-reduce:animate-none"
                 />
               ) : null}
-              {isSubmitting ? "Salvando…" : "Salvar empresa"}
+              {isSubmitting
+                ? "Salvando…"
+                : isEdit
+                  ? "Salvar alterações"
+                  : "Salvar empresa"}
             </Button>
           </DialogFooter>
         </form>

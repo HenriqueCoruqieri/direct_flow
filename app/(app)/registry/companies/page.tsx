@@ -20,7 +20,7 @@ const CompaniesPage = async () => {
         <div className="flex flex-col gap-1">
           <h1 className="font-heading text-title font-semibold">Empresas</h1>
         </div>
-        <CompanyFormDialog />
+        <CompanyFormDialog mode="create" />
       </div>
 
       <CompaniesTable companies={companies} />

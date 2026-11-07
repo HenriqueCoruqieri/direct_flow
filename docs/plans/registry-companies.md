@@ -164,6 +164,12 @@ dígitos nas 12 primeiras posições. Detalhe no contrato (`cleanCnpj`,
   puder ser trocada depois da abertura, `ticket_history` ganha
   `from_company_id`/`to_company_id` (histórico append-only). Só empresas ativas
   seriam oferecidas; desativar continua sem pré-condição.
+- **`FormField` genérico** (pedido do usuário): refatorar
+  `app/(app)/registry/companies/_components/company-form-field.tsx` para
+  `app/_components/form-field.tsx`, sem conhecer empresa (peça genérica de
+  interface, seção 5 do `stack.md`), e aplicá-lo aos demais formulários
+  (Pessoas, Setores, Tags, chamados; telas de `app/(auth)/**` pelo
+  `df-auth`). Via `/refactor`, dono `df-ui`; sem mudança de contrato de dados.
 
 ## Critério de pronto
 
@@ -195,6 +201,12 @@ Etapa 2:
 - [x] Etapa 1 — lista e criação, concluída em 2026-11-06: `df-reviewer`
       aprovado com atenções (refletidas no contrato); `df-qa` 28/28
       (`docs/test-reports/2026-11-06-registry-companies-etapa-1.md`)
-- [ ] Etapa 2 — edição, desativar e reativar. As quatro empresas `[QA]`
-      criadas pela rodada da Etapa 1 (ids 4, 5, 9 e 10) são desativadas no
-      cenário E12
+- [x] Etapa 2 — edição, desativar e reativar, concluída em 2026-11-06:
+      `df-reviewer` aprovado sem achados; `df-qa` 14/14
+      (`docs/test-reports/2026-11-06-registry-companies-etapa-2.md`). O
+      cenário E12 desativou as empresas `[QA]` ids 4, 5, 9 e 10; seed intacto
+- [ ] Pendente de execução pelo `df-debug` (não testável pelo navegador):
+      `FORBIDDEN` para não-diretor em `createCompany`, `updateCompany` e
+      `setCompanyActive`; `NOT_FOUND` por id inexistente nas duas actions da
+      Etapa 2; corrida de CNPJ. O `df-reviewer` confirmou estaticamente que
+      `getDirector` roda antes do parse nas actions

@@ -48,6 +48,11 @@ export interface CompanyNotFound {
 
 export type InsertCompanyOutcome = CompanySaved | CompanyCnpjTaken
 
+export type UpdateCompanyOutcome =
+  CompanySaved | CompanyCnpjTaken | CompanyNotFound
+
+export type UpdateCompanyActiveOutcome = CompanySaved | CompanyNotFound
+
 export interface BusinessHoursDraft {
   businessDays: readonly Weekday[]
   opensAt: string | null

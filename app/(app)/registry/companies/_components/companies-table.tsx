@@ -20,6 +20,7 @@ import type { CompanyListItem } from "@/app/_lib/types/company"
 
 import ActiveStatusBadge from "../../_components/active-status-badge"
 import activeStatusFilter from "../../_components/active-status-filter"
+import CompanyRowActions from "./company-row-actions"
 
 const columnHelper = createColumnHelper<DataTableFeatures, CompanyListItem>()
 
@@ -58,6 +59,11 @@ const columns = columnHelper.columns([
     header: "Status",
     filterFn: "inValues",
     cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue()} />,
+  }),
+  columnHelper.display({
+    id: "actions",
+    header: () => <span className="sr-only">Ações</span>,
+    cell: ({ row }) => <CompanyRowActions company={row.original} />,
   }),
 ])
 

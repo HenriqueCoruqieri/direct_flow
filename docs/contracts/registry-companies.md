@@ -350,6 +350,9 @@ export const checkBusinessHours: (
 export const BUSINESS_HOURS_MESSAGES // satisfies Record<BusinessHoursProblem, string>
 
 export const describeCompanyCnpjTaken: (existingIsActive: boolean) => string
+export const describeCompanyCnpjTakenOnUpdate: (
+  existingIsActive: boolean,
+) => string
 export const companySearchText: (company: CompanySearchable) => string
 export const companyLocationLabel: (
   city: string,
@@ -392,29 +395,32 @@ export type CompanySearchable = Pick<
 >
 ```
 
-| Nome                       | Semântica                                                                                                                                                                                                                                                                                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `WEEKDAY_SHORT_LABELS`     | `1: "Seg"`, `2: "Ter"`, `3: "Qua"`, `4: "Qui"`, `5: "Sex"`, `6: "Sáb"`, `7: "Dom"`. Texto do botão                                                                                                                                                                                                                                                                       |
-| `WEEKDAY_LABELS`           | `Segunda-feira` … `Domingo`. `aria-label` do botão                                                                                                                                                                                                                                                                                                                       |
-| `WEEKDAYS`                 | `[1, 2, 3, 4, 5, 6, 7]`, ordem dos botões (segunda primeiro)                                                                                                                                                                                                                                                                                                             |
-| `isWeekday`                | Guard para ler `smallint[]` do banco sem `as`                                                                                                                                                                                                                                                                                                                            |
-| `normalizeBusinessDays`    | Ordena e tira repetição                                                                                                                                                                                                                                                                                                                                                  |
-| `checkBusinessHours`       | **A** regra do expediente. Sem dia e sem horário → `ok`. Com dia: falta "Das" → `DAYS_WITHOUT_OPENS_AT`; falta "Às" → `DAYS_WITHOUT_CLOSES_AT`; os dois presentes e `closesAt <= opensAt` (comparação de `HH:MM` como texto) → `CLOSES_NOT_AFTER_OPENS`. Sem dia e algum horário → `TIMES_WITHOUT_DAYS`. Devolve **todos** os problemas, para cada campo ganhar seu erro |
-| `describeCompanyCnpjTaken` | Mensagem de `CNPJ_TAKEN` (tabela abaixo)                                                                                                                                                                                                                                                                                                                                 |
-| `companySearchText`        | `` `${tradeName}\n${legalName}\n${cnpj}\n${formatCnpj(cnpj)}` ``. Valor da coluna de busca: o texto digitado acha o CNPJ sem máscara **e** com máscara. `includesString` compara os dois lados em minúsculas, então a busca ignora caixa: `12abc` acha `12ABC34501DE35`                                                                                                  |
-| `companyLocationLabel`     | `São Paulo / SP`                                                                                                                                                                                                                                                                                                                                                         |
-| `statesPresentIn`          | UFs distintas da lista recebida, na ordem de `BRAZILIAN_STATES`. Opções do filtro UF (ver `df-ui`)                                                                                                                                                                                                                                                                       |
+| Nome                               | Semântica                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `WEEKDAY_SHORT_LABELS`             | `1: "Seg"`, `2: "Ter"`, `3: "Qua"`, `4: "Qui"`, `5: "Sex"`, `6: "Sáb"`, `7: "Dom"`. Texto do botão                                                                                                                                                                                                                                                                       |
+| `WEEKDAY_LABELS`                   | `Segunda-feira` … `Domingo`. `aria-label` do botão                                                                                                                                                                                                                                                                                                                       |
+| `WEEKDAYS`                         | `[1, 2, 3, 4, 5, 6, 7]`, ordem dos botões (segunda primeiro)                                                                                                                                                                                                                                                                                                             |
+| `isWeekday`                        | Guard para ler `smallint[]` do banco sem `as`                                                                                                                                                                                                                                                                                                                            |
+| `normalizeBusinessDays`            | Ordena e tira repetição                                                                                                                                                                                                                                                                                                                                                  |
+| `checkBusinessHours`               | **A** regra do expediente. Sem dia e sem horário → `ok`. Com dia: falta "Das" → `DAYS_WITHOUT_OPENS_AT`; falta "Às" → `DAYS_WITHOUT_CLOSES_AT`; os dois presentes e `closesAt <= opensAt` (comparação de `HH:MM` como texto) → `CLOSES_NOT_AFTER_OPENS`. Sem dia e algum horário → `TIMES_WITHOUT_DAYS`. Devolve **todos** os problemas, para cada campo ganhar seu erro |
+| `describeCompanyCnpjTaken`         | Mensagem de `CNPJ_TAKEN` na **criação** (tabela abaixo)                                                                                                                                                                                                                                                                                                                  |
+| `describeCompanyCnpjTakenOnUpdate` | Etapa 2. Mensagem de `CNPJ_TAKEN` na **edição**: igual à da criação quando a outra empresa está ativa; quando está inativa, sem o "Reative-a em vez de cadastrar de novo", que não faz sentido para quem está corrigindo o CNPJ de uma empresa existente                                                                                                                 |
+| `companySearchText`                | `` `${tradeName}\n${legalName}\n${cnpj}\n${formatCnpj(cnpj)}` ``. Valor da coluna de busca: o texto digitado acha o CNPJ sem máscara **e** com máscara. `includesString` compara os dois lados em minúsculas, então a busca ignora caixa: `12abc` acha `12ABC34501DE35`                                                                                                  |
+| `companyLocationLabel`             | `São Paulo / SP`                                                                                                                                                                                                                                                                                                                                                         |
+| `statesPresentIn`                  | UFs distintas da lista recebida, na ordem de `BRAZILIAN_STATES`. Opções do filtro UF (ver `df-ui`)                                                                                                                                                                                                                                                                       |
 
 Mensagens:
 
-| Caso                              | Texto                                                                                 |
-| --------------------------------- | ------------------------------------------------------------------------------------- |
-| `DAYS_WITHOUT_OPENS_AT`           | `Informe o horário de abertura.`                                                      |
-| `DAYS_WITHOUT_CLOSES_AT`          | `Informe o horário de fechamento.`                                                    |
-| `CLOSES_NOT_AFTER_OPENS`          | `O horário de fechamento precisa ser depois do de abertura.`                          |
-| `TIMES_WITHOUT_DAYS`              | `Marque os dias de atendimento ou apague os horários.`                                |
-| `describeCompanyCnpjTaken(true)`  | `Já existe uma empresa com este CNPJ.`                                                |
-| `describeCompanyCnpjTaken(false)` | `Já existe uma empresa inativa com este CNPJ. Reative-a em vez de cadastrar de novo.` |
+| Caso                                      | Texto                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------- |
+| `DAYS_WITHOUT_OPENS_AT`                   | `Informe o horário de abertura.`                                                      |
+| `DAYS_WITHOUT_CLOSES_AT`                  | `Informe o horário de fechamento.`                                                    |
+| `CLOSES_NOT_AFTER_OPENS`                  | `O horário de fechamento precisa ser depois do de abertura.`                          |
+| `TIMES_WITHOUT_DAYS`                      | `Marque os dias de atendimento ou apague os horários.`                                |
+| `describeCompanyCnpjTaken(true)`          | `Já existe uma empresa com este CNPJ.`                                                |
+| `describeCompanyCnpjTaken(false)`         | `Já existe uma empresa inativa com este CNPJ. Reative-a em vez de cadastrar de novo.` |
+| `describeCompanyCnpjTakenOnUpdate(true)`  | `Já existe uma empresa com este CNPJ.` (Etapa 2)                                      |
+| `describeCompanyCnpjTakenOnUpdate(false)` | `Já existe uma empresa inativa com este CNPJ.` (Etapa 2)                              |
 
 O expediente **não** é lido por nenhuma regra de prazo: `computeDueAt` e o
 restante de ADR 019 continuam em horas corridas.
@@ -521,22 +527,38 @@ Os limites de 80 caracteres reusam `REGISTRY_NAME_MAX_LENGTH`; o mínimo de 2,
 ### Etapa 2
 
 ```ts
-export const updateCompanySchema // { id } + os mesmos campos e o mesmo superRefine
+export const updateCompanySchema // z.object({ id, ...companyFields }) + o mesmo superRefine, com o mesmo `when`
 export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>
 
 export const setCompanyActiveSchema // z.object({ id, isActive })
 export type SetCompanyActiveInput = z.infer<typeof setCompanyActiveSchema>
 ```
 
-| Campo      | Regra            | Mensagem             |
-| ---------- | ---------------- | -------------------- |
-| `id`       | inteiro positivo | `Empresa inválida.`  |
-| `isActive` | boolean          | `Situação inválida.` |
+| Campo      | Regra            | Mensagem             | Fonte                                   |
+| ---------- | ---------------- | -------------------- | --------------------------------------- |
+| `id`       | inteiro positivo | `Empresa inválida.`  | `registryIdSchema("Empresa inválida.")` |
+| `isActive` | boolean          | `Situação inválida.` | `registryActiveSchema`                  |
 
 `createCompanySchema` e `updateCompanySchema` saem do **mesmo** objeto de
 campos com a **mesma** função de refinamento. Não chamar `.extend` sobre um
 schema já refinado (o Zod 4 não preserva o refinamento por esse caminho):
 montar os dois a partir do objeto base e aplicar o refinamento em cada um.
+
+- `UpdateCompanyInput` é `{ id: number } & CreateCompanyInput` na saída. O
+  formulário **não** usa `updateCompanySchema`: o Dialog valida com
+  `createCompanySchema` nos dois modos (o `id` não é campo do formulário) e,
+  no modo edição, manda `{ id: props.company.id, ...values }` com a saída do
+  resolver. Como o schema é idempotente, a action revalida essa saída
+  (dígitos, `null`) sem diferença. Conferido: `parse` da saída de
+  `createCompanySchema` acrescida de `id` devolve o mesmo valor.
+- `id` inválido não impede o refinamento do expediente: o `when` só pula a
+  regra quando `businessDays`, `opensAt` ou `closesAt` falharam no próprio
+  campo, então a primeira `issue.message` vista pela action é a do `id`
+  (vem primeiro no objeto).
+- O CNPJ é **editável** e passa pelas mesmas regras da criação (formato, DV,
+  repetido). A unicidade é do banco (`company_cnpj_idx`), como na criação.
+- `secondaryPhone` `""`/`null` sai `null`: é esse `null` que faz
+  `updateCompany` apagar a linha `secondary` de `company_contact`.
 
 ## `df-auth` — sem mudança
 
@@ -591,22 +613,38 @@ export async function updateCompanyActive(
    `is_active` da empresa com esse `cnpj` e devolver
    `{ status: "cnpj_taken", existingIsActive }`. Outro erro → relança.
 
+Tipos de retorno em `app/_lib/types/company.ts` (já publicados):
+`UpdateCompanyOutcome = CompanySaved | CompanyCnpjTaken | CompanyNotFound`,
+`UpdateCompanyActiveOutcome = CompanySaved | CompanyNotFound`.
+
 **`updateCompany(id, values)`** — Etapa 2, numa transação
 
-1. `update company set ... where id returning id`. Zero linhas → `not_found`.
-2. Primário: `insert ... on conflict (company_id, position) do update set phone, updated_at`.
-3. Secundário: com valor, o mesmo upsert; `null` → `delete` da linha
-   `secondary` (se houver).
-4. CNPJ pode mudar (correção de digitação); violação de `company_cnpj_idx` →
-   mesma busca de `insertCompany` → `cnpj_taken`. Salvar com o próprio CNPJ não
-   conflita (o índice compara com a própria linha).
-5. `is_active` nunca é tocado aqui.
+1. `update company set <os 17 campos de company em CompanyValues>, updated_at = new Date() where id = $id returning id`.
+   Zero linhas → devolve `{ status: "not_found" }` de dentro da transação, sem
+   tocar em `company_contact`.
+2. Primário: `insert into company_contact (company_id, position, phone) values ($id, 'primary', $primaryPhone) on conflict (company_id, position) do update set phone = excluded.phone, updated_at = new Date()`
+   (alvo do conflito = `company_contact_company_position_idx`). O
+   `$onUpdate` de `updated_at` não vale para o `set` do `onConflictDoUpdate`:
+   passar `updatedAt` explícito.
+3. Secundário: com valor, o mesmo upsert com `position = 'secondary'`; `null` →
+   `delete from company_contact where company_id = $id and position = 'secondary'`
+   (zero linhas apagadas não é erro).
+4. `{ status: "saved", id }`.
+5. CNPJ pode mudar (correção de digitação). Violação `23505` em
+   `company_cnpj_idx` (`isUniqueViolation`) → **fora** da transação abortada,
+   `findExistingCompanyByCnpj(values.cnpj)` (o helper que `insertCompany` já
+   usa) → `{ status: "cnpj_taken", existingIsActive }`; se a busca não achar
+   nada, relança o erro original. Outro erro → relança. Salvar com o próprio
+   CNPJ não conflita (o índice compara com a própria linha).
+6. `is_active` nunca é tocado aqui: editar uma inativa a mantém inativa (E10).
 
 **`updateCompanyActive(id, isActive)`** — Etapa 2
 
-- `update company set is_active, updated_at where id returning id`. Zero
-  linhas → `not_found`. Sem pré-condição nos dois sentidos. Mesmo valor já
-  gravado não é erro.
+- `update company set is_active = $isActive, updated_at = new Date() where id = $id returning id`.
+  Zero linhas → `not_found`; senão `{ status: "saved", id }`. Sem transação
+  (um comando só) e sem pré-condição nos dois sentidos: empresa não tem
+  dependente hoje. Mesmo valor já gravado não é erro. Não toca em
+  `company_contact`.
 
 ### `db/seed.ts` (alterado) — Etapa 1
 
@@ -658,6 +696,24 @@ em Tags (`updateTag`): a action importa a de dados com alias
 (`updateCompany as saveCompany`), como `app/_lib/actions/tags.ts` faz
 (`updateTag as saveTag`).
 
+Etapa 2, por action (mesmo arquivo, mesmas constantes de falha):
+
+| Action             | Schema                   | Dados                                                                  | `Outcome` → resultado                                                                                                                            |
+| ------------------ | ------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `updateCompany`    | `updateCompanySchema`    | `saveCompany(id, values)`, com `const { id, ...values } = parsed.data` | `cnpj_taken` → `CNPJ_TAKEN` com `describeCompanyCnpjTakenOnUpdate(existingIsActive)`; `not_found` → `NOT_FOUND`; `saved` → `Empresa atualizada.` |
+| `setCompanyActive` | `setCompanyActiveSchema` | `updateCompanyActive(id, isActive)`                                    | `not_found` → `NOT_FOUND`; `saved` → `Empresa ativada.` se `isActive`, senão `Empresa desativada.` (como `setDepartmentActive`/`setTagActive`)   |
+
+- Não existem `deactivateCompany`/`reactivateCompany` separadas: Setores e
+  Tags usam uma action só com `isActive` (`setDepartmentActive`,
+  `setTagActive`), e Empresas segue o mesmo padrão.
+- O helper `cnpjTaken` da Etapa 1 hoje chama `describeCompanyCnpjTaken`
+  direto: na Etapa 2 ele passa a receber a mensagem (ou a função) para servir
+  às duas actions, sem duplicar o objeto de falha.
+- Sem leitura prévia de existência: só o diretor chega aqui (ADR 011) e a
+  ausência sai do `returning` como `not_found`.
+- `revalidatePath(COMPANIES_REGISTRY_PATH)` nas duas. Nada fora de
+  `/registry/companies` lê empresa hoje.
+
 Sequência comum:
 
 1. `const actor = await getDirector()`; `null` → `FORBIDDEN`, **antes** do parse.
@@ -668,17 +724,17 @@ Sequência comum:
 4. Traduz o `Outcome`.
 5. Sucesso → `revalidatePath(COMPANIES_REGISTRY_PATH)` e `{ ok: true, message }`.
 
-| Situação         | `code`          | Mensagem                                                    |
-| ---------------- | --------------- | ----------------------------------------------------------- |
-| criada           | —               | `Empresa criada.`                                           |
-| atualizada       | —               | `Empresa atualizada.` (Etapa 2)                             |
-| ativada          | —               | `Empresa ativada.` (Etapa 2)                                |
-| desativada       | —               | `Empresa desativada.` (Etapa 2)                             |
-| não é diretor    | `FORBIDDEN`     | `Você não tem permissão para gerenciar empresas.`           |
-| schema falhou    | `INVALID_INPUT` | primeira `issue.message` do Zod                             |
-| `cnpj_taken`     | `CNPJ_TAKEN`    | `describeCompanyCnpjTaken(outcome.existingIsActive)`        |
-| `not_found`      | `NOT_FOUND`     | `Empresa não encontrada.` (Etapa 2)                         |
-| falha inesperada | —               | `Não foi possível salvar a empresa agora. Tente novamente.` |
+| Situação         | `code`          | Mensagem                                                                                                                          |
+| ---------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| criada           | —               | `Empresa criada.`                                                                                                                 |
+| atualizada       | —               | `Empresa atualizada.` (Etapa 2)                                                                                                   |
+| ativada          | —               | `Empresa ativada.` (Etapa 2)                                                                                                      |
+| desativada       | —               | `Empresa desativada.` (Etapa 2)                                                                                                   |
+| não é diretor    | `FORBIDDEN`     | `Você não tem permissão para gerenciar empresas.`                                                                                 |
+| schema falhou    | `INVALID_INPUT` | primeira `issue.message` do Zod                                                                                                   |
+| `cnpj_taken`     | `CNPJ_TAKEN`    | criar: `describeCompanyCnpjTaken(outcome.existingIsActive)`; editar: `describeCompanyCnpjTakenOnUpdate(outcome.existingIsActive)` |
+| `not_found`      | `NOT_FOUND`     | `Empresa não encontrada.` (Etapa 2)                                                                                               |
+| falha inesperada | —               | `Não foi possível salvar a empresa agora. Tente novamente.`                                                                       |
 
 Nenhuma action escreve SQL nem recebe id de ator.
 
@@ -805,15 +861,35 @@ type CompanyFormDialogProps =
 Formulário: React Hook Form + `zodResolver(createCompanySchema)`, com
 `useForm<CompanyFormValues, unknown, CreateCompanyInput>`, nos dois modos.
 
-- **Valores iniciais**, criar: todos os textos `""`, `state` indefinido,
-  `businessDays: []`, horários `""`. Editar (Etapa 2): os da linha, com
-  `formatCnpj`/`formatCep`/`formatPhone` nos campos de máscara, `null` → `""`
-  e `businessDays ?? []`. `form.reset(...)` ao abrir, como o Dialog de Tags.
+- **Mudança de assinatura na Etapa 2.** Hoje (Etapa 1) é
+  `const CompanyFormDialog = () => …` e `page.tsx` usa `<CompanyFormDialog />`.
+  Na Etapa 2 passa a `(props: CompanyFormDialogProps)`, e `page.tsx` muda para
+  `<CompanyFormDialog mode="create" />` (o `tsc` acusa o uso antigo). Mesmo
+  formato de `TagFormDialog` (`initialValuesFor(props)`, `isEdit`).
+- **Valores iniciais**, criar: `EMPTY_VALUES` como hoje (todos os textos `""`,
+  `state` indefinido, `businessDays: []`, horários `""`). Editar (Etapa 2), a
+  partir de `props.company`:
+
+  | Campo                                                                                             | Valor inicial                               |
+  | ------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+  | `cnpj`                                                                                            | `formatCnpj(company.cnpj)`                  |
+  | `cep`                                                                                             | `formatCep(company.cep)`                    |
+  | `primaryPhone`, `managerPhone`                                                                    | `formatPhone(...)`                          |
+  | `secondaryPhone`                                                                                  | `formatPhone(company.secondaryPhone ?? "")` |
+  | `complement`, `opensAt`, `closesAt`, `notes`                                                      | `?? ""`                                     |
+  | `businessDays`                                                                                    | `company.businessDays ?? []`                |
+  | `legalName`, `tradeName`, `email`, `state`, `street`, `number`, `district`, `city`, `managerName` | como vieram                                 |
+
+  Sem `id`, `isActive` e `createdAt` (não são campos do formulário).
+  `form.reset(initialValuesFor(props))` ao abrir, como o Dialog de Tags: abrir,
+  alterar, Cancelar e reabrir mostra de novo os valores gravados (E7).
+
 - **Envio**, criar: `createCompany(values)`. Editar: `updateCompany({ id:
 props.company.id, ...values })`.
 - Sucesso → toast `result.message` e fecha. `CNPJ_TAKEN` →
   `form.setError("cnpj", { message: result.message }, { shouldFocus: true })`,
-  Dialog continua aberto com os valores. Qualquer outro → toast de erro.
+  Dialog continua aberto com os valores, nos dois modos (a mensagem já vem
+  certa da action). Qualquer outro, inclusive `NOT_FOUND` → toast de erro.
 - **Gatilho**, criar: `Button` primário "Nova empresa" com `PlusIcon`. Editar:
   `Button` `ghost` `sm` "Editar" com `PencilIcon` e
   `aria-label="Editar <tradeName>"`.
@@ -875,18 +951,37 @@ Cabeçalho, corpo e rodapé:
 
 ### `app/(app)/registry/companies/_components/company-row-actions.tsx` — Etapa 2
 
+Sem diretiva própria, como `TagRowActions`: é importado pela tabela
+(`"use client"`) e roda no cliente; chama as actions por import, nunca
+`app/_lib/data`.
+
+```ts
+interface CompanyRowActionsProps {
+  company: CompanyListItem
+}
+```
+
 `RegistryRowActions` com dois slots:
 
 | Slot     | Largura | Ação                                                                                            |
 | -------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `edit`   | `fit`   | `CompanyFormDialog mode="edit"`                                                                 |
+| `edit`   | `fit`   | `<CompanyFormDialog mode="edit" company={company} />`                                           |
 | `status` | `md`    | ativa → `DeactivateRegistryDialog`; inativa → `ReactivateRegistryButton` (sem `disabledReason`) |
 
-- `DeactivateRegistryDialog`: `name = tradeName`, `description` =
+- `DeactivateRegistryDialog`: `name = company.tradeName`, `description` =
   `A empresa sai da lista de ativas. Os dados ficam guardados e você pode reativá-la depois.`,
-  sem `blockedReason` nem `blockedLink`; `onDeactivate` → `setCompanyActive({ id, isActive: false })`.
-- `ReactivateRegistryButton`: `onReactivate` → `setCompanyActive({ id, isActive: true })`.
+  sem `blockedReason` nem `blockedLink`; `onDeactivate` →
+  `setCompanyActive({ id: company.id, isActive: false })`.
+- `ReactivateRegistryButton`: `name = company.tradeName` (a prop é obrigatória:
+  monta o `aria-label` "Reativar …"); `onReactivate` →
+  `setCompanyActive({ id: company.id, isActive: true })`.
+- `CompanyActionResult` cabe em `RegistryMutationResult` (`ok`, `message`)
+  sem adaptação.
 - Não existe ação de excluir.
+
+Na tabela (`companies-table.tsx`), a coluna nova vem por último, como em Tags:
+`columnHelper.display({ id: "actions", header: () => <span className="sr-only">Ações</span>, cell: ({ row }) => <CompanyRowActions company={row.original} /> })`,
+seguindo o cabeçalho e o alinhamento que `tags-table.tsx` já usa.
 
 ## Decisão registrada — CNPJ alfanumérico
 
@@ -986,24 +1081,33 @@ QA Membro Suporte. Viewport padrão 1280×800 salvo indicação.
 
 ### Etapa 2 — edição, desativar e reativar
 
-| #   | Quem     | Ação                                                                                                 | Esperado                                                                                                                                                                                  |
-| --- | -------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| E1  | D        | olhar a coluna de ações com Status Ativo e Inativo marcados                                          | ativas: "Editar" e "Desativar"; inativas: "Editar" e "Reativar"; colunas alinhadas entre linhas; nenhuma ação de excluir                                                                  |
-| E2  | D        | "Editar" em `[QA] Empresa Completa`                                                                  | título "Editar empresa", subtítulo "Campos com \* são obrigatórios."; todos os campos preenchidos com máscara; Seg a Sex marcados; 08:00 e 18:00; rodapé "Cancelar" e "Salvar alterações" |
-| E3  | D        | mudar nome fantasia para `[QA] Empresa Completa 2` e cidade; salvar                                  | toast "Empresa atualizada."; linha atualizada; no banco `updated_at` mudou                                                                                                                |
-| E4  | D        | apagar o Secundário e salvar; depois preencher de novo e salvar                                      | primeiro: só `primary` em `company_contact`; depois: `secondary` de volta com o número novo                                                                                               |
-| E5  | D        | desmarcar todos os dias e apagar os horários; salvar                                                 | salva; no banco `business_days`, `opens_at`, `closes_at` nulos                                                                                                                            |
-| E6  | D        | trocar o CNPJ para `12.345.678/0001-95` (`QA Alfa`) e salvar; depois voltar ao próprio CNPJ e salvar | erro no campo CNPJ `Já existe uma empresa com este CNPJ.`, sem toast; com o próprio CNPJ salva normalmente                                                                                |
-| E7  | D        | "Editar" em `QA Alfa` (seed) e Cancelar                                                              | abre preenchida; Cancelar não grava (seed é só leitura)                                                                                                                                   |
-| E8  | D        | "Desativar" em `[QA] Empresa Mínima`; Cancelar; de novo e confirmar                                  | dialog "Desativar [QA] Empresa Mínima?" com o texto do contrato; Cancelar não muda nada; confirmar → toast "Empresa desativada."; some da lista com o filtro padrão; aparece com Inativo  |
-| E9  | D        | "Reativar" em `[QA] Empresa Mínima`                                                                  | toast "Empresa ativada."; badge Ativo                                                                                                                                                     |
-| E10 | D        | editar uma empresa `[QA]` inativa (desativar antes) e salvar                                         | salva; continua inativa                                                                                                                                                                   |
-| E11 | A, M     | abrir `/registry/companies`                                                                          | 404, como na Etapa 1                                                                                                                                                                      |
-| E12 | D        | estado final da rodada                                                                               | empresas `[QA]` criadas na rodada desativadas; seed intacto                                                                                                                               |
-| E13 | qualquer | navegar por E1–E12                                                                                   | nenhum erro nem aviso de hidratação no dev server                                                                                                                                         |
+| #   | Quem     | Ação                                                                                                                                                                                               | Esperado                                                                                                                                                                                                                                                 |
+| --- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | D        | olhar a coluna de ações com Status Ativo e Inativo marcados                                                                                                                                        | ativas: "Editar" e "Desativar"; inativas: "Editar" e "Reativar"; colunas alinhadas entre linhas; nenhuma ação de excluir                                                                                                                                 |
+| E2  | D        | "Editar" em `[QA] Empresa Completa`                                                                                                                                                                | título "Editar empresa", subtítulo "Campos com \* são obrigatórios."; todos os campos preenchidos com máscara; Seg a Sex marcados; 08:00 e 18:00; rodapé "Cancelar" e "Salvar alterações"                                                                |
+| E3  | D        | mudar nome fantasia para `[QA] Empresa Completa 2` e cidade; salvar                                                                                                                                | toast "Empresa atualizada."; linha atualizada; no banco `updated_at` mudou                                                                                                                                                                               |
+| E4  | D        | apagar o Secundário e salvar; depois preencher de novo e salvar                                                                                                                                    | primeiro: só `primary` em `company_contact`; depois: `secondary` de volta com o número novo                                                                                                                                                              |
+| E5  | D        | desmarcar todos os dias e apagar os horários; salvar                                                                                                                                               | salva; no banco `business_days`, `opens_at`, `closes_at` nulos                                                                                                                                                                                           |
+| E6  | D        | em `[QA] Empresa Completa` (id 4): trocar o CNPJ para `12.345.678/0001-95` (`QA Alfa`) e salvar; depois `45.678.901/0001-75` (`QA Gama`, inativa) e salvar; depois voltar ao próprio CNPJ e salvar | primeiro: erro no campo CNPJ `Já existe uma empresa com este CNPJ.`; segundo: `Já existe uma empresa inativa com este CNPJ.` (sem o "Reative-a…" da criação); foco no CNPJ, Dialog aberto, sem toast, nada gravado; com o próprio CNPJ salva normalmente |
+| E6b | D        | em `[QA] Email Repetido` (id 9, CNPJ `13.579.246/0001-01`): trocar o CNPJ para `24.681.357/0001-40` (reserva) e salvar                                                                             | toast "Empresa atualizada."; coluna CNPJ `24.681.357/0001-40`; no banco `cnpj = '24681357000140'` no id 9                                                                                                                                                |
+| E7  | D        | "Editar" em `QA Alfa` (seed): conferir os campos; mudar o nome fantasia; Cancelar; reabrir                                                                                                         | abre preenchida (CNPJ `12.345.678/0001-95`, CEP `01310-100`, telefones com máscara, Secundário `(11) 99888-7777`, complemento `Sala 101`); reabrir mostra o nome original; nada gravado (seed é só leitura)                                              |
+| E8  | D        | "Desativar" em `[QA] Empresa Mínima`; Cancelar; de novo e confirmar                                                                                                                                | dialog "Desativar [QA] Empresa Mínima?" com o texto do contrato; Cancelar não muda nada; confirmar → toast "Empresa desativada."; some da lista com o filtro padrão; aparece com Inativo                                                                 |
+| E9  | D        | "Reativar" em `[QA] Empresa Mínima`                                                                                                                                                                | toast "Empresa ativada."; badge Ativo                                                                                                                                                                                                                    |
+| E10 | D        | desativar `[QA] Empresa Alfanumérica` (id 10); com Inativo marcado no filtro, "Editar", mudar a cidade e salvar                                                                                    | toast "Empresa atualizada."; continua com badge Inativo; no banco `is_active = false`                                                                                                                                                                    |
+| E11 | A, M     | abrir `/registry/companies`                                                                                                                                                                        | 404, como na Etapa 1                                                                                                                                                                                                                                     |
+| E12 | D        | estado final da rodada: desativar as `[QA]` que ainda estiverem ativas                                                                                                                             | ids 4, 5, 9 e 10 (as quatro `[QA]` da Etapa 1; a Etapa 2 não cria empresa) com `is_active = false`; seed (ids 1, 2, 3) intacto, `QA Gama` continua inativa e as outras duas ativas                                                                       |
+| E13 | qualquer | navegar por E1–E12                                                                                                                                                                                 | nenhum erro nem aviso de hidratação no dev server                                                                                                                                                                                                        |
 
-`FORBIDDEN` da action para não-diretor e a corrida de CNPJ não são testáveis
-pelo navegador: ficam para o `df-debug` (checklist).
+Os cenários E usam só as empresas `[QA]` que a rodada da Etapa 1 deixou no
+banco (ids 4, 5, 9 e 10, ver
+`docs/test-reports/2026-11-06-registry-companies-etapa-1.md`) e nenhum CNPJ de
+reserva além de `24.681.357/0001-40` (E6b). Se algum desses ids não existir ou
+já estiver com outro estado, o `df-qa` registra e adapta à empresa `[QA]`
+equivalente, nunca a uma do seed.
+
+`FORBIDDEN` da action para não-diretor, `NOT_FOUND` (id inexistente) e a
+corrida de CNPJ não são testáveis pelo navegador: ficam para o `df-debug`
+(checklist).
 
 ## Checklist de encerramento
 
@@ -1018,12 +1122,15 @@ Etapa 1 — concluída em 2026-11-06 (`df-reviewer` aprovado com atenções;
 - [ ] não-diretor chamando `createCompany` → `FORBIDDEN`, antes da validação (`df-debug`) — sem registro de execução no relatório da Etapa 1
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; cenários C aprovados
 
-Etapa 2:
+Etapa 2 — concluída em 2026-11-06 (`df-reviewer` aprovado sem achados;
+`df-qa` 14/14 em `docs/test-reports/2026-11-06-registry-companies-etapa-2.md`):
 
-- [ ] E12: desativar as quatro empresas `[QA]` criadas pela rodada da Etapa 1 (ids 4, 5, 9 e 10), além das criadas na rodada da Etapa 2
-
-- [ ] `updateCompanySchema`, `setCompanyActiveSchema` (`df-architect`)
-- [ ] `updateCompany`, `updateCompanyActive` (`df-data`)
-- [ ] `updateCompany`, `setCompanyActive` (`df-actions`)
-- [ ] `CompanyRowActions`, Dialog em modo edição (`df-ui`)
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`; cenários E aprovados
+- [x] E12: as quatro empresas `[QA]` criadas pela rodada da Etapa 1 (ids 4, 5, 9 e 10) desativadas; seed (ids 1, 2, 3) intacto
+- [x] `updateCompanySchema`, `setCompanyActiveSchema`, `UpdateCompanyOutcome`, `UpdateCompanyActiveOutcome`, `describeCompanyCnpjTakenOnUpdate` (`df-architect`)
+- [x] `updateCompany`, `updateCompanyActive` (`df-data`)
+- [x] `updateCompany`, `setCompanyActive` (`df-actions`)
+- [x] `CompanyRowActions`, Dialog em modo edição, coluna `actions`, `page.tsx` com `mode="create"` (`df-ui`)
+- [ ] não-diretor chamando `updateCompany`/`setCompanyActive` → `FORBIDDEN` antes da validação (`df-debug`) — não verificado em execução; o `df-reviewer` confirmou estaticamente que `getDirector` roda antes do parse nas duas actions
+- [ ] id inexistente em `updateCompany`/`setCompanyActive` → `NOT_FOUND` (`df-debug`) — não verificado em execução
+- [ ] corrida de CNPJ: duas gravações simultâneas com o mesmo CNPJ, uma recebe `CNPJ_TAKEN` pelo índice `company_cnpj_idx` (`df-debug`) — não verificado em execução
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; cenários E aprovados
