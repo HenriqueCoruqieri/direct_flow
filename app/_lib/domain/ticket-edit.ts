@@ -1,3 +1,4 @@
+import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import {
   formatTicketNumber,
   RESOLVED_TICKET_STATUS,
@@ -9,8 +10,16 @@ import {
   queueAssigneeLabel,
 } from "@/app/_lib/domain/ticket-assignee"
 import { isTicketLocked } from "@/app/_lib/domain/ticket-closure"
+import {
+  companyEditHintFor,
+  ticketCompanyEditOptions,
+} from "@/app/_lib/domain/ticket-company"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type { AssigneeOption, TicketStatus } from "@/app/_lib/types/ticket"
+import type {
+  TicketCompanyOption,
+  TicketCompanyRef,
+} from "@/app/_lib/types/ticket-company"
 import type {
   EditTicketFormDefaults,
   TicketEditabilityFacts,
@@ -103,11 +112,13 @@ export const buildTicketEditFormOptions = (
   ticket: TicketEditSource,
   tags: readonly TagOption[],
   assignees: readonly AssigneeOption[],
+  companies: readonly TicketCompanyOption[],
 ): TicketEditFormOptions => {
   const includesSolution = canEditSolution(ticket.status)
 
   const defaults: EditTicketFormDefaults = {
     ticketId: ticket.id,
+    companyId: ticket.company?.id,
     title: ticket.title,
     description: ticket.description,
     type: ticket.type,
@@ -121,6 +132,8 @@ export const buildTicketEditFormOptions = (
     defaults: includesSolution
       ? { ...defaults, solution: ticket.solution ?? "" }
       : defaults,
+    companies: ticketCompanyEditOptions(ticket.company, companies),
+    companyHint: companyEditHintFor(ticket.company),
     tags: [...tags],
     tagHint: tagEditHintFor(ticket.tagId, tags),
     assignees: [...assignees],
@@ -133,7 +146,21 @@ export const buildTicketEditFormOptions = (
 export const diffTicketEdit = (
   current: TicketEditSnapshot,
   next: TicketEditValues,
+  chosenCompany: TicketCompanyRef,
 ): TicketEditChanges => ({
+  company:
+    current.company?.id === chosenCompany.id
+      ? null
+      : {
+          from:
+            current.company === null
+              ? null
+              : {
+                  id: current.company.id,
+                  tradeName: current.company.tradeName,
+                },
+          to: { id: chosenCompany.id, tradeName: chosenCompany.tradeName },
+        },
   title: current.title !== next.title,
   description: current.description !== next.description,
   type:
@@ -150,6 +177,7 @@ export const diffTicketEdit = (
 })
 
 export const hasTicketEditChanges = (changes: TicketEditChanges): boolean =>
+  changes.company !== null ||
   changes.title ||
   changes.description ||
   changes.type !== null ||
@@ -164,6 +192,9 @@ const joinWithAnd = (items: readonly string[]): string =>
 
 export const describeTicketEditNote = (changes: TicketEditChanges): string => {
   const parts = [
+    changes.company
+      ? `empresa (${changes.company.from?.tradeName ?? EMPTY_VALUE_LABEL} → ${changes.company.to.tradeName})`
+      : null,
     changes.title ? "título" : null,
     changes.description ? "descrição" : null,
     changes.type

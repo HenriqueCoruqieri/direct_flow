@@ -162,6 +162,13 @@
       "when": 1794241126909,
       "tag": "0022_ticket_company",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794246126382,
+      "tag": "0023_ticket_company_history",
+      "breakpoints": true
     }
   ]
 }

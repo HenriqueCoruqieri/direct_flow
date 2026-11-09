@@ -179,6 +179,8 @@ export interface TicketHistoryEntry {
   toAssigneeName: string | null
   fromTagName: string | null
   toTagName: string | null
+  fromCompanyName: string | null
+  toCompanyName: string | null
   note: string | null
 }
 

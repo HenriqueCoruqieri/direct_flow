@@ -6,11 +6,16 @@ import type { TagOption } from "@/app/_lib/types/tag"
 import type {
   AssigneeOption,
   TicketInvalidAssignee,
+  TicketInvalidCompany,
   TicketInvalidTag,
   TicketStatus,
   TicketType,
   TicketViewerFacts,
 } from "@/app/_lib/types/ticket"
+import type {
+  TicketCompanyRef,
+  TicketCompanySummary,
+} from "@/app/_lib/types/ticket-company"
 
 export interface TicketEditorFacts extends TicketViewerFacts {
   isActive: boolean
@@ -46,6 +51,7 @@ export interface TicketEditDetailFacts extends Omit<
 }
 
 export interface TicketEditSnapshot {
+  company: TicketCompanyRef | null
   title: string
   description: string
   type: TicketType
@@ -55,12 +61,14 @@ export interface TicketEditSnapshot {
 }
 
 export interface TicketEditSource extends TicketEditSnapshot {
+  company: TicketCompanySummary | null
   id: number
   status: TicketStatus
   currentDepartmentName: string
 }
 
 export interface TicketEditValues {
+  companyId: number
   title: string
   description: string
   type: TicketType
@@ -74,6 +82,11 @@ export interface TicketTypeChange {
   to: TicketType
 }
 
+export interface TicketCompanyChange {
+  from: TicketCompanyRef | null
+  to: TicketCompanyRef
+}
+
 export interface TicketTagChange {
   fromTagId: number | null
   toTagId: number
@@ -85,6 +98,7 @@ export interface TicketAssigneeChange {
 }
 
 export interface TicketEditChanges {
+  company: TicketCompanyChange | null
   title: boolean
   description: boolean
   type: TicketTypeChange | null
@@ -132,6 +146,7 @@ export type UpdateTicketByAssigneeOutcome =
   | TicketEditSaved
   | TicketNotFound
   | TicketNotEditable
+  | TicketInvalidCompany
   | TicketInvalidTag
   | TicketInvalidAssignee
   | TicketNoChanges
@@ -139,6 +154,7 @@ export type UpdateTicketByAssigneeOutcome =
 
 export interface EditTicketFormDefaults {
   ticketId: number
+  companyId?: number
   title: string
   description: string
   type: TicketType
@@ -151,6 +167,8 @@ export interface EditTicketFormDefaults {
 
 export interface TicketEditFormOptions {
   defaults: EditTicketFormDefaults
+  companies: TicketCompanySummary[]
+  companyHint?: string
   tags: TagOption[]
   tagHint?: string
   assignees: AssigneeOption[]

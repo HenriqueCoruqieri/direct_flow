@@ -72,6 +72,7 @@ import type {
   TicketAssignmentFacts,
 } from "@/app/_lib/types/ticket-assignment"
 import type { CloseExpiredResolvedTicketsOutcome } from "@/app/_lib/types/ticket-closure"
+import type { TicketCompanyRef } from "@/app/_lib/types/ticket-company"
 import type {
   UpdateTicketByAssigneeOutcome,
   UpdateTicketByAssigneeValues,
@@ -125,6 +126,8 @@ export async function findTicketDetail(
   const toAssignee = alias(user, "history_to_assignee")
   const fromTag = alias(tag, "history_from_tag")
   const toTag = alias(tag, "history_to_tag")
+  const fromCompany = alias(company, "history_from_company")
+  const toCompany = alias(company, "history_to_company")
 
   const [ticketRows, transferRows, historyRows] = await Promise.all([
     db
@@ -220,6 +223,8 @@ export async function findTicketDetail(
         toAssigneeName: toAssignee.name,
         fromTagName: fromTag.name,
         toTagName: toTag.name,
+        fromCompanyName: fromCompany.tradeName,
+        toCompanyName: toCompany.tradeName,
         note: ticketHistory.note,
       })
       .from(ticketHistory)
@@ -237,6 +242,8 @@ export async function findTicketDetail(
       .leftJoin(toAssignee, eq(toAssignee.id, ticketHistory.toAssigneeId))
       .leftJoin(fromTag, eq(fromTag.id, ticketHistory.fromTagId))
       .leftJoin(toTag, eq(toTag.id, ticketHistory.toTagId))
+      .leftJoin(fromCompany, eq(fromCompany.id, ticketHistory.fromCompanyId))
+      .leftJoin(toCompany, eq(toCompany.id, ticketHistory.toCompanyId))
       .where(eq(ticketHistory.ticketId, id))
       .orderBy(asc(ticketHistory.changedAt), asc(ticketHistory.id)),
   ])
@@ -363,6 +370,7 @@ export async function insertTicket(
       toPriority: priority,
       toDepartmentId: values.originDepartmentId,
       toAssigneeId: values.assigneeId,
+      toCompanyId: values.companyId,
       changedAt: created.createdAt,
     })
 
@@ -418,6 +426,7 @@ export async function updateTicketByAssignee(
       .select({
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
+        companyId: ticket.companyId,
         currentDepartmentId: ticket.currentDepartmentId,
         status: ticket.status,
         title: ticket.title,
@@ -511,6 +520,41 @@ export async function updateTicketByAssignee(
       .from(ticketTag)
       .where(eq(ticketTag.ticketId, ticketId))
 
+    const [chosenCompanyRow] = await tx
+      .select({
+        id: company.id,
+        tradeName: company.tradeName,
+        isActive: company.isActive,
+      })
+      .from(company)
+      .where(eq(company.id, values.companyId))
+      .for("share")
+
+    if (
+      !chosenCompanyRow ||
+      !isUsableTicketCompany(chosenCompanyRow, ticketRow.companyId)
+    ) {
+      return { status: "invalid_company" }
+    }
+
+    let currentCompany: TicketCompanyRef | null = null
+
+    if (ticketRow.companyId !== null) {
+      if (ticketRow.companyId === chosenCompanyRow.id) {
+        currentCompany = {
+          id: chosenCompanyRow.id,
+          tradeName: chosenCompanyRow.tradeName,
+        }
+      } else {
+        const [currentCompanyRow] = await tx
+          .select({ id: company.id, tradeName: company.tradeName })
+          .from(company)
+          .where(eq(company.id, ticketRow.companyId))
+
+        currentCompany = currentCompanyRow ?? null
+      }
+    }
+
     const [chosenTagRow] = await tx
       .select({ departmentId: tag.departmentId, isActive: tag.isActive })
       .from(tag)
@@ -541,6 +585,7 @@ export async function updateTicketByAssignee(
 
     const changes = diffTicketEdit(
       {
+        company: currentCompany,
         title: ticketRow.title,
         description: ticketRow.description,
         type: ticketRow.type,
@@ -549,6 +594,7 @@ export async function updateTicketByAssignee(
         solution: ticketRow.solution,
       },
       values,
+      { id: chosenCompanyRow.id, tradeName: chosenCompanyRow.tradeName },
     )
 
     if (
@@ -596,6 +642,7 @@ export async function updateTicketByAssignee(
         title: values.title,
         description: values.description,
         type: values.type,
+        ...(changes.company ? { companyId: changes.company.to.id } : {}),
         ...(changes.solution ? { solution: values.solution } : {}),
         ...(changes.assignee ? { assignedTo: values.assigneeId } : {}),
         ...(nextStatus !== ticketRow.status ? { status: nextStatus } : {}),
@@ -703,6 +750,17 @@ export async function updateTicketByAssignee(
         changedBy: editorId,
         event: "edicao",
         note: describeTicketEditNote(changes),
+        changedAt,
+      })
+    }
+
+    if (changes.company) {
+      historyRows.push({
+        ticketId,
+        changedBy: editorId,
+        event: "mudanca_empresa",
+        fromCompanyId: changes.company.from?.id ?? null,
+        toCompanyId: changes.company.to.id,
         changedAt,
       })
     }

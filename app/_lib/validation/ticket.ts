@@ -68,7 +68,12 @@ export const ticketSolutionSchema = z
 
 const SELECT_ASSIGNEE_MESSAGE = "Selecione o destinatário."
 
+export const ticketCompanyIdSchema = registryIdSchema(
+  TICKET_COMPANY_REQUIRED_MESSAGE,
+).max(POSTGRES_INTEGER_MAX, { error: TICKET_COMPANY_REQUIRED_MESSAGE })
+
 const ticketFieldsSchema = z.object({
+  companyId: ticketCompanyIdSchema,
   title: ticketTitleSchema,
   description: ticketDescriptionSchema,
   type: ticketTypeSchema,
@@ -78,13 +83,7 @@ const ticketFieldsSchema = z.object({
     .nullable(),
 })
 
-export const ticketCompanyIdSchema = registryIdSchema(
-  TICKET_COMPANY_REQUIRED_MESSAGE,
-).max(POSTGRES_INTEGER_MAX, { error: TICKET_COMPANY_REQUIRED_MESSAGE })
-
-export const createTicketSchema = z.object({
-  companyId: ticketCompanyIdSchema,
-  ...ticketFieldsSchema.shape,
+export const createTicketSchema = ticketFieldsSchema.extend({
   priority: ticketPrioritySchema.optional().pipe(ticketPrioritySchema),
   attachments: uploadedAttachmentsSchema.optional(),
 })

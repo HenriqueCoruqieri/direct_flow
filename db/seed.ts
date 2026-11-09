@@ -358,6 +358,7 @@ async function seedQaWindowTickets(
         toStatus: creationStatusFor("queue"),
         toPriority: "media",
         toDepartmentId: departmentId,
+        toCompanyId: windowCompany.id,
         changedAt: createdAt,
       },
       {

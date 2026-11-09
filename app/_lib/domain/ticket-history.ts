@@ -22,6 +22,7 @@ export const HISTORY_EVENT_LABELS = {
   mudanca_tag: "Mudança de tag",
   edicao: "Edição",
   resolucao: "Resolução",
+  mudanca_empresa: "Mudança de empresa",
 } satisfies Record<HistoryEvent, string>
 
 export const SYSTEM_ACTOR_LABEL = "Sistema"
@@ -152,6 +153,13 @@ const HISTORY_EVENT_DESCRIBERS = {
     }),
   edicao: () => "Editou o chamado.",
   resolucao: () => "Resolveu o chamado.",
+  mudanca_empresa: (entry) =>
+    replacement(entry.fromCompanyName, entry.toCompanyName, {
+      set: (to) => `Definiu a empresa ${to}.`,
+      replaced: (from, to) => `Trocou a empresa de ${from} para ${to}.`,
+      removed: (from) => `Removeu a empresa ${from}.`,
+      unknown: "Alterou a empresa.",
+    }),
 } satisfies Record<HistoryEvent, HistoryEntryDescriber>
 
 export const describeHistoryEntry = (entry: TicketHistoryEntry): string =>
@@ -170,6 +178,7 @@ const HISTORY_EVENT_NAMES_ACTOR = {
   mudanca_tag: false,
   edicao: false,
   resolucao: false,
+  mudanca_empresa: false,
 } satisfies Record<HistoryEvent, boolean>
 
 export const historyEntryNamesActor = (
@@ -188,6 +197,7 @@ export const HISTORY_EVENT_SUMMARY_RANK = {
   atribuicao: 50,
   mudanca_prioridade: 20,
   mudanca_tag: 10,
+  mudanca_empresa: 10,
   mudanca_status: 10,
 } satisfies Record<HistoryEvent, number>
 

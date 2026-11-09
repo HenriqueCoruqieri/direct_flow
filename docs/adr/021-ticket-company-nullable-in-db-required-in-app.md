@@ -38,3 +38,6 @@ currentCompanyId)`: empresa ativa, ou a empresa que o chamado já tem. A
 - Desativar empresa não afeta chamados existentes; ela só deixa de ser
   escolhível. Excluir empresa com chamado é recusado pela FK.
 - Migration `0022_ticket_company.sql`, não destrutiva.
+- Sem nenhuma empresa ativa, chamado antigo sem empresa fica não editável: a
+  empresa é obrigatória na edição e não há o que escolher. Aceito pelo usuário
+  em 2026-11-09, sem exceção na regra nem aviso especial.

@@ -78,6 +78,7 @@ export const historyEventEnum = pgEnum("history_event", [
   "mudanca_tag",
   "edicao",
   "resolucao",
+  "mudanca_empresa",
 ])
 
 export const messageVisibilityEnum = pgEnum("message_visibility", [
@@ -358,6 +359,12 @@ export const ticketHistory = pgTable(
     toTagId: integer("to_tag_id").references(() => tag.id, {
       onDelete: "restrict",
     }),
+    fromCompanyId: integer("from_company_id").references(() => company.id, {
+      onDelete: "restrict",
+    }),
+    toCompanyId: integer("to_company_id").references(() => company.id, {
+      onDelete: "restrict",
+    }),
     note: text("note"),
     changedAt: timestamp("changed_at", { withTimezone: true })
       .defaultNow()
@@ -369,6 +376,7 @@ export const ticketHistory = pgTable(
     index("history_to_department_idx").on(table.toDepartmentId),
     index("history_to_assignee_idx").on(table.toAssigneeId),
     index("history_to_tag_idx").on(table.toTagId),
+    index("history_to_company_idx").on(table.toCompanyId),
   ],
 )
 
@@ -719,6 +727,16 @@ export const ticketHistoryRelations = relations(ticketHistory, ({ one }) => ({
     references: [tag.id],
     relationName: "history_to_tag",
   }),
+  fromCompany: one(company, {
+    fields: [ticketHistory.fromCompanyId],
+    references: [company.id],
+    relationName: "history_from_company",
+  }),
+  toCompany: one(company, {
+    fields: [ticketHistory.toCompanyId],
+    references: [company.id],
+    relationName: "history_to_company",
+  }),
 }))
 
 export const messageRelations = relations(message, ({ one, many }) => ({
@@ -776,6 +794,8 @@ export const attachmentHistoryRelations = relations(
 export const companyRelations = relations(company, ({ many }) => ({
   contacts: many(companyContact),
   tickets: many(ticket),
+  historyFrom: many(ticketHistory, { relationName: "history_from_company" }),
+  historyTo: many(ticketHistory, { relationName: "history_to_company" }),
 }))
 
 export const companyContactRelations = relations(companyContact, ({ one }) => ({

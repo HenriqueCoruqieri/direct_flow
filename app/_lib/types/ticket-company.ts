@@ -3,9 +3,12 @@ export interface TicketCompanyFacts {
   isActive: boolean
 }
 
-export interface TicketCompanyOption {
+export interface TicketCompanyRef {
   id: number
   tradeName: string
+}
+
+export interface TicketCompanyOption extends TicketCompanyRef {
   cnpj: string
 }
 

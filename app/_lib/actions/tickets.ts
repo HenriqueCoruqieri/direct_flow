@@ -222,6 +222,7 @@ export type EditTicketErrorCode =
   | "INVALID_INPUT"
   | "FORBIDDEN"
   | "NOT_FOUND"
+  | "INVALID_COMPANY"
   | "INVALID_TAG"
   | "INVALID_ASSIGNEE"
   | "NO_CHANGES"
@@ -274,6 +275,11 @@ const EDIT_OUTCOME_FAILURES = {
     ok: false,
     code: "FORBIDDEN",
     message: "Você não pode editar este chamado.",
+  },
+  invalid_company: {
+    ok: false,
+    code: "INVALID_COMPANY",
+    message: INVALID_TICKET_COMPANY_MESSAGE,
   },
   invalid_tag: {
     ok: false,
