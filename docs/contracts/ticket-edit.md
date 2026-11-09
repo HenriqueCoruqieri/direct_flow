@@ -9,6 +9,17 @@ de `docs/contracts/my-tickets.md`.
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`, `react-hook-form@7.88`.
 
+> **Revisão 2026-11-09 — empresa na edição (a implementar na Etapa 2 de
+> `docs/contracts/ticket-company.md`, que prevalece no que diverge).**
+> `editTicketSchema` ganha `companyId` obrigatório, inclusive para chamado
+> antigo sem empresa. Empresa atual desativada pode ser mantida; trocar, só
+> para ativa (`isUsableTicketCompany`). `diffTicketEdit` ganha o 3º parâmetro
+> `chosenCompany`; `TicketEditChanges.company`; a nota da `edicao` ganha
+> `empresa (A → B)`; a troca grava `mudanca_empresa` com
+> `from_company_id`/`to_company_id`. `updateTicketByAssignee` ganha o outcome
+> `invalid_company` e `editTicket`, o código `INVALID_COMPANY`. Quem edita
+> continua sendo só o destinatário (ADR 017).
+
 ## Escopo técnico em uma frase
 
 O autor edita título, descrição, tipo e tag do próprio chamado enquanto ele está

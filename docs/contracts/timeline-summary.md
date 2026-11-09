@@ -22,6 +22,14 @@ revisão de 2026-10-15 apontando para cá.
 > em `ticket_history` e não aparece na linha do tempo. O rastro fica em
 > `attachment_history`.
 
+> Revisão de 2026-11-09 (a implementar na Etapa 2 de
+> `docs/contracts/ticket-company.md`): evento novo `mudanca_empresa`, rótulo
+> `Mudança de empresa`, `HISTORY_EVENT_SUMMARY_RANK` = `10` (como
+> `mudanca_tag`) e `HISTORY_EVENT_NAMES_ACTOR` = `false`. Numa edição, a linha
+> visível continua sendo a `edicao`, cuja nota passa a citar
+> `empresa (A → B)`. A tabela de ações compostas ganha "Editar a empresa" com
+> o mesmo comportamento de "Editar a tag".
+
 Versões observadas: `next@16.3.5`, Tailwind v4 (escala `--spacing` padrão,
 `0.25rem`).
 

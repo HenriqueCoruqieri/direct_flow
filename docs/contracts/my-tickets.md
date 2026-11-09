@@ -9,6 +9,14 @@ URL, de `docs/contracts/dashboard.md`.
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `@tanstack/react-table@9.2.4`, `lucide-react@1.47.0`.
 
+> **Revisão 2026-11-09 — coluna "Empresa" (a implementar na Etapa 3 de
+> `docs/contracts/ticket-company.md`, que prevalece no que diverge).**
+> `MyTicketListItem` ganha `company: TicketCompanyOption | null`
+> (`listMyTickets` com `left join company`); a tabela ganha a coluna "Empresa"
+> logo depois de "Título": nome fantasia e, abaixo, `formatCnpjTail` (ex.:
+> `…/0001-95`); sem empresa, `—`. No detalhe, desde a Etapa 1, o card
+> "Detalhes" mostra "Empresa" acima de "Tipo".
+
 > **Revisão 2026-10-27 — período padrão volta a `Todos`.**
 > `DEFAULT_MY_TICKETS_PERIOD = { periodo: "todos" }`, como a Fila do setor.
 > Ausência de `periodo` ou valor inválido na URL de `/tickets` cai em `Todos`

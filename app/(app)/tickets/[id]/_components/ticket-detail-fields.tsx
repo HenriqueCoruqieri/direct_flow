@@ -1,4 +1,5 @@
 import { formatDateTime, toISO } from "@/app/_lib/date"
+import { formatCnpj } from "@/app/_lib/domain/brazilian-formats"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import {
   TICKET_PRIORITY_FIELD_LABEL,
@@ -10,6 +11,7 @@ import {
   TICKET_ASSIGNEE_LABEL,
   TICKET_CREATOR_LABEL,
 } from "@/app/_lib/domain/ticket-assignee"
+import { TICKET_COMPANY_LABEL } from "@/app/_lib/domain/ticket-company"
 import {
   describeTicketSlaDetail,
   ticketSlaFor,
@@ -48,6 +50,17 @@ const TicketDetailFields = ({
     </span>
   )
 
+  const companyValue = ticket.company ? (
+    <span className="flex flex-col">
+      <span>{ticket.company.tradeName}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {formatCnpj(ticket.company.cnpj)}
+      </span>
+    </span>
+  ) : (
+    EMPTY_VALUE_LABEL
+  )
+
   const classification = (
     <TicketDetailFieldList
       fields={[
@@ -84,6 +97,9 @@ const TicketDetailFields = ({
         Detalhes
       </h2>
       <div className="flex flex-col gap-3.5">
+        <TicketDetailFieldList
+          fields={[{ label: TICKET_COMPANY_LABEL, value: companyValue }]}
+        />
         {editable ? (
           <TicketEditClassification>{classification}</TicketEditClassification>
         ) : (

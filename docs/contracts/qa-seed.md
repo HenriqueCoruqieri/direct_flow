@@ -176,6 +176,28 @@ alteração (nem dados, nem `is_active`, nem telefones).
   "Dados criados pelos testes").
 - Domínio `.test` nos e-mails (RFC 2606), como os usuários QA.
 
+### Empresa dos chamados QA
+
+Acrescentado em 2026-11-09 (`docs/contracts/ticket-company.md`, Etapa 1).
+Os chamados da janela de edição passam a ter empresa. As empresas são
+buscadas por `cnpj` na mesma transação, depois de criadas ou reaproveitadas.
+
+| Título                | Empresa   | `company_id`           | Para quê                      |
+| --------------------- | --------- | ---------------------- | ----------------------------- |
+| `[QA] Janela vencida` | `QA Alfa` | id de `12345678000195` | detalhe com CNPJ numérico     |
+| `[QA] Janela aberta`  | `QA Beta` | id de `AB12CD34000184` | detalhe com CNPJ alfanumérico |
+
+- Chamado criado: `company_id` gravado no `insert`.
+- Chamado reaproveitado (regra de idempotência acima) com `company_id` nulo:
+  `update ticket set company_id`, sem linha de histórico. Empresa já
+  gravada não é trocada.
+- `QA Gama` (inativa) não é vinculada: o cenário de empresa atual inativa é
+  montado pelo próprio teste com uma empresa `[QA]` (Etapa 2).
+- Chamados que não são do seed continuam com `company_id` nulo e servem ao
+  cenário de "sem empresa" (`—`).
+- A partir da Etapa 2, a `criacao` dos chamados criados pelo seed grava
+  `to_company_id`.
+
 ## Variáveis de ambiente
 
 | Variável           | Para quê                                                                                              |

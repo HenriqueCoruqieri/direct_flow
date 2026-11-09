@@ -9,6 +9,23 @@ resultado de action e de formulário vêm de `docs/contracts/registry-tags.md` e
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 `zod@4.6.5`.
 
+## Revisão de 2026-11-09 — empresa obrigatória na abertura
+
+Especificada em `docs/contracts/ticket-company.md` (Etapa 1; ADR 021), que
+prevalece sobre este documento no que diverge. Resumo:
+
+- O "Novo chamado" ganha **Empresa** como primeiro campo (acima de Título),
+  obrigatória, só empresas ativas (`listTicketCompanyOptions`).
+- `createTicketSchema` ganha `companyId` como primeira chave
+  (`Selecione a empresa.`). `InsertTicketValues` ganha `companyId`;
+  `InsertTicketOutcome` ganha `invalid_company`; `NewTicketFormAvailable`
+  ganha `companies`; `NewTicketFormDefaults` ganha `companyId: undefined`.
+- `checkTicketCreation(author, activeTagCount, activeCompanyCount)` e
+  `buildNewTicketFormOptions(…, assignees, companies)`: bloqueio novo
+  `NO_ACTIVE_COMPANIES`.
+- `insertTicket` trava a empresa (`for share`) **antes** da tag e grava
+  `ticket.company_id`. `createTicket` ganha o código `INVALID_COMPANY`.
+
 ## Revisão de 2026-10-26 — prioridade definida pela tag
 
 Decidida no plano `docs/plans/tag-priority.md`; referência técnica em

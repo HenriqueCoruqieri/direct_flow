@@ -1,5 +1,16 @@
 # Contrato — Fila do setor
 
+> **Revisão 2026-11-09 — coluna "Empresa" e "Enviar" fora da tabela (a
+> implementar na Etapa 3 de `docs/contracts/ticket-company.md`, que prevalece
+> no que diverge).** `DepartmentQueueListItem` ganha `company:
+TicketCompanyOption | null` (`listQueueTickets` com `left join company`); a
+> tabela ganha a coluna "Empresa" logo depois de "Título" (nome fantasia e
+> `formatCnpjTail`). O botão "Enviar" e o `SendTicketDialog` saem da Fila e vão
+> para o detalhe do chamado (`ticketSendTargetFor`), com a mesma regra
+> (`canSendTicket`: Diretor ou Administrador do setor atual; Membro nunca teve
+> "Enviar"). `DepartmentQueueRowActions` fica só com `assume`; a página deixa
+> de carregar `listTicketAssigneeOptions`.
+
 > **Revisão 2026-10-26 — coluna SLA.** `DepartmentQueueListItem` ganha
 > `priority: TicketPriority` e `resolvedAt: Date | null`; `listQueueTickets`
 > passa a selecioná-los. A tabela ganha a coluna "SLA" logo após "Aberto em"
