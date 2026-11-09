@@ -3,7 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, PencilIcon, PlusIcon } from "lucide-react"
 import { useId, useState } from "react"
-import { Controller, type DefaultValues, useForm } from "react-hook-form"
+import {
+  Controller,
+  type DefaultValues,
+  FormProvider,
+  useForm,
+} from "react-hook-form"
 import { toast } from "sonner"
 
 import MaskedInput from "@/app/_components/masked-input"
@@ -201,526 +206,530 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
       </DialogTrigger>
 
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 p-0 sm:max-w-2xl">
-        <form
-          noValidate
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <DialogHeader className="shrink-0 border-b border-border-subtle px-6 pt-6 pb-4">
-            <DialogTitle>
-              {isEdit ? "Editar empresa" : "Nova empresa"}
-            </DialogTitle>
-            <DialogDescription>
-              {COMPANY_REQUIRED_FIELDS_HINT}
-            </DialogDescription>
-          </DialogHeader>
+        <FormProvider {...form}>
+          <form
+            noValidate
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <DialogHeader className="shrink-0 border-b border-border-subtle px-6 pt-6 pb-4">
+              <DialogTitle>
+                {isEdit ? "Editar empresa" : "Nova empresa"}
+              </DialogTitle>
+              <DialogDescription>
+                {COMPANY_REQUIRED_FIELDS_HINT}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 scroll-py-6 flex-col gap-6 overflow-y-auto px-6 py-5">
-            <FieldSet className="gap-0">
-              <FieldLegend className={LEGEND_CLASS}>Identificação</FieldLegend>
-              <div className={TWO_COLUMNS}>
-                <Controller
-                  name="cnpj"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("cnpj")}
-                      label="CNPJ"
-                      required
-                      error={fieldState.error}
-                      className="sm:col-span-2"
-                    >
-                      {(control) => (
-                        <MaskedInput
-                          {...control}
-                          ref={field.ref}
-                          name={field.name}
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          clean={cleanCnpj}
-                          format={formatCnpj}
-                          inputMode="text"
-                          autoCapitalize="characters"
-                          placeholder={CNPJ_PLACEHOLDER}
-                          className="font-mono"
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="legalName"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("legalName")}
-                      label="Razão social"
-                      required
-                      error={fieldState.error}
-                      className="sm:col-span-2"
-                    >
-                      {(control) => (
-                        <Input {...field} {...control} autoComplete="off" />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="tradeName"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("tradeName")}
-                      label="Nome fantasia"
-                      required
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <Input {...field} {...control} autoComplete="off" />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="email"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("email")}
-                      label="E-mail"
-                      required
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <Input
-                          {...field}
-                          {...control}
-                          type="email"
-                          autoComplete="off"
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-              </div>
-            </FieldSet>
-
-            <FieldSet className="gap-0">
-              <FieldLegend className={LEGEND_CLASS}>Contatos</FieldLegend>
-              <div className={TWO_COLUMNS}>
-                <Controller
-                  name="primaryPhone"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("primaryPhone")}
-                      label="Primário"
-                      required
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <MaskedInput
-                          {...control}
-                          ref={field.ref}
-                          name={field.name}
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          clean={cleanPhone}
-                          format={formatPhone}
-                          placeholder={PHONE_PLACEHOLDER}
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="secondaryPhone"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("secondaryPhone")}
-                      label="Secundário"
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <MaskedInput
-                          {...control}
-                          ref={field.ref}
-                          name={field.name}
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          clean={cleanPhone}
-                          format={formatPhone}
-                          placeholder={PHONE_PLACEHOLDER}
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-              </div>
-            </FieldSet>
-
-            <FieldSet className="gap-0">
-              <FieldLegend className={LEGEND_CLASS}>Endereço</FieldLegend>
-              <div className={FOUR_COLUMNS}>
-                <Controller
-                  name="cep"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("cep")}
-                      label="CEP"
-                      required
-                      error={fieldState.error}
-                      className="sm:col-span-2"
-                    >
-                      {(control) => (
-                        <MaskedInput
-                          {...control}
-                          ref={field.ref}
-                          name={field.name}
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          clean={cleanCep}
-                          format={formatCep}
-                          placeholder={CEP_PLACEHOLDER}
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="state"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("state")}
-                      label="UF"
-                      required
-                      error={fieldState.error}
-                      className="sm:col-span-2"
-                    >
-                      {(control) => (
-                        <Select
-                          name={field.name}
-                          value={field.value ?? ""}
-                          onValueChange={(next) =>
-                            field.onChange(
-                              isBrazilianState(next) ? next : undefined,
-                            )
-                          }
-                          disabled={field.disabled}
-                        >
-                          <SelectTrigger
+            <div className="flex min-h-0 flex-1 scroll-py-6 flex-col gap-6 overflow-y-auto px-6 py-5">
+              <FieldSet className="gap-0">
+                <FieldLegend className={LEGEND_CLASS}>
+                  Identificação
+                </FieldLegend>
+                <div className={TWO_COLUMNS}>
+                  <Controller
+                    name="cnpj"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("cnpj")}
+                        label="CNPJ"
+                        requiredField="cnpj"
+                        error={fieldState.error}
+                        className="sm:col-span-2"
+                      >
+                        {(control) => (
+                          <MaskedInput
                             {...control}
                             ref={field.ref}
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
                             onBlur={field.onBlur}
-                            className="w-full"
-                          >
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {BRAZILIAN_STATES.map((state) => (
-                              <SelectItem key={state} value={state}>
-                                {brazilianStateLabel(state)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="street"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("street")}
-                      label="Logradouro"
-                      required
-                      error={fieldState.error}
-                      className="sm:col-span-3"
-                    >
-                      {(control) => (
-                        <Input {...field} {...control} autoComplete="off" />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="number"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("number")}
-                      label="Número"
-                      required
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <Input {...field} {...control} autoComplete="off" />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="district"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("district")}
-                      label="Bairro"
-                      required
-                      error={fieldState.error}
-                      className="sm:col-span-2"
-                    >
-                      {(control) => (
-                        <Input {...field} {...control} autoComplete="off" />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="city"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("city")}
-                      label="Cidade"
-                      required
-                      error={fieldState.error}
-                      className="sm:col-span-2"
-                    >
-                      {(control) => (
-                        <Input {...field} {...control} autoComplete="off" />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="complement"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("complement")}
-                      label="Complemento"
-                      error={fieldState.error}
-                      className="sm:col-span-4"
-                    >
-                      {(control) => (
-                        <Input
-                          {...field}
-                          {...control}
-                          value={field.value ?? ""}
-                          autoComplete="off"
-                          placeholder={COMPANY_COMPLEMENT_PLACEHOLDER}
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-              </div>
-            </FieldSet>
-
-            <FieldSet className="gap-0">
-              <FieldLegend className={LEGEND_CLASS}>Responsável</FieldLegend>
-              <div className={TWO_COLUMNS}>
-                <Controller
-                  name="managerName"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("managerName")}
-                      label="Responsável"
-                      required
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <Input
-                          {...field}
-                          {...control}
-                          autoComplete="off"
-                          placeholder={COMPANY_MANAGER_NAME_PLACEHOLDER}
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="managerPhone"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("managerPhone")}
-                      label="Contato do responsável"
-                      required
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <MaskedInput
-                          {...control}
-                          ref={field.ref}
-                          name={field.name}
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          clean={cleanPhone}
-                          format={formatPhone}
-                          placeholder={PHONE_PLACEHOLDER}
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-              </div>
-            </FieldSet>
-
-            <FieldSet className="gap-0">
-              <FieldLegend className={LEGEND_CLASS}>Expediente</FieldLegend>
-              <div className={TWO_COLUMNS}>
-                <Controller
-                  name="businessDays"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field
-                      data-invalid={fieldState.invalid}
-                      className="gap-1.5 sm:col-span-2"
-                    >
-                      <FieldTitle id={daysLabelId}>Dias</FieldTitle>
-                      <ToggleGroup
-                        type="multiple"
-                        variant="outline"
-                        spacing={2}
-                        value={(field.value ?? []).map(String)}
-                        onValueChange={(next) =>
-                          field.onChange(next.map(Number).filter(isWeekday))
-                        }
-                        disabled={field.disabled}
-                        aria-labelledby={daysLabelId}
-                        aria-invalid={fieldState.invalid}
-                        aria-describedby={
-                          fieldState.invalid ? daysErrorId : undefined
-                        }
-                        className="flex-wrap"
+                            clean={cleanCnpj}
+                            format={formatCnpj}
+                            inputMode="text"
+                            autoCapitalize="characters"
+                            placeholder={CNPJ_PLACEHOLDER}
+                            className="font-mono"
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="legalName"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("legalName")}
+                        label="Razão social"
+                        requiredField="legalName"
+                        error={fieldState.error}
+                        className="sm:col-span-2"
                       >
-                        {WEEKDAYS.map((day, index) => (
-                          <ToggleGroupItem
-                            key={day}
-                            ref={index === 0 ? field.ref : undefined}
-                            value={String(day)}
-                            aria-label={WEEKDAY_LABELS[day]}
-                            onBlur={field.onBlur}
-                            className="min-w-12 rounded-full data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                          >
-                            {WEEKDAY_SHORT_LABELS[day]}
-                          </ToggleGroupItem>
-                        ))}
-                      </ToggleGroup>
-                      {fieldState.invalid ? (
-                        <FieldError
-                          id={daysErrorId}
-                          errors={[fieldState.error]}
-                        />
-                      ) : null}
-                    </Field>
-                  )}
-                />
-                <Controller
-                  name="opensAt"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("opensAt")}
-                      label="Das"
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <Input
-                          {...field}
-                          {...control}
-                          value={field.value ?? ""}
-                          type="time"
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="closesAt"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("closesAt")}
-                      label="Às"
-                      error={fieldState.error}
-                    >
-                      {(control) => (
-                        <Input
-                          {...field}
-                          {...control}
-                          value={field.value ?? ""}
-                          type="time"
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-                <Controller
-                  name="notes"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <CompanyFormField
-                      id={idFor("notes")}
-                      label="Observação"
-                      error={fieldState.error}
-                      className="sm:col-span-2"
-                    >
-                      {(control) => (
-                        <Textarea
-                          {...field}
-                          {...control}
-                          value={field.value ?? ""}
-                          placeholder={COMPANY_NOTES_PLACEHOLDER}
-                          className="max-h-48 min-h-20"
-                        />
-                      )}
-                    </CompanyFormField>
-                  )}
-                />
-              </div>
-            </FieldSet>
-          </div>
+                        {(control) => (
+                          <Input {...field} {...control} autoComplete="off" />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="tradeName"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("tradeName")}
+                        label="Nome fantasia"
+                        requiredField="tradeName"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <Input {...field} {...control} autoComplete="off" />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="email"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("email")}
+                        label="E-mail"
+                        requiredField="email"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <Input
+                            {...field}
+                            {...control}
+                            type="email"
+                            autoComplete="off"
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                </div>
+              </FieldSet>
 
-          <DialogFooter className="m-0 shrink-0 px-6 py-4">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={isSubmitting}>
-                Cancelar
+              <FieldSet className="gap-0">
+                <FieldLegend className={LEGEND_CLASS}>Contatos</FieldLegend>
+                <div className={TWO_COLUMNS}>
+                  <Controller
+                    name="primaryPhone"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("primaryPhone")}
+                        label="Primário"
+                        requiredField="primaryPhone"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <MaskedInput
+                            {...control}
+                            ref={field.ref}
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            clean={cleanPhone}
+                            format={formatPhone}
+                            placeholder={PHONE_PLACEHOLDER}
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="secondaryPhone"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("secondaryPhone")}
+                        label="Secundário"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <MaskedInput
+                            {...control}
+                            ref={field.ref}
+                            name={field.name}
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            clean={cleanPhone}
+                            format={formatPhone}
+                            placeholder={PHONE_PLACEHOLDER}
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                </div>
+              </FieldSet>
+
+              <FieldSet className="gap-0">
+                <FieldLegend className={LEGEND_CLASS}>Endereço</FieldLegend>
+                <div className={FOUR_COLUMNS}>
+                  <Controller
+                    name="cep"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("cep")}
+                        label="CEP"
+                        requiredField="cep"
+                        error={fieldState.error}
+                        className="sm:col-span-2"
+                      >
+                        {(control) => (
+                          <MaskedInput
+                            {...control}
+                            ref={field.ref}
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            clean={cleanCep}
+                            format={formatCep}
+                            placeholder={CEP_PLACEHOLDER}
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="state"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("state")}
+                        label="UF"
+                        requiredField="state"
+                        error={fieldState.error}
+                        className="sm:col-span-2"
+                      >
+                        {(control) => (
+                          <Select
+                            name={field.name}
+                            value={field.value ?? ""}
+                            onValueChange={(next) =>
+                              field.onChange(
+                                isBrazilianState(next) ? next : undefined,
+                              )
+                            }
+                            disabled={field.disabled}
+                          >
+                            <SelectTrigger
+                              {...control}
+                              ref={field.ref}
+                              onBlur={field.onBlur}
+                              className="w-full"
+                            >
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {BRAZILIAN_STATES.map((state) => (
+                                <SelectItem key={state} value={state}>
+                                  {brazilianStateLabel(state)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="street"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("street")}
+                        label="Logradouro"
+                        requiredField="street"
+                        error={fieldState.error}
+                        className="sm:col-span-3"
+                      >
+                        {(control) => (
+                          <Input {...field} {...control} autoComplete="off" />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="number"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("number")}
+                        label="Número"
+                        requiredField="number"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <Input {...field} {...control} autoComplete="off" />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="district"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("district")}
+                        label="Bairro"
+                        requiredField="district"
+                        error={fieldState.error}
+                        className="sm:col-span-2"
+                      >
+                        {(control) => (
+                          <Input {...field} {...control} autoComplete="off" />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="city"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("city")}
+                        label="Cidade"
+                        requiredField="city"
+                        error={fieldState.error}
+                        className="sm:col-span-2"
+                      >
+                        {(control) => (
+                          <Input {...field} {...control} autoComplete="off" />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="complement"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("complement")}
+                        label="Complemento"
+                        error={fieldState.error}
+                        className="sm:col-span-4"
+                      >
+                        {(control) => (
+                          <Input
+                            {...field}
+                            {...control}
+                            value={field.value ?? ""}
+                            autoComplete="off"
+                            placeholder={COMPANY_COMPLEMENT_PLACEHOLDER}
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                </div>
+              </FieldSet>
+
+              <FieldSet className="gap-0">
+                <FieldLegend className={LEGEND_CLASS}>Responsável</FieldLegend>
+                <div className={TWO_COLUMNS}>
+                  <Controller
+                    name="managerName"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("managerName")}
+                        label="Responsável"
+                        requiredField="managerName"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <Input
+                            {...field}
+                            {...control}
+                            autoComplete="off"
+                            placeholder={COMPANY_MANAGER_NAME_PLACEHOLDER}
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="managerPhone"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("managerPhone")}
+                        label="Contato do responsável"
+                        requiredField="managerPhone"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <MaskedInput
+                            {...control}
+                            ref={field.ref}
+                            name={field.name}
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            clean={cleanPhone}
+                            format={formatPhone}
+                            placeholder={PHONE_PLACEHOLDER}
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                </div>
+              </FieldSet>
+
+              <FieldSet className="gap-0">
+                <FieldLegend className={LEGEND_CLASS}>Expediente</FieldLegend>
+                <div className={TWO_COLUMNS}>
+                  <Controller
+                    name="businessDays"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field
+                        data-invalid={fieldState.invalid}
+                        className="gap-1.5 sm:col-span-2"
+                      >
+                        <FieldTitle id={daysLabelId}>Dias</FieldTitle>
+                        <ToggleGroup
+                          type="multiple"
+                          variant="outline"
+                          spacing={2}
+                          value={(field.value ?? []).map(String)}
+                          onValueChange={(next) =>
+                            field.onChange(next.map(Number).filter(isWeekday))
+                          }
+                          disabled={field.disabled}
+                          aria-labelledby={daysLabelId}
+                          aria-invalid={fieldState.invalid}
+                          aria-describedby={
+                            fieldState.invalid ? daysErrorId : undefined
+                          }
+                          className="flex-wrap"
+                        >
+                          {WEEKDAYS.map((day, index) => (
+                            <ToggleGroupItem
+                              key={day}
+                              ref={index === 0 ? field.ref : undefined}
+                              value={String(day)}
+                              aria-label={WEEKDAY_LABELS[day]}
+                              onBlur={field.onBlur}
+                              className="min-w-12 rounded-full data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                            >
+                              {WEEKDAY_SHORT_LABELS[day]}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                        {fieldState.invalid ? (
+                          <FieldError
+                            id={daysErrorId}
+                            errors={[fieldState.error]}
+                          />
+                        ) : null}
+                      </Field>
+                    )}
+                  />
+                  <Controller
+                    name="opensAt"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("opensAt")}
+                        label="Das"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <Input
+                            {...field}
+                            {...control}
+                            value={field.value ?? ""}
+                            type="time"
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="closesAt"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("closesAt")}
+                        label="Às"
+                        error={fieldState.error}
+                      >
+                        {(control) => (
+                          <Input
+                            {...field}
+                            {...control}
+                            value={field.value ?? ""}
+                            type="time"
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                  <Controller
+                    name="notes"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <CompanyFormField
+                        id={idFor("notes")}
+                        label="Observação"
+                        error={fieldState.error}
+                        className="sm:col-span-2"
+                      >
+                        {(control) => (
+                          <Textarea
+                            {...field}
+                            {...control}
+                            value={field.value ?? ""}
+                            placeholder={COMPANY_NOTES_PLACEHOLDER}
+                            className="max-h-48 min-h-20"
+                          />
+                        )}
+                      </CompanyFormField>
+                    )}
+                  />
+                </div>
+              </FieldSet>
+            </div>
+
+            <DialogFooter className="m-0 shrink-0 px-6 py-4">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={isSubmitting}>
+                  Cancelar
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting || undefined}
+              >
+                {isSubmitting ? (
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                ) : null}
+                {isSubmitting
+                  ? "Salvando…"
+                  : isEdit
+                    ? "Salvar alterações"
+                    : "Salvar empresa"}
               </Button>
-            </DialogClose>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting || undefined}
-            >
-              {isSubmitting ? (
-                <Loader2Icon
-                  aria-hidden="true"
-                  className="size-4 animate-spin motion-reduce:animate-none"
-                />
-              ) : null}
-              {isSubmitting
-                ? "Salvando…"
-                : isEdit
-                  ? "Salvar alterações"
-                  : "Salvar empresa"}
-            </Button>
-          </DialogFooter>
-        </form>
+            </DialogFooter>
+          </form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   )

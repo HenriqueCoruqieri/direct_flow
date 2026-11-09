@@ -198,6 +198,29 @@ const companyFields = {
   notes: optionalTextSchema("A observação", COMPANY_NOTES_MAX_LENGTH),
 }
 
+export const COMPANY_REQUIRED_FIELDS = [
+  "cnpj",
+  "legalName",
+  "tradeName",
+  "email",
+  "primaryPhone",
+  "cep",
+  "state",
+  "street",
+  "number",
+  "district",
+  "city",
+  "managerName",
+  "managerPhone",
+] as const satisfies readonly (keyof typeof companyFields)[]
+
+export type CompanyRequiredField = (typeof COMPANY_REQUIRED_FIELDS)[number]
+
+export const isCompanyRequiredFieldValid = (
+  field: CompanyRequiredField,
+  value: unknown,
+): boolean => companyFields[field].safeParse(value).success
+
 const BUSINESS_HOURS_FIELDS: readonly string[] = [
   "businessDays",
   "opensAt",

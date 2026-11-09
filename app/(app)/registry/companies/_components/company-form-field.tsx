@@ -2,6 +2,9 @@ import type { FieldError as FormFieldError } from "react-hook-form"
 
 import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
 import { cn } from "@/app/_lib/utils"
+import type { CompanyRequiredField } from "@/app/_lib/validation/company"
+
+import CompanyRequiredMark from "./company-required-mark"
 
 export interface CompanyFieldControlProps {
   id: string
@@ -13,7 +16,7 @@ export interface CompanyFieldControlProps {
 interface CompanyFormFieldProps {
   id: string
   label: string
-  required?: boolean
+  requiredField?: CompanyRequiredField
   error: FormFieldError | undefined
   className?: string
   children: (control: CompanyFieldControlProps) => React.ReactNode
@@ -22,7 +25,7 @@ interface CompanyFormFieldProps {
 const CompanyFormField = ({
   id,
   label,
-  required = false,
+  requiredField,
   error,
   className,
   children,
@@ -34,13 +37,13 @@ const CompanyFormField = ({
     <Field data-invalid={invalid} className={cn("gap-1.5", className)}>
       <FieldLabel htmlFor={id} className="gap-0.5">
         {label}
-        {required ? <span aria-hidden="true">*</span> : null}
+        {requiredField ? <CompanyRequiredMark field={requiredField} /> : null}
       </FieldLabel>
       {children({
         id,
         "aria-invalid": invalid,
         "aria-describedby": invalid ? errorId : undefined,
-        "aria-required": required || undefined,
+        "aria-required": requiredField ? true : undefined,
       })}
       {invalid ? <FieldError id={errorId} errors={[error]} /> : null}
     </Field>
