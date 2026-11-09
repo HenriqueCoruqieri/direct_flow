@@ -11,6 +11,7 @@ import {
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getSession } from "@/app/_lib/auth/session"
 import { listTicketAttachments } from "@/app/_lib/data/attachments"
+import { listTicketCompanyOptions } from "@/app/_lib/data/companies"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
 import {
   findTicketAttachmentFacts,
@@ -38,6 +39,7 @@ import {
   ATTACHMENT_REMOVAL_NOT_FOUND_MESSAGE,
   ticketAttachmentEditRefusalFor,
 } from "@/app/_lib/domain/ticket-attachment"
+import { INVALID_TICKET_COMPANY_MESSAGE } from "@/app/_lib/domain/ticket-company"
 import {
   canEditSolution,
   canEditTicket,
@@ -65,6 +67,7 @@ import {
 export type TicketErrorCode =
   | "INVALID_INPUT"
   | "FORBIDDEN"
+  | "INVALID_COMPANY"
   | "INVALID_TAG"
   | "INVALID_ASSIGNEE"
   | "INVALID_ATTACHMENT"
@@ -105,6 +108,11 @@ const UNEXPECTED_FAILURE: TicketActionFailure = {
 }
 
 const OUTCOME_FAILURES = {
+  invalid_company: {
+    ok: false,
+    code: "INVALID_COMPANY",
+    message: INVALID_TICKET_COMPANY_MESSAGE,
+  },
   invalid_tag: {
     ok: false,
     code: "INVALID_TAG",
@@ -153,8 +161,11 @@ export const createTicket = async (
     const facts = await getAccountFacts()
     if (!facts) return FORBIDDEN_FAILURE
 
-    const tags = await listActiveDepartmentTags(facts.departmentId)
-    const check = checkTicketCreation(facts, tags.length)
+    const [tags, companies] = await Promise.all([
+      listActiveDepartmentTags(facts.departmentId),
+      listTicketCompanyOptions(),
+    ])
+    const check = checkTicketCreation(facts, tags.length, companies.length)
     if (!check.ok) return blocked(check.reason)
 
     const parsed = createTicketSchema.safeParse(input)
@@ -174,6 +185,7 @@ export const createTicket = async (
     outcome = await insertTicket({
       title: parsed.data.title,
       description: parsed.data.description,
+      companyId: parsed.data.companyId,
       type: parsed.data.type,
       priority: parsed.data.priority,
       tagId: parsed.data.tagId,

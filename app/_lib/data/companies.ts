@@ -12,6 +12,7 @@ import type {
   UpdateCompanyOutcome,
   Weekday,
 } from "@/app/_lib/types/company"
+import type { TicketCompanyOption } from "@/app/_lib/types/ticket-company"
 import { db } from "@/db"
 import { company, companyContact } from "@/db/schema"
 
@@ -107,6 +108,20 @@ export async function listCompanies(): Promise<CompanyListItem[]> {
     opensAt: toClockTime(row.opensAt),
     closesAt: toClockTime(row.closesAt),
   }))
+}
+
+export async function listTicketCompanyOptions(): Promise<
+  TicketCompanyOption[]
+> {
+  return db
+    .select({
+      id: company.id,
+      tradeName: company.tradeName,
+      cnpj: company.cnpj,
+    })
+    .from(company)
+    .where(eq(company.isActive, true))
+    .orderBy(sql`lower(${company.tradeName})`, company.id)
 }
 
 export async function insertCompany(

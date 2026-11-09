@@ -1,7 +1,7 @@
 import "dotenv/config"
 
 import { hashPassword } from "better-auth/crypto"
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 
 import { isDepartmentNameTakenError } from "@/app/_lib/data/departments"
 import {
@@ -195,6 +195,9 @@ const QA_USERS: QaUserBlueprint[] = [
   },
 ]
 
+const QA_ALFA_CNPJ = "12345678000195"
+const QA_BETA_CNPJ = "AB12CD34000184"
+
 const QA_WINDOW_MEMBER_EMAIL = "qa.member.suporte@directflow.test"
 const QA_WINDOW_DEPARTMENT_NAME: QaDepartmentName = "QA Suporte"
 const QA_WINDOW_TAG_NAME = "[QA] Acesso"
@@ -206,11 +209,20 @@ const QA_WINDOW_SOLUTION =
 interface QaWindowTicketBlueprint {
   title: string
   expectsOpenWindow: boolean
+  companyCnpj: string
 }
 
 const QA_WINDOW_TICKETS: QaWindowTicketBlueprint[] = [
-  { title: "[QA] Janela vencida", expectsOpenWindow: false },
-  { title: "[QA] Janela aberta", expectsOpenWindow: true },
+  {
+    title: "[QA] Janela vencida",
+    expectsOpenWindow: false,
+    companyCnpj: QA_ALFA_CNPJ,
+  },
+  {
+    title: "[QA] Janela aberta",
+    expectsOpenWindow: true,
+    companyCnpj: QA_BETA_CNPJ,
+  },
 ]
 
 async function seedQaWindowTickets(
@@ -251,8 +263,24 @@ async function seedQaWindowTickets(
   }
 
   for (const blueprint of QA_WINDOW_TICKETS) {
+    const [windowCompany] = await tx
+      .select({ id: company.id })
+      .from(company)
+      .where(eq(company.cnpj, blueprint.companyCnpj))
+      .limit(1)
+
+    if (!windowCompany) {
+      throw new Error(
+        `Seed QA: empresa com o CNPJ ${blueprint.companyCnpj} não foi criada nem encontrada.`,
+      )
+    }
+
     const existing = await tx
-      .select({ resolvedAt: ticket.resolvedAt })
+      .select({
+        id: ticket.id,
+        resolvedAt: ticket.resolvedAt,
+        companyId: ticket.companyId,
+      })
       .from(ticket)
       .where(
         and(
@@ -263,13 +291,29 @@ async function seedQaWindowTickets(
         ),
       )
 
-    const alreadyOnRightSide = existing.some(
+    const onRightSide = existing.filter(
       (row) =>
         isResolutionWindowOpen(row.resolvedAt, now) ===
         blueprint.expectsOpenWindow,
     )
 
-    if (alreadyOnRightSide) {
+    if (onRightSide.length > 0) {
+      const withoutCompanyIds = onRightSide
+        .filter((row) => row.companyId === null)
+        .map((row) => row.id)
+
+      if (withoutCompanyIds.length > 0) {
+        await tx
+          .update(ticket)
+          .set({ companyId: windowCompany.id })
+          .where(
+            and(
+              inArray(ticket.id, withoutCompanyIds),
+              isNull(ticket.companyId),
+            ),
+          )
+      }
+
       console.log(
         `Seed QA ignorado: "${blueprint.title}" já existe no lado certo da janela.`,
       )
@@ -285,6 +329,7 @@ async function seedQaWindowTickets(
     const [created] = await tx
       .insert(ticket)
       .values({
+        companyId: windowCompany.id,
         title: blueprint.title,
         description: QA_WINDOW_DESCRIPTION,
         type: "duvida",
@@ -347,7 +392,7 @@ interface QaCompanyBlueprint {
 const QA_COMPANIES: QaCompanyBlueprint[] = [
   {
     company: {
-      cnpj: "12345678000195",
+      cnpj: QA_ALFA_CNPJ,
       legalName: "QA Alfa Comércio de Peças Ltda",
       tradeName: "QA Alfa",
       email: "contato@qa-alfa.test",
@@ -371,7 +416,7 @@ const QA_COMPANIES: QaCompanyBlueprint[] = [
   },
   {
     company: {
-      cnpj: "AB12CD34000184",
+      cnpj: QA_BETA_CNPJ,
       legalName: "QA Beta Serviços de Tecnologia S.A.",
       tradeName: "QA Beta",
       email: "contato@qa-beta.test",
@@ -548,8 +593,8 @@ async function seedQa(): Promise<void> {
       )
     }
 
-    await seedQaWindowTickets(tx, windowDepartmentId, new Date())
     await seedQaCompanies(tx)
+    await seedQaWindowTickets(tx, windowDepartmentId, new Date())
   })
 }
 

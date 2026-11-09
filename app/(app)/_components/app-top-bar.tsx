@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getSession } from "@/app/_lib/auth/session"
+import { listTicketCompanyOptions } from "@/app/_lib/data/companies"
 import { findDepartmentName } from "@/app/_lib/data/departments"
 import { listTicketAssigneeOptions } from "@/app/_lib/data/people"
 import { listActiveDepartmentTags } from "@/app/_lib/data/tags"
@@ -15,10 +16,11 @@ const AppTopBar = async () => {
   const [facts, actor] = await Promise.all([getAccountFacts(), getSession()])
   if (!facts || !actor) notFound()
 
-  const [departmentName, tags, assignees] = await Promise.all([
+  const [departmentName, tags, assignees, companies] = await Promise.all([
     findDepartmentName(facts.departmentId),
     listActiveDepartmentTags(facts.departmentId),
     listTicketAssigneeOptions(facts.departmentId),
+    listTicketCompanyOptions(),
   ])
   if (departmentName === null) notFound()
 
@@ -28,6 +30,7 @@ const AppTopBar = async () => {
     departmentName,
     tags,
     assignees,
+    companies,
   )
 
   return (

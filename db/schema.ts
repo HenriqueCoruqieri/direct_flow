@@ -234,6 +234,9 @@ export const ticket = pgTable(
     solution: text("solution"),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     dueAt: timestamp("due_at", { withTimezone: true }),
+    companyId: integer("company_id").references(() => company.id, {
+      onDelete: "restrict",
+    }),
     ...timestamps,
   },
   (table) => [
@@ -245,6 +248,7 @@ export const ticket = pgTable(
     index("ticket_created_by_idx").on(table.createdBy),
     index("ticket_assigned_to_idx").on(table.assignedTo),
     index("ticket_origin_department_idx").on(table.originDepartmentId),
+    index("ticket_company_idx").on(table.companyId),
     check(
       "ticket_title_length",
       sql`char_length(${table.title}) between 3 and 200`,
@@ -619,6 +623,10 @@ export const ticketRelations = relations(ticket, ({ one, many }) => ({
     references: [department.id],
     relationName: "ticket_current_department",
   }),
+  company: one(company, {
+    fields: [ticket.companyId],
+    references: [company.id],
+  }),
   ticketTags: many(ticketTag),
   transfers: many(ticketTransfer),
   history: many(ticketHistory),
@@ -767,6 +775,7 @@ export const attachmentHistoryRelations = relations(
 
 export const companyRelations = relations(company, ({ many }) => ({
   contacts: many(companyContact),
+  tickets: many(ticket),
 }))
 
 export const companyContactRelations = relations(companyContact, ({ one }) => ({

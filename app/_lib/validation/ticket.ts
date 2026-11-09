@@ -8,6 +8,7 @@ import {
   TICKET_TITLE_MIN_LENGTH,
   TICKET_TYPES,
 } from "@/app/_lib/domain/ticket"
+import { TICKET_COMPANY_REQUIRED_MESSAGE } from "@/app/_lib/domain/ticket-company"
 import {
   TICKET_SOLUTION_MAX_LENGTH,
   TICKET_SOLUTION_MIN_LENGTH,
@@ -77,7 +78,13 @@ const ticketFieldsSchema = z.object({
     .nullable(),
 })
 
-export const createTicketSchema = ticketFieldsSchema.extend({
+export const ticketCompanyIdSchema = registryIdSchema(
+  TICKET_COMPANY_REQUIRED_MESSAGE,
+).max(POSTGRES_INTEGER_MAX, { error: TICKET_COMPANY_REQUIRED_MESSAGE })
+
+export const createTicketSchema = z.object({
+  companyId: ticketCompanyIdSchema,
+  ...ticketFieldsSchema.shape,
   priority: ticketPrioritySchema.optional().pipe(ticketPrioritySchema),
   attachments: uploadedAttachmentsSchema.optional(),
 })

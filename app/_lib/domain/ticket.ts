@@ -16,6 +16,7 @@ import type {
   TicketViewerFacts,
   TicketVisibilityFacts,
 } from "@/app/_lib/types/ticket"
+import type { TicketCompanyOption } from "@/app/_lib/types/ticket-company"
 
 export const TICKET_STATUS_LABELS = {
   aberto: "Aberto",
@@ -208,11 +209,14 @@ export const TICKET_CREATION_BLOCK_MESSAGES = {
     "Seu perfil não está associado a nenhum setor, informe sua liderança.",
   DEPARTMENT_WITHOUT_TAGS:
     "Não há nenhuma Tag disponível para registro de chamados, informe sua liderança.",
+  NO_ACTIVE_COMPANIES:
+    "Não há nenhuma Empresa ativa para registro de chamados, informe sua liderança.",
 } satisfies Record<TicketCreationBlockReason, string>
 
 export const checkTicketCreation = (
   author: TicketAuthorFacts,
   activeTagCount: number,
+  activeCompanyCount: number,
 ): TicketCreationCheck => {
   if (!author.isActive) return { ok: false, reason: "USER_INACTIVE" }
   if (author.mustChangePassword) {
@@ -221,6 +225,9 @@ export const checkTicketCreation = (
   if (author.isUnassigned) return { ok: false, reason: "DEPARTMENT_UNASSIGNED" }
   if (activeTagCount < 1) {
     return { ok: false, reason: "DEPARTMENT_WITHOUT_TAGS" }
+  }
+  if (activeCompanyCount < 1) {
+    return { ok: false, reason: "NO_ACTIVE_COMPANIES" }
   }
   return { ok: true }
 }
@@ -236,8 +243,9 @@ export const buildNewTicketFormOptions = (
   departmentName: string,
   tags: readonly TagOption[],
   assignees: readonly AssigneeOption[],
+  companies: readonly TicketCompanyOption[],
 ): NewTicketFormOptions => {
-  const check = checkTicketCreation(author, tags.length)
+  const check = checkTicketCreation(author, tags.length, companies.length)
   if (!check.ok) {
     return {
       canCreate: false,
@@ -248,11 +256,13 @@ export const buildNewTicketFormOptions = (
 
   return {
     canCreate: true,
+    companies: [...companies],
     tags: [...tags],
     assignees: [...assignees],
     creatorName: creator.name,
     queueLabel: queueAssigneeLabel(departmentName),
     defaults: {
+      companyId: undefined,
       title: "",
       description: "",
       priority: undefined,

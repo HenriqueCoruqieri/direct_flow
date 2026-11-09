@@ -5,6 +5,10 @@ import type {
 } from "@/app/_lib/types/attachment"
 import type { TagOption } from "@/app/_lib/types/tag"
 import type {
+  TicketCompanyOption,
+  TicketCompanySummary,
+} from "@/app/_lib/types/ticket-company"
+import type {
   HistoryEvent,
   TicketPriority,
   TicketStatus,
@@ -27,6 +31,7 @@ export type TicketCreationBlockReason =
   | "PASSWORD_CHANGE_REQUIRED"
   | "DEPARTMENT_UNASSIGNED"
   | "DEPARTMENT_WITHOUT_TAGS"
+  | "NO_ACTIVE_COMPANIES"
 
 export interface TicketCreationAllowed {
   ok: true
@@ -68,6 +73,7 @@ export interface TicketCreatorFacts {
 }
 
 export interface InsertTicketValues {
+  companyId: number
   title: string
   description: string
   type: TicketType
@@ -92,10 +98,15 @@ export interface TicketInvalidAssignee {
   status: "invalid_assignee"
 }
 
+export interface TicketInvalidCompany {
+  status: "invalid_company"
+}
+
 export type InsertTicketOutcome =
-  TicketSaved | TicketInvalidTag | TicketInvalidAssignee
+  TicketSaved | TicketInvalidCompany | TicketInvalidTag | TicketInvalidAssignee
 
 export interface NewTicketFormDefaults {
+  companyId: number | undefined
   title: string
   description: string
   priority: TicketPriority | undefined
@@ -105,6 +116,7 @@ export interface NewTicketFormDefaults {
 
 export interface NewTicketFormAvailable {
   canCreate: true
+  companies: TicketCompanyOption[]
   tags: TagOption[]
   assignees: AssigneeOption[]
   creatorName: string
@@ -184,6 +196,7 @@ export interface TicketDetail extends TicketVisibilityFacts {
   currentDepartmentName: string
   tagId: number | null
   tagName: string | null
+  company: TicketCompanySummary | null
   createdAt: Date
   solution: string | null
   resolvedAt: Date | null

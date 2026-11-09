@@ -27,6 +27,7 @@ import {
   ticketAttachmentEditRefusalFor,
 } from "@/app/_lib/domain/ticket-attachment"
 import { AUTO_CLOSE_NOTE } from "@/app/_lib/domain/ticket-closure"
+import { isUsableTicketCompany } from "@/app/_lib/domain/ticket-company"
 import {
   canEditSolution,
   canEditTicket,
@@ -92,6 +93,7 @@ import { db, type Transaction } from "@/db"
 import {
   attachment,
   attachmentHistory,
+  company,
   department,
   message,
   tag,
@@ -141,6 +143,10 @@ export async function findTicketDetail(
         originDepartmentName: originDepartment.name,
         currentDepartmentId: ticket.currentDepartmentId,
         currentDepartmentName: currentDepartment.name,
+        companyId: company.id,
+        companyTradeName: company.tradeName,
+        companyCnpj: company.cnpj,
+        companyIsActive: company.isActive,
         tagId: tag.id,
         tagName: tag.name,
         createdAt: ticket.createdAt,
@@ -148,6 +154,7 @@ export async function findTicketDetail(
         resolvedAt: ticket.resolvedAt,
       })
       .from(ticket)
+      .leftJoin(company, eq(company.id, ticket.companyId))
       .innerJoin(author, eq(author.id, ticket.createdBy))
       .leftJoin(assignee, eq(assignee.id, ticket.assignedTo))
       .innerJoin(
@@ -239,8 +246,28 @@ export async function findTicketDetail(
 
   const transferRow = transferRows[0]
 
+  const {
+    companyId,
+    companyTradeName,
+    companyCnpj,
+    companyIsActive,
+    ...ticketFields
+  } = ticketRow
+
   return {
-    ...ticketRow,
+    ...ticketFields,
+    company:
+      companyId !== null &&
+      companyTradeName !== null &&
+      companyCnpj !== null &&
+      companyIsActive !== null
+        ? {
+            id: companyId,
+            tradeName: companyTradeName,
+            cnpj: companyCnpj,
+            isActive: companyIsActive,
+          }
+        : null,
     pendingTransfer: transferRow
       ? {
           id: transferRow.id,
@@ -261,6 +288,16 @@ export async function insertTicket(
   values: InsertTicketValues,
 ): Promise<InsertTicketOutcome> {
   return db.transaction(async (tx) => {
+    const [companyRow] = await tx
+      .select({ id: company.id, isActive: company.isActive })
+      .from(company)
+      .where(eq(company.id, values.companyId))
+      .for("share")
+
+    if (!companyRow || !isUsableTicketCompany(companyRow, null)) {
+      return { status: "invalid_company" }
+    }
+
     const [tagRow] = await tx
       .select({
         departmentId: tag.departmentId,
@@ -299,6 +336,7 @@ export async function insertTicket(
     const [created] = await tx
       .insert(ticket)
       .values({
+        companyId: values.companyId,
         title: values.title,
         description: values.description,
         type: values.type,

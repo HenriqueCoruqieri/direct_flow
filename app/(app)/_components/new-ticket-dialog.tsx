@@ -41,6 +41,7 @@ import {
 import AttachmentUploader from "./attachment-uploader"
 import NewTicketButton from "./new-ticket-button"
 import TicketAssigneeField from "./ticket-assignee-field"
+import TicketCompanyField from "./ticket-company-field"
 import TicketDescriptionField from "./ticket-description-field"
 import TicketPriorityField from "./ticket-priority-field"
 import TicketTagField from "./ticket-tag-field"
@@ -55,6 +56,7 @@ const TAG_HINT =
   "A tag é utilizada para categorizar e mapear os maiores ofensores da fila de atendimento."
 
 const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
+  const companyId = useId()
   const titleId = useId()
   const descriptionId = useId()
   const typeId = useId()
@@ -109,6 +111,16 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
     if (result.ok) {
       toast.success(result.message)
       closeAndDiscard()
+      return
+    }
+
+    if (result.code === "INVALID_COMPANY") {
+      form.setError(
+        "companyId",
+        { message: result.message },
+        { shouldFocus: true },
+      )
+      router.refresh()
       return
     }
 
@@ -171,6 +183,19 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
           </DialogHeader>
 
           <div className="flex flex-col gap-4">
+            <Controller
+              name="companyId"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <TicketCompanyField
+                  id={companyId}
+                  {...field}
+                  fieldState={fieldState}
+                  companies={options.companies}
+                />
+              )}
+            />
+
             <Controller
               name="title"
               control={form.control}
