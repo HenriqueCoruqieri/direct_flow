@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/app/_components/ui/popover"
+import { normalizeSearchText } from "@/app/_lib/domain/search"
 
 export interface ComboboxOption<TValue extends string | number> {
   value: TValue
@@ -38,19 +39,14 @@ interface ComboboxProps<TValue extends string | number> {
   "aria-describedby"?: string
 }
 
-const COMBINING_MARKS = /[\u0300-\u036f]/g
-
-const normalizeForSearch = (text: string) =>
-  text.normalize("NFD").replace(COMBINING_MARKS, "").toLowerCase().trim()
-
 const matchesSearch = (
   _value: string,
   search: string,
   keywords: string[] = [],
 ) => {
-  const term = normalizeForSearch(search)
+  const term = normalizeSearchText(search)
   if (term === "") return 1
-  return keywords.some((keyword) => normalizeForSearch(keyword).includes(term))
+  return keywords.some((keyword) => normalizeSearchText(keyword).includes(term))
     ? 1
     : 0
 }

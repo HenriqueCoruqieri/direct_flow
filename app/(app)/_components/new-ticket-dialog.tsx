@@ -115,6 +115,7 @@ const NewTicketDialog = ({ options }: NewTicketDialogProps) => {
     }
 
     if (result.code === "INVALID_COMPANY") {
+      form.resetField("companyId")
       form.setError(
         "companyId",
         { message: result.message },

@@ -73,9 +73,12 @@ const CEP_SEPARATORS = ["-"]
 
 export const onlyDigits = (value: string): string => value.replace(/\D/g, "")
 
+export const stripCnpjMask = (value: string): string =>
+  value.toUpperCase().replace(/[^0-9A-Z]/g, "")
+
 export const cleanCnpj = (value: string): string => {
   let result = ""
-  for (const char of value.toUpperCase().replace(/[^0-9A-Z]/g, "")) {
+  for (const char of stripCnpjMask(value)) {
     if (result.length >= CNPJ_LENGTH) {
       break
     }

@@ -1,4 +1,5 @@
-import { formatCnpj } from "@/app/_lib/domain/brazilian-formats"
+import { formatCnpj, stripCnpjMask } from "@/app/_lib/domain/brazilian-formats"
+import { normalizeSearchText } from "@/app/_lib/domain/search"
 import type {
   TicketCompanyFacts,
   TicketCompanyOption,
@@ -6,9 +7,9 @@ import type {
 
 export const TICKET_COMPANY_LABEL = "Empresa"
 
-export const TICKET_COMPANY_PLACEHOLDER = "Selecione a empresa"
-
 export const TICKET_COMPANY_SEARCH_PLACEHOLDER = "Buscar empresa…"
+
+export const TICKET_COMPANY_EMPTY_SEARCH_MESSAGE = "Nenhuma empresa encontrada."
 
 export const TICKET_COMPANY_REQUIRED_MESSAGE = "Selecione a empresa."
 
@@ -23,3 +24,18 @@ export const isUsableTicketCompany = (
 export const ticketCompanyOptionLabel = (
   company: Pick<TicketCompanyOption, "tradeName" | "cnpj">,
 ): string => `${company.tradeName} — ${formatCnpj(company.cnpj)}`
+
+export const matchesTicketCompanySearch = (
+  company: TicketCompanyOption,
+  query: string,
+): boolean => {
+  const term = normalizeSearchText(query)
+  if (term === "") {
+    return true
+  }
+  if (normalizeSearchText(company.tradeName).includes(term)) {
+    return true
+  }
+  const cnpjTerm = stripCnpjMask(query)
+  return cnpjTerm !== "" && company.cnpj.includes(cnpjTerm)
+}
