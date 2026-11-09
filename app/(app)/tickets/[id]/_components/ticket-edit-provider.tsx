@@ -95,6 +95,20 @@ const TicketEditProvider = ({
       return
     }
 
+    if (result.code === "INVALID_COMPANY") {
+      form.reset(
+        { ...form.getValues(), companyId: undefined },
+        { keepDefaultValues: true, keepIsSubmitted: true, keepFieldsRef: true },
+      )
+      form.setError(
+        "companyId",
+        { message: result.message },
+        { shouldFocus: true },
+      )
+      router.refresh()
+      return
+    }
+
     if (result.code === "INVALID_TAG") {
       form.setError("tagId", { message: result.message }, { shouldFocus: true })
       router.refresh()
@@ -164,6 +178,8 @@ const TicketEditProvider = ({
     <TicketEditContext
       value={{
         form,
+        companies: options.companies,
+        companyHint: options.companyHint,
         tags: options.tags,
         tagHint: options.tagHint,
         assignees: options.assignees,

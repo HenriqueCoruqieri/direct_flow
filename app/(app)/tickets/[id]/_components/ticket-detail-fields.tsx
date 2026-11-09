@@ -22,6 +22,7 @@ import { cn } from "@/app/_lib/utils"
 import TicketDetailFieldList from "./ticket-detail-field-list"
 import TicketEditAssignee from "./ticket-edit-assignee"
 import TicketEditClassification from "./ticket-edit-classification"
+import TicketEditCompany from "./ticket-edit-company"
 
 interface TicketDetailFieldsProps {
   ticket: TicketDetail
@@ -61,6 +62,12 @@ const TicketDetailFields = ({
     EMPTY_VALUE_LABEL
   )
 
+  const company = (
+    <TicketDetailFieldList
+      fields={[{ label: TICKET_COMPANY_LABEL, value: companyValue }]}
+    />
+  )
+
   const classification = (
     <TicketDetailFieldList
       fields={[
@@ -97,9 +104,7 @@ const TicketDetailFields = ({
         Detalhes
       </h2>
       <div className="flex flex-col gap-3.5">
-        <TicketDetailFieldList
-          fields={[{ label: TICKET_COMPANY_LABEL, value: companyValue }]}
-        />
+        {editable ? <TicketEditCompany>{company}</TicketEditCompany> : company}
         {editable ? (
           <TicketEditClassification>{classification}</TicketEditClassification>
         ) : (

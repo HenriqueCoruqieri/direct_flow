@@ -3,12 +3,15 @@ import type { UseFormReturn } from "react-hook-form"
 
 import type { TagOption } from "@/app/_lib/types/tag"
 import type { AssigneeOption } from "@/app/_lib/types/ticket"
+import type { TicketCompanySummary } from "@/app/_lib/types/ticket-company"
 import type { EditTicketInput } from "@/app/_lib/validation/ticket"
 
 import type { AttachmentUploaderBusy } from "../../../_hooks/use-attachment-uploads"
 
 export interface TicketEditContextValue {
   form: UseFormReturn<EditTicketInput>
+  companies: readonly TicketCompanySummary[]
+  companyHint: string | undefined
   tags: readonly TagOption[]
   tagHint: string | undefined
   assignees: readonly AssigneeOption[]

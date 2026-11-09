@@ -106,7 +106,10 @@ nenhum agente escreveu fora dos seus caminhos.
       `df-reviewer` aprovado com atenções, `df-qa` 11/12 sem falhas
       (`docs/test-reports/2026-11-09-ticket-company-etapa-1.md`). Em aberto: T10
       e `INVALID_COMPANY` em execução, `NO_ACTIVE_COMPANIES` (para o `df-debug`)
-- [ ] Etapa 2
+- [x] Etapa 2 — concluída em 2026-11-09: Ondas 0–2, `tsc`/lint/build,
+      `df-reviewer` aprovado com atenções, `df-qa` 14/14 após o Reteste 1 (E9
+      corrigido pelo `df-ui`)
+      (`docs/test-reports/2026-11-09-ticket-company-etapa-2.md`)
 - [ ] Etapa 3
 
 ## Padrões reaproveitados
@@ -128,14 +131,18 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `drizzle-kit@0.31`,
 
 Textos novos (todas as etapas):
 
-| Constante                             | Texto                                                                            | Onde                       |
-| ------------------------------------- | -------------------------------------------------------------------------------- | -------------------------- |
-| `TICKET_COMPANY_LABEL`                | `Empresa`                                                                        | `domain/ticket-company.ts` |
-| `TICKET_COMPANY_SEARCH_PLACEHOLDER`   | `Buscar empresa…`                                                                | `domain/ticket-company.ts` |
-| `TICKET_COMPANY_EMPTY_SEARCH_MESSAGE` | `Nenhuma empresa encontrada.`                                                    | `domain/ticket-company.ts` |
-| `TICKET_COMPANY_REQUIRED_MESSAGE`     | `Selecione a empresa.`                                                           | `domain/ticket-company.ts` |
-| `INVALID_TICKET_COMPANY_MESSAGE`      | `Esta empresa não está disponível. Escolha uma empresa ativa.`                   | `domain/ticket-company.ts` |
-| `NO_ACTIVE_COMPANIES` (bloqueio)      | `Não há nenhuma Empresa ativa para registro de chamados, informe sua liderança.` | `domain/ticket.ts`         |
+| Constante                                        | Texto                                                                                                   | Onde                       |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `TICKET_COMPANY_LABEL`                           | `Empresa`                                                                                               | `domain/ticket-company.ts` |
+| `TICKET_COMPANY_SEARCH_PLACEHOLDER`              | `Buscar empresa…`                                                                                       | `domain/ticket-company.ts` |
+| `TICKET_COMPANY_EMPTY_SEARCH_MESSAGE`            | `Nenhuma empresa encontrada.`                                                                           | `domain/ticket-company.ts` |
+| `TICKET_COMPANY_REQUIRED_MESSAGE`                | `Selecione a empresa.`                                                                                  | `domain/ticket-company.ts` |
+| `INVALID_TICKET_COMPANY_MESSAGE`                 | `Esta empresa não está disponível. Escolha uma empresa ativa.`                                          | `domain/ticket-company.ts` |
+| `NO_ACTIVE_COMPANIES` (bloqueio)                 | `Não há nenhuma Empresa ativa para registro de chamados, informe sua liderança.`                        | `domain/ticket.ts`         |
+| `INACTIVE_TICKET_COMPANY_SUFFIX` (Etapa 2)       | `(inativa)`                                                                                             | `domain/ticket-company.ts` |
+| `MISSING_TICKET_COMPANY_HINT` (Etapa 2)          | `Este chamado não tem empresa. Escolha uma para salvar.`                                                | `domain/ticket-company.ts` |
+| `INACTIVE_TICKET_COMPANY_HINT` (Etapa 2)         | `A empresa atual está inativa. Você pode mantê-la, mas não poderá escolhê-la de novo depois de trocar.` | `domain/ticket-company.ts` |
+| `HISTORY_EVENT_LABELS.mudanca_empresa` (Etapa 2) | `Mudança de empresa`                                                                                    | `domain/ticket-history.ts` |
 
 ---
 
@@ -575,27 +582,62 @@ select confdeltype from pg_constraint where conname = 'ticket_company_id_company
 
 # Etapa 2 — empresa na edição e na linha do tempo
 
+Revisado contra o código em 2026-11-09 (Onda 0 entregue). As assinaturas
+abaixo são as do código, não rascunho.
+
+## Decisões da etapa (fechadas pelo usuário)
+
+- Quem edita segue o ADR 017 (só o destinatário, no setor dele). Nada muda em
+  `ticketEditBlockFor`.
+- Na edição, "Empresa" é **obrigatória**, inclusive em chamado antigo sem
+  empresa: salvar só o título exige escolher uma.
+- A lista mostra as ativas; a empresa atual, se inativa, aparece **primeiro**
+  com `(inativa)` e pode ser mantida. Trocar, só para ativa. Regra única:
+  `isUsableTicketCompany(company, currentCompanyId)`.
+- A troca grava `mudanca_empresa` em `ticket_history` (`from_company_id`,
+  `to_company_id`). Na linha do tempo a ação aparece como "Editou o chamado."
+  com a nota `Alterou empresa (QA Alfa → QA Beta).` (nomes do momento da
+  troca, gravados na nota).
+- A partir desta etapa, a linha `criacao` grava `to_company_id`. Sem backfill.
+- Risco aceito (2026-11-09): sem nenhuma empresa ativa, chamado antigo sem
+  empresa fica **não editável** — a empresa é obrigatória na edição e não há
+  o que escolher. Sem exceção na regra e sem aviso especial na tela.
+
 ## Tabelas, enums e migration
 
-### `db/schema.ts`
+### `db/schema.ts` (alterado, entregue)
 
 ```ts
-historyEventEnum: + "mudanca_empresa" (no fim da lista)
+historyEventEnum: [..., "resolucao", "mudanca_empresa"]
 
 ticketHistory.fromCompanyId: integer("from_company_id").references(() => company.id, { onDelete: "restrict" })
-ticketHistory.toCompanyId: integer("to_company_id").references(() => company.id, { onDelete: "restrict" })
+ticketHistory.toCompanyId:   integer("to_company_id").references(() => company.id, { onDelete: "restrict" })
 index("history_to_company_idx").on(table.toCompanyId)
 
-ticketHistoryRelations.fromCompany / toCompany (relationName "history_from_company" / "history_to_company")
-companyRelations.historyFrom / historyTo
+ticketHistoryRelations.fromCompany: one(company, { ..., relationName: "history_from_company" })
+ticketHistoryRelations.toCompany:   one(company, { ..., relationName: "history_to_company" })
+companyRelations.historyFrom: many(ticketHistory, { relationName: "history_from_company" })
+companyRelations.historyTo:   many(ticketHistory, { relationName: "history_to_company" })
 ```
 
-### Migration `0023_ticket_company_history`
+Sem índice em `from_company_id`, como em `from_tag_id`: empresa nunca é
+excluída, então a FK não precisa varrer pelo lado `from`.
 
-`ALTER TYPE "history_event" ADD VALUE 'mudanca_empresa'`, as duas colunas
-nullable com FK restrict e o índice. Não destrutiva; sem backfill.
+### Migration `db/migrations/0023_ticket_company_history.sql` (aplicada em 2026-11-09)
 
-## Tipos
+```sql
+ALTER TYPE "public"."history_event" ADD VALUE 'mudanca_empresa';
+ALTER TABLE "ticket_history" ADD COLUMN "from_company_id" integer;
+ALTER TABLE "ticket_history" ADD COLUMN "to_company_id" integer;
+ALTER TABLE "ticket_history" ADD CONSTRAINT "ticket_history_from_company_id_company_id_fk" FOREIGN KEY ("from_company_id") REFERENCES "public"."company"("id") ON DELETE restrict ON UPDATE no action;
+ALTER TABLE "ticket_history" ADD CONSTRAINT "ticket_history_to_company_id_company_id_fk" FOREIGN KEY ("to_company_id") REFERENCES "public"."company"("id") ON DELETE restrict ON UPDATE no action;
+CREATE INDEX "history_to_company_idx" ON "ticket_history" USING btree ("to_company_id");
+```
+
+Não destrutiva. O `ADD VALUE` não é usado na mesma migration (precedente:
+`0015`). Aplicar com `npm run db:migrate` antes da Onda 1.
+
+## Tipos — `app/_lib/types/` (entregues)
 
 ### `ticket-company.ts`
 
@@ -604,83 +646,142 @@ export interface TicketCompanyRef {
   id: number
   tradeName: string
 }
+
+export interface TicketCompanyOption extends TicketCompanyRef {
+  cnpj: string
+}
 ```
+
+`TicketCompanyOption` só passou a herdar de `TicketCompanyRef`; a forma é a
+mesma da Etapa 1.
 
 ### `ticket.ts`
 
 ```ts
-TicketHistoryEntry: + fromCompanyName: string | null
-                    + toCompanyName: string | null
+export interface TicketHistoryEntry {
+  ...
+  toTagName: string | null
+  fromCompanyName: string | null
+  toCompanyName: string | null
+  note: string | null
+}
 ```
 
 ### `ticket-edit.ts`
 
 ```ts
-TicketEditSnapshot: + company: TicketCompanyRef | null
-TicketEditValues:   + companyId: number
+export interface TicketEditSnapshot {
+  company: TicketCompanyRef | null
+  title: string
+  ...
+}
+
+export interface TicketEditSource extends TicketEditSnapshot {
+  company: TicketCompanySummary | null
+  id: number
+  status: TicketStatus
+  currentDepartmentName: string
+}
+
+export interface TicketEditValues {
+  companyId: number
+  title: string
+  ...
+}
 
 export interface TicketCompanyChange {
   from: TicketCompanyRef | null
   to: TicketCompanyRef
 }
 
-TicketEditChanges:  + company: TicketCompanyChange | null
+export interface TicketEditChanges {
+  company: TicketCompanyChange | null
+  title: boolean
+  ...
+}
 
-UpdateTicketByAssigneeOutcome: + TicketInvalidCompany
+export type UpdateTicketByAssigneeOutcome =
+  | TicketEditSaved
+  | TicketNotFound
+  | TicketNotEditable
+  | TicketInvalidCompany
+  | TicketInvalidTag
+  | TicketInvalidAssignee
+  | TicketNoChanges
+  | TicketHandoffCommentRequired
 
-EditTicketFormDefaults: + companyId?: number
-TicketEditFormOptions:  + companies: TicketCompanySummary[]
-                        + companyHint?: string
+export interface EditTicketFormDefaults {
+  ticketId: number
+  companyId?: number
+  ...
+}
+
+export interface TicketEditFormOptions {
+  defaults: EditTicketFormDefaults
+  companies: TicketCompanySummary[]
+  companyHint?: string
+  ...
+}
 ```
 
-`TicketDetail.company` (`TicketCompanySummary | null`) satisfaz
-`TicketEditSnapshot.company`, então `buildTicketEditFormOptions(ticket, …)`
-continua recebendo o `TicketDetail`.
+`TicketDetail` (com `company: TicketCompanySummary | null`) satisfaz
+`TicketEditSource`: a página continua passando o `TicketDetail` inteiro.
+`UpdateTicketByAssigneeValues extends TicketEditValues` herda `companyId`.
 
-## Domínio
+## Domínio — `app/_lib/domain/` (entregue)
 
 ### `ticket-company.ts`
 
 ```ts
+export const INACTIVE_TICKET_COMPANY_SUFFIX = "(inativa)"
+export const MISSING_TICKET_COMPANY_HINT =
+  "Este chamado não tem empresa. Escolha uma para salvar."
+export const INACTIVE_TICKET_COMPANY_HINT =
+  "A empresa atual está inativa. Você pode mantê-la, mas não poderá escolhê-la de novo depois de trocar."
+
+export const ticketCompanyEditOptionLabel = (company: TicketCompanySummary): string
 export const ticketCompanyEditOptions = (
   current: TicketCompanySummary | null,
   active: readonly TicketCompanyOption[],
 ): TicketCompanySummary[]
-```
-
-As ativas (com `isActive: true`); se `current` existe e está inativa, ela
-entra **primeiro**. Ativa atual não é duplicada.
-
-```ts
-export const ticketCompanyEditOptionLabel = (company: TicketCompanySummary): string
-```
-
-`ticketCompanyOptionLabel(company)` + ` (inativa)` quando `!isActive`.
-
-```ts
 export const companyEditHintFor = (current: TicketCompanySummary | null): string | undefined
 ```
 
-- `null` → `Este chamado não tem empresa. Escolha uma para salvar.`
-- inativa → `A empresa atual está inativa. Você pode mantê-la, mas não poderá escolhê-la de novo depois de trocar.`
-- ativa → `undefined`
+- `ticketCompanyEditOptionLabel`: `ticketCompanyOptionLabel(company)`; inativa
+  ganha ` (inativa)` → `[QA] Empresa Inativa — <CNPJ> (inativa)`.
+- `ticketCompanyEditOptions`: as ativas recebidas, na ordem recebida, com
+  `isActive: true`; com `current` inativa, ela entra **primeiro**. Ativa atual
+  já está na lista e não é duplicada.
+- `companyEditHintFor`: `null` → `MISSING_TICKET_COMPANY_HINT`; inativa →
+  `INACTIVE_TICKET_COMPANY_HINT`; ativa → `undefined`.
+
+A atual inativa **precisa** estar nas opções: o `Autocomplete`
+(`app/_components/autocomplete.tsx:92-97`) zera o valor que não encontra nas
+opções (`hasStaleValue`).
+
+Na **edição** o esvaziamento depois de um `INVALID_COMPANY` não depende do
+`hasStaleValue` (corrigido no E9, 2026-11-09): o provider
+(`ticket-edit-provider.tsx`) faz `form.reset({ ...form.getValues(), companyId:
+undefined }, { keepDefaultValues: true, keepIsSubmitted: true, keepFieldsRef:
+true })` antes do `setError`, e `ticket-edit-company.tsx` lê o valor com
+`useWatch` (sem fallback para o salvo). Na abertura, o `hasStaleValue` continua
+sendo o que esvazia o campo após o `router.refresh()`.
 
 ### `ticket-edit.ts`
 
 ```ts
 export const buildTicketEditFormOptions = (
-  ticket: TicketEditSource & { company: TicketCompanySummary | null },
+  ticket: TicketEditSource,
   tags: readonly TagOption[],
   assignees: readonly AssigneeOption[],
   companies: readonly TicketCompanyOption[],
 ): TicketEditFormOptions
 ```
 
-(o arquiteto declara o tipo do 1º parâmetro como `interface` nomeada na Onda 0
-da Etapa 2). `defaults.companyId = ticket.company?.id` (`undefined` sem
-empresa: o campo começa vazio e salvar exige escolher); `companies =
-ticketCompanyEditOptions(ticket.company, companies)`; `companyHint =
-companyEditHintFor(ticket.company)`.
+`defaults.companyId = ticket.company?.id` (sem empresa, `undefined`: o campo
+começa vazio e salvar cai em `Selecione a empresa.`);
+`companies = ticketCompanyEditOptions(ticket.company, companies)`;
+`companyHint = companyEditHintFor(ticket.company)`.
 
 ```ts
 export const diffTicketEdit = (
@@ -690,119 +791,245 @@ export const diffTicketEdit = (
 ): TicketEditChanges
 ```
 
-Pré-condição: `chosenCompany.id === next.companyId`. `company = current.company?.id
-=== next.companyId ? null : { from: current.company, to: chosenCompany }`.
-`hasTicketEditChanges` passa a considerar `company`.
+`company = current.company?.id === chosenCompany.id ? null : { from:
+current.company (só id e nome) , to: chosenCompany (só id e nome) }`. A
+comparação usa `chosenCompany`, a linha lida no banco; quem chama passa a
+linha do `values.companyId`. `hasTicketEditChanges` considera `company`.
+`requiresHandoffComment` não muda.
 
-`describeTicketEditNote`: parte nova, **primeira** da lista,
-`empresa (${from?.tradeName ?? "—"} → ${to.tradeName})`. Ex.: `Alterou empresa
-(QA Alfa → QA Beta) e título.`; sem empresa antes: `Alterou empresa (— → QA
-Alfa).`. `requiresHandoffComment` não muda (empresa não exige comentário).
+`describeTicketEditNote`: parte nova, **primeira**,
+`empresa (${from?.tradeName ?? "—"} → ${to.tradeName})` (`—` é
+`EMPTY_VALUE_LABEL`):
+
+- `Alterou empresa (QA Alfa → QA Beta).`
+- `Alterou empresa (QA Beta → QA Alfa) e título.`
+- `Alterou empresa (— → QA Alfa) e título.`
 
 ### `ticket-history.ts`
 
-| Mapa                         | `mudanca_empresa`                                                                                                                                          |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HISTORY_EVENT_LABELS`       | `Mudança de empresa`                                                                                                                                       |
-| `HISTORY_EVENT_DESCRIBERS`   | `replacement(fromCompanyName, toCompanyName, …)`: `Definiu a empresa X.` · `Trocou a empresa de X para Y.` · `Removeu a empresa X.` · `Alterou a empresa.` |
-| `HISTORY_EVENT_NAMES_ACTOR`  | `false`                                                                                                                                                    |
-| `HISTORY_EVENT_SUMMARY_RANK` | `10` (como `mudanca_tag`): numa edição, a linha visível é a `edicao` com a nota                                                                            |
+| Mapa                         | `mudanca_empresa`                                                                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `HISTORY_EVENT_LABELS`       | `Mudança de empresa`                                                                                                                             |
+| `HISTORY_EVENT_DESCRIBERS`   | `Definiu a empresa X.` · `Trocou a empresa de X para Y.` · `Removeu a empresa X.` · `Alterou a empresa.` (por `fromCompanyName`/`toCompanyName`) |
+| `HISTORY_EVENT_NAMES_ACTOR`  | `false`                                                                                                                                          |
+| `HISTORY_EVENT_SUMMARY_RANK` | `10`: a `edicao` (90) da mesma ação é a linha visível                                                                                            |
 
-O valor novo no enum quebra o `tsc` em todo `satisfies Record<HistoryEvent, …>`
-fora do domínio; a Onda 0 lista os arquivos encontrados.
+`describeCreation` não cita a empresa (fora do pedido). Nenhum
+`Record<HistoryEvent, …>` existe fora deste arquivo.
 
-## Validação — `app/_lib/validation/ticket.ts`
+## Validação — `app/_lib/validation/ticket.ts` (entregue)
 
-`companyId: ticketCompanyIdSchema` passa para a **primeira** chave de
-`ticketFieldsSchema`; `createTicketSchema` volta a ser
-`ticketFieldsSchema.extend({ priority, attachments })` (mesma saída da Etapa 1).
-`editTicketSchema` herda: `EditTicketInput.companyId: number`, obrigatório.
+```ts
+export const ticketCompanyIdSchema = registryIdSchema(
+  TICKET_COMPANY_REQUIRED_MESSAGE,
+).max(POSTGRES_INTEGER_MAX, { error: TICKET_COMPANY_REQUIRED_MESSAGE })
 
-## `df-data`
+const ticketFieldsSchema = z.object({
+  companyId: ticketCompanyIdSchema,
+  title,
+  description,
+  type,
+  tagId,
+  assigneeId,
+})
 
-### `updateTicketByAssignee`
+export const createTicketSchema = ticketFieldsSchema.extend({
+  priority,
+  attachments,
+})
+export const editTicketSchema = ticketFieldsSchema.extend({
+  ticketId,
+  solution,
+  handoffComment,
+  attachments,
+  removedAttachmentIds,
+})
+```
 
-1. O `select … for update` do chamado ganha `companyId: ticket.companyId` (sem
-   join: `for update` não pode cair no lado nulo de um outer join).
-2. Depois das checagens de permissão e de anexos e **antes** da tag: `select
-id, trade_name, is_active from company where id = $companyId for share`.
-   Sem linha ou `!isUsableTicketCompany(row, ticketRow.companyId)` →
-   `{ status: "invalid_company" }`.
-3. Empresa atual para o diff: se `ticketRow.companyId === values.companyId`, a
-   própria linha do passo 2; se não e `ticketRow.companyId !== null`, `select
-id, trade_name from company where id = $atual` (sem trava: só o nome);
-   senão `null`.
-4. `diffTicketEdit(snapshot, values, { id: row.id, tradeName: row.tradeName })`.
+`companyId` é a primeira chave nos dois: `CreateTicketInput` igual à Etapa 1;
+`EditTicketInput.companyId: number`, obrigatório. Sem empresa,
+`INVALID_INPUT` `Selecione a empresa.`.
+
+## `tsc` entre ondas
+
+Os erros abertos pela Onda 0 foram fechados pelas Ondas 1 (`df-data`, `df-ui`)
+e 2 (`df-actions`). Desde 2026-11-09, `npx tsc --noEmit`, `npm run lint` e
+`npm run build` passam sem erro.
+
+## `df-data` — `app/_lib/data/tickets.ts` e `db/seed.ts`
+
+### `updateTicketByAssignee(values: UpdateTicketByAssigneeValues): Promise<UpdateTicketByAssigneeOutcome>`
+
+Assinatura igual; `values.companyId` chega pelo tipo.
+
+1. O `select … for update` do chamado ganha `companyId: ticket.companyId`
+   (sem join: `for update` não cai no lado nulo de um outer join).
+2. Depois das checagens de permissão e de anexos e **antes** da tag (ordem dos
+   campos; ordem das travas empresa → tag → pessoa, a mesma do `insertTicket`):
+   `select id, trade_name, is_active from company where id = $values.companyId
+for share`. Sem linha ou `!isUsableTicketCompany(row, ticketRow.companyId)`
+   → `{ status: "invalid_company" }`, sem gravar nada.
+3. Empresa atual para o snapshot: se `ticketRow.companyId === null`, `null`;
+   se igual a `values.companyId`, a própria linha do passo 2; senão `select
+id, trade_name from company where id = $ticketRow.companyId` (sem trava).
+4. `diffTicketEdit({ company: atual, title, …, solution }, values, { id:
+row.id, tradeName: row.tradeName })`.
 5. `update ticket` ganha `...(changes.company ? { companyId: values.companyId } : {})`.
-6. Histórico: depois da `edicao`, `mudanca_empresa` com `fromCompanyId =
-changes.company.from?.id ?? null`, `toCompanyId = changes.company.to.id`,
-   mesmo `changedAt`. Ordem: `edicao`, `mudanca_empresa`, `mudanca_tag`,
-   `atribuicao`, `mudanca_status`.
+6. Histórico, mesmo `changedAt`, nesta ordem: `edicao` (nota de
+   `describeTicketEditNote`), `mudanca_empresa` (`fromCompanyId:
+changes.company.from?.id ?? null`, `toCompanyId: changes.company.to.id`),
+   `mudanca_tag`, `atribuicao`, `mudanca_status`.
+7. `TicketEditSaved` sem campo novo (a empresa não entra no dashboard; não há
+   revalidação extra).
 
 ### `insertTicket`
 
-A `criacao` ganha `toCompanyId: values.companyId`.
+A linha `criacao` ganha `toCompanyId: values.companyId`.
 
 ### `findTicketDetail`
 
-Histórico: aliases `history_from_company`/`history_to_company`, `leftJoin` em
-`from_company_id`/`to_company_id`, selecionando `fromCompanyName`/`toCompanyName`.
+Histórico: `alias(company, "history_from_company")` e
+`alias(company, "history_to_company")`, `leftJoin` em
+`ticketHistory.fromCompanyId`/`toCompanyId`, selecionando
+`fromCompanyName: fromCompany.tradeName` e `toCompanyName:
+toCompany.tradeName`. O join da empresa do chamado (Etapa 1) não muda.
 
 ### `db/seed.ts`
 
-`criacao` dos chamados da janela criados a partir daqui grava `to_company_id`.
+`seedQa`: a `criacao` dos chamados da janela criados a partir daqui ganha
+`toCompanyId: windowCompany.id`. Chamado reaproveitado não ganha linha nova.
+O seed de demonstração (sem empresa) não muda.
 
-## `df-actions` — `editTicket`
+## `df-actions` — `app/_lib/actions/tickets.ts`
 
-`EditTicketErrorCode` + `"INVALID_COMPANY"`; `EDIT_OUTCOME_FAILURES.invalid_company
-= { ok: false, code: "INVALID_COMPANY", message: INVALID_TICKET_COMPANY_MESSAGE }`.
-Sequência igual. Revalidação igual.
+```ts
+export type EditTicketErrorCode =
+  | "INVALID_INPUT"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "INVALID_COMPANY"
+  | "INVALID_TAG"
+  | "INVALID_ASSIGNEE"
+  | "NO_CHANGES"
+  | "HANDOFF_COMMENT_REQUIRED"
+  | "INVALID_ATTACHMENT"
+  | "ATTACHMENT_NOT_FOUND"
+  | "ATTACHMENTS_LIMIT"
+
+EDIT_OUTCOME_FAILURES.invalid_company = {
+  ok: false,
+  code: "INVALID_COMPANY",
+  message: INVALID_TICKET_COMPANY_MESSAGE,
+}
+```
+
+`editTicket(input: EditTicketInput): Promise<EditTicketResult>` — assinatura e
+sequência iguais; `companyId` segue em `...fields` para `updateTicketByAssignee`.
+Anexos já copiados são descartados no caminho de recusa existente. Revalidação
+igual. A action não confere a empresa: a autoridade é a leitura sob trava.
+
+| Situação                          | `code`            | Mensagem                                                       |
+| --------------------------------- | ----------------- | -------------------------------------------------------------- |
+| empresa ausente/inválida no input | `INVALID_INPUT`   | `Selecione a empresa.`                                         |
+| `invalid_company`                 | `INVALID_COMPANY` | `Esta empresa não está disponível. Escolha uma empresa ativa.` |
 
 ## `df-ui`
 
-- `tickets/[id]/page.tsx`: com `isEditable`, carrega também
-  `listTicketCompanyOptions()` e o passa como 4º argumento de
-  `buildTicketEditFormOptions`.
-- No modo edição, o bloco "Empresa" do card "Detalhes" vira o combobox
-  (`TicketCompanyField` aceitando `TicketCompanySummary[]` e rotulando com
-  `ticketCompanyEditOptionLabel`), com `companyHint` como dica, no mesmo
-  lugar (acima de "Tipo"). Wrapper no padrão de `TicketEditClassification`.
-- `INVALID_COMPANY` no provider de edição → `setError("companyId")` com foco +
-  `router.refresh()`.
+### `app/(app)/tickets/[id]/page.tsx`
+
+Com `isEditable`, `listTicketCompanyOptions()` entra no `Promise.all` (como
+tags e pessoas, `null` quando não editável) e vai como 4º argumento:
+`buildTicketEditFormOptions(ticket, editTags, editAssignees, editCompanies)`.
+
+### `app/(app)/_components/ticket-company-field.tsx`
+
+Precisa mudar, sim: a opção da atual inativa leva `(inativa)`, e o rótulo da
+criação não sabe disso. Mínimo necessário (o resto é do `df-ui`):
+
+- genérico no tipo da empresa, `<TCompany extends TicketCompanyOption,>`, com
+  `companies: readonly TCompany[]`;
+- prop opcional `getOptionLabel?: (company: TCompany) => string`, padrão
+  `ticketCompanyOptionLabel` (a abertura não muda); a edição passa
+  `ticketCompanyEditOptionLabel`;
+- prop opcional `hint?: string`, exibida como a dica do campo de tag
+  (`ComboboxField`), no padrão visual do projeto.
+
+O filtro continua `matchesTicketCompanySearch` (aceita `TicketCompanySummary`).
+
+### Campo no modo edição
+
+- Wrapper novo no padrão de `TicketEditClassification`
+  (`tickets/[id]/_components/ticket-edit-company.tsx`, nome livre): fora da
+  edição, devolve `children` (o bloco de leitura da Etapa 1); na edição,
+  `Controller name="companyId"` com `TicketCompanyField` (`companies`,
+  `getOptionLabel={ticketCompanyEditOptionLabel}`, `hint={companyHint}`), no
+  mesmo lugar (acima de "Tipo").
+- `TicketEditContextValue` ganha `companies: readonly TicketCompanySummary[]`
+  e `companyHint: string | undefined`, vindos de `options`.
+- Provider: `result.code === "INVALID_COMPANY"` → `form.reset` com
+  `companyId: undefined` (`keepDefaultValues`, `keepIsSubmitted`,
+  `keepFieldsRef`), `form.setError("companyId", { message: result.message },
+{ shouldFocus: true })` e `router.refresh()`. O esvaziamento é do provider,
+  não do `Autocomplete` (E9; nota em "Domínio — `ticket-company.ts`").
+- Linha do tempo: sem mudança de componente. A nota já é exibida
+  (`ticket-timeline.tsx:81`).
 
 ## Cenários do `df-qa` — Etapa 2
 
-Preparação: M assume (ou recebe) um chamado `[QA]` de Suporte com `QA Alfa`
-(T5 da Etapa 1) e um chamado anterior à migration, sem empresa (consulta 4,
-assumido pelo "Assumir").
+Contas como na Etapa 1 (D, A, M). Pré-requisitos: `0023` aplicada; Ondas 1 e
+2 entregues. Preparação: M assume (ou recebe) um chamado `[QA]` de Suporte com
+`QA Alfa` (T5 da Etapa 1) e um chamado anterior à migration `0022`, sem
+empresa (consulta 4 da Etapa 1), assumido pelo "Assumir". Empresa a desativar
+é `[QA]` criada (ou reativada) pelo próprio teste, com CNPJ da reserva de
+`docs/contracts/registry-companies.md`, e termina desativada.
 
-| #   | Papel | Passos                                                                                                         | Esperado                                                                                                                                  |
-| --- | ----- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| E1  | M     | "Editar" no chamado com `QA Alfa`                                                                              | "Empresa" vira combobox acima de "Tipo", com `QA Alfa — 12.345.678/0001-95` selecionada                                                   |
-| E2  | M     | trocar para `QA Beta`, salvar                                                                                  | toast `Chamado #N atualizado.`; detalhe com `QA Beta`; linha do tempo "Editou o chamado." com nota `Alterou empresa (QA Alfa → QA Beta).` |
-| E3  | M     | trocar empresa e título juntos                                                                                 | nota `Alterou empresa (QA Beta → QA Alfa) e título.`                                                                                      |
-| E4  | M     | "Editar" no chamado sem empresa; mudar só o título e salvar                                                    | campo vazio com a dica `Este chamado não tem empresa. Escolha uma para salvar.`; ao salvar, `Selecione a empresa.`; nada gravado          |
-| E5  | M     | escolher `QA Alfa` e salvar                                                                                    | nota `Alterou empresa (— → QA Alfa) e título.`; `mudanca_empresa` com `from_company_id` nulo (consulta 5)                                 |
-| E6  | D + M | D cria/reativa `[QA] Empresa Inativa`; M abre `[QA] Empresa Inativa chamado` com ela; D a desativa; M "Editar" | opção `[QA] Empresa Inativa — … (inativa)` selecionada e no topo; dica de empresa inativa                                                 |
-| E7  | M     | no E6, mudar só a descrição e salvar                                                                           | salva; empresa continua a inativa; nenhuma `mudanca_empresa` nova                                                                         |
-| E8  | M     | trocar a inativa por `QA Alfa`, salvar; abrir "Editar" de novo                                                 | salva; a inativa não aparece mais na lista                                                                                                |
-| E9  | D + M | M com "Editar" aberto escolhe outra `[QA]` ativa; D a desativa; M salva                                        | erro `Esta empresa não está disponível. Escolha uma empresa ativa.` no campo, com foco; nada gravado                                      |
-| E10 | M     | "Editar" e salvar sem mudar nada                                                                               | `Nenhuma alteração para salvar.`                                                                                                          |
-| E11 | A     | abrir chamado de Suporte cujo destinatário é M                                                                 | sem "Editar" (ADR 017 inalterado)                                                                                                         |
-| E12 | M     | criar `[QA] Empresa Histórico` com `QA Beta`                                                                   | `criacao` com `to_company_id` = `QA Beta` (consulta 5)                                                                                    |
+| #   | Papel | Passos                                                                                                                    | Esperado                                                                                                                                                                                                          |
+| --- | ----- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | M     | "Editar" no chamado com `QA Alfa`                                                                                         | "Empresa" vira o campo de busca acima de "Tipo", preenchido com `QA Alfa — 12.345.678/0001-95`; sem dica                                                                                                          |
+| E2  | M     | trocar para `QA Beta`, salvar                                                                                             | toast `Chamado #N atualizado.`; detalhe com `QA Beta`; linha do tempo "Editou o chamado." com nota `Alterou empresa (QA Alfa → QA Beta).`; `mudanca_empresa` gravada (consulta 5)                                 |
+| E3  | M     | trocar empresa e título juntos                                                                                            | nota `Alterou empresa (QA Beta → QA Alfa) e título.`                                                                                                                                                              |
+| E4  | M     | "Editar" no chamado sem empresa; mudar só o título e salvar                                                               | campo vazio com a dica `Este chamado não tem empresa. Escolha uma para salvar.`; ao salvar, `Selecione a empresa.` no campo; nada gravado (consulta 5)                                                            |
+| E5  | M     | no E4, escolher `QA Alfa` e salvar                                                                                        | nota `Alterou empresa (— → QA Alfa) e título.`; `mudanca_empresa` com `from_company_id` nulo e `to_company_id` de `QA Alfa` (consulta 5)                                                                          |
+| E6  | D + M | D cria/reativa `[QA] Empresa Inativa`; M abre `[QA] Empresa Inativa chamado` com ela e o assume; D a desativa; M "Editar" | campo preenchido com `[QA] Empresa Inativa — … (inativa)`; ao abrir a lista, ela é a primeira opção; dica `A empresa atual está inativa. Você pode mantê-la, mas não poderá escolhê-la de novo depois de trocar.` |
+| E7  | M     | no E6, mudar só a descrição e salvar                                                                                      | salva; empresa continua a inativa; nota `Alterou descrição.`; nenhuma `mudanca_empresa` nova                                                                                                                      |
+| E8  | M     | trocar a inativa por `QA Alfa`, salvar; abrir "Editar" de novo                                                            | salva; a inativa não aparece mais na lista; sem dica                                                                                                                                                              |
+| E9  | D + M | M com "Editar" aberto escolhe outra `[QA]` ativa; D a desativa; M salva                                                   | erro `Esta empresa não está disponível. Escolha uma empresa ativa.` no campo, com foco; campo esvazia após o refresh; nada gravado                                                                                |
+| E10 | M     | "Editar" no chamado com empresa e salvar sem mudar nada                                                                   | `Nenhuma alteração para salvar.`                                                                                                                                                                                  |
+| E11 | A     | abrir chamado de Suporte cujo destinatário é M                                                                            | sem "Editar" (ADR 017 inalterado)                                                                                                                                                                                 |
+| E12 | M     | criar `[QA] Empresa Histórico` com `QA Beta`                                                                              | `criacao` com `to_company_id` = id de `QA Beta` (consulta 5)                                                                                                                                                      |
+| E13 | M     | no E2, conferir a linha do tempo resumida                                                                                 | uma entrada só para a ação ("Editou o chamado." com a nota); "Trocou a empresa…" não aparece como linha própria                                                                                                   |
+| E14 | M     | "Editar", digitar `beta` no campo e escolher pelo teclado (`↓`, Enter); Cancelar                                          | filtro e teclado como na abertura; Cancelar volta ao valor salvo                                                                                                                                                  |
+
+Fora do navegador (para o `df-debug`, se acionado): `editTicket` com
+`companyId` de empresa inativa que **não** é a do chamado → `INVALID_COMPANY`;
+com a inativa que é a do chamado → salva; sem `companyId` → `INVALID_INPUT`
+`Selecione a empresa.`.
 
 ```sql
 -- 5: histórico de empresa de um chamado
 select id, event, from_company_id, to_company_id, note, changed_at
 from ticket_history where ticket_id = $1 order by changed_at, id;
+
+-- migration aplicada
+select unnest(enum_range(null::history_event)); -- inclui mudanca_empresa
+select conname, confdeltype from pg_constraint
+where conname in ('ticket_history_from_company_id_company_id_fk', 'ticket_history_to_company_id_company_id_fk'); -- 'r'
 ```
 
 ## Checklist — Etapa 2
 
-- [ ] Onda 0: schema, `0023`, tipos, domínio, Zod; lista de erros de `tsc`
-- [ ] Usuário: `npm run db:migrate`
-- [ ] Onda 1: `df-data` ∥ `df-ui` · Onda 2: `df-actions` ∥ `df-ui`
-- [ ] `tsc`, lint, build · `df-reviewer` · `df-qa` E1–E12
+- [x] Onda 0: schema, `0023` gerada, tipos, domínio, Zod; lint passa; `tsc`
+      só com os cinco erros listados — 2026-11-09
+- [x] Usuário: `npm run db:migrate` (`0023`) — 2026-11-09
+- [x] Onda 1: `df-data` (`updateTicketByAssignee`, `insertTicket`,
+      `findTicketDetail`, seed) ∥ `df-ui` (página, campo, wrapper) — 2026-11-09
+- [x] Onda 2: `df-actions` (`editTicket`) ∥ `df-ui` (`INVALID_COMPANY`) —
+      2026-11-09
+- [x] `tsc`, lint, build — 2026-11-09
+- [x] `df-reviewer` — 2026-11-09, aprovado com atenções
+- [x] `df-qa` E1–E14 — 2026-11-09, 14/14 após o Reteste 1; E9 corrigido pelo
+      `df-ui` (reset com `keepFieldsRef` no provider, `useWatch` sem fallback no
+      campo) (`docs/test-reports/2026-11-09-ticket-company-etapa-2.md`)
 
 ---
 

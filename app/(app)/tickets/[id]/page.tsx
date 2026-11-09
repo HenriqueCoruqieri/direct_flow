@@ -6,6 +6,7 @@ import { notFound } from "next/navigation"
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { requireSession } from "@/app/_lib/auth/session"
 import { listTicketAttachments } from "@/app/_lib/data/attachments"
+import { listTicketCompanyOptions } from "@/app/_lib/data/companies"
 import { listDepartmentOptions } from "@/app/_lib/data/departments"
 import {
   listTicketAssigneeOptions,
@@ -113,6 +114,7 @@ const TicketDetailPage = async ({
     attachments,
     editTags,
     editAssignees,
+    editCompanies,
     departmentOptions,
     transferAssignees,
   ] = await Promise.all([
@@ -120,6 +122,7 @@ const TicketDetailPage = async ({
     listTicketAttachments(ticket.id),
     isEditable ? listActiveDepartmentTags(facts.departmentId) : null,
     isEditable ? listTicketAssigneeOptions(facts.departmentId) : null,
+    isEditable ? listTicketCompanyOptions() : null,
     canSendToDepartment ? listDepartmentOptions() : null,
     canSendToDepartment
       ? listTransferAssigneeOptions(ticket.currentDepartmentId)
@@ -140,8 +143,13 @@ const TicketDetailPage = async ({
       : null
 
   const editOptions =
-    editTags !== null && editAssignees !== null
-      ? buildTicketEditFormOptions(ticket, editTags, editAssignees)
+    editTags !== null && editAssignees !== null && editCompanies !== null
+      ? buildTicketEditFormOptions(
+          ticket,
+          editTags,
+          editAssignees,
+          editCompanies,
+        )
       : null
   const editable = editOptions !== null
   const commentEntries = messages.map((message) => ({
