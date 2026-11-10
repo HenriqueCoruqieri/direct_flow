@@ -738,13 +738,13 @@ usuário no `.env` (feito em 2026-09-24).
 
 ## Checklist de encerramento da feature
 
-- [ ] `findUserProfile` com os campos novos, `updateUserImage`, `app/_lib/storage/` (`df-data`)
-- [ ] `changeUserPassword` em `app/_lib/auth/password-change.ts` (`df-auth`)
-- [ ] `sendPasswordChangedEmail` e `emails/password-changed.ts` (`df-email`)
-- [ ] `changePassword`, `updateAvatar`, `removeAvatar` (`df-actions`)
-- [ ] item "Meu perfil", `UserAvatar` com foto, `/profile` completo (`df-ui`)
-- [ ] nenhuma ocorrência de `getUserProfile` no projeto
-- [ ] nenhum import de `@aws-sdk/client-s3` fora de `app/_lib/storage/`
+- [x] `findUserProfile` com os campos novos, `updateUserImage`, `app/_lib/storage/` (`df-data`)
+- [x] `changeUserPassword` em `app/_lib/auth/password-change.ts` (`df-auth`)
+- [x] `sendPasswordChangedEmail` e `emails/password-changed.ts` (`df-email`)
+- [x] `changePassword`, `updateAvatar`, `removeAvatar` (`df-actions`)
+- [x] item "Meu perfil", `UserAvatar` com foto, `/profile` completo (`df-ui`)
+- [x] nenhuma ocorrência de `getUserProfile` no projeto
+- [x] nenhum import de `@aws-sdk/client-s3` fora de `app/_lib/storage/`
 - [ ] senha atual errada não muda nada; certa mantém esta sessão e derruba as outras; e-mail chega (`df-debug`)
 - [ ] upload grava no R2, atualiza sidebar/cabeçalho/perfil e apaga o antigo; remover apaga e volta às iniciais (`df-debug`)
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

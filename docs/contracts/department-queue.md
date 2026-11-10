@@ -1206,22 +1206,22 @@ menos um `resolvido` em QA Suporte (ex.: `[QA] Janela aberta`, ou os de
 ## Checklist de encerramento da feature
 
 - [x] `types/department-queue.ts`, `types/ticket-assignment.ts`, `domain/department-queue-tabs.ts`, `domain/department-queue.ts`, `domain/ticket-assignment.ts`, `ALL_TIME_PERIOD_PRESETS`, `validation/department-queue.ts`, `validation/ticket-assignment.ts`, `allTimePeriodSchema`, este contrato e o plano (`df-architect`)
-- [ ] `listQueueTickets`, `countQueueTicketsByTab` em `app/_lib/data/department-queue.ts`; `assignTicket` em `app/_lib/data/tickets.ts` (`df-data`)
-- [ ] `assumeTicket`, `sendTicket` em `app/_lib/actions/ticket-assignment.ts` (`df-actions`)
-- [ ] menu condicionado, `/queue`, abas, período, filtro de Setor, tabela, botões e dialog (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `listQueueTickets`, `countQueueTicketsByTab` em `app/_lib/data/department-queue.ts`; `assignTicket` em `app/_lib/data/tickets.ts` (`df-data`)
+- [x] `assumeTicket`, `sendTicket` em `app/_lib/actions/ticket-assignment.ts` (`df-actions`)
+- [x] menu condicionado, `/queue`, abas, período, filtro de Setor, tabela, botões e dialog (`df-ui`)
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
 Revisão de 2026-10-06 (aba Resolvidos):
 
 - [x] `resolved` em `DEPARTMENT_QUEUE_TABS` e `DEPARTMENT_QUEUE_TAB_RULES`; "Em aberto" com `ACTIVE_TICKET_STATUSES` (`df-architect`)
-- [ ] `resolved: 0` na contagem inicial de `countQueueTicketsByTab` (`df-data`)
-- [ ] nada no `df-ui`: abas, estado vazio e filtro Status saem das regras
-- [ ] cenários Q33–Q40 do `df-qa`
+- [x] `resolved: 0` na contagem inicial de `countQueueTicketsByTab` (`df-data`)
+- [x] nada no `df-ui`: abas, estado vazio e filtro Status saem das regras
+- [x] cenários Q33–Q40 do `df-qa`
 
 Revisão de 2026-10-08 (sete abas, `queue-tabs-comment-delete-and-attend.md`):
 
 - [x] `DEPARTMENT_QUEUE_TABS` com sete abas, `assignee` nas regras, textos, `mapDepartmentQueueTabs` (`df-architect`)
-- [ ] `queueTabCondition` com critério de destinatário; contagens por `mapDepartmentQueueTabs` (`df-data`)
-- [ ] nada obrigatório no `df-ui`: abas, estado vazio e filtro Status saem das regras
-- [ ] cenários QT1–QT12 do `df-qa`
+- [x] `queueTabCondition` com critério de destinatário; contagens por `mapDepartmentQueueTabs` (`df-data`)
+- [x] nada obrigatório no `df-ui`: abas, estado vazio e filtro Status saem das regras
+- [x] cenários QT1–QT12 do `df-qa`

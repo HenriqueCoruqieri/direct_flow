@@ -556,4 +556,4 @@ texto de 5000 caracteres começando por `[QA] `; `X5001` = 5001.
 - [x] `sendTicket` com `comment`; `editTicket` com `HANDOFF_COMMENT_REQUIRED` (`df-actions`)
 - [x] campo nos dois diálogos e campo condicional na edição, sem desvio de `INVALID_INPUT` para o Comentário (`df-ui`)
 - [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

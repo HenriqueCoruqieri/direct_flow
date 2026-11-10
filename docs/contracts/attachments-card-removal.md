@@ -125,5 +125,5 @@ Admin Suporte). Títulos começam com `[QA] Sem card`. **Não alterar #65 a
 - [x] `data/attachments.ts` apagado; `createAttachmentDownloadUrl` removido e o import do domínio reduzido a `ATTACHMENT_HEADER_BYTES`, `ATTACHMENT_UPLOAD_URL_TTL_SECONDS`, `isAttachmentStorageKey`, `parsePendingAttachmentKey`, `pendingAttachmentKey`, `storedAttachmentKey` (`storage/attachments.ts:11-18`) (`df-data`)
 - [x] domínio, tipos, validação e `eslint.config.mjs` limpos; `isStoredAttachmentKey` passou a interna de `domain/attachment.ts` (`df-architect`, fechamento)
 - [x] `.claude/rules/stack.md`, `.claude/agents/df-actions.md` e `.claude/agents/df-data.md` sem a rota de download (orquestrador)
-- [ ] cenários do `df-qa`
+- [x] ~~cenários do `df-qa`~~ — obsoleto: o card voltou dentro da Conclusão (`ticket-attachments-list-and-download.md:8`)
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `grep` do critério 2 vazio fora de `docs/`

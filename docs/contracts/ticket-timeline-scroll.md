@@ -238,6 +238,6 @@ rolagem é do `df-reviewer`, no código.
 
 ## Checklist de encerramento
 
-- [ ] `comments-scroll-area.tsx` → `scroll-to-end-area.tsx` (`ScrollToEndArea`), `TicketComments` com o nome novo, `TicketTimeline` com a `<ol>` dentro de `ScrollToEndArea` e altura máxima calibrada (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `comments-scroll-area.tsx` → `scroll-to-end-area.tsx` (`ScrollToEndArea`), `TicketComments` com o nome novo, `TicketTimeline` com a `<ol>` dentro de `ScrollToEndArea` e altura máxima calibrada (`df-ui`)
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

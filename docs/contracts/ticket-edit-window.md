@@ -940,17 +940,17 @@ os cenários 17–22 ficam como não executados e o 15 continua valendo.
 Etapa 1 — janela de 7 dias:
 
 - [x] `changed_by` anulável e migration `0010_history_system_actor`; `domain/ticket-closure.ts`; `now` em `ticketEditBlockFor`, `canEditTicket`, `ticketEditButtonStateFor`, `ticketCommentBlockFor`, `canCommentOnTicket`, `ticketCommentFormStateFor`, `ticketConclusionStateFor`; `editableUntil`; `SYSTEM_ACTOR_LABEL`/`describeHistoryActor`; `vercel.json`; `CRON_SECRET` no `.env.example`; ADR 014 (`df-architect`)
-- [ ] `matcher` do `proxy.ts` sem `api/cron` (`df-auth`)
-- [ ] `leftJoin` no histórico; `updateTicketByAuthor` e `insertTicketMessage` com `resolved_at` e `now`; `closeExpiredResolvedTickets`; seed QA com `#V` e `#J` (`df-data`)
-- [ ] `app/api/cron/close-resolved-tickets/route.ts` (`df-actions`)
-- [ ] `page.tsx` com um `now`; `Editável até`; `Sistema` na linha do tempo (`df-ui`)
+- [x] `matcher` do `proxy.ts` sem `api/cron` (`df-auth`)
+- [x] `leftJoin` no histórico; `updateTicketByAuthor` e `insertTicketMessage` com `resolved_at` e `now`; `closeExpiredResolvedTickets`; seed QA com `#V` e `#J` (`df-data`)
+- [x] `app/api/cron/close-resolved-tickets/route.ts` (`df-actions`)
+- [x] `page.tsx` com um `now`; `Editável até`; `Sistema` na linha do tempo (`df-ui`)
 
 Etapa 2 — edição na própria tela e "Hoje":
 
 - [x] `solution` em `editTicketSchema`, `canEditSolution`, `diffTicketEdit`/`describeTicketEditNote` com solução, `includesSolution`; `DEFAULT_MY_TICKETS_PERIOD = hoje`; `periodo=todos` explícito; `myTicketsTabHref` com período obrigatório (`df-architect`)
-- [ ] `updateTicketByAuthor` grava `solution` (`df-data`)
-- [ ] `editTicket` repassa `solution` (`df-actions`)
-- [ ] modo de edição na página; `EditTicketDialog` removido (`df-ui`)
-- [ ] `npm run db:migrate` aplicado pelo usuário; `CRON_SECRET` no `.env` e na Vercel
+- [x] `updateTicketByAuthor` grava `solution` (`df-data`)
+- [x] `editTicket` repassa `solution` (`df-actions`)
+- [x] modo de edição na página; `EditTicketDialog` removido (`df-ui`)
+- [ ] `npm run db:migrate` aplicado pelo usuário (feito); `CRON_SECRET` no `.env` e na Vercel (pendente)
 - [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

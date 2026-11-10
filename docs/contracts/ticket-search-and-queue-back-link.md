@@ -431,9 +431,9 @@ começam com `[QA]`; escrita só em QA Suporte e QA Infra. **Não alterar #65 a
 ## Checklist de encerramento
 
 - [x] Tipos, domínio, `parseTicketSearchQuery`, `parseTicketDetailOrigin`, `queueTicketDetailHref`, `ticketDetailBackLinkFor`, ADR 015 (`df-architect`)
-- [ ] `searchVisibleTickets` (`df-data`)
-- [ ] `searchTickets` (`df-actions`)
-- [ ] `TicketSearch`, `AppTopBarFrame`, tabelas sem busca, `createTicketListColumns(detailHref)`, `location` na Fila, link de voltar no detalhe (`df-ui`)
-- [ ] Linha da seção 2 do `stack.md` apontando para o ADR 015 (orquestrador, com aprovação do usuário)
-- [ ] Cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem bloqueante
+- [x] `searchVisibleTickets` (`df-data`)
+- [x] `searchTickets` (`df-actions`)
+- [x] `TicketSearch`, `AppTopBarFrame`, tabelas sem busca, `createTicketListColumns(detailHref)`, `location` na Fila, link de voltar no detalhe (`df-ui`)
+- [x] Linha da seção 2 do `stack.md` apontando para o ADR 015 (orquestrador, com aprovação do usuário)
+- [x] Cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem bloqueante

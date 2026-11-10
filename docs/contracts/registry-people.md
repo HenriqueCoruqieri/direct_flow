@@ -1309,11 +1309,11 @@ interface RegistryRowActionsProps {
 
 ## Checklist de encerramento da feature
 
-- [ ] `npm run db:migrate` aplicado (usuário); setor "Não alocado" com `is_unassigned` existe
-- [ ] `getAccountFacts`, `getAccountState`, `requirePendingPasswordChange`, `hashDefaultPassword`, `defineInitialPassword`, `revokeUserSessions`, `onPasswordReset`; `/set-password` (`df-auth`)
-- [ ] `app/_lib/data/people.ts`; `isUnassigned` e nova ordem em `departments.ts`; `checkTagDepartment` em `tags.ts` (`df-data`)
-- [ ] `app/_lib/actions/people.ts`, `password-setup.ts`; ramos novos em `tags.ts` e `departments.ts` (`df-actions`)
-- [ ] `/registry/people`; redirecionamento no layout `(app)`; `FolderIcon`; badges e trava do Não alocado em Setores (`df-ui`)
+- [x] `npm run db:migrate` aplicado (usuário); setor "Não alocado" com `is_unassigned` existe
+- [x] `getAccountFacts`, `getAccountState`, `requirePendingPasswordChange`, `hashDefaultPassword`, `defineInitialPassword`, `revokeUserSessions`, `onPasswordReset`; `/set-password` (`df-auth`)
+- [x] `app/_lib/data/people.ts`; `isUnassigned` e nova ordem em `departments.ts`; `checkTagDepartment` em `tags.ts` (`df-data`)
+- [x] `app/_lib/actions/people.ts`, `password-setup.ts`; ramos novos em `tags.ts` e `departments.ts` (`df-actions`)
+- [x] `/registry/people`; redirecionamento no layout `(app)`; `FolderIcon`; badges e trava do Não alocado em Setores (`df-ui`)
 - [ ] Pessoa criada entra com a senha padrão e cai em `/set-password`; senha igual à padrão recusada; depois de definir, navega normalmente e outras sessões caem (`df-debug`)
 - [ ] Restaurar senha: sessões da pessoa caem; próximo login volta a `/set-password` (`df-debug`)
 - [ ] Desativar: a sessão aberta da pessoa cai na próxima requisição; desativar a si mesmo → `SELF_DEACTIVATION`; último diretor → `LAST_DIRECTOR` (desativar e mover) (`df-debug`)
@@ -1322,4 +1322,4 @@ interface RegistryRowActionsProps {
 - [ ] Criar pessoa no Não alocado → `DEPARTMENT_UNASSIGNED`; criar/reativar tag no Não alocado → `DEPARTMENT_UNASSIGNED`; desativar o Não alocado → `IS_UNASSIGNED` (`df-debug`)
 - [ ] Sem `DEFAULT_USER_PASSWORD`: criar e restaurar → `DEFAULT_PASSWORD_MISSING`; resto do app normal (`df-debug`)
 - [ ] E-mail com maiúsculas no cadastro é gravado em minúsculas e o login funciona (`df-debug`)
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

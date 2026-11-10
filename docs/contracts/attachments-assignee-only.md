@@ -443,5 +443,5 @@ mapeamento em `resolveTicket`).
 - [x] revisão deste contrato: tabela de respostas na ordem das checagens, passos 5–6, cenários AO8, AO16 e AO17, preparação de `#Q6` (`df-architect`)
 - [x] `canAttach` em `page.tsx:96` → `TicketConclusion` (`:174`; prop com padrão `false`, `ticket-conclusion.tsx:20`, `:29`) → `ResolveTicketForm`; sem `canAttach`, barra própria (`resolve-ticket-form.tsx:186-188`), bloqueio por envio ignorado (`:60-62`) e `attachments: []` no envio (`:66`) (`df-ui`)
 - [x] além do contrato (`df-ui`): `shouldUnregister` no `Controller` de anexos (`resolve-ticket-form.tsx:168`), que tira `attachments` dos valores quando o uploader desmonta — o `attachments: []` de `:66` continua como garantia; e reset de `uploadsBusy` para `"idle"` quando `canAttach` muda, pelo padrão de ajuste de estado no render (`:47-52`), para que um envio em andamento ou com falha de antes do `router.refresh()` não prenda o "Resolver" se o uploader voltar
-- [ ] cenários do `df-qa`
+- [x] ~~cenários do `df-qa`~~ — obsoleto: o uploader saiu da Conclusão (`attachments-in-edit.md:56`)
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build` depois da revisão

@@ -1379,33 +1379,33 @@ Consulta de referência = cenário 3 (cinco contagens). Escrita só nos cenário
 ## Checklist de encerramento da feature
 
 - [x] tipos, domínio (`TICKET_STATUS_LABELS`, `TICKET_PRIORITY_LABELS`, `NON_FINAL_TICKET_STATUSES`, `canViewTicket`, `MY_TICKETS_TAB_RULES`, `HISTORY_EVENT_LABELS`, `describeHistoryEntry`) e validação (`parseMyTicketsTab`, `parseTicketIdParam`) (`df-architect`)
-- [ ] `listMyTickets`, `countMyTicketsByTab` em `app/_lib/data/my-tickets.ts`; `findTicketDetail` em `app/_lib/data/tickets.ts` (`df-data`)
-- [ ] item do menu, `/tickets`, `/tickets/[id]`, `TicketStatusBadge`, `rowHref` no `DataTable` (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `listMyTickets`, `countMyTicketsByTab` em `app/_lib/data/my-tickets.ts`; `findTicketDetail` em `app/_lib/data/tickets.ts` (`df-data`)
+- [x] item do menu, `/tickets`, `/tickets/[id]`, `TicketStatusBadge`, `rowHref` no `DataTable` (`df-ui`)
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
 Adendo do filtro por data:
 
 - [x] `PeriodFilterSelection`, `PERIOD_LABELS.todos`, `MY_TICKETS_PERIOD_PRESETS`, `myTicketsEmptyCopy`, `resolvePeriodFilterRange`, `validation/period.ts`, `parseMyTicketsPeriod`, `myTicketsTabHref(tab, period)` (`df-architect`)
-- [ ] `range` em `listMyTickets` e `countMyTicketsByTab` (`df-data`)
-- [ ] `PeriodFilter`/`CustomPeriodPicker` genéricos em `app/(app)/_components/`, slot no `DataTable`, `/tickets` com período, abas mantendo o período, estado vazio por período (`df-ui`)
-- [ ] cenários 23–36 do `df-qa`
+- [x] `range` em `listMyTickets` e `countMyTicketsByTab` (`df-data`)
+- [x] `PeriodFilter`/`CustomPeriodPicker` genéricos em `app/(app)/_components/`, slot no `DataTable`, `/tickets` com período, abas mantendo o período, estado vazio por período (`df-ui`)
+- [x] cenários 23–36 do `df-qa`
 
 Revisão de 2026-10-05 (datas futuras):
 
 - [x] `customPeriodSchema(today)`, `myTicketsPeriodSchema(today)`, `dashboardSearchParamsSchema(today)`, `parseMyTicketsPeriod(raw, today)`, `parseDashboardParams(raw, today)`, `todayCalendarDate` (`df-architect`)
-- [ ] `today` nas páginas `/tickets` e `/dashboard`; `disabled`/`endMonth` no `CustomPeriodPicker` (`df-ui`)
-- [ ] cenários 37–44 do `df-qa`
+- [x] `today` nas páginas `/tickets` e `/dashboard`; `disabled`/`endMonth` no `CustomPeriodPicker` (`df-ui`)
+- [x] cenários 37–44 do `df-qa`
 
 Revisão de 2026-10-06 (aba Resolvidos):
 
 - [x] `ACTIVE_TICKET_STATUSES`, `ActiveTicketStatus`, `isActiveTicketStatus`, `RESOLVED_TICKET_STATUS` literal, `resolved` em `MY_TICKETS_TABS` e `MY_TICKETS_TAB_RULES` (`df-architect`)
-- [ ] `resolved: 0` na contagem inicial de `countMyTicketsByTab` (`df-data`)
-- [ ] nada no `df-ui`: abas, estado vazio e filtro Status saem das regras
-- [ ] cenários 45–54 do `df-qa`
+- [x] `resolved: 0` na contagem inicial de `countMyTicketsByTab` (`df-data`)
+- [x] nada no `df-ui`: abas, estado vazio e filtro Status saem das regras
+- [x] cenários 45–54 do `df-qa`
 
 Revisão de 2026-10-12 (aba padrão Atribuídos a mim):
 
 - [x] `assigned` primeiro em `MY_TICKETS_TABS`; `DEFAULT_MY_TICKETS_TAB = "assigned"` (`df-architect`)
-- [ ] nada no `df-data`, `df-actions` nem `df-ui`: ordem e padrão saem do domínio
-- [ ] cenários 55–59 do `df-qa`
+- [x] nada no `df-data`, `df-actions` nem `df-ui`: ordem e padrão saem do domínio
+- [x] cenários 55–59 do `df-qa`

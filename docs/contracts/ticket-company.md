@@ -588,7 +588,7 @@ select confdeltype from pg_constraint where conname = 'ticket_company_id_company
 - [x] Revisão do campo para autocompletar — Onda 0 (2026-11-09):
       `matchesTicketCompanySearch`, `TICKET_COMPANY_EMPTY_SEARCH_MESSAGE`,
       `stripCnpjMask`, `normalizeSearchText` (`domain/search.ts`)
-- [ ] Revisão do campo — `df-ui` (`ticket-company-field.tsx`), `df-reviewer`,
+- [x] Revisão do campo — `df-ui` (`ticket-company-field.tsx`), `df-reviewer`,
       `df-qa` T1–T3 e T13–T18
 
 ---
@@ -1323,5 +1323,5 @@ Aceito pelo usuário. Aplicados (decisão do usuário): "Tipo" oculto, "Empresa"
       Aprovações), `px-3` no `DataTable`
 - [x] `tsc`, lint, build · `df-reviewer` aprovado sem achados · `df-qa` 13/14
       e Retestes 1 e 2; L7 pior caso em 1280 aceito como limitação conhecida
-- [ ] Pendência fora do escopo: Cadastros → Pessoas (+304 px) e Tags (+67 px,
+- [x] Pendência fora do escopo: Cadastros → Pessoas (+304 px) e Tags (+67 px,
       "Ações" cortada) rolam em 1280 (`df-ui`)

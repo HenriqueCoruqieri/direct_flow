@@ -654,14 +654,14 @@ priority }` e valida o input completo com `updateTagSchema`.
 
 ## Checklist de encerramento da feature
 
-- [ ] `getRegistryAccess`, `requireRegistryAccess` em `app/_lib/auth/registry-access.ts`; `director.ts` derivado deles (`df-auth`)
-- [ ] `listTags`, `insertTag`, `updateTag`, `updateTagActive`, `findTagDepartment` em `app/_lib/data/tags.ts`, com `priority` gravada e lida; `listDepartmentOptions` em `app/_lib/data/departments.ts` (`df-data`)
-- [ ] `createTag`, `updateTag`, `setTagActive` em `app/_lib/actions/tags.ts` (`df-actions`)
-- [ ] sidebar por acesso; `/registry` com `requireRegistryAccess`; `/registry/departments` com `requireDirector`; `/registry/tags` completa (`df-ui`)
+- [x] `getRegistryAccess`, `requireRegistryAccess` em `app/_lib/auth/registry-access.ts`; `director.ts` derivado deles (`df-auth`)
+- [x] `listTags`, `insertTag`, `updateTag`, `updateTagActive`, `findTagDepartment` em `app/_lib/data/tags.ts`, com `priority` gravada e lida; `listDepartmentOptions` em `app/_lib/data/departments.ts` (`df-data`)
+- [x] `createTag`, `updateTag`, `setTagActive` em `app/_lib/actions/tags.ts` (`df-actions`)
+- [x] sidebar por acesso; `/registry` com `requireRegistryAccess`; `/registry/departments` com `requireDirector`; `/registry/tags` completa (`df-ui`)
 - [ ] membro comum: sem "Cadastros" e 404 em `/registry/tags` e `/registry/departments` (`df-debug`)
 - [ ] admin de setor: vê Pessoas e Tags; 404 em `/registry/departments`; tabela só do setor dele, sem coluna nem filtro de setor (`df-debug`)
 - [ ] admin forjando `departmentId` na criação ou `id` de tag alheia → `FORBIDDEN` (`df-debug`)
 - [ ] nome repetido no setor (outra caixa, inclusive inativa) → `NAME_TAKEN` com a mensagem certa; mesmo nome em outro setor é aceito (`df-debug`)
 - [ ] criar ou reativar em setor inativo → `DEPARTMENT_INACTIVE` (`df-debug`)
 - [ ] rebaixar o admin para membro tira "Cadastros" na próxima navegação, sem novo login (`df-debug`)
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

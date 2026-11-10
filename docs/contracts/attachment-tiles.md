@@ -340,6 +340,6 @@ itens que eles descrevem passa a ser a deste contrato.
 ## Checklist de encerramento
 
 - [x] `ATTACHMENT_KINDS`, `AttachmentKind`, `kind` em `AttachmentTypeSpec` e em cada entrada de `ATTACHMENT_TYPES`, `attachmentKindFor`, `attachmentExtensionLabel`, `describeAttachmentUploadStatus`; plano e este contrato (`df-architect`)
-- [ ] `AttachmentKindIcon`, tokens `--file-*` e `--text-micro`, blocos no `AttachmentUploadItem`, grade no `AttachmentUploader` (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `AttachmentKindIcon`, tokens `--file-*` e `--text-micro`, blocos no `AttachmentUploadItem`, grade no `AttachmentUploader` (`df-ui`)
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

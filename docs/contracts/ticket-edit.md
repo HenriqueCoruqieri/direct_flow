@@ -810,13 +810,13 @@ toque no botão esmaecido: a ferramenta de navegador recusa a ação em elemento
 ## Checklist de encerramento da feature
 
 - [x] `edicao` em `history_event`, migration `0008_ticket_edit`, tipos, `canEditTicket` e demais funções de `domain/ticket-edit.ts`, rótulo e frase de `edicao`, `editTicketSchema`, `TicketDetail.tagId` (`df-architect`)
-- [ ] `tagId` em `findTicketDetail`; `updateTicketByAuthor` em `app/_lib/data/tickets.ts` (`df-data`)
-- [ ] `editTicket` em `app/_lib/actions/tickets.ts` (`df-actions`)
+- [x] `tagId` em `findTicketDetail`; `updateTicketByAuthor` em `app/_lib/data/tickets.ts` (`df-data`)
+- [x] `editTicket` em `app/_lib/actions/tickets.ts` (`df-actions`)
 - [x] `ticketEditBlockFor`, `ticketEditButtonStateFor`, `describeTicketAwaitingApproval`, `TicketEditButtonState` e afins; `canEditTicket` derivada do motivo (`df-architect`)
-- [ ] botão e `EditTicketDialog` no detalhe (`df-ui`)
-- [ ] página por `ticketEditButtonStateFor` e `EditTicketBlockedButton` no estado `blocked` (`df-ui`)
+- [x] ~~botão e `EditTicketDialog` no detalhe (`df-ui`)~~ — obsoleto: substituído pelo modo de edição na página (`assignee-edit-and-assume.md:549`)
+- [x] ~~página por `ticketEditButtonStateFor` e `EditTicketBlockedButton` no estado `blocked` (`df-ui`)~~ — obsoleto: substituído pelo modo de edição na página; removido em `assignee-edit-and-assume.md:549`
 - [x] `describeTicketAwaitingApproval` → `Aguarde a solução ou devolutiva de {setor}` (`df-architect`)
-- [ ] botão esmaecido sem nada no hover/foco, toast com `editButton.message` no clique, toque e `Enter`/`Espaço`, `aria-describedby` para `span` `sr-only`; `app/_components/blocked-action-tooltip.tsx` removido (`df-ui`)
-- [ ] `npm run db:migrate` aplicado pelo usuário
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] ~~botão esmaecido sem nada no hover/foco, toast com `editButton.message` no clique, toque e `Enter`/`Espaço`, `aria-describedby` para `span` `sr-only`; `app/_components/blocked-action-tooltip.tsx` removido (`df-ui`)~~ — obsoleto: substituído pelo modo de edição na página; botão bloqueado removido em `assignee-edit-and-assume.md:549`
+- [x] `npm run db:migrate` aplicado pelo usuário
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

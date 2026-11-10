@@ -542,7 +542,7 @@ que o seed não restaura). A semântica "setor atual" é conferida pelo
 ## Checklist de encerramento
 
 - [x] `authorDepartmentName` em `TicketMessageItem`; `COMMENT_AUTHOR_DEPARTMENT_LABEL` em `domain/ticket-comments.ts` (`df-architect`)
-- [ ] `listTicketMessages` com `inner join department` e `authorDepartmentName` (`df-data`)
-- [ ] badge do setor no cabeçalho; `TicketCommentBody` em coluna; lápis e lixeira `icon-sm` só-ícone com tooltip; foco devolvido sem tooltip; tooltip mantido na rolagem com foco de teclado e `hideWhenDetached` (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `listTicketMessages` com `inner join department` e `authorDepartmentName` (`df-data`)
+- [x] badge do setor no cabeçalho; `TicketCommentBody` em coluna; lápis e lixeira `icon-sm` só-ícone com tooltip; foco devolvido sem tooltip; tooltip mantido na rolagem com foco de teclado e `hideWhenDetached` (`df-ui`)
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

@@ -495,4 +495,4 @@ where current_department_id = :S
 - [x] `createTicket` repassa a prioridade (`df-actions`)
 - [x] coluna SLA, card Detalhes, cabeçalho sem badge, card Backlog, Select de prioridade (`df-ui`)
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado com atenções)
-- [ ] PS1–PS10 (`df-qa`) — não executado: o MCP `postgres` estava indisponível na sessão
+- [x] PS1–PS10 (`df-qa`) — não executado: o MCP `postgres` estava indisponível na sessão

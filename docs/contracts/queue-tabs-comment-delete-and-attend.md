@@ -888,8 +888,8 @@ Ao final: M e A ativos em QA Suporte.
 - [x] `DEPARTMENT_QUEUE_TABS` (7), `DepartmentQueueAssigneeCriterion`, `assignee` nas regras, textos novos e de "Em aberto", `mapDepartmentQueueTabs` (`df-architect`)
 - [x] `TicketCommentDeleteBlockReason`, `DeleteTicketMessageValues`/`Outcome`, `DeleteTicketCommentTarget`, `ticketCommentDeleteBlockFor`, `canDeleteTicketComment`, `buildDeleteTicketCommentTarget`, textos, `deleteTicketCommentSchema` (`df-architect`)
 - [x] `TicketAttend*`, `StartTicketWork*`, `ATTENDABLE_TICKET_STATUS`/`ATTENDED_TICKET_STATUS`, `ticketAttendBlockFor`, `canAttendTicket`, `canAttendTicketDetail`, `isTicketAttendConflict`, `describeTicketAttended`, `describeTicketAttendConflict`, textos, `attendTicketSchema` (`df-architect`)
-- [ ] `queueTabCondition` com critério de destinatário e contagens por `mapDepartmentQueueTabs`; `deleteTicketMessage`; `startTicketWork` (`df-data`)
-- [ ] `deleteTicketComment`; `attendTicket` (`df-actions`)
-- [ ] "Excluir" com `AlertDialog` no item do comentário; "Atender" no cabeçalho nos dois modos (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `queueTabCondition` com critério de destinatário e contagens por `mapDepartmentQueueTabs`; `deleteTicketMessage`; `startTicketWork` (`df-data`)
+- [x] `deleteTicketComment`; `attendTicket` (`df-actions`)
+- [x] "Excluir" com `AlertDialog` no item do comentário; "Atender" no cabeçalho nos dois modos (`df-ui`)
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

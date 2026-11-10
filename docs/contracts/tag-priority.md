@@ -368,8 +368,8 @@ lê a tag nem chama `resolveTicketPriority`.
 
 ## Checklist de encerramento
 
-- [ ] `npm run db:migrate` aplicou `0019_tag_priority`
-- [ ] `df-data`: `listTags`, `listActiveDepartmentTags`, `insertTag`, `updateTag`, `insertTicket`
-- [ ] `df-actions`: `createTag`, `updateTag` (sai `renameTag`)
-- [ ] `df-ui`: coluna, diálogo de edição, trava do Select
-- [ ] `df-reviewer`, `df-qa`
+- [x] `npm run db:migrate` aplicou `0019_tag_priority`
+- [x] `df-data`: `listTags`, `listActiveDepartmentTags`, `insertTag`, `updateTag`, `insertTicket`
+- [x] `df-actions`: `createTag`, `updateTag` (sai `renameTag`)
+- [x] `df-ui`: coluna, diálogo de edição, trava do Select
+- [x] `df-reviewer`, `df-qa`

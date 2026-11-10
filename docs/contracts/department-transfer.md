@@ -2268,19 +2268,19 @@ Etapa 1:
 
 - [x] `AWAITING_APPROVAL_TICKET_STATUS`, `ticketActorBlockFor` exportado, `types/ticket-transfer.ts`, `domain/ticket-transfer.ts`, `sendTicketToDepartmentSchema`, aba `awaiting` + `departmentScope` + `mapMyTicketsTabs`, frase de `transferencia_solicitada`, precedência de `AWAITING_APPROVAL` na edição (`df-architect`)
 - [x] migration de dados `0011_align_legacy_transfers` escrita (`df-architect`)
-- [ ] migration `0011` aplicada no banco de desenvolvimento (`npm run db:migrate`) e TR0 conferido
-- [ ] `requestTicketTransfer`; `departmentScope` em `tabCondition`; contagens por `mapMyTicketsTabs` (`df-data`)
-- [ ] `sendTicketToDepartment` (`df-actions`)
-- [ ] botão e diálogo no detalhe; saída sem acesso (`df-ui`)
-- [ ] cenários TR (`df-qa`)
+- [x] migration `0011` aplicada no banco de desenvolvimento (`npm run db:migrate`) e TR0 conferido
+- [x] `requestTicketTransfer`; `departmentScope` em `tabCondition`; contagens por `mapMyTicketsTabs` (`df-data`)
+- [x] `sendTicketToDepartment` (`df-actions`)
+- [x] botão e diálogo no detalhe; saída sem acesso (`df-ui`)
+- [x] cenários TR (`df-qa`)
 
 Etapa 2:
 
 - [x] tipos, regra de revisão, `ticketAttendKindFor`, `ticketAttendTargetFor`, `acceptTicketTransferSchema`, frase de `transferencia_aprovada`, remover `TICKET_TRANSFER_SOON_MESSAGE` (`df-architect`, 2026-10-09)
-- [ ] `approveTicketTransfer` (`df-data`) · `acceptTicketTransfer` (`df-actions`) · "Atender" com os dois casos (`df-ui`) · cenários AC (`df-qa`)
+- [x] `approveTicketTransfer` (`df-data`) · `acceptTicketTransfer` (`df-actions`) · "Atender" com os dois casos (`df-ui`) · cenários AC (`df-qa`)
 
 Etapa 3:
 
 - [x] enum + migration `0012` (gerada, não aplicada), mapas com `recusado`, `isAttendableStatus`/`ATTENDABLE_TICKET_STATUSES`, aba Encaminhados, regra e textos da recusa, `canFollowTicketTransferReview`, `TRANSFER_DECLINED`, `declineTicketTransferSchema`, frases de `transferencia_rejeitada` e (revisão) `transferencia_solicitada` (`df-architect`, 2026-10-09)
-- [ ] migration `0012` aplicada no banco de desenvolvimento (`npm run db:migrate`) e RJ1 conferido
-- [ ] `rejectTicketTransfer` e passo 3 revisado de `approveTicketTransfer` (`df-data`) · `declineTicketTransfer` (`df-actions`) · "Recusar", diálogo e selo (`df-ui`) · cenários RJ (`df-qa`)
+- [x] migration `0012` aplicada no banco de desenvolvimento (`npm run db:migrate`) e RJ1 conferido
+- [x] `rejectTicketTransfer` e passo 3 revisado de `approveTicketTransfer` (`df-data`) · `declineTicketTransfer` (`df-actions`) · "Recusar", diálogo e selo (`df-ui`) · cenários RJ (`df-qa`)

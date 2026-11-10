@@ -889,13 +889,13 @@ com cabeçalho `Next-Action` na aba de rede.
 ## Checklist de encerramento da feature
 
 - [x] schema, migration `0007`, tipos, domínio e `createTicketSchema` (`df-architect`)
-- [ ] `listActiveDepartmentTags` em `app/_lib/data/tags.ts`; `insertTicket` em `app/_lib/data/tickets.ts` (`df-data`)
-- [ ] `createTicket` em `app/_lib/actions/tickets.ts` (`df-actions`)
-- [ ] `AppTopBarFrame`, `AppTopBar` async, `NewTicketDialog`, `NewTicketBlockedButton`; `error.tsx` sem import de `AppTopBar` (`df-ui`)
-- [ ] botão bloqueado sem nada no hover/foco, toast com o motivo no clique, toque e `Enter`/`Espaço`, `aria-describedby` para `span` `sr-only`; `app/_components/blocked-action-tooltip.tsx` removido (`df-ui`)
-- [ ] `npm run db:migrate` aplicado pelo usuário
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `listActiveDepartmentTags` em `app/_lib/data/tags.ts`; `insertTicket` em `app/_lib/data/tickets.ts` (`df-data`)
+- [x] `createTicket` em `app/_lib/actions/tickets.ts` (`df-actions`)
+- [x] `AppTopBarFrame`, `AppTopBar` async, `NewTicketDialog`, `NewTicketBlockedButton`; `error.tsx` sem import de `AppTopBar` (`df-ui`)
+- [x] botão bloqueado sem nada no hover/foco, toast com o motivo no clique, toque e `Enter`/`Espaço`, `aria-describedby` para `span` `sr-only`; `app/_components/blocked-action-tooltip.tsx` removido (`df-ui`)
+- [x] `npm run db:migrate` aplicado pelo usuário
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`
 
 Revisão de 2026-10-02 (criação sem destino), entregue com
 `docs/contracts/ticket-resolution.md`:

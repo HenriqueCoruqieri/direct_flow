@@ -965,6 +965,6 @@ where a.ticket_id = <N> order by a.id;
 - [x] `requestAttachmentUpload`; `createTicket`; `app/api/attachments/[id]/route.ts` (`df-actions`)
 - [x] `TicketAttachments` e `page.tsx` (Onda 1); `AttachmentUploader`, `AttachmentUploadItem`, `useAttachmentUploads`, `NewTicketDialog` e remoção de `new-ticket-attachments.tsx` (Onda 2) (`df-ui`)
 - [x] correções do `df-reviewer`: `isSafeAttachmentFileName` recusa C1 e marcas de direção; ADR 018 e este contrato alinhados ao entregue (`df-architect`)
-- [ ] configuração do painel da Cloudflare (usuário)
-- [ ] cenários do `df-qa`
+- [x] configuração do painel da Cloudflare (usuário)
+- [x] cenários do `df-qa`
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

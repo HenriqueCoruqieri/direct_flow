@@ -548,6 +548,6 @@ de um formulário legítimo aberto em outro chamado.
 - [x] `updateTicketByAssignee` (renomeada, `editorId`, `assignedTo` na regra); `updateTicketResolution` com `resolutionAssigneeFor` e `atribuicao`; `seedQa` com destinatário nos chamados da janela (`df-data`)
 - [x] `editTicket` chamando `updateTicketByAssignee` com `editorId` (`df-actions`)
 - [x] `page.tsx` com `canEditTicketDetail` e `ticketAssumeTargetFor`; `AssumeTicketButton` (`app/(app)/tickets/[id]/_components/assume-ticket-button.tsx`); hook `app/(app)/_hooks/use-ticket-action.ts` (`useTicketAction`; era `use-assume-ticket.ts`, revisão de 2026-10-12), usado também por `queue-row-actions.tsx` e pelo "Atender"; `TicketDetailHeader` com `assumeTarget` e sem `action`; `edit-ticket-blocked-button.tsx` removido (`df-ui`)
-- [ ] seed QA rodado de novo pelo usuário (`SEED_QA=true`)
+- [x] seed QA rodado de novo pelo usuário (`SEED_QA=true`)
 - [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

@@ -644,8 +644,8 @@ Admin Suporte precisa estar **ativo** e QA Admin Infra continua como estava.
 ## Checklist de encerramento da feature
 
 - [x] tipos (`AssigneeOption`, `TicketAssigneeFacts`, `TicketCreatorFacts`, `TicketInvalidAssignee`, `NewTicketFormDefaults`, `assigneeId`/`assignedTo`/`assignee` na edição, `changedById`/`toAssigneeId` no histórico), `domain/ticket-assignee.ts`, `buildNewTicketFormOptions` e `buildTicketEditFormOptions` com atribuíveis, `tagHint`/`tagEditHintFor`/`UNAVAILABLE_TAG_HINT`, diff e nota com destinatário, frases de `criacao` e `atribuicao`, `assigneeId` em `createTicketSchema` (`df-architect`)
-- [ ] `listTicketAssigneeOptions`; `findTicketDetail` com `changedById`/`toAssigneeId`; `insertTicket` e `updateTicketByAuthor` com destinatário (`df-data`)
-- [ ] `createTicket`/`editTicket` com `INVALID_ASSIGNEE`; `createTicket` revalida `MY_TICKETS_PATH` (`df-actions`)
-- [ ] `AppTopBar` com atribuíveis e criador; `NewTicketDialog` com Criador e Destinatário; detalhe com rótulos e combobox na edição (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] `listTicketAssigneeOptions`; `findTicketDetail` com `changedById`/`toAssigneeId`; `insertTicket` e `updateTicketByAuthor` com destinatário (`df-data`)
+- [x] `createTicket`/`editTicket` com `INVALID_ASSIGNEE`; `createTicket` revalida `MY_TICKETS_PATH` (`df-actions`)
+- [x] `AppTopBar` com atribuíveis e criador; `NewTicketDialog` com Criador e Destinatário; detalhe com rótulos e combobox na edição (`df-ui`)
+- [x] cenários do `df-qa`
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`

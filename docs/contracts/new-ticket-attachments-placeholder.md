@@ -321,6 +321,6 @@ criados começam com `[QA]`; criação só em QA Suporte. **Não alterar #65 a
 ## Checklist de encerramento
 
 - [x] constantes em `app/_lib/domain/ticket.ts`; `TICKET_ATTACHMENTS_SOON_MESSAGE` fora de `ticket-resolution.ts` (`df-architect`)
-- [ ] `git mv` para `app/(app)/_components/attachments-soon-button.tsx` (`AttachmentsSoonButton`, textos do domínio), `ResolveTicketForm` com o nome novo, seção `Anexos` no `NewTicketDialog` (`df-ui`)
-- [ ] cenários do `df-qa`
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`
+- [x] ~~`git mv` para `app/(app)/_components/attachments-soon-button.tsx` (`AttachmentsSoonButton`, textos do domínio), `ResolveTicketForm` com o nome novo, seção `Anexos` no `NewTicketDialog` (`df-ui`)~~ — obsoleto: componente apagado (`ticket-attachments-on-resolution.md:549`)
+- [x] ~~cenários do `df-qa`~~ — obsoleto: componente apagado (`ticket-attachments-on-resolution.md:549`)
+- [x] ~~`npx tsc --noEmit`, `npm run lint`, `npm run build`~~ — obsoleto: componente apagado (`ticket-attachments-on-resolution.md:549`)

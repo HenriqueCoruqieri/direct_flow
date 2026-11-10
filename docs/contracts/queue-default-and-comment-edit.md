@@ -956,7 +956,7 @@ A publica `[QA] Público do admin`. Anotar os ids das três mensagens (`m1`,
 
 ## Checklist de encerramento
 
-- [ ] Etapa 1 — `DataTable` com coluna oculta; Fila sem Criador e Destinatário (`df-ui`)
+- [x] Etapa 1 — `DataTable` com coluna oculta; Fila sem Criador e Destinatário (`df-ui`)
 - [x] Etapa 2 — tipos, `queueAssigneeLabel`, `describeTicketAssignee`, `preselectedAssigneeId`/`assigneeEditHintFor` com nulo, `buildNewTicketFormOptions` com setor, `queueLabel` na edição, textos do "Enviar", `assigneeId` nulo-ável (`df-architect`)
 - [x] Etapa 2 — `findDepartmentName`, `insertTicket` e `updateTicketByAuthor` com fila (`df-data`)
 - [x] Etapa 2 — `AppTopBar`, campo, formulários e detalhe (`df-ui`)
@@ -970,5 +970,5 @@ A publica `[QA] Público do admin`. Anotar os ids das três mensagens (`m1`,
 - [x] Etapa 6 — `listTicketMessages` com `authorId`/`updatedAt` e `updateTicketMessage` (`df-data`)
 - [x] Etapa 6 — `editTicketComment` (`df-actions`)
 - [x] Etapa 6 — "(editado)", botão "Editar" e edição em linha (`df-ui`)
-- [ ] Cenários do `df-qa` (bateria inteira, uma vez)
-- [ ] Em cada etapa: `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem bloqueante
+- [x] Cenários do `df-qa` (bateria inteira, uma vez)
+- [x] Em cada etapa: `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` sem bloqueante
