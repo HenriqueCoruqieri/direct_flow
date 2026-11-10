@@ -37,6 +37,8 @@ interface ComboboxProps<TValue extends string | number> {
   ref?: Ref<HTMLButtonElement>
   "aria-invalid"?: boolean
   "aria-describedby"?: string
+  "aria-required"?: boolean
+  "aria-labelledby"?: string
 }
 
 const matchesSearch = (
@@ -64,6 +66,8 @@ const Combobox = <TValue extends string | number>({
   ref,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
+  "aria-required": ariaRequired,
+  "aria-labelledby": ariaLabelledBy,
 }: ComboboxProps<TValue>) => {
   const [open, setOpen] = useState(false)
   const selected = options.find((option) => option.value === value) ?? null
@@ -86,6 +90,8 @@ const Combobox = <TValue extends string | number>({
           onBlur={onBlur}
           aria-invalid={ariaInvalid}
           aria-describedby={ariaDescribedBy}
+          aria-required={ariaRequired}
+          aria-labelledby={ariaLabelledBy}
           data-placeholder={selected === null || undefined}
           className="w-full justify-between border-input bg-transparent pr-2 pl-2.5 font-normal data-placeholder:text-muted-foreground"
         >

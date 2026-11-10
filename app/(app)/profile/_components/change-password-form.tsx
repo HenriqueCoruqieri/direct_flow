@@ -2,16 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
+import FormField from "@/app/_components/form-field"
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/app/_components/ui/field"
+import { FieldGroup } from "@/app/_components/ui/field"
 import { Input } from "@/app/_components/ui/input"
 import { changePassword } from "@/app/_lib/actions/profile"
 import {
@@ -92,58 +89,49 @@ const ChangePasswordForm = () => {
   }
 
   return (
-    <form
-      noValidate
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="flex flex-col gap-5"
-    >
-      <FieldGroup className="gap-4">
-        {PASSWORD_FIELDS.map((config) => (
-          <Controller
-            key={config.name}
-            name={config.name}
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel htmlFor={config.id}>{config.label}</FieldLabel>
+    <FormSchemaProvider form={form} schema={changePasswordSchema}>
+      <form
+        noValidate
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-5"
+      >
+        <FieldGroup className="gap-4">
+          {PASSWORD_FIELDS.map((config) => (
+            <FormField
+              key={config.name}
+              control={form.control}
+              name={config.name}
+              label={config.label}
+              id={config.id}
+            >
+              {(field) => (
                 <Input
                   {...field}
-                  id={config.id}
                   type="password"
                   autoComplete={config.autoComplete}
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={
-                    fieldState.invalid ? `${config.id}-error` : undefined
-                  }
                 />
-                {fieldState.invalid ? (
-                  <FieldError
-                    id={`${config.id}-error`}
-                    errors={[fieldState.error]}
-                  />
-                ) : null}
-              </Field>
-            )}
-          />
-        ))}
-      </FieldGroup>
+              )}
+            </FormField>
+          ))}
+        </FieldGroup>
 
-      <div>
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          aria-busy={isSubmitting || undefined}
-        >
-          {isSubmitting ? (
-            <Loader2Icon
-              aria-hidden="true"
-              className="size-4 animate-spin motion-reduce:animate-none"
-            />
-          ) : null}
-          {isSubmitting ? "Alterando…" : "Alterar senha"}
-        </Button>
-      </div>
-    </form>
+        <div>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting || undefined}
+          >
+            {isSubmitting ? (
+              <Loader2Icon
+                aria-hidden="true"
+                className="size-4 animate-spin motion-reduce:animate-none"
+              />
+            ) : null}
+            {isSubmitting ? "Alterando…" : "Alterar senha"}
+          </Button>
+        </div>
+      </form>
+    </FormSchemaProvider>
   )
 }
 

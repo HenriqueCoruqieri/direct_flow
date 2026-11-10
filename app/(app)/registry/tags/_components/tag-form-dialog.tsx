@@ -2,11 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, PencilIcon, PlusIcon } from "lucide-react"
-import { useId, useState } from "react"
-import { Controller, type DefaultValues, useForm } from "react-hook-form"
+import { useState } from "react"
+import { type DefaultValues, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import Combobox from "@/app/_components/combobox"
+import FormField from "@/app/_components/form-field"
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
 import {
   Dialog,
@@ -18,12 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/app/_components/ui/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/app/_components/ui/field"
 import { Input } from "@/app/_components/ui/input"
 import {
   Select,
@@ -85,9 +81,6 @@ const initialValuesFor = (
 }
 
 const TagFormDialog = (props: TagFormDialogProps) => {
-  const nameId = useId()
-  const departmentId = useId()
-  const priorityId = useId()
   const [open, setOpen] = useState(false)
 
   const form = useForm<CreateTagFormValues, unknown, CreateTagInput>({
@@ -130,12 +123,6 @@ const TagFormDialog = (props: TagFormDialogProps) => {
     toast.error(result.message)
   }
 
-  const nameErrorId = `${nameId}-error`
-  const nameHintId = `${nameId}-hint`
-  const departmentErrorId = `${departmentId}-error`
-  const priorityErrorId = `${priorityId}-error`
-  const priorityHintId = `${priorityId}-hint`
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -158,110 +145,76 @@ const TagFormDialog = (props: TagFormDialogProps) => {
       </DialogTrigger>
 
       <DialogContent className="gap-6 p-6">
-        <form
-          noValidate
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
-        >
-          <DialogHeader>
-            <DialogTitle>{isEdit ? "Editar tag" : "Nova tag"}</DialogTitle>
-            <DialogDescription>
-              {isEdit
-                ? "O novo nome aparece em todos os chamados que usam a tag. A prioridade vale só para chamados abertos daqui em diante."
-                : "A tag é criada ativa e passa a ser oferecida nos chamados do setor."}
-            </DialogDescription>
-          </DialogHeader>
+        <FormSchemaProvider form={form} schema={createTagSchema}>
+          <form
+            noValidate
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col gap-6"
+          >
+            <DialogHeader>
+              <DialogTitle>{isEdit ? "Editar tag" : "Nova tag"}</DialogTitle>
+              <DialogDescription>
+                {isEdit
+                  ? "O novo nome aparece em todos os chamados que usam a tag. A prioridade vale só para chamados abertos daqui em diante."
+                  : "A tag é criada ativa e passa a ser oferecida nos chamados do setor."}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="flex flex-col gap-4">
-            {departmentChoices ? (
-              <Controller
-                name="departmentId"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                    <FieldLabel htmlFor={departmentId}>Setor</FieldLabel>
+            <div className="flex flex-col gap-4">
+              {departmentChoices ? (
+                <FormField
+                  control={form.control}
+                  name="departmentId"
+                  label="Setor"
+                >
+                  {(field) => (
                     <Combobox
-                      id={departmentId}
                       ref={field.ref}
-                      options={departmentChoices.map((option) => ({
-                        value: option.id,
-                        label: option.name,
-                      }))}
+                      id={field.id}
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
                       disabled={field.disabled}
+                      aria-invalid={field["aria-invalid"]}
+                      aria-describedby={field["aria-describedby"]}
+                      aria-required={field["aria-required"]}
+                      aria-labelledby={field["aria-labelledby"]}
+                      options={departmentChoices.map((option) => ({
+                        value: option.id,
+                        label: option.name,
+                      }))}
                       placeholder="Selecione o setor"
                       searchPlaceholder="Buscar setor…"
-                      aria-invalid={fieldState.invalid}
-                      aria-describedby={
-                        fieldState.invalid ? departmentErrorId : undefined
-                      }
                     />
-                    {fieldState.invalid ? (
-                      <FieldError
-                        id={departmentErrorId}
-                        errors={[fieldState.error]}
-                      />
-                    ) : null}
-                  </Field>
-                )}
-              />
-            ) : null}
-
-            <Controller
-              name="name"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={nameId}>Nome da tag</FieldLabel>
-                  <Input
-                    {...field}
-                    id={nameId}
-                    autoComplete="off"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? nameErrorId : nameHintId
-                    }
-                  />
-                  {fieldState.invalid ? (
-                    <FieldError id={nameErrorId} errors={[fieldState.error]} />
-                  ) : (
-                    <FieldDescription id={nameHintId}>
-                      Nomes iguais no mesmo setor não são aceitos, mesmo com
-                      outra caixa ou de tag inativa.
-                    </FieldDescription>
                   )}
-                </Field>
-              )}
-            />
+                </FormField>
+              ) : null}
 
-            <Controller
-              name="priority"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={priorityId}>
-                    {TICKET_PRIORITY_FIELD_LABEL}
-                  </FieldLabel>
+              <FormField
+                control={form.control}
+                name="name"
+                label="Nome da tag"
+                description="Nomes iguais no mesmo setor não são aceitos, mesmo com outra caixa ou de tag inativa."
+              >
+                {(field) => <Input {...field} autoComplete="off" />}
+              </FormField>
+
+              <FormField
+                control={form.control}
+                name="priority"
+                label={TICKET_PRIORITY_FIELD_LABEL}
+                description={TAG_PRIORITY_FIELD_HINT}
+              >
+                {({ name, value, onChange, disabled, ...trigger }) => (
                   <Select
-                    name={field.name}
-                    value={tagPriorityToSelectValue(field.value ?? null)}
+                    name={name}
+                    value={tagPriorityToSelectValue(value ?? null)}
                     onValueChange={(next) =>
-                      field.onChange(tagPriorityFromSelectValue(next))
+                      onChange(tagPriorityFromSelectValue(next))
                     }
-                    disabled={field.disabled}
+                    disabled={disabled}
                   >
-                    <SelectTrigger
-                      ref={field.ref}
-                      id={priorityId}
-                      onBlur={field.onBlur}
-                      aria-invalid={fieldState.invalid}
-                      aria-describedby={
-                        fieldState.invalid ? priorityErrorId : priorityHintId
-                      }
-                      className="w-full"
-                    >
+                    <SelectTrigger {...trigger} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -272,46 +225,36 @@ const TagFormDialog = (props: TagFormDialogProps) => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {fieldState.invalid ? (
-                    <FieldError
-                      id={priorityErrorId}
-                      errors={[fieldState.error]}
-                    />
-                  ) : (
-                    <FieldDescription id={priorityHintId}>
-                      {TAG_PRIORITY_FIELD_HINT}
-                    </FieldDescription>
-                  )}
-                </Field>
-              )}
-            />
-          </div>
+                )}
+              </FormField>
+            </div>
 
-          <DialogFooter className="-mx-6 -mb-6 p-4">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={isSubmitting}>
-                Cancelar
+            <DialogFooter className="-mx-6 -mb-6 p-4">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={isSubmitting}>
+                  Cancelar
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting || undefined}
+              >
+                {isSubmitting ? (
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                ) : null}
+                {isSubmitting
+                  ? "Salvando…"
+                  : isEdit
+                    ? "Salvar alterações"
+                    : "Criar tag"}
               </Button>
-            </DialogClose>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting || undefined}
-            >
-              {isSubmitting ? (
-                <Loader2Icon
-                  aria-hidden="true"
-                  className="size-4 animate-spin motion-reduce:animate-none"
-                />
-              ) : null}
-              {isSubmitting
-                ? "Salvando…"
-                : isEdit
-                  ? "Salvar alterações"
-                  : "Criar tag"}
-            </Button>
-          </DialogFooter>
-        </form>
+            </DialogFooter>
+          </form>
+        </FormSchemaProvider>
       </DialogContent>
     </Dialog>
   )

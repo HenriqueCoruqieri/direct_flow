@@ -2,16 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, PencilIcon, PlusIcon } from "lucide-react"
-import { useId, useState } from "react"
-import {
-  Controller,
-  type DefaultValues,
-  useForm,
-  useWatch,
-} from "react-hook-form"
+import { useState } from "react"
+import { type DefaultValues, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import Combobox from "@/app/_components/combobox"
+import FormField from "@/app/_components/form-field"
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
 import {
   Dialog,
@@ -23,12 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/app/_components/ui/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/app/_components/ui/field"
 import { Input } from "@/app/_components/ui/input"
 import {
   Select,
@@ -107,10 +98,6 @@ const initialValuesFor = (
 }
 
 const PersonFormDialog = (props: PersonFormDialogProps) => {
-  const nameId = useId()
-  const emailId = useId()
-  const departmentId = useId()
-  const roleId = useId()
   const [open, setOpen] = useState(false)
 
   const form = useForm<CreatePersonInput>({
@@ -171,12 +158,6 @@ const PersonFormDialog = (props: PersonFormDialogProps) => {
     toast.error(result.message)
   }
 
-  const nameErrorId = `${nameId}-error`
-  const emailErrorId = `${emailId}-error`
-  const departmentErrorId = `${departmentId}-error`
-  const roleErrorId = `${roleId}-error`
-  const roleHintId = `${roleId}-hint`
-
   const roleHint =
     forcedRole !== null
       ? `Na Diretoria o papel é sempre ${ROLE_LABELS[forcedRole]}.`
@@ -206,134 +187,83 @@ const PersonFormDialog = (props: PersonFormDialogProps) => {
       </DialogTrigger>
 
       <DialogContent className="gap-6 p-6">
-        <form
-          noValidate
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
-        >
-          <DialogHeader>
-            <DialogTitle>
-              {isEdit ? "Editar pessoa" : "Nova pessoa"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEdit
-                ? "Atualize os dados de cadastro da pessoa."
-                : "A pessoa entra com a senha padrão e define a própria senha no primeiro acesso."}
-            </DialogDescription>
-          </DialogHeader>
+        <FormSchemaProvider form={form} schema={createPersonSchema}>
+          <form
+            noValidate
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col gap-6"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                {isEdit ? "Editar pessoa" : "Nova pessoa"}
+              </DialogTitle>
+              <DialogDescription>
+                {isEdit
+                  ? "Atualize os dados de cadastro da pessoa."
+                  : "A pessoa entra com a senha padrão e define a própria senha no primeiro acesso."}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="flex flex-col gap-4">
-            <Controller
-              name="name"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={nameId}>Nome</FieldLabel>
+            <div className="flex flex-col gap-4">
+              <FormField control={form.control} name="name" label="Nome">
+                {(field) => <Input {...field} autoComplete="off" />}
+              </FormField>
+
+              <FormField control={form.control} name="email" label="E-mail">
+                {(field) => (
                   <Input
                     {...field}
-                    id={nameId}
-                    autoComplete="off"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? nameErrorId : undefined
-                    }
-                  />
-                  {fieldState.invalid ? (
-                    <FieldError id={nameErrorId} errors={[fieldState.error]} />
-                  ) : null}
-                </Field>
-              )}
-            />
-
-            <Controller
-              name="email"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                  <FieldLabel htmlFor={emailId}>E-mail</FieldLabel>
-                  <Input
-                    {...field}
-                    id={emailId}
                     type="email"
                     autoComplete="off"
                     spellCheck={false}
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={
-                      fieldState.invalid ? emailErrorId : undefined
-                    }
                   />
-                  {fieldState.invalid ? (
-                    <FieldError id={emailErrorId} errors={[fieldState.error]} />
-                  ) : null}
-                </Field>
-              )}
-            />
+                )}
+              </FormField>
 
-            {departmentChoices ? (
-              <Controller
-                name="departmentId"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                    <FieldLabel htmlFor={departmentId}>Setor</FieldLabel>
+              {departmentChoices ? (
+                <FormField
+                  control={form.control}
+                  name="departmentId"
+                  label="Setor"
+                >
+                  {(field) => (
                     <Combobox
-                      id={departmentId}
                       ref={field.ref}
-                      options={departmentChoices.map((option) => ({
-                        value: option.id,
-                        label: departmentOptionLabel(option),
-                      }))}
+                      id={field.id}
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
                       disabled={field.disabled}
+                      aria-invalid={field["aria-invalid"]}
+                      aria-describedby={field["aria-describedby"]}
+                      aria-required={field["aria-required"]}
+                      aria-labelledby={field["aria-labelledby"]}
+                      options={departmentChoices.map((option) => ({
+                        value: option.id,
+                        label: departmentOptionLabel(option),
+                      }))}
                       placeholder="Selecione o setor"
                       searchPlaceholder="Buscar setor…"
-                      aria-invalid={fieldState.invalid}
-                      aria-describedby={
-                        fieldState.invalid ? departmentErrorId : undefined
-                      }
                     />
-                    {fieldState.invalid ? (
-                      <FieldError
-                        id={departmentErrorId}
-                        errors={[fieldState.error]}
-                      />
-                    ) : null}
-                  </Field>
-                )}
-              />
-            ) : null}
+                  )}
+                </FormField>
+              ) : null}
 
-            {showRole ? (
-              <Controller
-                name="role"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                    <FieldLabel htmlFor={roleId}>Papel</FieldLabel>
+              {showRole ? (
+                <FormField
+                  control={form.control}
+                  name="role"
+                  label="Papel"
+                  description={roleHint}
+                >
+                  {({ name, value, onChange, disabled, ...trigger }) => (
                     <Select
-                      name={field.name}
-                      value={forcedRole ?? field.value ?? ""}
-                      onValueChange={(value) =>
-                        field.onChange(roleFromValue(value))
-                      }
-                      disabled={field.disabled || forcedRole !== null}
+                      name={name}
+                      value={forcedRole ?? value ?? ""}
+                      onValueChange={(next) => onChange(roleFromValue(next))}
+                      disabled={disabled || forcedRole !== null}
                     >
-                      <SelectTrigger
-                        id={roleId}
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        aria-invalid={fieldState.invalid}
-                        aria-describedby={
-                          fieldState.invalid
-                            ? roleErrorId
-                            : roleHint !== null
-                              ? roleHintId
-                              : undefined
-                        }
-                        className="w-full"
-                      >
+                      <SelectTrigger {...trigger} className="w-full">
                         <SelectValue placeholder="Selecione o papel" />
                       </SelectTrigger>
                       <SelectContent>
@@ -344,47 +274,37 @@ const PersonFormDialog = (props: PersonFormDialogProps) => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {fieldState.invalid ? (
-                      <FieldError
-                        id={roleErrorId}
-                        errors={[fieldState.error]}
-                      />
-                    ) : roleHint !== null ? (
-                      <FieldDescription id={roleHintId}>
-                        {roleHint}
-                      </FieldDescription>
-                    ) : null}
-                  </Field>
-                )}
-              />
-            ) : null}
-          </div>
-
-          <DialogFooter className="-mx-6 -mb-6 p-4">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={isSubmitting}>
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting || undefined}
-            >
-              {isSubmitting ? (
-                <Loader2Icon
-                  aria-hidden="true"
-                  className="size-4 animate-spin motion-reduce:animate-none"
-                />
+                  )}
+                </FormField>
               ) : null}
-              {isSubmitting
-                ? "Salvando…"
-                : isEdit
-                  ? "Salvar alterações"
-                  : "Cadastrar pessoa"}
-            </Button>
-          </DialogFooter>
-        </form>
+            </div>
+
+            <DialogFooter className="-mx-6 -mb-6 p-4">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={isSubmitting}>
+                  Cancelar
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting || undefined}
+              >
+                {isSubmitting ? (
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                ) : null}
+                {isSubmitting
+                  ? "Salvando…"
+                  : isEdit
+                    ? "Salvar alterações"
+                    : "Cadastrar pessoa"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </FormSchemaProvider>
       </DialogContent>
     </Dialog>
   )

@@ -11,8 +11,8 @@ Versões observadas: `zod@4.6.5`, `react-hook-form@7.88`, `next@16.3.5`.
 | Etapa | Escopo                                                                                                   | Estado                                                                                  |
 | ----- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | 1     | Helpers puros (`df-architect`), `FormField` + `FormSchemaProvider` (`df-ui`), Dialog de Empresas migrado | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-1.md)) |
-| 2     | Setores, Pessoas, Tags e Perfil (trocar senha) migrados. **Pausa** depois dela                           | pendente                                                                                |
-| 3     | Formulários de chamado (novo, editar, resolver, comentar, enviar, recusar) — escopo decidido depois      | a decidir                                                                               |
+| 2     | Setores, Pessoas, Tags e Perfil (trocar senha) migrados. **Pausa** depois dela                           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-2.md)) |
+| 3     | Formulários de chamado (novo, editar, resolver, comentar, enviar, recusar) e `ComboboxField`             | aguardando decisão do usuário                                                           |
 
 ## Decisões fixadas pelo usuário
 
@@ -335,18 +335,21 @@ Feita depois da entrega do `df-ui`, sem mais uso no projeto. **Removidos**:
 
 ## Etapa 2 — Setores, Pessoas, Tags e Perfil (`df-ui`)
 
-| Formulário                                                    | Schema no provider       | `required` explícito | `*` esperado                                  |
-| ------------------------------------------------------------- | ------------------------ | -------------------- | --------------------------------------------- |
-| `registry/departments/_components/department-form-dialog.tsx` | `createDepartmentSchema` | —                    | Nome do setor                                 |
-| `registry/people/_components/person-form-dialog.tsx`          | `createPersonSchema`     | —                    | Nome, E-mail, Setor; Papel sem `*`            |
-| `registry/tags/_components/tag-form-dialog.tsx`               | `createTagSchema`        | —                    | Setor, Nome da tag; Prioridade sem `*`        |
-| `profile/_components/change-password-form.tsx`                | `changePasswordSchema`   | —                    | Senha atual, Nova senha, Confirmar nova senha |
+| Formulário                                                    | Schema no provider       | `required` explícito | `*` esperado                                        |
+| ------------------------------------------------------------- | ------------------------ | -------------------- | --------------------------------------------------- |
+| `registry/departments/_components/department-form-dialog.tsx` | `createDepartmentSchema` | —                    | Nome do setor                                       |
+| `registry/people/_components/person-form-dialog.tsx`          | `createPersonSchema`     | —                    | Nome, E-mail, Setor (só Diretor); Papel sem `*`     |
+| `registry/tags/_components/tag-form-dialog.tsx`               | `createTagSchema`        | —                    | Setor (só Diretor), Nome da tag; Prioridade sem `*` |
+| `profile/_components/change-password-form.tsx`                | `changePasswordSchema`   | —                    | Senha atual, Nova senha, Confirmar nova senha       |
 
 - O `FieldDescription` de Setores ("Nomes iguais não são aceitos…") vai pela
   prop `description`.
 - `confirmPassword`: o `*` some quando há qualquer texto (o schema do campo é
   só `min(1)`); "as senhas não conferem" é refinamento do objeto e aparece só
   ao salvar, como erro. Esperado, não é falha.
+- Para o Administrador de setor, "Nova pessoa" mostra só Nome e E-mail (Setor e
+  Papel ficam fixos e não aparecem) e "Nova tag" não mostra Setor (fixo no
+  setor dele). O `*` em Setor vale só para o Diretor.
 - Se o schema do provider de algum formulário for diferente do do
   `zodResolver`, o `df-ui` para e reporta.
 
@@ -400,18 +403,18 @@ Nenhum erro nem aviso no console/dev server em todos (MCP `next-devtools`).
 
 ### Etapa 2 — Setores, Pessoas, Tags, Perfil
 
-| #   | Quem  | Ação                                                        | Esperado                                                                                                                                        |
-| --- | ----- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| G1  | D     | "Novo setor"; digitar 1 caractere, depois 3                 | `*` em "Nome do setor"; dica "Nomes iguais…" visível; `*` fica com 1 e some com 3; sem erro até salvar                                          |
-| G2  | D     | salvar vazio; depois nome de setor existente                | erro no campo com foco; a dica é substituída pelo erro; `NAME_TAKEN` no campo                                                                   |
-| G3  | D     | "Renomear" um setor                                         | abre sem `*`; apagar o nome faz voltar                                                                                                          |
-| G4  | D / A | "Nova pessoa"                                               | `*` em Nome, E-mail, Setor; **sem** `*` em Papel; e-mail `abc` mantém o `*`, e-mail válido o tira                                               |
-| G5  | D     | salvar pessoa vazia; depois criar `[QA]` válida             | erros nos três obrigatórios, foco no primeiro; criação com toast                                                                                |
-| G6  | D / A | "Nova tag"                                                  | `*` em Setor e Nome da tag; **sem** `*` em Prioridade; salvar vazio dá erro nos dois; criar com "Sem prioridade" funciona                       |
-| G7  | D / A | "Editar" uma tag sem prioridade                             | abre sem `*` nenhum (prioridade `null` não é obrigatória)                                                                                       |
-| G8  | M     | Perfil → trocar senha                                       | `*` nos três campos; somem ao preencher (Nova senha só com 8+); senhas diferentes → erro só ao salvar em "Confirmar"; nova igual à atual → erro |
-| G9  | M     | trocar senha com sucesso (e restaurar a senha de QA depois) | toast de sucesso, campos limpos com `*` de volta                                                                                                |
-| G10 | todos | inspecionar os quatro formulários                           | `aria-required` só nos obrigatórios; `aria-invalid`/`aria-describedby` como F6; nenhuma legenda "Campos com \*…"                                |
+| #   | Quem  | Ação                                                        | Esperado                                                                                                                                                                                   |
+| --- | ----- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| G1  | D     | "Novo setor"; digitar 1 caractere, depois 3                 | `*` em "Nome do setor"; dica "Nomes iguais…" visível; `*` fica com 1 e some com 3; sem erro até salvar                                                                                     |
+| G2  | D     | salvar vazio; depois nome de setor existente                | erro no campo com foco; a dica é substituída pelo erro; `NAME_TAKEN` no campo                                                                                                              |
+| G3  | D     | "Renomear" um setor                                         | abre sem `*`; apagar o nome faz voltar                                                                                                                                                     |
+| G4  | D / A | "Nova pessoa"                                               | D: `*` em Nome, E-mail, Setor; **sem** `*` em Papel. A: só Nome e E-mail visíveis, ambos com `*`. Nos dois, e-mail `abc` mantém o `*`, e-mail válido o tira                                |
+| G5  | D     | salvar pessoa vazia; depois criar `[QA]` válida             | erros nos três obrigatórios, foco no primeiro; criação com toast                                                                                                                           |
+| G6  | D / A | "Nova tag"                                                  | D: `*` em Setor e Nome da tag, salvar vazio dá erro nos dois. A: Setor não aparece (fixo), `*` só em Nome da tag. Nos dois, **sem** `*` em Prioridade; criar com "Sem prioridade" funciona |
+| G7  | D / A | "Editar" uma tag sem prioridade                             | abre sem `*` nenhum (prioridade `null` não é obrigatória)                                                                                                                                  |
+| G8  | M     | Perfil → trocar senha                                       | `*` nos três campos; somem ao preencher (Nova senha só com 8+); senhas diferentes → erro só ao salvar em "Confirmar"; nova igual à atual → erro                                            |
+| G9  | M     | trocar senha com sucesso (e restaurar a senha de QA depois) | toast de sucesso, campos limpos com `*` de volta                                                                                                                                           |
+| G10 | todos | inspecionar os quatro formulários                           | `aria-required` só nos obrigatórios; `aria-invalid`/`aria-describedby` como F6; nenhuma legenda "Campos com \*…"                                                                           |
 
 ## Checklist
 
@@ -425,6 +428,11 @@ Etapa 1:
 
 Etapa 2:
 
-- [ ] Setores, Pessoas, Tags e Perfil migrados (`df-ui`)
-- [ ] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer`; cenários G
-- [ ] pausa para o usuário decidir a Etapa 3
+- [x] Setores, Pessoas, Tags e Perfil migrados (`df-ui`); Combobox com `aria-labelledby` declarado e `name` repassado
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado com atenções, aplicadas exceto o `ComboboxField`, levado à Etapa 3); cenários G1–G10 sem falhas, G5/G8 parciais e G9 não executado por restrição de escrita (não criar pessoa nem trocar senha) ([relatório](../test-reports/2026-11-10-form-field-etapa-2.md))
+- [ ] pausa para o usuário decidir a Etapa 3 — aguardando
+
+Etapa 3 (aguardando decisão do usuário):
+
+- [ ] `ComboboxField` — atenção do `df-reviewer` na Etapa 2, adiada para cá
+- [ ] formulários de chamado (novo, editar, resolver, comentar, enviar, recusar), escopo a definir
