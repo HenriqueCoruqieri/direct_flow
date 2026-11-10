@@ -24,7 +24,11 @@ const columnHelper = createColumnHelper<DataTableFeatures, TagListItem>()
 const nameColumn = columnHelper.accessor("name", {
   header: "Nome",
   filterFn: "includesString",
-  cell: ({ getValue }) => <span className="font-medium">{getValue()}</span>,
+  cell: ({ getValue }) => (
+    <span title={getValue()} className="block max-w-48 truncate font-medium">
+      {getValue()}
+    </span>
+  ),
 })
 
 const departmentColumn = columnHelper.accessor("departmentId", {

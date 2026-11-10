@@ -21,9 +21,12 @@ interface RegistryRowActionsProps {
 }
 
 const RegistryRowActions = ({ slots }: RegistryRowActionsProps) => (
-  <div className="flex items-center justify-end gap-1">
+  <div className="ml-auto grid w-max grid-cols-[auto_auto] items-center justify-items-end gap-1">
     {slots.map(({ id, width, action }) => (
-      <div key={id} className={cn("flex shrink-0", SLOT_WIDTHS[width])}>
+      <div
+        key={id}
+        className={cn("flex shrink-0 odd:last:col-span-2", SLOT_WIDTHS[width])}
+      >
         {action}
       </div>
     ))}

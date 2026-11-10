@@ -41,7 +41,17 @@ const renderName = (person: PersonRow, withDepartmentBadge: boolean) => {
   return (
     <div className="flex items-center gap-3">
       <UserAvatar initials={getInitials(person.name)} image={person.image} />
-      <span className="font-medium">{person.name}</span>
+      <div className="flex max-w-48 min-w-0 flex-col">
+        <span title={person.name} className="truncate font-medium">
+          {person.name}
+        </span>
+        <span
+          title={person.email}
+          className="truncate text-xs text-muted-foreground"
+        >
+          {person.email}
+        </span>
+      </div>
       {badge ? <Badge variant="secondary">{badge}</Badge> : null}
     </div>
   )
@@ -54,13 +64,6 @@ const nameColumnFor = (withDepartmentBadge: boolean) =>
     filterFn: "includesString",
     cell: ({ row }) => renderName(row.original, withDepartmentBadge),
   })
-
-const emailColumn = columnHelper.accessor("email", {
-  header: "E-mail",
-  cell: ({ getValue }) => (
-    <span className="text-muted-foreground">{getValue()}</span>
-  ),
-})
 
 const departmentColumn = columnHelper.accessor("departmentId", {
   header: "Setor",
@@ -91,7 +94,7 @@ const lastAccessColumn = columnHelper.accessor("lastLoginAt", {
     const lastLoginAt = getValue()
 
     return (
-      <span className="text-muted-foreground tabular-nums">
+      <span className="whitespace-normal text-muted-foreground tabular-nums">
         {lastLoginAt ? formatDateTime(lastLoginAt) : NEVER_ACCESSED_LABEL}
       </span>
     )
@@ -109,7 +112,6 @@ const actionsColumn = columnHelper.display({
 
 const directorColumns = columnHelper.columns([
   nameColumnFor(false),
-  emailColumn,
   departmentColumn,
   roleColumn,
   statusColumn,
@@ -119,7 +121,6 @@ const directorColumns = columnHelper.columns([
 
 const departmentAdminColumns = columnHelper.columns([
   nameColumnFor(true),
-  emailColumn,
   roleColumn,
   statusColumn,
   lastAccessColumn,
