@@ -1,11 +1,12 @@
 "use client"
 
-import { useId } from "react"
-import { Controller } from "react-hook-form"
+import FormField from "@/app/_components/form-field"
+import {
+  TICKET_ASSIGNEE_LABEL,
+  TICKET_CREATOR_LABEL,
+} from "@/app/_lib/domain/ticket-assignee"
 
-import { TICKET_CREATOR_LABEL } from "@/app/_lib/domain/ticket-assignee"
-
-import TicketAssigneeField from "../../../_components/ticket-assignee-field"
+import TicketAssigneeCombobox from "../../../_components/ticket-assignee-combobox"
 import { useTicketEdit } from "../_hooks/use-ticket-edit"
 import TicketDetailFieldList, {
   TICKET_DETAIL_FIELD_GRID_CLASS,
@@ -21,7 +22,6 @@ const TicketEditAssignee = ({
   creatorName,
   children,
 }: TicketEditAssigneeProps) => {
-  const assigneeId = useId()
   const { form, assignees, assigneeHint, queueLabel, isEditing } =
     useTicketEdit()
 
@@ -33,20 +33,21 @@ const TicketEditAssignee = ({
         fields={[{ label: TICKET_CREATOR_LABEL, value: creatorName }]}
         className="sm:grid-cols-1"
       />
-      <Controller
-        name="assigneeId"
+      <FormField
         control={form.control}
-        render={({ field, fieldState }) => (
-          <TicketAssigneeField
-            id={assigneeId}
+        name="assigneeId"
+        label={TICKET_ASSIGNEE_LABEL}
+        description={assigneeHint}
+        className="min-w-0"
+      >
+        {(field) => (
+          <TicketAssigneeCombobox
             {...field}
-            fieldState={fieldState}
             assignees={assignees}
-            hint={assigneeHint}
             queueLabel={queueLabel}
           />
         )}
-      />
+      </FormField>
       <TicketEditHandoffComment />
     </div>
   )

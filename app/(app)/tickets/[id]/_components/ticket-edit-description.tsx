@@ -1,9 +1,8 @@
 "use client"
 
-import { useId } from "react"
-import { Controller } from "react-hook-form"
+import FormField from "@/app/_components/form-field"
 
-import TicketDescriptionField from "../../../_components/ticket-description-field"
+import TicketDescriptionTextarea from "../../../_components/ticket-description-textarea"
 import { useTicketEdit } from "../_hooks/use-ticket-edit"
 
 interface TicketEditDescriptionProps {
@@ -11,24 +10,19 @@ interface TicketEditDescriptionProps {
 }
 
 const TicketEditDescription = ({ children }: TicketEditDescriptionProps) => {
-  const descriptionId = useId()
   const { form, isEditing } = useTicketEdit()
 
   if (!isEditing) return children
 
   return (
-    <Controller
-      name="description"
+    <FormField
       control={form.control}
-      render={({ field, fieldState }) => (
-        <TicketDescriptionField
-          id={descriptionId}
-          {...field}
-          fieldState={fieldState}
-          hideLabel
-        />
-      )}
-    />
+      name="description"
+      label="Descrição"
+      hideLabel
+    >
+      {(field) => <TicketDescriptionTextarea {...field} />}
+    </FormField>
   )
 }
 

@@ -1,11 +1,12 @@
 "use client"
 
-import { useId } from "react"
-import { Controller, useWatch } from "react-hook-form"
+import FormField from "@/app/_components/form-field"
+import {
+  TICKET_COMPANY_LABEL,
+  ticketCompanyEditOptionLabel,
+} from "@/app/_lib/domain/ticket-company"
 
-import { ticketCompanyEditOptionLabel } from "@/app/_lib/domain/ticket-company"
-
-import TicketCompanyField from "../../../_components/ticket-company-field"
+import TicketCompanyAutocomplete from "../../../_components/ticket-company-autocomplete"
 import { useTicketEdit } from "../_hooks/use-ticket-edit"
 
 interface TicketEditCompanyProps {
@@ -13,31 +14,25 @@ interface TicketEditCompanyProps {
 }
 
 const TicketEditCompany = ({ children }: TicketEditCompanyProps) => {
-  const companyId = useId()
   const { form, companies, companyHint, isEditing } = useTicketEdit()
-  const selectedCompanyId = useWatch({
-    control: form.control,
-    name: "companyId",
-  })
 
   if (!isEditing) return children
 
   return (
-    <Controller
-      name="companyId"
+    <FormField
       control={form.control}
-      render={({ field, fieldState }) => (
-        <TicketCompanyField
-          id={companyId}
+      name="companyId"
+      label={TICKET_COMPANY_LABEL}
+      description={companyHint}
+    >
+      {(field) => (
+        <TicketCompanyAutocomplete
           {...field}
-          value={selectedCompanyId}
-          fieldState={fieldState}
           companies={companies}
           getOptionLabel={ticketCompanyEditOptionLabel}
-          hint={companyHint}
         />
       )}
-    />
+    </FormField>
   )
 }
 

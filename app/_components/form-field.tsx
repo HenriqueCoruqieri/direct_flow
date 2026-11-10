@@ -6,8 +6,10 @@ import {
   type ControllerFieldState,
   type ControllerRenderProps,
   type FieldPath,
+  type FieldPathValue,
   type FieldValues,
   useController,
+  useWatch,
 } from "react-hook-form"
 
 import {
@@ -53,6 +55,8 @@ interface FormFieldProps<
   hideLabel?: boolean
   id?: string
   className?: string
+  shouldUnregister?: boolean
+  defaultValue?: FieldPathValue<TFieldValues, TName>
   children: (
     field: FormFieldControlProps<TFieldValues, TName>,
     fieldState: ControllerFieldState,
@@ -73,13 +77,21 @@ const FormField = <
   hideLabel = false,
   id: idProp,
   className,
+  shouldUnregister,
+  defaultValue,
   children,
 }: FormFieldProps<TFieldValues, TName, TTransformedValues>) => {
-  const { field, fieldState } = useController({ name, control })
+  const { field, fieldState } = useController({
+    name,
+    control,
+    shouldUnregister,
+    defaultValue,
+  })
+  const value = useWatch({ control, name, defaultValue, exact: true })
   const schema = useFormSchema()
   const fieldSchema = fieldSchemaOf(schema, name)
   const isRequired = resolveFieldRequired(fieldSchema, required)
-  const showMark = shouldShowRequiredMark(fieldSchema, field.value, required)
+  const showMark = shouldShowRequiredMark(fieldSchema, value, required)
 
   const baseId = useId()
   const id = idProp ?? `${baseId}-control`
@@ -125,7 +137,7 @@ const FormField = <
           {mark}
         </FieldLabel>
       )}
-      {children({ ...field, ...a11y }, fieldState)}
+      {children({ ...field, value, ...a11y }, fieldState)}
       {invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />
       ) : description ? (

@@ -8,12 +8,15 @@ Versões observadas: `zod@4.6.5`, `react-hook-form@7.88`, `next@16.3.5`.
 
 ## Etapas
 
-| Etapa | Escopo                                                                                                   | Estado                                                                                                                |
-| ----- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| 1     | Helpers puros (`df-architect`), `FormField` + `FormSchemaProvider` (`df-ui`), Dialog de Empresas migrado | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-1.md))                               |
-| 2     | Setores, Pessoas, Tags e Perfil (trocar senha) migrados. **Pausa** depois dela                           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-2.md))                               |
-| 3a    | Abertura do chamado, Enviar, Enviar para setor, Recusar, Resolver, Comentar, Editar comentário           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-3a.md)); H8 aberto para o `df-debug` |
-| 3b    | Edição do chamado (`ticket-edit-*`, `ticket-edit-provider`, `use-ticket-edit`)                           | aguardando decisão do usuário                                                                                         |
+| Etapa | Escopo                                                                                                   | Estado                                                                                                                                |
+| ----- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Helpers puros (`df-architect`), `FormField` + `FormSchemaProvider` (`df-ui`), Dialog de Empresas migrado | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-1.md))                                               |
+| 2     | Setores, Pessoas, Tags e Perfil (trocar senha) migrados. **Pausa** depois dela                           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-2.md))                                               |
+| 3a    | Abertura do chamado, Enviar, Enviar para setor, Recusar, Resolver, Comentar, Editar comentário           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-3a.md)); H8 aberto para o `df-debug`                 |
+| 3b    | Edição do chamado (`ticket-edit-*`, `ticket-edit-provider`, `use-ticket-edit`)                           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-3b.md)); J8, J12–J14 e J20 abertos para o `df-debug` |
+
+**Refatoração concluída em 2026-11-10** (Etapas 1, 2, 3a e 3b). Pendências em
+aberto só para o `df-debug`: H8 (3a) e J8, J12–J14, J20 (3b).
 
 ## Decisões fixadas pelo usuário
 
@@ -190,6 +193,8 @@ interface FormFieldProps<
   hideLabel?: boolean
   id?: string
   className?: string
+  shouldUnregister?: boolean
+  defaultValue?: FieldPathValue<TFieldValues, TName>
   children: (
     field: FormFieldControlProps<TFieldValues, TName>,
     fieldState: ControllerFieldState,
@@ -215,7 +220,8 @@ genérico `TContext` em vez de inventar cast e reporta.
 
 Comportamento:
 
-1. `const { field, fieldState } = useController({ name, control })` — sem
+1. `const { field, fieldState } = useController({ name, control, shouldUnregister, defaultValue })`,
+   seguido de `const value = useWatch({ control, name, defaultValue, exact: true })` — sem
    `control`, o RHF usa o `useFormContext`. `control` existe **só para
    inferência de tipo** (`<FormField control={form.control} name="cnpj">` tipa
    `field.value` como `string`); passe quando o `children` precisa do valor
@@ -223,9 +229,10 @@ Comportamento:
 2. `const schema = useFormSchema()`;
    `const fieldSchema = fieldSchemaOf(schema, name)`;
    `const isRequired = resolveFieldRequired(fieldSchema, props.required)`;
-   `const showMark = shouldShowRequiredMark(fieldSchema, field.value, props.required)`.
-   O `field.value` do `useController` já é o valor atual a cada mudança: não
-   precisa de `useWatch` separado.
+   `const showMark = shouldShowRequiredMark(fieldSchema, value, props.required)`.
+   O valor usado no `*` e entregue ao `children` é o `value` do `useWatch`
+   sem fallback para o default do formulário (seção "Etapa 3b — mudança no
+   `FormField`"), não o `field.value`.
 3. Ids: `const baseId = useId()`; `id = props.id ?? \`${baseId}-control\``;
    `errorId = \`${id}-error\``; `descriptionId = \`${id}-description\``;
    `labelId = \`${id}-label\``.
@@ -245,7 +252,7 @@ Comportamento:
          {mark}
        </FieldLabel>
      )}
-     {children({ ...field, ...a11y }, fieldState)}
+     {children({ ...field, value, ...a11y }, fieldState)}
      {invalid ? (
        <FieldError id={errorId} errors={[fieldState.error]} />
      ) : description ? (
@@ -490,6 +497,196 @@ Depois da entrega do `df-ui`: remover `TICKET_PRIORITY_REQUIRED_HINT` de
 `app/_lib/domain/ticket.ts` e atualizar o "Aviso de campo vazio" em
 `docs/contracts/tag-priority.md` para o `*`.
 
+## Etapa 3b — edição do chamado (`df-ui`)
+
+Arquivos: `tickets/[id]/_components/ticket-edit-provider.tsx`,
+`ticket-edit-heading.tsx`, `ticket-edit-description.tsx`,
+`ticket-edit-classification.tsx`, `ticket-edit-company.tsx`,
+`ticket-edit-assignee.tsx`, `ticket-edit-handoff-comment.tsx`,
+`ticket-edit-solution.tsx`, `ticket-edit-attachments.tsx` e
+`tickets/[id]/_hooks/use-ticket-edit.ts`. Nada muda em `app/_lib/**`
+(helpers, `editTicketSchema`, domínio e action ficam como estão).
+
+### Schema conferido (tsx, 2026-11-10)
+
+`editTicketSchema` (= `ticketFieldsSchema.extend({...})`) é `ZodObject` no
+topo e é o mesmo do `zodResolver` de `ticket-edit-provider.tsx`:
+`useForm<EditTicketInput>({ resolver: zodResolver(editTicketSchema), defaultValues: options.defaults })`.
+
+| Campo                  | `isFieldRequired` | Observação                                                                         |
+| ---------------------- | ----------------- | ---------------------------------------------------------------------------------- |
+| `companyId`            | obrigatório       | `undefined`, `0`, `2147483648` → `*`; id válido → sem                              |
+| `title`                | obrigatório       | `""`, `"ab"`, `"   "` → `*`; `"abc"` → sem                                         |
+| `description`          | obrigatório       | 9 caracteres → `*`; 10 → sem                                                       |
+| `type`                 | obrigatório       | `undefined` / fora do enum → `*`                                                   |
+| `tagId`                | obrigatório       | `undefined` → `*`                                                                  |
+| `assigneeId`           | opcional          | aceita `null` (fila). `undefined` também sai sem `*`, mas falha ao salvar (abaixo) |
+| `solution`             | opcional          | `.optional()` no schema; com `required` → `""`/9 caracteres `*`, 10 → sem          |
+| `handoffComment`       | opcional          | `.optional()`; com `required` → `""`/só espaço/5001 → `*`; `"ok"` → sem            |
+| `attachments`          | opcional          | fica fora do `FormField`                                                           |
+| `ticketId`             | obrigatório       | oculto, não vira campo                                                             |
+| `removedAttachmentIds` | opcional          | oculto, não vira campo                                                             |
+
+`safeParse` conferido: `handoffComment: ""` → `Escreva um comentário para quem
+vai receber o chamado.`; `companyId` ausente → `Selecione a empresa.`; `tagId`
+ausente → `Selecione a tag.`; `solution: ""` → `Descreva a solução.`;
+sem `handoffComment` → válido.
+
+### Decisões por campo
+
+`TicketEditProvider` passa a envolver `children` em
+`<FormSchemaProvider form={form} schema={editTicketSchema}>` **dentro** do
+`TicketEditContext` (o contexto continua expondo `form` para `setFocus`,
+`control` e o `useWatch` dos anexos). Toda ilha `ticket-edit-*` fica abaixo
+do provider — o `page.tsx` já monta tudo dentro dele. Os formulários do
+detalhe (Resolver, Comentar, diálogos) têm o próprio `FormSchemaProvider`, que
+sobrepõe o da edição; nenhum `useFormContext` solto existe no subtree
+(conferido). Continua **sem** `<form>` envolvendo os cards.
+
+Todo `FormField` da edição recebe `control={form.control}`. Os `useId` das
+ilhas saem (o `FormField` gera os ids). O `ref` do `field` chega ao elemento
+focável em todos os controles (já garantido na 3a).
+
+| Ilha / campo                          | `FormField`                                                                                                                                                                                                                                    | `required`                  | `*` esperado                                                                                                                                                                                                         |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ticket-edit-heading` — Título        | `label="Título"` (visível, como hoje), `Input autoComplete="off"`; dentro do `div.min-w-0.flex-1`                                                                                                                                              | —                           | só se o título deixar de valer                                                                                                                                                                                       |
+| `ticket-edit-description`             | `label="Descrição"` `hideLabel`, `TicketDescriptionTextarea`                                                                                                                                                                                   | —                           | nunca visível (rótulo oculto leva o `*` junto); `aria-required="true"`                                                                                                                                               |
+| `ticket-edit-company` — Empresa       | `label={TICKET_COMPANY_LABEL}`, `TicketCompanyAutocomplete` com `getOptionLabel={ticketCompanyEditOptionLabel}`, `description={companyHint}`                                                                                                   | —                           | chamado sem empresa: `*` desde o início, junto com a dica; com empresa (ativa ou inativa atual): sem                                                                                                                 |
+| `ticket-edit-classification` — Tipo   | `label="Tipo"`, `TicketTypeSelect`                                                                                                                                                                                                             | —                           | sem, salvo valor inválido                                                                                                                                                                                            |
+| `ticket-edit-classification` — Tag    | `label="Tag"`, `TicketTagCombobox`, `description={tagHint}`                                                                                                                                                                                    | —                           | tag atual indisponível (`defaults.tagId` ausente): `*` desde o início, junto com a dica                                                                                                                              |
+| `ticket-edit-assignee` — Destinatário | `label={TICKET_ASSIGNEE_LABEL}`, `TicketAssigneeCombobox` com `queueLabel`, `description={assigneeHint}`, `className="min-w-0"`                                                                                                                | —                           | nunca (`null` = fila é escolha válida). Destinatário atual fora da lista (`undefined`): sem `*`, a dica `UNAVAILABLE_ASSIGNEE_HINT` explica e salvar dá `Selecione o destinatário.` com foco — comportamento de hoje |
+| `ticket-edit-handoff-comment`         | `label={HANDOFF_COMMENT_LABEL}`, `HandoffCommentTextarea` com `disabled={isSubmitting}`, `description={HANDOFF_COMMENT_DESCRIPTION}`, `className="col-span-full min-w-0"`, **`shouldUnregister`** e **`defaultValue={EMPTY_HANDOFF_COMMENT}`** | `required` (literal `true`) | `*` ao aparecer (vazio); some com texto válido. Só montado quando `isHandoffAssigneeChange(initialAssigneeId, assigneeId)`, como hoje                                                                                |
+| `ticket-edit-solution`                | `label="Solução"`, `TicketSolutionTextarea`                                                                                                                                                                                                    | `required` (literal `true`) | a ilha só monta com `includesSolution`; legado sem solução abre com `*`; solução gravada abre sem                                                                                                                    |
+| `ticket-edit-attachments`             | **não** — continua `Controller` + `TicketAttachmentsEditor`                                                                                                                                                                                    | —                           | sem `*` (opcional); layout próprio, como na abertura                                                                                                                                                                 |
+
+- `required` na solução e no comentário de passagem: o schema os deixa
+  `.optional()` porque só existem em parte dos casos; quando a ilha está
+  montada, eles são exigidos (`ticketSolutionSchema` / `handoffCommentSchema`
+  recusam `""`). O override dá `*` e `aria-required` coerentes com o erro que
+  sai ao salvar.
+- **Mudança visível — dica do comentário de passagem.** Hoje
+  `O texto vira um comentário público no chamado.` fica **acima** do textarea
+  e continua junto do erro (`aria-describedby` com os dois). No `FormField`
+  ela vai **abaixo** e é substituída pelo erro, como toda dica do projeto.
+  Aceito pela padronização; HC21/HC22 de `handoff-comment.md` passam a
+  esperar a dica abaixo.
+- **Mudança visível — `*` na edição.** Com valores gravados válidos, a edição
+  abre sem nenhum `*`; ele aparece onde o valor deixa de valer (apagar o
+  título, descrição curta, chamado sem empresa, tag indisponível, solução
+  legada vazia, comentário de passagem). H17 da 3a ("sem `*` em lugar nenhum")
+  deixa de valer.
+- `ticket-edit-company` **perde** o próprio `useWatch`: passa `{...field}`
+  inteiro ao `TicketCompanyAutocomplete` (o `FormField` já entrega o valor
+  sem fallback, abaixo).
+- `use-ticket-edit.ts`: o tipo do contexto **não** muda
+  (`form: UseFormReturn<EditTicketInput>`). Remover campos do contexto só se
+  ficarem sem uso.
+
+### Etapa 3b — mudança no `FormField` (`df-ui`, `app/_components/form-field.tsx`)
+
+**Causa do E9, conferida no `react-hook-form@7.88`**
+(`node_modules/react-hook-form/dist/index.esm.mjs:458-473`): o `useController`
+calcula `defaultValueMemo = get(_formValues, name, get(_defaultValues, name))`
+no primeiro render e o passa como `defaultValue` ao `useWatch` interno; o
+`useWatch` resolve `get(formValues, name, defaultValue)`
+(`generateWatchOutput`, `:335-338`). Depois do
+`form.reset({ ...getValues(), companyId: undefined }, { keepDefaultValues: true, … })`,
+o valor do formulário é `undefined` e o `field.value` **volta a ser a empresa
+gravada**. Era isso que o `ticket-edit-company` contornava com o `useWatch`
+próprio. No `FormField`, além do campo não esvaziar, o `*` sumiria com o
+campo vazio (ele lê o mesmo valor).
+
+**Solução — o `FormField` passa a ler o valor sem fallback para o default do
+formulário, para todos os formulários:**
+
+```ts
+interface FormFieldProps<TFieldValues, TName, TTransformedValues> {
+  …
+  shouldUnregister?: boolean
+  defaultValue?: FieldPathValue<TFieldValues, TName>
+}
+
+const { field, fieldState } = useController({
+  name,
+  control,
+  shouldUnregister,
+  defaultValue,
+})
+const value = useWatch({ control, name, defaultValue, exact: true })
+const showMark = shouldShowRequiredMark(fieldSchema, value, required)
+…
+{children({ ...field, value, ...a11y }, fieldState)}
+```
+
+- O `useWatch` **depois** do `useController`, nesta ordem: o `register` do
+  `useController` grava o valor inicial em `_formValues` de forma síncrona
+  (`updateValidAndValue`, `:2285-2297`), e o `useWatch` lê esse valor no
+  primeiro render. Inverter a ordem faz o comentário de passagem nascer
+  `undefined` (aviso de controlado/não controlado).
+- O `defaultValue` repassado ao `useWatch` é **só o da prop do `FormField`**
+  (comentário de passagem), nunca o do formulário: o fallback fica restrito
+  ao default explícito do campo, que não existe no campo Empresa.
+- `FieldPathValue` vem de `react-hook-form` (`import type`). O retorno do
+  `useWatch` com `name: TName` já é `FieldPathValue<TFieldValues, TName>`,
+  o mesmo tipo de `field.value`: sem `as`.
+- Efeito nos outros formulários: só difere quando o valor do formulário é
+  `undefined` e o default não — e nesse caso o certo é mostrar vazio. Hoje
+  isso só acontece no E9; `resetField`, `reset(defaults)` e `setValue`
+  continuam iguais. Regressão conferida em J22.
+
+**Provider — sem mudança** (já é o E9 corrigido):
+
+```ts
+if (result.code === "INVALID_COMPANY") {
+  form.reset(
+    { ...form.getValues(), companyId: undefined },
+    { keepDefaultValues: true, keepIsSubmitted: true, keepFieldsRef: true },
+  )
+  form.setError("companyId", { message: result.message }, { shouldFocus: true })
+  router.refresh()
+  return
+}
+```
+
+`keepFieldsRef` mantém o `ref` registrado pelo `field.ref` do `FormField` no
+`Input` do `Autocomplete` (sem ele, o `shouldFocus` não acharia o elemento
+depois do reset); `keepDefaultValues` mantém o "Cancelar volta ao salvo";
+`keepIsSubmitted` mantém a revalidação `onChange` depois da primeira tentativa.
+Ordem: `reset` → `setError` → `refresh`.
+
+### Cuidados que não podem regredir (3b)
+
+| Ref.                       | O que precisa continuar                                                                                                                                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E9 / `INVALID_COMPANY`     | erro no campo Empresa com **foco** no `Input`; campo vazio (valor `undefined`, sem a empresa gravada de volta) com `*`; nada gravado; "Cancelar" depois volta à empresa gravada                                                                                                 |
+| `INVALID_TAG`              | `setError("tagId", …, { shouldFocus: true })` + `refresh`; foco no botão do `Combobox` da Tag                                                                                                                                                                                   |
+| `INVALID_ASSIGNEE`         | `setError("assigneeId", …, { shouldFocus: true })` + `refresh`; foco no botão do Destinatário                                                                                                                                                                                   |
+| `HANDOFF_COMMENT_REQUIRED` | com troca de destinatário no formulário, erro no comentário com foco; sem troca, `toast.error` + `refresh` (provider intacto)                                                                                                                                                   |
+| Entrar                     | `form.reset(options.defaults)` e foco no Título (`form.setFocus("title")` precisa do `ref` no `Input`)                                                                                                                                                                          |
+| Cancelar                   | `form.reset(options.defaults)`: valores salvos, erros limpos, `*` recalculado; foco volta ao "Editar"; nenhum request                                                                                                                                                           |
+| Botões do cabeçalho        | "Enviar", "Assumir", "Atender" (`attendActions`) somem durante a edição; "Cancelar"/"Salvar alterações" desabilitados no envio. "Enviar para outro setor" e "Resolver" **continuam visíveis** durante a edição: comportamento já existente na 3a, que esta refatoração não muda |
+| Janela                     | campo Solução só com `includesSolution`; `Resolvido em`/`Editável até` visíveis; `ResolveTicketForm` montado e oculto (`HiddenWhileEditing`)                                                                                                                                    |
+| Anexos                     | `Controller` + `TicketAttachmentsEditor` intactos; bloqueio por upload em andamento e por limite (`saveBlockMessage`, toast com id)                                                                                                                                             |
+| Comentário de passagem     | some ao voltar o destinatário e reaparece **vazio** (`shouldUnregister` + `defaultValue`), HC23                                                                                                                                                                                 |
+
+### Invólucros apagados ao fim da 3b
+
+Sem mais uso depois da migração (conferido por `grep`: só as ilhas da edição
+os importam):
+
+- `app/(app)/_components/ticket-company-field.tsx`
+- `app/(app)/_components/ticket-title-field.tsx`
+- `app/(app)/_components/ticket-description-field.tsx`
+- `app/(app)/_components/ticket-type-field.tsx`
+- `app/(app)/_components/ticket-tag-field.tsx`
+- `app/(app)/_components/ticket-assignee-field.tsx`
+- `app/(app)/_components/handoff-comment-field.tsx`
+- `app/(app)/tickets/[id]/_components/ticket-solution-field.tsx`
+
+Com eles some a duplicação transitória da 3a (markup do antigo
+`ComboboxField` em `ticket-tag-field`/`ticket-assignee-field`). Os controles
+da 3a (`ticket-*-autocomplete|textarea|select|combobox`) ficam.
+
 ## Riscos
 
 1. **Schema sem `shape`** — pipe, preprocess ou transform no topo, união ou
@@ -526,6 +723,25 @@ Depois da entrega do `df-ui`: remover `TICKET_PRIORITY_REQUIRED_HINT` de
 10. **Etapa 3a — `ref`** — controle que não leva o `ref` ao elemento focável
     quebra T10, `INVALID_TAG`, `INVALID_ASSIGNEE`, `INVALID_TARGET` e o
     `shouldFocusError`. Conferir nos H6–H9.
+11. **Etapa 3b — valor do `FormField` sem fallback** — muda a leitura do
+    valor em **todos** os formulários. Só difere quando o valor do
+    formulário é `undefined` com default definido (hoje, só o E9). Ordem dos
+    hooks (`useController` antes do `useWatch`) é obrigatória; invertida, o
+    campo montado depois do formulário nasce `undefined`. Regressão em J22.
+12. **Etapa 3b — provider envolvendo o detalhe inteiro** — o
+    `FormSchemaProvider` da edição fica acima de Resolver, Comentar e
+    diálogos. Cada um tem o próprio provider, que sobrepõe; um `FormField`
+    novo no detalhe sem provider próprio ligaria **em silêncio** ao
+    formulário da edição em vez de lançar. Quem criar formulário no detalhe
+    envolve-o no próprio `FormSchemaProvider`.
+13. **Etapa 3b — destinatário `undefined`** — o atual fora da lista abre sem
+    seleção e sem `*` (o schema aceita `null`, então o campo é opcional); o
+    erro aparece só ao salvar. Mantém o comportamento de hoje; a dica
+    `UNAVAILABLE_ASSIGNEE_HINT` cobre. Mostrar `*` aí exigiria `required`
+    dinâmico (valor `undefined` ≠ `null`), fora do escopo.
+14. **Etapa 3b — mudança visível** — dica do comentário de passagem passa de
+    cima para baixo do campo e some quando há erro; `*` aparece na edição
+    onde o valor deixa de valer.
 
 ## Cenários para o `df-qa`
 
@@ -590,6 +806,40 @@ e `[QA] Empresa Temporária` como em `ticket-company.md`.
 | H17 | M     | "Editar" o chamado (E1, E9 de `ticket-company.md`) e alterar Tipo, Tag, Destinatário, Descrição                               | idêntico a antes da 3a: sem `*` em lugar nenhum da edição, mesmos rótulos, dicas, erros e foco                                                                                                                                                                                                  |
 | H18 | todos | inspecionar os formulários da 3a                                                                                              | `aria-required` só nos obrigatórios (nunca no checkbox nem na prioridade travada); cada rótulo ligado por `for`/`id` (Empresa inclusive); `aria-describedby` → erro após salvar, senão a dica; `*` com `aria-hidden`; nenhum aviso no console                                                   |
 
+### Etapa 3b — edição do chamado
+
+Chamados e empresas como em `ticket-company.md` (Etapa 2),
+`ticket-edit-window.md` (`#T`, `#J`), `assignee-edit-and-assume.md` (`#D*`)
+e `handoff-comment.md` (`#H*`). Anotar `max(id)` de `ticket_history` e
+`message` antes de todo "nada gravado".
+
+| #   | Quem  | Ação                                                                                                               | Esperado                                                                                                                                                                                                                         |
+| --- | ----- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| J1  | M     | `#T` → "Editar" (janela 1)                                                                                         | sem dialog; Título no cabeçalho com foco; Descrição, Empresa (E1: `QA Alfa — …`), Tipo, Tag, Destinatário preenchidos; **nenhum** `*`; "Editar", "Enviar", "Assumir" ausentes; "Cancelar" e "Salvar alterações" presentes        |
+| J2  | M     | inspecionar os campos da J1                                                                                        | `aria-required="true"` em Título, Descrição, Empresa, Tipo, Tag; **não** em Destinatário nem nos anexos; cada rótulo ligado por `for`/`id`; Descrição com rótulo `sr-only` e nome acessível `Descrição`; nenhum aviso no console |
+| J3  | M     | apagar o título; Descrição com 9 caracteres; depois corrigir os dois                                               | `*` em Título e (oculto) na Descrição; nenhuma mensagem até salvar; `*` some ao corrigir                                                                                                                                         |
+| J4  | M     | janela 6: título `ab` → salvar                                                                                     | `O título precisa ter no mínimo 3 caracteres.` com foco; nenhum request de action                                                                                                                                                |
+| J5  | M     | janela 3: alterar título e descrição → "Cancelar"; "Editar" de novo                                                | volta aos valores salvos, sem `*`, sem erro; foco no "Editar" ao sair; nenhum request                                                                                                                                            |
+| J6  | M     | janela 4 + E2/E3/E13: título, descrição, tipo Bug, tag `[QA] Edição B`, empresa `QA Beta` → salvar                 | toast `Chamado #T atualizado.`; notas da linha do tempo como nos contratos de origem; `mudanca_empresa` gravada                                                                                                                  |
+| J7  | M     | E10 / janela 5: salvar sem mudar nada                                                                              | `Nenhuma alteração para salvar.`; sai da edição                                                                                                                                                                                  |
+| J8  | M     | E4/E5: chamado sem empresa → "Editar"                                                                              | Empresa vazia com `*` e a dica `Este chamado não tem empresa. Escolha uma para salvar.`; salvar só o título → `Selecione a empresa.` com foco; escolher `QA Alfa` → `*` some; salvar grava `— → QA Alfa`                         |
+| J9  | D + M | E6/E7/E8: empresa atual inativa                                                                                    | campo com `… (inativa)` e sem `*`; dica de inativa; salvar só a descrição mantém a inativa; trocar por `QA Alfa` salva e, ao reabrir, a inativa não está mais na lista                                                           |
+| J10 | D + M | **E9**: M escolhe outra `[QA]` ativa; D a desativa; M salva                                                        | `Esta empresa não está disponível. Escolha uma empresa ativa.` no campo, **foco** no `Input`; campo **vazio** (a empresa gravada **não** volta) com `*`; nada gravado. "Cancelar" → visualização com a empresa gravada           |
+| J11 | M     | E14: digitar `beta`, `↓`, Enter; depois `zzz-nao-existe`; Cancelar                                                 | filtro e teclado como na abertura; `Nenhuma empresa encontrada.` com foco no campo; Cancelar volta ao salvo                                                                                                                      |
+| J12 | A / I | AE21: tag atual indisponível → "Editar"                                                                            | Tag sem seleção, com `*` e a dica `A tag atual não está disponível…`; escolher `[QA] Rede` tira o `*`; AE22 salva                                                                                                                |
+| J13 | D + M | `INVALID_TAG`: M escolhe tag; D a desativa; M salva                                                                | erro no campo Tag com foco no botão; lista recarrega; nada gravado                                                                                                                                                               |
+| J14 | D + M | `INVALID_ASSIGNEE`: M escolhe pessoa; D a desativa; M salva                                                        | erro no Destinatário com foco; lista recarrega; nada gravado                                                                                                                                                                     |
+| J15 | M     | HC19/HC20: `#H4` → "Editar"; mudar só o título                                                                     | nenhum campo `Comentário`; salva sem `message` nova                                                                                                                                                                              |
+| J16 | M     | HC21/HC22: Destinatário `QA Admin Suporte`; salvar vazio; só espaços                                               | campo `Comentário` abaixo do Destinatário, vazio, com `*` e a dica `O texto vira um comentário público no chamado.` **abaixo** do textarea; ao salvar, a dica dá lugar a `Escreva um comentário…` com foco; nada gravado         |
+| J17 | M     | HC23: escrever `[QA] Texto descartado`; voltar o destinatário; salvar; "Editar" → trocar de novo                   | campo some; `Nenhuma alteração para salvar.`; ao reaparecer está **vazio** com `*`; nenhum aviso de controlado/não controlado                                                                                                    |
+| J18 | M     | HC24/HC26/HC27: passar ao admin com texto; devolver à fila; `X5001`                                                | sucesso nos dois primeiros (`message` pública gravada); `X5001` → `O comentário precisa ter no máximo 5000 caracteres.` com `*`                                                                                                  |
+| J19 | M     | janelas 8–11 / AE27: `#J` → "Editar"                                                                               | Solução preenchida sem `*`, `Resolvido em`/`Editável até` visíveis; vazia → `*` e `Descreva a solução.`; `curta` → mínimo de 10; texto válido salva `Alterou descrição e solução.`                                               |
+| J20 | M     | legado resolvido sem solução → "Editar"                                                                            | Solução vazia **com** `*` desde a abertura; `aria-required="true"`                                                                                                                                                               |
+| J21 | M     | anexos na edição (`attachments-in-edit.md`): incluir, remover, salvar com upload em andamento e acima do limite    | sem `*` na área de anexos; toasts de bloqueio como antes; salvar grava em `attachment_history` com `inclusao`/`exclusao` (não em `ticket_history`)                                                                               |
+| J22 | D / M | regressão do valor sem fallback: F11 (Editar empresa → apagar Nome fantasia → Cancelar → reabrir), G3, H3, H5, H16 | todos como nos relatórios das Etapas 1–3a                                                                                                                                                                                        |
+| J23 | A     | AE5/AE11/AE16: editar como destinatário; passar o chamado a outra pessoa                                           | "Editar" e "Atender" no cabeçalho só fora da edição; salvar com troca exige o comentário (J16); depois do salvamento a página volta sem "Editar" para quem deixou de ser destinatário                                            |
+| J24 | todos | toda a bateria                                                                                                     | E11 (sem "Editar" para quem não pode); nenhum erro nem aviso no console/dev server; nenhum `ticket-*-field.tsx` nem `handoff-comment-field.tsx` no repositório                                                                   |
+
 ## Checklist
 
 Etapa 1:
@@ -616,6 +866,12 @@ Etapa 3a:
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado, sem achados); cenários H1–H18 17/18, 0 falhas, H8 não executado por restrição de escrita (não desativar tag nem pessoa) ([relatório](../test-reports/2026-11-10-form-field-etapa-3a.md))
 - [ ] H8 (`INVALID_TAG`, `INVALID_ASSIGNEE`, `INVALID_TARGET`) aberto para o `df-debug`: confirmar em execução o `setError` com foco no campo certo e o `refresh`
 
-Etapa 3b (aguardando decisão do usuário):
+Etapa 3b (aprovada pelo usuário):
 
-- [ ] edição do chamado no `FormField` (`TicketEditProvider` com `FormSchemaProvider` de `editTicketSchema`); invólucros `ticket-*-field.tsx` apagados
+- [x] `editTicketSchema` conferido com tsx; decisões por campo, solução do E9 e cenários J1–J24 neste contrato; nota do E9 em `ticket-company.md` atualizada (`df-architect`)
+- [x] `FormField` com `shouldUnregister`, `defaultValue` e valor por `useWatch` sem fallback, depois do `useController` (`df-ui`)
+- [x] `TicketEditProvider` com `FormSchemaProvider` de `editTicketSchema`; ilhas `ticket-edit-*` no `FormField`; `ticket-edit-company` sem `useWatch` próprio; anexos continuam `Controller` (`df-ui`)
+- [x] invólucros da lista "Invólucros apagados ao fim da 3b" removidos (`df-ui`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado com atenções, 2026-11-10)
+- [x] cenários J1–J24: 19/24, 0 falhas; J21 parcial (limite de 10 MB e upload em andamento não exercitados); J8 e J20 não executados (sem chamado `[QA]` sem empresa / resolvido sem solução); J12–J14 não executados (exigiriam desativar tag ou conta) ([relatório](../test-reports/2026-11-10-form-field-etapa-3b.md))
+- [ ] J8, J12–J14 e J20 abertos para o `df-debug`: J8 (chamado sem empresa), J12 (tag atual indisponível), J13 (`INVALID_TAG`), J14 (`INVALID_ASSIGNEE`), J20 (legado resolvido sem solução abre com `*`)

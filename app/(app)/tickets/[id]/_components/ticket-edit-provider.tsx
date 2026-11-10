@@ -6,6 +6,7 @@ import { useId, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { editTicket } from "@/app/_lib/actions/tickets"
 import { TICKET_ATTACHMENTS_LIMIT_MESSAGE } from "@/app/_lib/domain/attachment"
 import { exceedsTicketAttachmentsLimit } from "@/app/_lib/domain/ticket-attachment"
@@ -196,7 +197,9 @@ const TicketEditProvider = ({
         save,
       }}
     >
-      {children}
+      <FormSchemaProvider form={form} schema={editTicketSchema}>
+        {children}
+      </FormSchemaProvider>
     </TicketEditContext>
   )
 }

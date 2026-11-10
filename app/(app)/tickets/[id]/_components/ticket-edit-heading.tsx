@@ -2,12 +2,12 @@
 
 import { Loader2Icon } from "lucide-react"
 import { useEffect, useId, useRef } from "react"
-import { Controller } from "react-hook-form"
 
+import FormField from "@/app/_components/form-field"
 import { Button } from "@/app/_components/ui/button"
+import { Input } from "@/app/_components/ui/input"
 import { cn } from "@/app/_lib/utils"
 
-import TicketTitleField from "../../../_components/ticket-title-field"
 import { useTicketEdit } from "../_hooks/use-ticket-edit"
 import EditTicketButton from "./edit-ticket-button"
 
@@ -20,7 +20,6 @@ const TicketEditHeading = ({
   heading,
   attendActions,
 }: TicketEditHeadingProps) => {
-  const titleId = useId()
   const saveBlockId = useId()
   const editButtonRef = useRef<HTMLButtonElement>(null)
   const wasEditingRef = useRef(false)
@@ -51,17 +50,9 @@ const TicketEditHeading = ({
     <>
       {isEditing ? (
         <div className="min-w-0 flex-1">
-          <Controller
-            name="title"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <TicketTitleField
-                id={titleId}
-                {...field}
-                fieldState={fieldState}
-              />
-            )}
-          />
+          <FormField control={form.control} name="title" label="Título">
+            {(field) => <Input {...field} autoComplete="off" />}
+          </FormField>
         </div>
       ) : (
         heading

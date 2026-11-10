@@ -778,7 +778,10 @@ Na **edição** o esvaziamento depois de um `INVALID_COMPANY` não depende do
 undefined }, { keepDefaultValues: true, keepIsSubmitted: true, keepFieldsRef:
 true })` antes do `setError`, e `ticket-edit-company.tsx` lê o valor com
 `useWatch` (sem fallback para o salvo). Na abertura, o `hasStaleValue` continua
-sendo o que esvazia o campo após o `router.refresh()`.
+sendo o que esvazia o campo após o `router.refresh()`. Desde a Etapa 3b de
+`docs/contracts/form-field.md`, a leitura sem fallback mora no próprio
+`FormField` (para todos os campos) e o `ticket-edit-company.tsx` deixa de ter
+`useWatch`; o `reset` do provider não muda.
 
 ### `ticket-edit.ts`
 
