@@ -1,78 +1,71 @@
-import ComboboxField, {
-  type ComboboxFieldProps,
-} from "@/app/_components/combobox-field"
+import type { ControllerFieldState } from "react-hook-form"
+
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/app/_components/ui/field"
 import { TICKET_ASSIGNEE_LABEL } from "@/app/_lib/domain/ticket-assignee"
 import type { AssigneeOption } from "@/app/_lib/types/ticket"
 
-interface TicketAssigneeFieldProps extends Omit<
-  ComboboxFieldProps<string>,
-  | "label"
-  | "value"
-  | "onChange"
-  | "options"
-  | "placeholder"
-  | "searchPlaceholder"
-  | "className"
-> {
+import TicketAssigneeCombobox from "./ticket-assignee-combobox"
+
+interface TicketAssigneeFieldProps {
+  id: string
+  value: number | null | undefined
+  disabled?: boolean
+  onChange: (value: number | null) => void
+  onBlur: () => void
+  ref?: React.Ref<HTMLButtonElement>
+  fieldState: ControllerFieldState
   assignees: readonly AssigneeOption[]
   queueLabel?: string
-  value: number | null | undefined
-  onChange: (value: number | null) => void
-}
-
-interface AssigneeChoice {
-  key: string
-  assigneeId: number | null
-  label: string
-}
-
-const QUEUE_CHOICE_KEY = "queue"
-
-const buildAssigneeChoices = (
-  assignees: readonly AssigneeOption[],
-  queueLabel: string | undefined,
-): AssigneeChoice[] => {
-  const people = assignees.map((assignee) => ({
-    key: String(assignee.id),
-    assigneeId: assignee.id,
-    label: assignee.name,
-  }))
-  if (queueLabel === undefined) return people
-  return [
-    { key: QUEUE_CHOICE_KEY, assigneeId: null, label: queueLabel },
-    ...people,
-  ]
+  hint?: string
 }
 
 const TicketAssigneeField = ({
+  id,
+  value,
+  disabled,
+  onChange,
+  onBlur,
+  ref,
+  fieldState,
   assignees,
   queueLabel,
-  value,
-  onChange,
-  ...props
+  hint,
 }: TicketAssigneeFieldProps) => {
-  const choices = buildAssigneeChoices(assignees, queueLabel)
-  const selectedKey = choices.find((choice) => choice.assigneeId === value)?.key
-
-  const handleChange = (key: string) => {
-    const choice = choices.find((item) => item.key === key)
-    if (choice !== undefined) onChange(choice.assigneeId)
-  }
+  const errorId = `${id}-error`
+  const hintId = `${id}-hint`
+  const showHint = !fieldState.invalid && hint !== undefined
 
   return (
-    <ComboboxField
-      {...props}
-      label={TICKET_ASSIGNEE_LABEL}
-      value={selectedKey}
-      onChange={handleChange}
-      options={choices.map((choice) => ({
-        value: choice.key,
-        label: choice.label,
-      }))}
-      placeholder="Selecione o destinatário"
-      searchPlaceholder="Buscar pessoa…"
-      className="min-w-0"
-    />
+    <Field data-invalid={fieldState.invalid} className="min-w-0 gap-1.5">
+      <FieldLabel htmlFor={id}>{TICKET_ASSIGNEE_LABEL}</FieldLabel>
+      <TicketAssigneeCombobox
+        id={id}
+        ref={ref}
+        assignees={assignees}
+        queueLabel={queueLabel}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        disabled={disabled}
+        aria-invalid={fieldState.invalid}
+        aria-describedby={
+          fieldState.invalid ? errorId : showHint ? hintId : undefined
+        }
+        aria-required={undefined}
+        aria-labelledby={undefined}
+      />
+      {fieldState.invalid ? (
+        <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
+      {showHint ? (
+        <FieldDescription id={hintId}>{hint}</FieldDescription>
+      ) : null}
+    </Field>
   )
 }
 

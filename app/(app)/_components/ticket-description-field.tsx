@@ -1,7 +1,8 @@
 import type { ControllerFieldState } from "react-hook-form"
 
 import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
-import { Textarea } from "@/app/_components/ui/textarea"
+
+import TicketDescriptionTextarea from "./ticket-description-textarea"
 
 interface TicketDescriptionFieldProps {
   id: string
@@ -33,7 +34,7 @@ const TicketDescriptionField = ({
       <FieldLabel htmlFor={id} className={hideLabel ? "sr-only" : undefined}>
         Descrição
       </FieldLabel>
-      <Textarea
+      <TicketDescriptionTextarea
         ref={ref}
         id={id}
         name={name}
@@ -41,10 +42,10 @@ const TicketDescriptionField = ({
         disabled={disabled}
         onChange={onChange}
         onBlur={onBlur}
-        rows={5}
-        className="max-h-64 min-h-28"
         aria-invalid={fieldState.invalid}
         aria-describedby={fieldState.invalid ? errorId : undefined}
+        aria-required={undefined}
+        aria-labelledby={undefined}
       />
       {fieldState.invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />

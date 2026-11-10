@@ -301,11 +301,12 @@ lê a tag nem chama `resolveTicketPriority`.
 - Campo vazio: o Select mostra o placeholder `TICKET_PRIORITY_PLACEHOLDER`
   (`Nenhuma`), que não é `SelectItem`. As opções continuam só
   `TICKET_PRIORITIES`.
-- Aviso de campo vazio: enquanto o campo está vazio (`Nenhuma`), abaixo do
-  Select aparece `TICKET_PRIORITY_REQUIRED_HINT` (`Defina uma prioridade`) em
-  texto pequeno e vermelho (`text-destructive`). Com erro de validação no
-  campo, o erro substitui o aviso (nunca os dois). Com tag que trava a
-  prioridade o aviso não aparece, porque o campo nunca está vazio.
+- Aviso de campo vazio: o antigo aviso `Defina uma prioridade` foi
+  substituído pelo `*` vermelho do `FormField`
+  (`required={priorityLock === null}`), ver `docs/contracts/form-field.md`.
+  Sem trava o campo é obrigatório e mostra o `*`; com tag que trava a
+  prioridade, sem `*` nem `aria-required`. O erro de validação continua
+  aparecendo abaixo do Select.
 - O servidor é a autoridade (ADR 020): a trava é conveniência de interface.
 - A edição do chamado (`ticket-edit-*`) **não** ganha campo de prioridade nem
   trava; trocar a tag ali não muda nada na prioridade.
@@ -316,7 +317,7 @@ lê a tag nem chama `resolveTicketPriority`.
 | ------------------------- | --------------------------------------------------------------------------------------------------- |
 | Opção sem prioridade      | `Sem prioridade (escolhida na abertura)`                                                            |
 | Hint do Select travado    | `Definida pela tag <nome>`                                                                          |
-| Aviso de campo vazio      | `Defina uma prioridade` (`TICKET_PRIORITY_REQUIRED_HINT`)                                           |
+| Campo obrigatório         | `*` vermelho do `FormField` quando `priorityLock === null` (ver `form-field.md`)                    |
 | Descrição do campo na tag | `Chamados abertos com esta tag recebem esta prioridade. Mudar aqui não altera chamados já abertos.` |
 | Coluna / rótulo do campo  | `Prioridade` (`TICKET_PRIORITY_FIELD_LABEL`)                                                        |
 | Célula sem prioridade     | `—`                                                                                                 |

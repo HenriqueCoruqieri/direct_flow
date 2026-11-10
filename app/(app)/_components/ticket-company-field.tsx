@@ -1,21 +1,16 @@
 import type { Ref } from "react"
 import type { ControllerFieldState } from "react-hook-form"
 
-import Autocomplete from "@/app/_components/autocomplete"
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldLabel,
 } from "@/app/_components/ui/field"
-import {
-  matchesTicketCompanySearch,
-  TICKET_COMPANY_EMPTY_SEARCH_MESSAGE,
-  TICKET_COMPANY_LABEL,
-  TICKET_COMPANY_SEARCH_PLACEHOLDER,
-  ticketCompanyOptionLabel,
-} from "@/app/_lib/domain/ticket-company"
+import { TICKET_COMPANY_LABEL } from "@/app/_lib/domain/ticket-company"
 import type { TicketCompanyOption } from "@/app/_lib/types/ticket-company"
+
+import TicketCompanyAutocomplete from "./ticket-company-autocomplete"
 
 interface TicketCompanyFieldProps<TCompany extends TicketCompanyOption> {
   id: string
@@ -30,8 +25,6 @@ interface TicketCompanyFieldProps<TCompany extends TicketCompanyOption> {
   hint?: string
 }
 
-const companyId = (company: TicketCompanyOption) => company.id
-
 const TicketCompanyField = <TCompany extends TicketCompanyOption>({
   id,
   value,
@@ -41,7 +34,7 @@ const TicketCompanyField = <TCompany extends TicketCompanyOption>({
   ref,
   fieldState,
   companies,
-  getOptionLabel = ticketCompanyOptionLabel,
+  getOptionLabel,
   hint,
 }: TicketCompanyFieldProps<TCompany>) => {
   const labelId = `${id}-label`
@@ -54,25 +47,21 @@ const TicketCompanyField = <TCompany extends TicketCompanyOption>({
       <FieldLabel id={labelId} htmlFor={id}>
         {TICKET_COMPANY_LABEL}
       </FieldLabel>
-      <Autocomplete
+      <TicketCompanyAutocomplete
         id={id}
         ref={ref}
-        options={companies}
+        companies={companies}
         value={value}
         onChange={onChange}
         onBlur={onBlur}
         disabled={disabled}
-        getOptionValue={companyId}
         getOptionLabel={getOptionLabel}
-        filterOption={matchesTicketCompanySearch}
-        listLabel={TICKET_COMPANY_LABEL}
-        placeholder={TICKET_COMPANY_SEARCH_PLACEHOLDER}
-        emptyText={TICKET_COMPANY_EMPTY_SEARCH_MESSAGE}
         aria-labelledby={labelId}
         aria-invalid={fieldState.invalid}
         aria-describedby={
           fieldState.invalid ? errorId : showHint ? hintId : undefined
         }
+        aria-required={undefined}
       />
       {fieldState.invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />

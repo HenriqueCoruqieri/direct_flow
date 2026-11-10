@@ -111,8 +111,6 @@ export const TICKET_PRIORITY_FIELD_LABEL = "Prioridade"
 
 export const TICKET_PRIORITY_PLACEHOLDER = "Nenhuma"
 
-export const TICKET_PRIORITY_REQUIRED_HINT = "Defina uma prioridade"
-
 export const TICKET_TYPE_LABELS = {
   duvida: "Dúvida",
   ocorrencia: "Ocorrência",

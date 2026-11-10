@@ -50,6 +50,7 @@ interface FormFieldProps<
   required?: boolean
   description?: React.ReactNode
   labelMode?: "for" | "group"
+  hideLabel?: boolean
   id?: string
   className?: string
   children: (
@@ -69,6 +70,7 @@ const FormField = <
   required,
   description,
   labelMode = "for",
+  hideLabel = false,
   id: idProp,
   className,
   children,
@@ -102,6 +104,8 @@ const FormField = <
     "aria-labelledby": isGroup ? labelId : undefined,
   }
 
+  const labelClassName = cn("gap-0.5", hideLabel && "sr-only")
+
   const mark = showMark ? (
     <span aria-hidden="true" className="text-destructive">
       *
@@ -111,12 +115,12 @@ const FormField = <
   return (
     <Field data-invalid={invalid} className={cn("gap-1.5", className)}>
       {isGroup ? (
-        <FieldTitle id={labelId} className="gap-0.5">
+        <FieldTitle id={labelId} className={labelClassName}>
           {label}
           {mark}
         </FieldTitle>
       ) : (
-        <FieldLabel htmlFor={id} className="gap-0.5">
+        <FieldLabel htmlFor={id} className={labelClassName}>
           {label}
           {mark}
         </FieldLabel>

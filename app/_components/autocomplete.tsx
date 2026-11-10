@@ -35,6 +35,7 @@ interface AutocompleteProps<TOption, TValue extends string | number> {
   "aria-labelledby"?: string
   "aria-invalid"?: boolean
   "aria-describedby"?: string
+  "aria-required"?: boolean
 }
 
 const OPENING_KEYS = new Set(["ArrowDown", "ArrowUp"])
@@ -75,6 +76,7 @@ const Autocomplete = <TOption, TValue extends string | number>({
   "aria-labelledby": ariaLabelledBy,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
+  "aria-required": ariaRequired,
 }: AutocompleteProps<TOption, TValue>) => {
   const anchorRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
@@ -171,6 +173,7 @@ const Autocomplete = <TOption, TValue extends string | number>({
                 aria-labelledby={ariaLabelledBy}
                 aria-invalid={ariaInvalid}
                 aria-describedby={ariaDescribedBy}
+                aria-required={ariaRequired}
                 onClick={openList}
                 onKeyDown={handleKeyDown}
                 onBlur={onBlur}

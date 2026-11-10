@@ -1,15 +1,9 @@
 import type { ControllerFieldState } from "react-hook-form"
 
 import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/app/_components/ui/select"
-import { TICKET_TYPE_LABELS, TICKET_TYPES } from "@/app/_lib/domain/ticket"
 import type { TicketType } from "@/app/_lib/types/ticket"
+
+import TicketTypeSelect from "./ticket-type-select"
 
 interface TicketTypeFieldProps {
   id: string
@@ -21,9 +15,6 @@ interface TicketTypeFieldProps {
   ref?: React.Ref<HTMLButtonElement>
   fieldState: ControllerFieldState
 }
-
-const ticketTypeFromValue = (value: string): TicketType | undefined =>
-  TICKET_TYPES.find((type) => type === value)
 
 const TicketTypeField = ({
   id,
@@ -40,30 +31,19 @@ const TicketTypeField = ({
   return (
     <Field data-invalid={fieldState.invalid} className="gap-1.5">
       <FieldLabel htmlFor={id}>Tipo</FieldLabel>
-      <Select
+      <TicketTypeSelect
+        ref={ref}
+        id={id}
         name={name}
-        value={value ?? ""}
-        onValueChange={(next) => onChange(ticketTypeFromValue(next))}
+        value={value}
         disabled={disabled}
-      >
-        <SelectTrigger
-          ref={ref}
-          id={id}
-          onBlur={onBlur}
-          aria-invalid={fieldState.invalid}
-          aria-describedby={fieldState.invalid ? errorId : undefined}
-          className="w-full"
-        >
-          <SelectValue placeholder="Selecione o tipo" />
-        </SelectTrigger>
-        <SelectContent>
-          {TICKET_TYPES.map((type) => (
-            <SelectItem key={type} value={type}>
-              {TICKET_TYPE_LABELS[type]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        onChange={onChange}
+        onBlur={onBlur}
+        aria-invalid={fieldState.invalid}
+        aria-describedby={fieldState.invalid ? errorId : undefined}
+        aria-required={undefined}
+        aria-labelledby={undefined}
+      />
       {fieldState.invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />
       ) : null}

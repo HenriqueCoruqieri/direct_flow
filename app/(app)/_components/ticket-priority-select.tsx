@@ -1,13 +1,7 @@
 import { useState } from "react"
-import type { ControllerFieldState } from "react-hook-form"
 import { toast } from "sonner"
 
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/app/_components/ui/field"
+import type { FormFieldA11yProps } from "@/app/_components/form-field"
 import {
   Select,
   SelectContent,
@@ -17,53 +11,40 @@ import {
 } from "@/app/_components/ui/select"
 import {
   TICKET_PRIORITIES,
-  TICKET_PRIORITY_FIELD_LABEL,
   TICKET_PRIORITY_LABELS,
   TICKET_PRIORITY_PLACEHOLDER,
-  TICKET_PRIORITY_REQUIRED_HINT,
 } from "@/app/_lib/domain/ticket"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
 import { cn } from "@/app/_lib/utils"
 
-interface TicketPriorityFieldProps {
-  id: string
-  name: string
+interface TicketPrioritySelectProps extends FormFieldA11yProps {
+  name?: string
   value: TicketPriority | undefined
   disabled?: boolean
   onChange: (value: TicketPriority | undefined) => void
   onBlur: () => void
   ref?: React.Ref<HTMLButtonElement>
-  fieldState: ControllerFieldState
   lockedMessage?: string
 }
 
 const ticketPriorityFromValue = (value: string): TicketPriority | undefined =>
   TICKET_PRIORITIES.find((priority) => priority === value)
 
-const TicketPriorityField = ({
-  id,
+const TicketPrioritySelect = ({
   name,
   value,
   disabled,
   onChange,
-  onBlur,
-  ref,
-  fieldState,
   lockedMessage,
-}: TicketPriorityFieldProps) => {
-  const errorId = `${id}-error`
-  const lockedId = `${id}-locked`
-  const requiredId = `${id}-required`
+  "aria-describedby": ariaDescribedBy,
+  ...trigger
+}: TicketPrioritySelectProps) => {
+  const lockedId = `${trigger.id}-locked`
   const [open, setOpen] = useState(false)
   const locked = lockedMessage !== undefined
-  const showRequired = !fieldState.invalid && value === undefined
   const describedBy =
-    [
-      fieldState.invalid ? errorId : null,
-      showRequired ? requiredId : null,
-      locked ? lockedId : null,
-    ]
-      .filter((entry) => entry !== null)
+    [ariaDescribedBy, locked ? lockedId : undefined]
+      .filter((entry) => entry !== undefined)
       .join(" ") || undefined
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -80,8 +61,7 @@ const TicketPriorityField = ({
   }
 
   return (
-    <Field data-invalid={fieldState.invalid} className="min-w-0 gap-1.5">
-      <FieldLabel htmlFor={id}>{TICKET_PRIORITY_FIELD_LABEL}</FieldLabel>
+    <>
       <Select
         name={name}
         value={value ?? ""}
@@ -91,10 +71,7 @@ const TicketPriorityField = ({
         onOpenChange={handleOpenChange}
       >
         <SelectTrigger
-          ref={ref}
-          id={id}
-          onBlur={onBlur}
-          aria-invalid={fieldState.invalid}
+          {...trigger}
           aria-disabled={locked || undefined}
           aria-describedby={describedBy}
           className={cn(
@@ -112,21 +89,13 @@ const TicketPriorityField = ({
           ))}
         </SelectContent>
       </Select>
-      {fieldState.invalid ? (
-        <FieldError id={errorId} errors={[fieldState.error]} />
-      ) : null}
-      {showRequired ? (
-        <FieldDescription id={requiredId} className="text-xs text-destructive">
-          {TICKET_PRIORITY_REQUIRED_HINT}
-        </FieldDescription>
-      ) : null}
       {locked ? (
         <span id={lockedId} className="sr-only">
           {lockedMessage}
         </span>
       ) : null}
-    </Field>
+    </>
   )
 }
 
-export default TicketPriorityField
+export default TicketPrioritySelect
