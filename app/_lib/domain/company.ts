@@ -55,8 +55,6 @@ export const COMPANY_NOTES_PLACEHOLDER = "Informações úteis para quem atende"
 
 export const COMPANY_MANAGER_NAME_PLACEHOLDER = "Nome completo"
 
-export const COMPANY_REQUIRED_FIELDS_HINT = "Campos com * são obrigatórios."
-
 export const BUSINESS_HOURS_MESSAGES = {
   DAYS_WITHOUT_OPENS_AT: "Informe o horário de abertura.",
   DAYS_WITHOUT_CLOSES_AT: "Informe o horário de fechamento.",
