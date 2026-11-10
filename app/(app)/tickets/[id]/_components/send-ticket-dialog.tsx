@@ -1,9 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, SendIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useId } from "react"
+import { useId, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -16,12 +16,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/app/_components/ui/dialog"
 import {
   type AssignTicketErrorCode,
   sendTicket,
 } from "@/app/_lib/actions/ticket-assignment"
-import { isStaleTicketCode } from "@/app/_lib/domain/ticket"
+import { formatTicketNumber, isStaleTicketCode } from "@/app/_lib/domain/ticket"
 import {
   buildSendTicketFormDefaults,
   describeCurrentAssignee,
@@ -31,38 +32,32 @@ import {
   sendTargetOptions,
   sendTicketDialogTitle,
 } from "@/app/_lib/domain/ticket-assignment"
-import type { DepartmentQueueListItem } from "@/app/_lib/types/department-queue"
 import type { AssigneeOption } from "@/app/_lib/types/ticket"
+import type { SendTicketTarget } from "@/app/_lib/types/ticket-assignment"
 import {
   type SendTicketInput,
   sendTicketSchema,
 } from "@/app/_lib/validation/ticket-assignment"
 
-import HandoffCommentField from "../../_components/handoff-comment-field"
-import TicketAssigneeField from "../../_components/ticket-assignee-field"
+import HandoffCommentField from "../../../_components/handoff-comment-field"
+import TicketAssigneeField from "../../../_components/ticket-assignee-field"
 
 const FIELD_ERROR_CODES: ReadonlySet<AssignTicketErrorCode> = new Set([
   "INVALID_ASSIGNEE",
   "INVALID_INPUT",
 ])
 
-interface SendTicketDialogProps {
-  ticket: DepartmentQueueListItem
+export interface SendTicketDialogProps {
+  target: SendTicketTarget
   assignees: readonly AssigneeOption[]
-  open: boolean
-  onOpenChange: (open: boolean) => void
 }
 
-const SendTicketDialog = ({
-  ticket,
-  assignees,
-  open,
-  onOpenChange,
-}: SendTicketDialogProps) => {
+const SendTicketDialog = ({ target, assignees }: SendTicketDialogProps) => {
   const assigneeFieldId = useId()
   const commentFieldId = useId()
   const router = useRouter()
-  const defaults = buildSendTicketFormDefaults(ticket)
+  const [open, setOpen] = useState(false)
+  const defaults = buildSendTicketFormDefaults(target)
 
   const form = useForm<SendTicketInput>({
     resolver: zodResolver(sendTicketSchema),
@@ -73,13 +68,13 @@ const SendTicketDialog = ({
 
   const close = () => {
     form.reset(defaults)
-    onOpenChange(false)
+    setOpen(false)
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting) return
     if (nextOpen) {
-      onOpenChange(true)
+      setOpen(true)
       return
     }
     close()
@@ -114,6 +109,16 @@ const SendTicketDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          aria-label={`${SEND_TICKET_LABEL} o chamado ${formatTicketNumber(target.id)}`}
+        >
+          <SendIcon aria-hidden="true" className="size-4" />
+          {SEND_TICKET_LABEL}
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-md">
         <form
           noValidate
@@ -121,7 +126,7 @@ const SendTicketDialog = ({
           className="flex flex-col gap-6"
         >
           <DialogHeader>
-            <DialogTitle>{sendTicketDialogTitle(ticket.id)}</DialogTitle>
+            <DialogTitle>{sendTicketDialogTitle(target.id)}</DialogTitle>
             <DialogDescription>
               {SEND_TICKET_DIALOG_DESCRIPTION}
             </DialogDescription>
@@ -135,8 +140,8 @@ const SendTicketDialog = ({
                 id={assigneeFieldId}
                 {...field}
                 fieldState={fieldState}
-                assignees={sendTargetOptions(assignees, ticket.assignedTo)}
-                hint={describeCurrentAssignee(ticket.assigneeName)}
+                assignees={sendTargetOptions(assignees, target.assignedTo)}
+                hint={describeCurrentAssignee(target.assigneeName)}
               />
             )}
           />

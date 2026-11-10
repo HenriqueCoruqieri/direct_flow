@@ -8,7 +8,6 @@ import {
   listQueueTickets,
 } from "@/app/_lib/data/department-queue"
 import { listDepartmentOptions } from "@/app/_lib/data/departments"
-import { listTicketAssigneeOptions } from "@/app/_lib/data/people"
 import {
   formatRangeLabel,
   resolvePeriodFilterRange,
@@ -25,7 +24,6 @@ import {
   queueDepartmentIdFor,
   queueDepartmentOptions,
 } from "@/app/_lib/domain/department-queue"
-import { isTicketDispatcher } from "@/app/_lib/domain/ticket-assignment"
 import type { DepartmentQueueLocation } from "@/app/_lib/types/department-queue"
 import type { TicketActorFacts } from "@/app/_lib/types/ticket"
 import {
@@ -88,12 +86,9 @@ const DepartmentQueuePage = async ({ searchParams }: PageProps<"/queue">) => {
   }
   const departmentId = queueDepartmentIdFor(viewer, location.departmentId)
   const range = resolvePeriodFilterRange(location.period, now)
-  const [tickets, counts, assignees] = await Promise.all([
+  const [tickets, counts] = await Promise.all([
     listQueueTickets(departmentId, location.tab, range),
     countQueueTicketsByTab(departmentId, range),
-    isTicketDispatcher(viewer, departmentId)
-      ? listTicketAssigneeOptions(departmentId)
-      : [],
   ])
 
   const toolbarFooter = (
@@ -145,7 +140,6 @@ const DepartmentQueuePage = async ({ searchParams }: PageProps<"/queue">) => {
             tab={location.tab}
             tickets={tickets}
             viewer={viewer}
-            assignees={assignees}
             toolbarFooter={toolbarFooter}
             location={location}
             now={now}

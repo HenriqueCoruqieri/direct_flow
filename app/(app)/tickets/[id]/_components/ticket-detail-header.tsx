@@ -9,6 +9,9 @@ import AttendTicketButton from "./attend-ticket-button"
 import DeclineTransferDialog, {
   type DeclineTransferDialogProps,
 } from "./decline-transfer-dialog"
+import SendTicketDialog, {
+  type SendTicketDialogProps,
+} from "./send-ticket-dialog"
 import TicketEditHeading from "./ticket-edit-heading"
 
 interface TicketDetailHeaderProps {
@@ -18,6 +21,7 @@ interface TicketDetailHeaderProps {
   editable?: boolean
   assumeTarget?: AssumeTicketTarget | null
   attendTarget?: TicketAttendTarget | null
+  send?: SendTicketDialogProps | null
   decline?: DeclineTransferDialogProps | null
 }
 
@@ -28,6 +32,7 @@ const TicketDetailHeader = ({
   editable = false,
   assumeTarget = null,
   attendTarget = null,
+  send = null,
   decline = null,
 }: TicketDetailHeaderProps) => {
   const heading = (
@@ -36,11 +41,20 @@ const TicketDetailHeader = ({
     </h1>
   )
   const hasAttendActions =
-    assumeTarget !== null || attendTarget !== null || decline !== null
+    assumeTarget !== null ||
+    send !== null ||
+    attendTarget !== null ||
+    decline !== null
   const attendActions = hasAttendActions ? (
     <>
       {assumeTarget !== null ? (
         <AssumeTicketButton target={assumeTarget} />
+      ) : null}
+      {send !== null ? (
+        <SendTicketDialog
+          key={`${send.target.id}:${send.target.assignedTo ?? "none"}`}
+          {...send}
+        />
       ) : null}
       {attendTarget !== null ? (
         <AttendTicketButton target={attendTarget} />

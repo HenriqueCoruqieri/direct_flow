@@ -8,7 +8,6 @@ import { formatTicketNumber } from "@/app/_lib/domain/ticket"
 import {
   ASSUME_TICKET_LABEL,
   ASSUME_TICKET_PENDING_LABEL,
-  SEND_TICKET_LABEL,
 } from "@/app/_lib/domain/ticket-assignment"
 import type {
   DepartmentQueueListItem,
@@ -20,15 +19,12 @@ import { useTicketAction } from "../../_hooks/use-ticket-action"
 interface QueueRowActionsProps {
   ticket: DepartmentQueueListItem
   actions: DepartmentQueueRowActions
-  onSend: (ticket: DepartmentQueueListItem) => void
 }
 
-const QueueRowActions = ({ ticket, actions, onSend }: QueueRowActionsProps) => {
+const QueueRowActions = ({ ticket, actions }: QueueRowActionsProps) => {
   const { isPending: isAssuming, run } = useTicketAction()
 
-  if (!actions.assume && !actions.send) return null
-
-  const ticketNumber = formatTicketNumber(ticket.id)
+  if (!actions.assume) return null
 
   const handleAssume = () =>
     run(() =>
@@ -39,38 +35,24 @@ const QueueRowActions = ({ ticket, actions, onSend }: QueueRowActionsProps) => {
     )
 
   return (
-    <div className="flex items-center justify-end gap-2">
-      {actions.assume ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={isAssuming}
-          aria-busy={isAssuming || undefined}
-          aria-label={`${ASSUME_TICKET_LABEL} o chamado ${ticketNumber}`}
-          onClick={handleAssume}
-        >
-          {isAssuming ? (
-            <Loader2Icon
-              aria-hidden="true"
-              className="size-3.5 animate-spin motion-reduce:animate-none"
-            />
-          ) : null}
-          {isAssuming ? ASSUME_TICKET_PENDING_LABEL : ASSUME_TICKET_LABEL}
-        </Button>
-      ) : null}
-      {actions.send ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={isAssuming}
-          aria-label={`${SEND_TICKET_LABEL} o chamado ${ticketNumber}`}
-          onClick={() => onSend(ticket)}
-        >
-          {SEND_TICKET_LABEL}
-        </Button>
-      ) : null}
+    <div className="flex items-center justify-end">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={isAssuming}
+        aria-busy={isAssuming || undefined}
+        aria-label={`${ASSUME_TICKET_LABEL} o chamado ${formatTicketNumber(ticket.id)}`}
+        onClick={handleAssume}
+      >
+        {isAssuming ? (
+          <Loader2Icon
+            aria-hidden="true"
+            className="size-3.5 animate-spin motion-reduce:animate-none"
+          />
+        ) : null}
+        {isAssuming ? ASSUME_TICKET_PENDING_LABEL : ASSUME_TICKET_LABEL}
+      </Button>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import type { TicketStatus, TicketType } from "@/app/_lib/types/ticket"
+import type { TicketCompanyListFacts } from "@/app/_lib/types/ticket-company"
 import type { TicketSlaFacts } from "@/app/_lib/types/ticket-due"
 
 export interface TicketListRow {
@@ -12,3 +13,6 @@ export interface TicketListRow {
 }
 
 export interface TicketSlaListRow extends TicketListRow, TicketSlaFacts {}
+
+export interface TicketCompanyListRow
+  extends TicketListRow, TicketCompanyListFacts {}

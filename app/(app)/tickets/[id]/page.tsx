@@ -17,7 +17,10 @@ import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { todayKey } from "@/app/_lib/date"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
-import { ticketAssumeTargetFor } from "@/app/_lib/domain/ticket-assignment"
+import {
+  ticketAssumeTargetFor,
+  ticketSendTargetFor,
+} from "@/app/_lib/domain/ticket-assignment"
 import { canAttachToTicketDetail } from "@/app/_lib/domain/ticket-attachment"
 import {
   canDeleteTicketComment,
@@ -47,6 +50,7 @@ import {
 import AppTopBar from "../../_components/app-top-bar"
 import type { DeclineTransferDialogProps } from "./_components/decline-transfer-dialog"
 import PendingTransferNotice from "./_components/pending-transfer-notice"
+import type { SendTicketDialogProps } from "./_components/send-ticket-dialog"
 import type { SendToDepartmentSetup } from "./_components/send-to-department-dialog"
 import TicketAttachments from "./_components/ticket-attachments"
 import TicketComments from "./_components/ticket-comments"
@@ -103,6 +107,7 @@ const TicketDetailPage = async ({
   const canAttach = canAttachToTicketDetail(actor, ticket, now)
   const canSendToDepartment = canSendTicketToDepartmentDetail(actor, ticket)
   const assumeTarget = ticketAssumeTargetFor(actor, ticket)
+  const sendTarget = ticketSendTargetFor(actor, ticket)
   const attendTarget = ticketAttendTargetFor(actor, ticket)
   const declineTarget = ticketDeclineTargetFor(actor, ticket)
   const decline: DeclineTransferDialogProps | null =
@@ -117,6 +122,7 @@ const TicketDetailPage = async ({
     editCompanies,
     departmentOptions,
     transferAssignees,
+    sendAssignees,
   ] = await Promise.all([
     listTicketMessages(ticket.id, ticketMessageScopeFor(actor, ticket)),
     listTicketAttachments(ticket.id),
@@ -127,7 +133,15 @@ const TicketDetailPage = async ({
     canSendToDepartment
       ? listTransferAssigneeOptions(ticket.currentDepartmentId)
       : null,
+    sendTarget !== null
+      ? listTicketAssigneeOptions(ticket.currentDepartmentId)
+      : null,
   ])
+
+  const send: SendTicketDialogProps | null =
+    sendTarget !== null && sendAssignees !== null
+      ? { target: sendTarget, assignees: sendAssignees }
+      : null
 
   const sendToDepartment: SendToDepartmentSetup | null =
     departmentOptions !== null && transferAssignees !== null
@@ -183,6 +197,7 @@ const TicketDetailPage = async ({
           status={ticket.status}
           editable={editable}
           assumeTarget={assumeTarget}
+          send={send}
           attendTarget={attendTarget}
           decline={decline}
         />

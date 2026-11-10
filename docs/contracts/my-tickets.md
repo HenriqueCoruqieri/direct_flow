@@ -16,6 +16,18 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 > logo depois de "Título": nome fantasia e, abaixo, `formatCnpjTail` (ex.:
 > `…/0001-95`); sem empresa, `—`. No detalhe, desde a Etapa 1, o card
 > "Detalhes" mostra "Empresa" acima de "Tipo".
+>
+> Largura (2026-11-09): a coluna "Tipo" sai da vista de `/tickets` (fica só no
+> detalhe), mas continua definida e oculta via `hiddenColumns`, porque o
+> filtro de Tipo (`TICKET_TYPE_FILTER`) continua valendo. "Título" quebra em
+> até 2 linhas (`line-clamp-2`, `min-w-40`); "Empresa" fica em `max-w-32`;
+> "Tag" fica em uma linha, `max-w-36 truncate` com `title`; "Setor atual"
+> quebra linha. Título e Tag são compartilhados com Fila e Aprovações
+> (Aprovações mantém "Tipo" visível). O `DataTable` usa `px-3` em todas as
+> tabelas. Onde este documento lista "Tipo" entre as colunas visíveis, vale a
+> ocultação. Pior caso de largura (tags longas): cabe em 1366 e rola +54 px em
+> 1280, limitação conhecida aceita, cenário L7 de
+> `docs/contracts/ticket-company.md`.
 
 > **Revisão 2026-10-27 — período padrão volta a `Todos`.**
 > `DEFAULT_MY_TICKETS_PERIOD = { periodo: "todos" }`, como a Fila do setor.

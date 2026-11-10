@@ -70,7 +70,7 @@ Onda 1  df-data  ∥  df-ui (contra o contrato)
         usuário          npm run db:seed com SEED_QA=true (Etapa 1)
 Onda 2  df-actions  ∥  df-ui (liga erros e ações)   — Etapa 3 sem df-actions
 Onda 3  df-reviewer
-Onda 4  df-qa            T1–T12 · E1–E12 · L1–L12
+Onda 4  df-qa            T1–T12 · E1–E14 · L1–L14
 ```
 
 Sem e-mail, variável de ambiente, pacote ou rota novos.
@@ -89,7 +89,14 @@ Sem e-mail, variável de ambiente, pacote ou rota novos.
 5. **Edição obrigatória em chamado antigo**: corrigir só o título exige escolher
    empresa (pedido do usuário).
 6. **Sem rolagem horizontal** não é garantido só por tirar o "Enviar": a coluna
-   nova ocupa largura. Cenário L7 mede.
+   nova ocupa largura. Cenário L7 mede. **Atualizado** (2026-11-09): "Tipo"
+   saiu da vista de `/queue` e `/tickets` e Título/Tag/Setor atual quebram
+   linha; o caso médio cabe, o pior caso ainda rola (limitação conhecida, Etapa
+   3, cenário L7). **Fechado** (2026-11-09, fim da Etapa 3): com "Empresa"
+   `max-w-32`, "Tag" `max-w-36` truncada e `px-3` no `DataTable`, o caso médio
+   cabe em 1280 e 1366; o pior caso (aba "Todos" com tags longas) cabe em 1366
+   e rola em 1280 (+76 px na Fila, +54 px em Meus chamados). Limitação conhecida
+   aceita pelo usuário.
 7. **Dois "Enviar" no detalhe**: "Enviar" (pessoa do setor, cabeçalho) e
    "Enviar para outro setor" (conclusão). Rótulos e títulos de diálogo
    distintos.
@@ -110,7 +117,13 @@ nenhum agente escreveu fora dos seus caminhos.
       `df-reviewer` aprovado com atenções, `df-qa` 14/14 após o Reteste 1 (E9
       corrigido pelo `df-ui`)
       (`docs/test-reports/2026-11-09-ticket-company-etapa-2.md`)
-- [ ] Etapa 3
+- [x] Etapa 3 — concluída em 2026-11-09: Ondas 0–2 (sem `df-actions`),
+      `tsc`/lint/build, `df-reviewer` aprovado sem achados, `df-qa` 13/14 e
+      Retestes 1 e 2 de L7; o que resta de L7 é o pior caso em 1280, limitação
+      conhecida aceita (`docs/test-reports/2026-11-09-ticket-company-etapa-3.md`).
+      Pendência fora do escopo: Cadastros → Pessoas (+304 px) e Tags (+67 px,
+      coluna "Ações" cortada em "Desa…") rolam em 1280; não foram causadas por
+      esta etapa (o `px-3` só reduz largura). Para o `df-ui` avaliar
 
 ## Padrões reaproveitados
 
@@ -1035,19 +1048,25 @@ where conname in ('ticket_history_from_company_id_company_id_fk', 'ticket_histor
 
 # Etapa 3 — coluna "Empresa" nas tabelas e "Enviar" no detalhe
 
-Sem schema e sem migration.
+Sem schema, sem migration, sem Zod novo, sem action nova.
 
 ## Constatação
 
 "Enviar" hoje: `QueueRowActions` (`app/(app)/queue/_components/queue-row-actions.tsx`)
 mostra o botão quando `queueRowActionsFor(viewer, row).send`, isto é,
 `canSendTicket` → `isTicketDispatcher`: **Diretor** (`isBoard`) ou
-**Administrador do setor atual do chamado**. **Membro nunca tem "Enviar".** A
-Etapa 3 move o botão; a regra não muda.
+**Administrador do setor atual do chamado**, com o chamado não final, sem
+transferência pendente e em status atribuível. **Membro nunca tem "Enviar".** A
+Etapa 3 move o botão; a regra não muda. `SendTicketDialog` só é usado por
+`department-queue-table.tsx`; depois da Etapa 3, só pelo detalhe.
 
-## Tipos
+`sendTicket` (`app/_lib/actions/ticket-assignment.ts`) já revalida
+`ticketDetailPath(id)`, `DEPARTMENT_QUEUE_PATH` e `MY_TICKETS_PATH`: nada muda
+na action.
 
-### `ticket-company.ts`
+## Tipos (Onda 0 — feito)
+
+### `app/_lib/types/ticket-company.ts`
 
 ```ts
 export interface TicketCompanyListFacts {
@@ -1055,104 +1074,176 @@ export interface TicketCompanyListFacts {
 }
 ```
 
-### `department-queue.ts` e `my-tickets.ts`
+`TicketCompanyOption` = `{ id: number; tradeName: string; cnpj: string }` (CNPJ
+limpo, 14 caracteres, como gravado).
+
+### `app/_lib/types/department-queue.ts` e `app/_lib/types/my-tickets.ts`
 
 ```ts
-DepartmentQueueListItem extends TicketAssignmentFacts, TicketCompanyListFacts
-MyTicketListItem extends TicketCompanyListFacts
+export interface DepartmentQueueListItem
+  extends TicketAssignmentFacts, TicketCompanyListFacts { … }
+
+export interface MyTicketListItem extends TicketCompanyListFacts { … }
 
 export interface DepartmentQueueRowActions {
   assume: boolean
 }
 ```
 
-(`send` sai.)
+(`send` saiu de `DepartmentQueueRowActions`.)
 
-### `ticket-assignment.ts`
+### `app/_lib/types/ticket-assignment.ts`
 
 ```ts
-export interface SendTicketTarget extends TicketAssignmentSource {
+export interface TicketSendDetailSource extends TicketAssumeDetailSource {
   assigneeName: string | null
 }
 
-export interface TicketSendDetailSource extends TicketAssumeDetailSource {
+export interface SendTicketTarget extends TicketAssignmentSource {
   assigneeName: string | null
 }
 ```
 
-## Domínio
+`TicketAssignmentSource` = `{ id: number; assignedTo: number | null }`.
+`TicketDetail` (de `findTicketDetail`) satisfaz `TicketSendDetailSource` sem
+mudança.
 
-### `brazilian-formats.ts`
+## Domínio (Onda 0 — feito)
+
+### `app/_lib/domain/brazilian-formats.ts`
 
 ```ts
 export const CNPJ_TAIL_PREFIX = "…"
 
-export const formatCnpjTail = (cnpj: string): string
+export const formatCnpjTail: (cnpj: string) => string
 ```
 
-`cleanCnpj(cnpj)`; com 14 caracteres → `…/${clean.slice(8, 12)}-${clean.slice(12)}`;
-com menos, `formatCnpj(clean)` (não acontece com dado gravado). Exemplos:
-`12345678000195` → `…/0001-95`; `AB12CD34000184` → `…/0001-84`;
-`12ABC34501DE35` → `…/01DE-35`.
+`cleanCnpj(cnpj)`; com 14 caracteres → `…/<filial>-<DV>` (posições 8–11 e
+12–13); com menos, `formatCnpj(clean)` (não acontece com dado gravado).
+Exemplos: `12345678000195` → `…/0001-95` (QA Alfa); `AB12CD34000184` →
+`…/0001-84` (QA Beta); `12ABC34501DE35` → `…/01DE-35`. O prefixo é o caractere
+reticências (U+2026), não três pontos.
 
-### `ticket-assignment.ts`
+### `app/_lib/domain/ticket-assignment.ts`
 
 ```ts
-export const ticketSendTargetFor = (
+export const ticketSendTargetFor: (
   actor: TicketActorFacts,
   ticket: TicketSendDetailSource,
-): SendTicketTarget | null
+) => SendTicketTarget | null
 ```
 
-Mesmo molde de `ticketAssumeTargetFor`: `canSendTicket(actor, { createdBy,
-assignedTo, currentDepartmentId, status, hasPendingTransfer:
-pendingTransfer !== null })` → `{ id, assignedTo, assigneeName }`; senão
-`null`. `buildSendTicketFormDefaults`, `sendTargetOptions`,
-`sendTicketDialogTitle` e `describeCurrentAssignee` servem ao alvo sem mudança.
+Mesmo molde de `ticketAssumeTargetFor` (os dois usam agora o helper privado
+`assignmentFactsFromDetail`, que monta `TicketAssignmentFacts` com
+`hasPendingTransfer: pendingTransfer !== null`): `canSendTicket(actor, facts)`
+→ `{ id, assignedTo, assigneeName }`; senão `null`.
+`buildSendTicketFormDefaults(target)`, `sendTargetOptions(assignees,
+target.assignedTo)`, `sendTicketDialogTitle(target.id)` e
+`describeCurrentAssignee(target.assigneeName)` servem ao alvo sem mudança.
 
-### `department-queue.ts`
+### `app/_lib/domain/department-queue.ts`
 
-`queueRowActionsFor(viewer, row) => ({ assume: canAssumeTicket(viewer, row) })`.
+```ts
+export const queueRowActionsFor: (
+  viewer: TicketActorFacts,
+  row: TicketAssignmentFacts,
+) => DepartmentQueueRowActions
+```
 
-## `df-data`
+`({ assume: canAssumeTicket(viewer, row) })`. `canSendTicket` continua
+exportado.
 
-`listQueueTickets` e `listMyTickets`: `leftJoin(company, eq(company.id,
-ticket.companyId))`, selecionando `id`, `tradeName`, `cnpj` e montando
-`company` (ou `null`) como em `findTicketDetail`. Sem filtro novo, sem mudança
-de ordenação nem de contagem.
+## `df-data` (Onda 1)
+
+`app/_lib/data/department-queue.ts` e `app/_lib/data/my-tickets.ts` — mesmas
+assinaturas, retorno agora com `company`:
+
+```ts
+export async function listQueueTickets(
+  departmentId: number,
+  tab: DepartmentQueueTab,
+  range?: DateRange | null,
+): Promise<DepartmentQueueListItem[]>
+
+export async function listMyTickets(
+  userId: number,
+  tab: MyTicketsTab,
+  range?: DateRange | null,
+): Promise<MyTicketListItem[]>
+```
+
+- `.leftJoin(company, eq(company.id, ticket.companyId))`, selecionando
+  `company.id`, `company.tradeName`, `company.cnpj`.
+- `company` é `{ id, tradeName, cnpj }` ou `null` quando `ticket.company_id` é
+  nulo. Pode ser o objeto aninhado no `select` do Drizzle (o join à esquerda o
+  anula quando todas as colunas vêm nulas) ou o mapeamento explícito de
+  `findTicketDetail`; vale o que fechar o tipo sem `as`.
+- Empresa inativa aparece normalmente (sem sufixo nas tabelas).
+- Sem filtro novo, sem mudança de ordenação, de condição nem de contagem
+  (`countQueueTicketsByTab` e `countMyTicketsByTab` intactas). O join é 1:1 e
+  não duplica linha.
 
 ## `df-actions`
 
-Nada. `sendTicket` já revalida `ticketDetailPath`, a Fila e Meus chamados.
+Nada.
 
-## `df-ui`
+## `df-ui` (Ondas 1 e 2)
 
 ### Coluna "Empresa"
 
-- Em `app/(app)/_components/ticket-list-columns.tsx`, uma coluna exportada
-  (ex.: `createTicketCompanyColumn<TRow>()`), `id: "company"`, header
-  `TICKET_COMPANY_LABEL`. Célula: nome fantasia em destaque (`font-medium`,
-  truncado com `title`) e, abaixo, `formatCnpjTail(cnpj)` em `text-xs
-text-muted-foreground tabular-nums`; sem empresa, `EMPTY_VALUE_LABEL`.
-- Sem filtro e sem ordenação própria (fora do escopo).
-- Posição: logo depois de "Título", nas duas tabelas
+- `app/(app)/_components/ticket-list-row.ts`:
+  `export interface TicketCompanyListRow extends TicketListRow, TicketCompanyListFacts {}`.
+- `app/(app)/_components/ticket-list-columns.tsx`:
+  `export const createTicketCompanyColumn = <TRow extends TicketCompanyListRow,>()`,
+  coluna `display` (sem filtro, sem ordenação), `id: "company"`, header
+  `TICKET_COMPANY_LABEL`. Célula com empresa: nome fantasia em destaque
+  (`font-medium`, truncado, `title={tradeName}`) e, abaixo,
+  `formatCnpjTail(cnpj)` em `text-xs text-muted-foreground tabular-nums`, com
+  `title={formatCnpj(cnpj)}` para o CNPJ inteiro. Sem empresa,
+  `EMPTY_VALUE_LABEL` (`—`).
+- Posição: logo depois de `shared.title`, nas duas tabelas
   (`department-queue-table.tsx`, `my-tickets-table.tsx`).
+- Largura (revisão 2026-11-09, decisão do usuário e entrega do `df-ui`):
+  - **"Tipo" sai da vista** de `/queue` e `/tickets`; o Tipo fica só no card
+    "Detalhes" do chamado. A coluna `type` continua definida e é ocultada por
+    `hiddenColumns` do `DataTable` (`HIDDEN_COLUMNS` em
+    `department-queue-table.tsx` e `my-tickets-table.tsx`), porque o filtro por
+    Tipo (`TICKET_TYPE_FILTER`) depende dela e continua funcionando.
+    **Aprovações mantém a coluna "Tipo" visível.**
+  - "Título" quebra em até 2 linhas (`line-clamp-2 max-w-96 min-w-40
+wrap-break-word whitespace-normal`, `title` com o texto inteiro).
+  - "Empresa" limitada a `max-w-32` (nome fantasia truncado, `title` com o
+    nome inteiro).
+  - "Tag" em uma linha, `max-w-36 truncate`, `title` com o rótulo inteiro
+    (substitui a quebra de linha da revisão anterior). "Setor atual" (só em
+    `/tickets`) continua quebrando linha (`whitespace-normal`).
+  - As colunas "Título" e "Tag" vêm de `ticket-list-columns.tsx`,
+    compartilhado: o mesmo tratamento vale para **Aprovações** (`/approvals`).
+  - `DataTable` compartilhado (`app/_components/data-table/data-table.tsx`)
+    usa `px-3` no cabeçalho e nas células: vale para **todas** as tabelas.
 
 ### "Enviar" sai da Fila
 
-- `queue-row-actions.tsx`: só "Assumir"; some `onSend`.
+- `queue-row-actions.tsx`: só "Assumir"; somem `onSend`, `SEND_TICKET_LABEL` e
+  o ramo `actions.send`; `if (!actions.assume) return null`.
 - `department-queue-table.tsx`: somem `SendTicketDialog`, `sendTarget`,
-  `isSendOpen`, `sendDialogKey`, a prop `assignees` e o argumento `onSend` de
-  `buildColumns`.
-- `queue/page.tsx`: deixa de carregar `listTicketAssigneeOptions` (e o
-  `isTicketDispatcher` que só servia a isso).
-- `queue/_components/send-ticket-dialog.tsx` é **movido** para
-  `app/(app)/tickets/[id]/_components/send-ticket-dialog.tsx` (uma rota só).
+  `isSendOpen`, `openSendDialog`, `sendDialogKey`, a prop `assignees`, o
+  argumento `onSend` de `buildColumns` e o fragmento em volta do `DataTable`.
+- `queue/page.tsx`: deixa de chamar `listTicketAssigneeOptions` e de importar
+  `isTicketDispatcher`; o `Promise.all` fica com `[tickets, counts]`.
+- `app/(app)/queue/_components/send-ticket-dialog.tsx` é **movido** (não
+  copiado) para `app/(app)/tickets/[id]/_components/send-ticket-dialog.tsx`
+  (uma rota só). Os imports relativos sobem um nível
+  (`../../../_components/handoff-comment-field`,
+  `../../../_components/ticket-assignee-field`).
 
 ### "Enviar" no detalhe
 
-- `SendTicketDialog` passa a ter o próprio gatilho (botão `outline`,
-  `SEND_TICKET_LABEL`, `aria-label` `Enviar o chamado #N`) e as props:
+- `SendTicketDialog` passa a controlar o próprio `open` e a ter o gatilho
+  (`DialogTrigger`): botão `variant="outline"`, ícone próprio de
+  `lucide-react` (sugestão: `SendIcon`; os vizinhos usam `UserCheckIcon`,
+  `PlayIcon` e `CornerUpLeftIcon`), texto `SEND_TICKET_LABEL` e `aria-label`
+  `Enviar o chamado #N` (`SEND_TICKET_LABEL` + `formatTicketNumber(target.id)`).
 
   ```ts
   export interface SendTicketDialogProps {
@@ -1162,35 +1253,72 @@ text-muted-foreground tabular-nums`; sem empresa, `EMPTY_VALUE_LABEL`.
   ```
 
   Formulário, textos, `FIELD_ERROR_CODES` e tratamento de erro iguais aos de
-  hoje; em sucesso fecha e reseta.
+  hoje, trocando `ticket` por `target`; em sucesso fecha e reseta.
 
+- **Remontagem obrigatória**: quem renderiza passa
+  `key` = `` `${target.id}:${target.assignedTo ?? "none"}` ``. Depois de um
+  envio, o `router.refresh()` traz outro `assignedTo`; sem a `key`, o
+  formulário manteria o `expectedAssigneeId` antigo e o envio seguinte cairia
+  em conflito (era o papel do `sendDialogKey` da Fila).
 - `tickets/[id]/page.tsx`: `const sendTarget = ticketSendTargetFor(actor,
 ticket)`; com alvo, `listTicketAssigneeOptions(ticket.currentDepartmentId)`
-  entra no `Promise.all`; monta `send: SendTicketDialogProps | null`.
-- `TicketDetailHeader` ganha `send?: SendTicketDialogProps | null`; o botão
-  entra nas ações do cabeçalho logo depois de "Assumir" (inclusive no modo
-  edição, junto das outras `attendActions`).
+  entra no `Promise.all` (senão `null`); `const send: SendTicketDialogProps |
+null` monta `{ target, assignees }` quando os dois existem. Atenção: o setor é
+  o **atual do chamado**, não o do ator (o Diretor envia para gente do setor do
+  chamado); `editAssignees` usa `facts.departmentId` e não serve.
+- `TicketDetailHeader` ganha `send?: SendTicketDialogProps | null` (padrão
+  `null`); entra em `hasAttendActions`, e o diálogo é renderizado dentro de
+  `attendActions`, logo depois de "Assumir". No modo editável, `TicketEditHeading`
+  já esconde `attendActions` enquanto se edita: o "Enviar" some durante a
+  edição, como "Assumir" e "Atender".
 
 ## Cenários do `df-qa` — Etapa 3
 
-| #   | Papel | Passos                                                              | Esperado                                                                                                                                                                 |
-| --- | ----- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| L1  | A     | `/queue`                                                            | coluna "Empresa" logo depois de "Título"; linha com `QA Alfa` mostra `QA Alfa` e, abaixo, menor, `…/0001-95`                                                             |
-| L2  | A     | linha com `QA Beta`                                                 | `…/0001-84`                                                                                                                                                              |
-| L3  | A     | linha de chamado sem empresa                                        | `—`                                                                                                                                                                      |
-| L4  | A     | ações das linhas                                                    | nenhum "Enviar"; "Assumir" continua nas linhas sem destinatário                                                                                                          |
-| L5  | D     | `/queue` em Suporte (`?setor=`)                                     | nenhum "Enviar"; coluna "Empresa" presente                                                                                                                               |
-| L6  | M     | `/tickets`                                                          | coluna "Empresa" depois de "Título", mesmo formato; `—` nos sem empresa                                                                                                  |
-| L7  | A, D  | `/queue` em 1366 × 768 e 1280 × 800                                 | a área da tabela não rola na horizontal (`scrollWidth <= clientWidth` do contêiner). Se rolar, reportar a largura medida                                                 |
-| L8  | A     | detalhe de chamado aberto de Suporte, sem transferência pendente    | "Enviar" no cabeçalho; diálogo `Enviar chamado #N`; escolher M, comentário `[QA] Enviando pelo detalhe.`; toast `Chamado #N enviado para <nome de M>.`; Destinatário = M |
-| L9  | D     | detalhe de chamado de outro setor                                   | "Enviar" presente; lista de pessoas = ativas do setor do chamado                                                                                                         |
-| L10 | M     | detalhe de chamado de Suporte                                       | sem "Enviar"                                                                                                                                                             |
-| L11 | A     | detalhe de chamado resolvido, fechado ou com transferência pendente | sem "Enviar"                                                                                                                                                             |
-| L12 | A     | detalhe de chamado que A abriu e que está em outro setor            | sem "Enviar" (A não é administrador do setor atual)                                                                                                                      |
+Contas como nas Etapas 1 e 2 (D Diretor, A Administrador de Suporte, M Membro
+de Suporte). Seed QA com `QA Alfa` (`12345678000195`) e `QA Beta`
+(`AB12CD34000184`); um chamado anterior à `0022`, sem empresa.
+
+| #   | Papel | Passos                                                                | Esperado                                                                                                                                                                                                                  |
+| --- | ----- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1  | A     | `/queue`, aba "Todos"                                                 | coluna "Empresa" logo depois de "Título"; linha com `QA Alfa` mostra `QA Alfa` e, abaixo, menor, `…/0001-95`                                                                                                              |
+| L2  | A     | linha com `QA Beta`                                                   | `…/0001-84`                                                                                                                                                                                                               |
+| L3  | A     | linha de chamado sem empresa                                          | `—`                                                                                                                                                                                                                       |
+| L4  | A     | ações das linhas                                                      | nenhum "Enviar"; "Assumir" continua nas linhas sem destinatário                                                                                                                                                           |
+| L5  | D     | `/queue` em outro setor (`?setor=`)                                   | nenhum "Enviar"; coluna "Empresa" presente                                                                                                                                                                                |
+| L6  | M     | `/tickets`                                                            | coluna "Empresa" depois de "Título", mesmo formato; `—` nos sem empresa                                                                                                                                                   |
+| L7  | A, D  | `/queue` e `/tickets` em 1366 × 768 e 1280 × 800, caso médio          | sem coluna "Tipo" visível; filtro de Tipo funciona. No caso médio, a área da tabela não rola na horizontal (`scrollWidth <= clientWidth`). Pior caso: limitação conhecida, abaixo; reportar a largura medida sem reprovar |
+| L8  | A     | detalhe de chamado aberto de Suporte, sem transferência pendente      | "Enviar" no cabeçalho; diálogo `Enviar chamado #N`; escolher M, comentário `[QA] Enviando pelo detalhe.`; toast `Chamado #N enviado para <nome de M>.`; Destinatário = M                                                  |
+| L9  | A     | logo depois de L8, sem recarregar, "Enviar" de novo para outra pessoa | envia sem conflito; o diálogo mostra `Destinatário atual: <nome de M>.` e M não está na lista                                                                                                                             |
+| L10 | D     | detalhe de chamado de outro setor                                     | "Enviar" presente; lista de pessoas = ativas do setor do chamado                                                                                                                                                          |
+| L11 | M     | detalhe de chamado de Suporte                                         | sem "Enviar"                                                                                                                                                                                                              |
+| L12 | A     | detalhe de chamado resolvido, fechado ou com transferência pendente   | sem "Enviar"                                                                                                                                                                                                              |
+| L13 | A     | detalhe de chamado que A abriu e que está em outro setor              | sem "Enviar" (A não é administrador do setor atual)                                                                                                                                                                       |
+| L14 | A     | detalhe de chamado com A destinatário, clicar "Editar"                | "Enviar" some durante a edição e volta ao cancelar                                                                                                                                                                        |
+
+Caso médio de L7: título, nome fantasia e tag de tamanho comum, status de
+rótulo curto. Resultado final (`df-qa`, Reteste 2, 2026-11-09): cabe sem
+rolagem em 1280 e 1366, para Administrador e Diretor.
+
+**Limitação conhecida (L7, pior caso).** Aba "Todos" com tags longas: cabe em
+1366 e rola na horizontal em 1280 (+76 px na Fila, +54 px em Meus chamados).
+Aceito pelo usuário. Aplicados (decisão do usuário): "Tipo" oculto, "Empresa"
+`max-w-32`, "Tag" `max-w-36 truncate` e `px-3` no `DataTable`. Avaliado e
+**não aplicado**: esconder "Aberto em" abaixo de `2xl`.
 
 ## Checklist — Etapa 3
 
-- [ ] Onda 0: domínio (`formatCnpjTail`, `ticketSendTargetFor`,
-      `queueRowActionsFor`), tipos; lista de erros de `tsc`
-- [ ] Onda 1: `df-data` ∥ `df-ui` · Onda 2: `df-ui` (sem `df-actions`)
-- [ ] `tsc`, lint, build · `df-reviewer` · `df-qa` L1–L12
+- [x] Onda 0 — 2026-11-09: tipos (`TicketCompanyListFacts`,
+      `SendTicketTarget`, `TicketSendDetailSource`, `DepartmentQueueRowActions`
+      sem `send`) e domínio (`formatCnpjTail`, `ticketSendTargetFor`,
+      `queueRowActionsFor`). `tsc` vermelho esperado em
+      `queue-row-actions.tsx` (`send`), `data/department-queue.ts` e
+      `data/my-tickets.ts` (`company`)
+- [x] Onda 1: `df-data` ∥ `df-ui` (coluna) · Onda 2: `df-ui` ("Enviar" no
+      detalhe; sem `df-actions`)
+- [x] Ajustes de largura (decisão do usuário): "Tipo" oculto (filtro mantido),
+      "Empresa" `max-w-32`, "Tag" `max-w-36 truncate` com `title` (também em
+      Aprovações), `px-3` no `DataTable`
+- [x] `tsc`, lint, build · `df-reviewer` aprovado sem achados · `df-qa` 13/14
+      e Retestes 1 e 2; L7 pior caso em 1280 aceito como limitação conhecida
+- [ ] Pendência fora do escopo: Cadastros → Pessoas (+304 px) e Tags (+67 px,
+      "Ações" cortada) rolam em 1280 (`df-ui`)

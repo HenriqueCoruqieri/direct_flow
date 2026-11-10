@@ -1,7 +1,7 @@
 "use client"
 
 import { createColumnHelper } from "@tanstack/react-table"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 
 import DataTable from "@/app/_components/data-table/data-table"
 import type { DataTableFeatures } from "@/app/_components/data-table/data-table-features"
@@ -16,10 +16,11 @@ import type {
   DepartmentQueueLocation,
   DepartmentQueueTab,
 } from "@/app/_lib/types/department-queue"
-import type { AssigneeOption, TicketActorFacts } from "@/app/_lib/types/ticket"
+import type { TicketActorFacts } from "@/app/_lib/types/ticket"
 import { queueTicketDetailHref } from "@/app/_lib/validation/ticket-detail-origin"
 
 import createTicketListColumns, {
+  createTicketCompanyColumn,
   createTicketPriorityColumn,
   createTicketSlaColumn,
 } from "../../_components/ticket-list-columns"
@@ -31,7 +32,6 @@ import {
   ticketTagFiltersFor,
 } from "../../_components/ticket-list-filters"
 import QueueRowActions from "./queue-row-actions"
-import SendTicketDialog from "./send-ticket-dialog"
 
 const columnHelper = createColumnHelper<
   DataTableFeatures,
@@ -39,12 +39,11 @@ const columnHelper = createColumnHelper<
 >()
 
 const ASSIGNEE_COLUMN_ID = "assignee"
-const HIDDEN_COLUMNS = [ASSIGNEE_COLUMN_ID] as const
+const HIDDEN_COLUMNS = [ASSIGNEE_COLUMN_ID, TICKET_TYPE_FILTER.columnId]
 
 const buildColumns = (
   viewer: TicketActorFacts,
   location: DepartmentQueueLocation,
-  onSend: (ticket: DepartmentQueueListItem) => void,
   now: Date,
 ) => {
   const shared = createTicketListColumns<DepartmentQueueListItem>((ticketId) =>
@@ -54,6 +53,7 @@ const buildColumns = (
   return columnHelper.columns([
     shared.number,
     shared.title,
+    createTicketCompanyColumn<DepartmentQueueListItem>(),
     shared.type,
     shared.tag,
     columnHelper.accessor(
@@ -75,15 +75,11 @@ const buildColumns = (
         <QueueRowActions
           ticket={row.original}
           actions={queueRowActionsFor(viewer, row.original)}
-          onSend={onSend}
         />
       ),
     }),
   ])
 }
-
-const sendDialogKey = (ticket: DepartmentQueueListItem): string =>
-  `${ticket.id}:${ticket.assignedTo ?? NONE_FILTER_VALUE}`
 
 const assigneeFiltersFor = (
   tickets: readonly DepartmentQueueListItem[],
@@ -102,7 +98,6 @@ interface DepartmentQueueTableProps {
   tab: DepartmentQueueTab
   tickets: DepartmentQueueListItem[]
   viewer: TicketActorFacts
-  assignees: AssigneeOption[]
   toolbarFooter: React.ReactNode
   location: DepartmentQueueLocation
   now: Date
@@ -112,24 +107,13 @@ const DepartmentQueueTable = ({
   tab,
   tickets,
   viewer,
-  assignees,
   toolbarFooter,
   location,
   now,
 }: DepartmentQueueTableProps) => {
-  const [sendTarget, setSendTarget] = useState<DepartmentQueueListItem | null>(
-    null,
-  )
-  const [isSendOpen, setIsSendOpen] = useState(false)
-
-  const openSendDialog = useCallback((ticket: DepartmentQueueListItem) => {
-    setSendTarget(ticket)
-    setIsSendOpen(true)
-  }, [])
-
   const columns = useMemo(
-    () => buildColumns(viewer, location, openSendDialog, now),
-    [viewer, location, openSendDialog, now],
+    () => buildColumns(viewer, location, now),
+    [viewer, location, now],
   )
 
   const rowHref = useCallback(
@@ -148,26 +132,15 @@ const DepartmentQueueTable = ({
   )
 
   return (
-    <>
-      <DataTable
-        columns={columns}
-        data={tickets}
-        emptyMessage={DEPARTMENT_QUEUE_TAB_RULES[tab].emptyTitle}
-        filters={filters}
-        rowHref={rowHref}
-        toolbarFooter={toolbarFooter}
-        hiddenColumns={HIDDEN_COLUMNS}
-      />
-      {sendTarget !== null ? (
-        <SendTicketDialog
-          key={sendDialogKey(sendTarget)}
-          ticket={sendTarget}
-          assignees={assignees}
-          open={isSendOpen}
-          onOpenChange={setIsSendOpen}
-        />
-      ) : null}
-    </>
+    <DataTable
+      columns={columns}
+      data={tickets}
+      emptyMessage={DEPARTMENT_QUEUE_TAB_RULES[tab].emptyTitle}
+      filters={filters}
+      rowHref={rowHref}
+      toolbarFooter={toolbarFooter}
+      hiddenColumns={HIDDEN_COLUMNS}
+    />
   )
 }
 

@@ -3,16 +3,22 @@ import Link from "next/link"
 
 import type { DataTableFeatures } from "@/app/_components/data-table/data-table-features"
 import { formatDate } from "@/app/_lib/date"
+import { formatCnpj, formatCnpjTail } from "@/app/_lib/domain/brazilian-formats"
 import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
 import {
   formatTicketNumber,
   TICKET_PRIORITY_FIELD_LABEL,
   TICKET_TYPE_LABELS,
 } from "@/app/_lib/domain/ticket"
+import { TICKET_COMPANY_LABEL } from "@/app/_lib/domain/ticket-company"
 import { TICKET_SLA_LABEL } from "@/app/_lib/domain/ticket-due"
 
 import { NONE_FILTER_VALUE } from "./ticket-list-filters"
-import type { TicketListRow, TicketSlaListRow } from "./ticket-list-row"
+import type {
+  TicketCompanyListRow,
+  TicketListRow,
+  TicketSlaListRow,
+} from "./ticket-list-row"
 import TicketPriorityText from "./ticket-priority-text"
 import TicketSlaCell from "./ticket-sla-cell"
 import TicketStatusBadge from "./ticket-status-badge"
@@ -46,7 +52,7 @@ const createTicketListColumns = <TRow extends TicketListRow>(
       cell: ({ getValue }) => (
         <span
           title={getValue()}
-          className="block max-w-96 truncate font-medium"
+          className="line-clamp-2 max-w-96 min-w-40 font-medium wrap-break-word whitespace-normal"
         >
           {getValue()}
         </span>
@@ -64,7 +70,14 @@ const createTicketListColumns = <TRow extends TicketListRow>(
         id: "tag",
         header: "Tag",
         filterFn: "inValues",
-        cell: ({ row }) => row.original.tagName ?? EMPTY_VALUE_LABEL,
+        cell: ({ row }) => {
+          const label = row.original.tagName ?? EMPTY_VALUE_LABEL
+          return (
+            <span title={label} className="block max-w-36 truncate">
+              {label}
+            </span>
+          )
+        },
       },
     ),
     status: columnHelper.accessor((row) => row.status, {
@@ -103,5 +116,31 @@ export const createTicketPriorityColumn = <TRow extends TicketSlaListRow>() =>
       cell: ({ getValue }) => <TicketPriorityText priority={getValue()} />,
     },
   )
+
+export const createTicketCompanyColumn = <
+  TRow extends TicketCompanyListRow,
+>() =>
+  createColumnHelper<DataTableFeatures, TRow>().display({
+    id: "company",
+    header: TICKET_COMPANY_LABEL,
+    cell: ({ row }) => {
+      const { company } = row.original
+      if (company === null) return EMPTY_VALUE_LABEL
+
+      return (
+        <div className="flex max-w-32 min-w-0 flex-col">
+          <span title={company.tradeName} className="truncate font-medium">
+            {company.tradeName}
+          </span>
+          <span
+            title={formatCnpj(company.cnpj)}
+            className="text-xs text-muted-foreground tabular-nums"
+          >
+            {formatCnpjTail(company.cnpj)}
+          </span>
+        </div>
+      )
+    },
+  })
 
 export default createTicketListColumns

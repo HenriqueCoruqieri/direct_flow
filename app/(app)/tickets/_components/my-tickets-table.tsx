@@ -14,6 +14,7 @@ import type {
 } from "@/app/_lib/types/my-tickets"
 
 import createTicketListColumns, {
+  createTicketCompanyColumn,
   createTicketPriorityColumn,
   createTicketSlaColumn,
 } from "../../_components/ticket-list-columns"
@@ -25,16 +26,21 @@ import {
 } from "../../_components/ticket-list-filters"
 
 const columnHelper = createColumnHelper<DataTableFeatures, MyTicketListItem>()
+const HIDDEN_COLUMNS = [TICKET_TYPE_FILTER.columnId]
 const shared = createTicketListColumns<MyTicketListItem>(ticketDetailPath)
 
 const buildColumns = (now: Date) =>
   columnHelper.columns([
     shared.number,
     shared.title,
+    createTicketCompanyColumn<MyTicketListItem>(),
     shared.type,
     shared.tag,
     columnHelper.accessor("currentDepartmentName", {
       header: "Setor atual",
+      cell: ({ getValue }) => (
+        <span className="whitespace-normal">{getValue()}</span>
+      ),
     }),
     shared.status,
     shared.createdAt,
@@ -74,6 +80,7 @@ const MyTicketsTable = ({
       filters={filters}
       rowHref={ticketRowHref}
       toolbarFooter={periodFilter}
+      hiddenColumns={HIDDEN_COLUMNS}
     />
   )
 }

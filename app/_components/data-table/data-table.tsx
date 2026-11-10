@@ -147,7 +147,7 @@ const DataTable = <TData extends RowData>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="h-11 px-4 text-xs font-bold text-muted-foreground"
+                    className="h-11 px-3 text-xs font-bold text-muted-foreground"
                   >
                     {header.isPlaceholder ? null : (
                       <table.FlexRender header={header} />
@@ -173,7 +173,7 @@ const DataTable = <TData extends RowData>({
                   }
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-3">
+                    <TableCell key={cell.id} className="px-3 py-3">
                       <table.FlexRender cell={cell} />
                     </TableCell>
                   ))}
@@ -183,7 +183,7 @@ const DataTable = <TData extends RowData>({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={table.getVisibleLeafColumns().length}
-                  className="h-24 px-4 text-center text-muted-foreground"
+                  className="h-24 px-3 text-center text-muted-foreground"
                 >
                   {isFiltered
                     ? "Nenhum resultado para os filtros aplicados."

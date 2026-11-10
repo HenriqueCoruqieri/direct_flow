@@ -10,6 +10,17 @@ TicketCompanyOption | null` (`listQueueTickets` com `left join company`); a
 > (`canSendTicket`: Diretor ou Administrador do setor atual; Membro nunca teve
 > "Enviar"). `DepartmentQueueRowActions` fica só com `assume`; a página deixa
 > de carregar `listTicketAssigneeOptions`.
+>
+> Largura (2026-11-09): a coluna "Tipo" sai da vista da Fila (fica só no
+> detalhe do chamado), mas continua definida e oculta via `hiddenColumns`,
+> porque o filtro de Tipo (`TICKET_TYPE_FILTER`) continua valendo. "Título"
+> quebra em até 2 linhas (`line-clamp-2`, `min-w-40`); "Empresa" fica em
+> `max-w-32`; "Tag" fica em uma linha, `max-w-36 truncate` com `title`. Título
+> e Tag são compartilhadas: Aprovações herda o mesmo tratamento, mas mantém
+> "Tipo" visível. O `DataTable` usa `px-3` em todas as tabelas. Onde este documento lista "Tipo" entre as colunas visíveis da Fila,
+> vale a ocultação. Pior caso de largura (aba "Todos" com tags longas): cabe
+> em 1366 e rola +76 px em 1280, limitação conhecida aceita, cenário L7 de
+> `docs/contracts/ticket-company.md`.
 
 > **Revisão 2026-10-26 — coluna SLA.** `DepartmentQueueListItem` ganha
 > `priority: TicketPriority` e `resolvedAt: Date | null`; `listQueueTickets`
