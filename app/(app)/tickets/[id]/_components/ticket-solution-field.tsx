@@ -1,7 +1,8 @@
 import type { ControllerFieldState } from "react-hook-form"
 
 import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
-import { Textarea } from "@/app/_components/ui/textarea"
+
+import TicketSolutionTextarea from "./ticket-solution-textarea"
 
 interface TicketSolutionFieldProps {
   id: string
@@ -29,7 +30,7 @@ const TicketSolutionField = ({
   return (
     <Field data-invalid={fieldState.invalid} className="gap-1.5">
       <FieldLabel htmlFor={id}>Solução</FieldLabel>
-      <Textarea
+      <TicketSolutionTextarea
         ref={ref}
         id={id}
         name={name}
@@ -37,10 +38,10 @@ const TicketSolutionField = ({
         disabled={disabled}
         onChange={onChange}
         onBlur={onBlur}
-        rows={4}
-        className="max-h-80 min-h-24"
         aria-invalid={fieldState.invalid}
         aria-describedby={fieldState.invalid ? errorId : undefined}
+        aria-required={undefined}
+        aria-labelledby={undefined}
       />
       {fieldState.invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />

@@ -6,12 +6,10 @@ import {
   FieldError,
   FieldLabel,
 } from "@/app/_components/ui/field"
-import { Textarea } from "@/app/_components/ui/textarea"
-import {
-  HANDOFF_COMMENT_LABEL,
-  HANDOFF_COMMENT_PLACEHOLDER,
-} from "@/app/_lib/domain/ticket-handoff"
+import { HANDOFF_COMMENT_LABEL } from "@/app/_lib/domain/ticket-handoff"
 import { cn } from "@/app/_lib/utils"
+
+import HandoffCommentTextarea from "./handoff-comment-textarea"
 
 interface HandoffCommentFieldProps {
   id: string
@@ -56,7 +54,7 @@ const HandoffCommentField = ({
       {description === undefined ? null : (
         <FieldDescription id={descriptionId}>{description}</FieldDescription>
       )}
-      <Textarea
+      <HandoffCommentTextarea
         ref={ref}
         id={id}
         name={name}
@@ -64,11 +62,10 @@ const HandoffCommentField = ({
         disabled={disabled}
         onChange={onChange}
         onBlur={onBlur}
-        placeholder={HANDOFF_COMMENT_PLACEHOLDER}
-        rows={4}
-        className="max-h-60 min-h-24"
         aria-invalid={fieldState.invalid}
         aria-describedby={describedBy === "" ? undefined : describedBy}
+        aria-required={undefined}
+        aria-labelledby={undefined}
       />
       {fieldState.invalid ? (
         <FieldError id={errorId} errors={[fieldState.error]} />

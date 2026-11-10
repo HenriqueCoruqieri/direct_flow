@@ -3,11 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useId, useState } from "react"
-import { Controller, useForm, useWatch } from "react-hook-form"
+import { useState } from "react"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
-import ComboboxField from "@/app/_components/combobox-field"
+import Combobox from "@/app/_components/combobox"
+import FormField from "@/app/_components/form-field"
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
 import {
   Dialog,
@@ -20,6 +22,8 @@ import {
 } from "@/app/_components/ui/dialog"
 import { sendTicketToDepartment } from "@/app/_lib/actions/ticket-transfer"
 import { isStaleTicketCode } from "@/app/_lib/domain/ticket"
+import { TICKET_ASSIGNEE_LABEL } from "@/app/_lib/domain/ticket-assignee"
+import { HANDOFF_COMMENT_LABEL } from "@/app/_lib/domain/ticket-handoff"
 import {
   NO_TRANSFER_TARGETS_MESSAGE,
   SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION,
@@ -41,8 +45,8 @@ import {
   sendTicketToDepartmentSchema,
 } from "@/app/_lib/validation/ticket-transfer"
 
-import HandoffCommentField from "../../../_components/handoff-comment-field"
-import TicketAssigneeField from "../../../_components/ticket-assignee-field"
+import HandoffCommentTextarea from "../../../_components/handoff-comment-textarea"
+import TicketAssigneeCombobox from "../../../_components/ticket-assignee-combobox"
 
 export interface SendToDepartmentSetup {
   defaults: SendToDepartmentFormDefaults
@@ -64,9 +68,6 @@ const SendToDepartmentDialog = ({
   open,
   onOpenChange,
 }: SendToDepartmentDialogProps) => {
-  const targetFieldId = useId()
-  const assigneeFieldId = useId()
-  const commentFieldId = useId()
   const router = useRouter()
   const [isLeaving, setIsLeaving] = useState(false)
 
@@ -152,104 +153,111 @@ const SendToDepartmentDialog = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-md">
-        <form
-          noValidate
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
-        >
-          <DialogHeader>
-            <DialogTitle>
-              {sendToDepartmentDialogTitle(defaults.ticketId)}
-            </DialogTitle>
-            <DialogDescription>
-              {SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION}
-            </DialogDescription>
-          </DialogHeader>
+        <FormSchemaProvider form={form} schema={sendTicketToDepartmentSchema}>
+          <form
+            noValidate
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col gap-6"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                {sendToDepartmentDialogTitle(defaults.ticketId)}
+              </DialogTitle>
+              <DialogDescription>
+                {SEND_TO_DEPARTMENT_DIALOG_DESCRIPTION}
+              </DialogDescription>
+            </DialogHeader>
 
-          {hasTargets ? (
-            <>
-              <Controller
-                name="toDepartmentId"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <ComboboxField
-                    id={targetFieldId}
-                    {...field}
-                    onChange={(value) => changeTarget(value, field.onChange)}
-                    disabled={isBusy}
-                    fieldState={fieldState}
-                    label={TRANSFER_TARGET_LABEL}
-                    options={options.map((option) => ({
-                      value: option.id,
-                      label: option.name,
-                    }))}
-                    placeholder={TRANSFER_TARGET_PLACEHOLDER}
-                    searchPlaceholder="Buscar setor…"
-                    className="min-w-0"
-                  />
-                )}
-              />
-              {toDepartmentId !== undefined ? (
-                <Controller
-                  name="assigneeId"
+            {hasTargets ? (
+              <>
+                <FormField
                   control={form.control}
-                  render={({ field, fieldState }) => (
-                    <TicketAssigneeField
-                      id={assigneeFieldId}
-                      {...field}
+                  name="toDepartmentId"
+                  label={TRANSFER_TARGET_LABEL}
+                  className="min-w-0"
+                >
+                  {(field) => (
+                    <Combobox
+                      ref={field.ref}
+                      id={field.id}
+                      value={field.value}
+                      onChange={(value) => changeTarget(value, field.onChange)}
+                      onBlur={field.onBlur}
                       disabled={isBusy}
-                      fieldState={fieldState}
-                      assignees={transferAssigneeOptionsFor(
-                        assignees,
-                        toDepartmentId,
-                      )}
-                      queueLabel={TRANSFER_QUEUE_ASSIGNEE_LABEL}
+                      aria-invalid={field["aria-invalid"]}
+                      aria-describedby={field["aria-describedby"]}
+                      aria-required={field["aria-required"]}
+                      aria-labelledby={field["aria-labelledby"]}
+                      options={options.map((option) => ({
+                        value: option.id,
+                        label: option.name,
+                      }))}
+                      placeholder={TRANSFER_TARGET_PLACEHOLDER}
+                      searchPlaceholder="Buscar setor…"
                     />
                   )}
-                />
-              ) : null}
-              <Controller
-                name="comment"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <HandoffCommentField
-                    id={commentFieldId}
-                    {...field}
-                    disabled={isBusy}
-                    fieldState={fieldState}
-                  />
-                )}
-              />
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {NO_TRANSFER_TARGETS_MESSAGE}
-            </p>
-          )}
+                </FormField>
+                {toDepartmentId !== undefined ? (
+                  <FormField
+                    control={form.control}
+                    name="assigneeId"
+                    label={TICKET_ASSIGNEE_LABEL}
+                    className="min-w-0"
+                  >
+                    {(field) => (
+                      <TicketAssigneeCombobox
+                        {...field}
+                        disabled={isBusy}
+                        assignees={transferAssigneeOptionsFor(
+                          assignees,
+                          toDepartmentId,
+                        )}
+                        queueLabel={TRANSFER_QUEUE_ASSIGNEE_LABEL}
+                      />
+                    )}
+                  </FormField>
+                ) : null}
+                <FormField
+                  control={form.control}
+                  name="comment"
+                  label={HANDOFF_COMMENT_LABEL}
+                  className="min-w-0"
+                >
+                  {(field) => (
+                    <HandoffCommentTextarea {...field} disabled={isBusy} />
+                  )}
+                </FormField>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {NO_TRANSFER_TARGETS_MESSAGE}
+              </p>
+            )}
 
-          <DialogFooter className="-mx-6 -mb-6 p-4">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={isBusy}>
-                Cancelar
+            <DialogFooter className="-mx-6 -mb-6 p-4">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={isBusy}>
+                  Cancelar
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                disabled={isBusy || !hasTargets}
+                aria-busy={isBusy || undefined}
+              >
+                {isBusy ? (
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                ) : null}
+                {isBusy
+                  ? SEND_TO_DEPARTMENT_PENDING_LABEL
+                  : SEND_TO_DEPARTMENT_SUBMIT_LABEL}
               </Button>
-            </DialogClose>
-            <Button
-              type="submit"
-              disabled={isBusy || !hasTargets}
-              aria-busy={isBusy || undefined}
-            >
-              {isBusy ? (
-                <Loader2Icon
-                  aria-hidden="true"
-                  className="size-4 animate-spin motion-reduce:animate-none"
-                />
-              ) : null}
-              {isBusy
-                ? SEND_TO_DEPARTMENT_PENDING_LABEL
-                : SEND_TO_DEPARTMENT_SUBMIT_LABEL}
-            </Button>
-          </DialogFooter>
-        </form>
+            </DialogFooter>
+          </form>
+        </FormSchemaProvider>
       </DialogContent>
     </Dialog>
   )

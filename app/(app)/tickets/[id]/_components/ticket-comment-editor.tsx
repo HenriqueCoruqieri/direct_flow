@@ -3,12 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, PencilIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useId, useRef, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useEffect, useRef, useState } from "react"
+import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
+import FormField from "@/app/_components/form-field"
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
-import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
 import { Textarea } from "@/app/_components/ui/textarea"
 import {
   Tooltip,
@@ -43,8 +44,6 @@ const TicketCommentEditor = ({
   actions,
   children,
 }: TicketCommentEditorProps) => {
-  const contentId = useId()
-  const contentErrorId = `${contentId}-error`
   const router = useRouter()
   const editButtonRef = useRef<HTMLButtonElement>(null)
   const wasEditingRef = useRef(false)
@@ -150,66 +149,51 @@ const TicketCommentEditor = ({
   }
 
   return (
-    <form
-      noValidate
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="flex flex-col gap-2"
-    >
-      <Controller
-        name="content"
-        control={form.control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid} className="gap-1.5">
-            <FieldLabel htmlFor={contentId} className="sr-only">
-              Comentário
-            </FieldLabel>
-            <Textarea
-              ref={field.ref}
-              id={contentId}
-              name={field.name}
-              value={field.value}
-              disabled={field.disabled}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              rows={3}
-              className="max-h-48 min-h-20"
-              aria-invalid={fieldState.invalid}
-              aria-describedby={fieldState.invalid ? contentErrorId : undefined}
-            />
-            {fieldState.invalid ? (
-              <FieldError id={contentErrorId} errors={[fieldState.error]} />
-            ) : null}
-          </Field>
-        )}
-      />
+    <FormSchemaProvider form={form} schema={editTicketCommentSchema}>
+      <form
+        noValidate
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-2"
+      >
+        <FormField
+          control={form.control}
+          name="content"
+          label="Comentário"
+          hideLabel
+        >
+          {(field) => (
+            <Textarea {...field} rows={3} className="max-h-48 min-h-20" />
+          )}
+        </FormField>
 
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={isSubmitting}
-          onClick={cancelEditing}
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={isSubmitting}
-          aria-busy={isSubmitting || undefined}
-        >
-          {isSubmitting ? (
-            <Loader2Icon
-              aria-hidden="true"
-              data-icon="inline-start"
-              className="size-3.5 animate-spin motion-reduce:animate-none"
-            />
-          ) : null}
-          {isSubmitting ? SAVE_COMMENT_PENDING_LABEL : SAVE_COMMENT_LABEL}
-        </Button>
-      </div>
-    </form>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isSubmitting}
+            onClick={cancelEditing}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting || undefined}
+          >
+            {isSubmitting ? (
+              <Loader2Icon
+                aria-hidden="true"
+                data-icon="inline-start"
+                className="size-3.5 animate-spin motion-reduce:animate-none"
+              />
+            ) : null}
+            {isSubmitting ? SAVE_COMMENT_PENDING_LABEL : SAVE_COMMENT_LABEL}
+          </Button>
+        </div>
+      </form>
+    </FormSchemaProvider>
   )
 }
 

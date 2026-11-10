@@ -3,10 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CornerUpLeftIcon, Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useId, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
+import FormField from "@/app/_components/form-field"
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
 import {
   Dialog,
@@ -18,7 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/app/_components/ui/dialog"
-import { Field, FieldError, FieldLabel } from "@/app/_components/ui/field"
 import { Textarea } from "@/app/_components/ui/textarea"
 import { declineTicketTransfer } from "@/app/_lib/actions/ticket-transfer"
 import { isStaleTicketCode } from "@/app/_lib/domain/ticket"
@@ -49,8 +50,6 @@ const DeclineTransferDialog = ({
   target,
   leaveHref,
 }: DeclineTransferDialogProps) => {
-  const reasonId = useId()
-  const reasonErrorId = `${reasonId}-error`
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
@@ -119,73 +118,62 @@ const DeclineTransferDialog = ({
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-md">
-        <form
-          noValidate
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
-        >
-          <DialogHeader>
-            <DialogTitle>
-              {declineTicketTransferDialogTitle(target.ticketId)}
-            </DialogTitle>
-            <DialogDescription>
-              {describeDeclineDestination(target.fromDepartmentName)}
-            </DialogDescription>
-          </DialogHeader>
+        <FormSchemaProvider form={form} schema={declineTicketTransferSchema}>
+          <form
+            noValidate
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col gap-6"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                {declineTicketTransferDialogTitle(target.ticketId)}
+              </DialogTitle>
+              <DialogDescription>
+                {describeDeclineDestination(target.fromDepartmentName)}
+              </DialogDescription>
+            </DialogHeader>
 
-          <Controller
-            name="reason"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="gap-1.5">
-                <FieldLabel htmlFor={reasonId}>
-                  {DECLINE_REASON_LABEL}
-                </FieldLabel>
+            <FormField
+              control={form.control}
+              name="reason"
+              label={DECLINE_REASON_LABEL}
+            >
+              {(field) => (
                 <Textarea
-                  ref={field.ref}
-                  id={reasonId}
-                  name={field.name}
-                  value={field.value}
+                  {...field}
                   disabled={isBusy}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
                   placeholder={DECLINE_REASON_PLACEHOLDER}
                   rows={4}
                   className="max-h-60 min-h-24"
-                  aria-invalid={fieldState.invalid}
-                  aria-describedby={
-                    fieldState.invalid ? reasonErrorId : undefined
-                  }
                 />
-                {fieldState.invalid ? (
-                  <FieldError id={reasonErrorId} errors={[fieldState.error]} />
-                ) : null}
-              </Field>
-            )}
-          />
+              )}
+            </FormField>
 
-          <DialogFooter className="-mx-6 -mb-6 p-4">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={isBusy}>
-                Cancelar
+            <DialogFooter className="-mx-6 -mb-6 p-4">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={isBusy}>
+                  Cancelar
+                </Button>
+              </DialogClose>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={isBusy}
+                aria-busy={isBusy || undefined}
+              >
+                {isBusy ? (
+                  <Loader2Icon
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                ) : null}
+                {isBusy
+                  ? DECLINE_TRANSFER_PENDING_LABEL
+                  : DECLINE_TRANSFER_LABEL}
               </Button>
-            </DialogClose>
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={isBusy}
-              aria-busy={isBusy || undefined}
-            >
-              {isBusy ? (
-                <Loader2Icon
-                  aria-hidden="true"
-                  className="size-4 animate-spin motion-reduce:animate-none"
-                />
-              ) : null}
-              {isBusy ? DECLINE_TRANSFER_PENDING_LABEL : DECLINE_TRANSFER_LABEL}
-            </Button>
-          </DialogFooter>
-        </form>
+            </DialogFooter>
+          </form>
+        </FormSchemaProvider>
       </DialogContent>
     </Dialog>
   )

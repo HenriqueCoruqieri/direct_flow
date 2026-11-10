@@ -8,11 +8,12 @@ Versões observadas: `zod@4.6.5`, `react-hook-form@7.88`, `next@16.3.5`.
 
 ## Etapas
 
-| Etapa | Escopo                                                                                                   | Estado                                                                                  |
-| ----- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 1     | Helpers puros (`df-architect`), `FormField` + `FormSchemaProvider` (`df-ui`), Dialog de Empresas migrado | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-1.md)) |
-| 2     | Setores, Pessoas, Tags e Perfil (trocar senha) migrados. **Pausa** depois dela                           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-2.md)) |
-| 3     | Formulários de chamado (novo, editar, resolver, comentar, enviar, recusar) e `ComboboxField`             | aguardando decisão do usuário                                                           |
+| Etapa | Escopo                                                                                                   | Estado                                                                                                                |
+| ----- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1     | Helpers puros (`df-architect`), `FormField` + `FormSchemaProvider` (`df-ui`), Dialog de Empresas migrado | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-1.md))                               |
+| 2     | Setores, Pessoas, Tags e Perfil (trocar senha) migrados. **Pausa** depois dela                           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-2.md))                               |
+| 3a    | Abertura do chamado, Enviar, Enviar para setor, Recusar, Resolver, Comentar, Editar comentário           | concluída em 2026-11-10 ([relatório](../test-reports/2026-11-10-form-field-etapa-3a.md)); H8 aberto para o `df-debug` |
+| 3b    | Edição do chamado (`ticket-edit-*`, `ticket-edit-provider`, `use-ticket-edit`)                           | aguardando decisão do usuário                                                                                         |
 
 ## Decisões fixadas pelo usuário
 
@@ -186,6 +187,7 @@ interface FormFieldProps<
   required?: boolean
   description?: React.ReactNode
   labelMode?: "for" | "group"
+  hideLabel?: boolean
   id?: string
   className?: string
   children: (
@@ -353,6 +355,141 @@ Feita depois da entrega do `df-ui`, sem mais uso no projeto. **Removidos**:
 - Se o schema do provider de algum formulário for diferente do do
   `zodResolver`, o `df-ui` para e reporta.
 
+## Etapa 3a — abertura e diálogos do detalhe (`df-ui`)
+
+Fora: edição do chamado (Etapa 3b). Os helpers **não mudam**.
+
+### Schemas conferidos (tsx, 2026-11-10)
+
+Todos são `ZodObject` no topo (os dois com `.refine` também), iguais ao do
+`zodResolver` de cada formulário. Campos ocultos (`ticketId`,
+`expected*`, `transferId`, `messageId`) não viram `FormField`.
+
+| Formulário (arquivo)                                     | Schema no provider             | Obrigatórios derivados                                           | Opcionais derivados          |
+| -------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------- |
+| `(app)/_components/new-ticket-dialog.tsx`                | `createTicketSchema`           | `companyId`, `title`, `description`, `type`, `tagId`, `priority` | `assigneeId`, `attachments`  |
+| `tickets/[id]/_components/send-ticket-dialog.tsx`        | `sendTicketSchema`             | `assigneeId`, `comment`                                          | —                            |
+| `tickets/[id]/_components/send-to-department-dialog.tsx` | `sendTicketToDepartmentSchema` | `toDepartmentId`, `comment`                                      | `assigneeId` (`null` = fila) |
+| `tickets/[id]/_components/decline-transfer-dialog.tsx`   | `declineTicketTransferSchema`  | `reason`                                                         | —                            |
+| `tickets/[id]/_components/resolve-ticket-form.tsx`       | `resolveTicketSchema`          | `solution`                                                       | —                            |
+| `tickets/[id]/_components/ticket-comment-form.tsx`       | `createTicketCommentSchema`    | `content` (`isPrivate` sai "obrigatório", mas fica fora, abaixo) | —                            |
+| `tickets/[id]/_components/ticket-comment-editor.tsx`     | `editTicketCommentSchema`      | `content`                                                        | —                            |
+
+Conferido campo a campo com `shouldShowRequiredMark`: Título `""`/`"ab"`/`"   "`
+→ `*`, `"abcde"` → sem; Descrição e Solução com menos de 10 caracteres → `*`;
+Tipo `undefined`/valor fora do enum → `*`; Prioridade `undefined` → `*`,
+`"alta"` → sem (o schema do campo é o `optional().pipe(enum)`, avaliado
+inteiro); `tagId`/`companyId` `undefined`, `0` ou acima do int do Postgres →
+`*`; `assigneeId` `null` → sem `*` na abertura e no envio para setor, `undefined`
+→ `*` no Enviar; comentários/motivo `""` e só espaço → `*`, acima de 5000 → `*`.
+
+### Decisões por campo
+
+**Abertura (`createTicketSchema`)** — `FormSchemaProvider` substitui o `<form>`
+solto; todo campo com `control={form.control}`.
+
+| Campo        | `FormField`                                        | `required` explícito    | Observação                                                                                                                                                                                                                      |
+| ------------ | -------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Empresa      | sim, `TicketCompanyAutocomplete`                   | —                       | `*` some ao escolher; texto digitado sem escolha não preenche o valor, `*` fica (T17)                                                                                                                                           |
+| Título       | sim, `Input autoComplete="off"`                    | —                       |                                                                                                                                                                                                                                 |
+| Descrição    | sim, `TicketDescriptionTextarea`                   | —                       |                                                                                                                                                                                                                                 |
+| Anexos       | **não** — continua `Controller`                    | —                       | opcional (sem `*`); `AttachmentUploader` tem layout próprio (título + limites + botão na mesma linha, `role="group"`) e já liga `ref` ao botão do seletor. Fica dentro do provider; nada muda nele                              |
+| Tipo         | sim, `TicketTypeSelect`                            | —                       |                                                                                                                                                                                                                                 |
+| Prioridade   | sim, `TicketPrioritySelect`                        | `priorityLock === null` | com a tag que fixa prioridade: sem `*` e sem `aria-required` (o valor travado já é setado no form por `ticketPriorityOnTagChange`). Sem trava: obrigatório. O aviso vermelho `Defina uma prioridade` **sai**: o `*` o substitui |
+| Tags         | sim, `TicketTagCombobox`, `description={TAG_HINT}` | —                       | o `onChange` composto (setValue da prioridade + `field.onChange`) fica no `children`, como hoje                                                                                                                                 |
+| Criador      | **não** — `Field` + `Input readOnly` como hoje     | —                       | não é campo do formulário                                                                                                                                                                                                       |
+| Destinatário | sim, `TicketAssigneeCombobox`                      | —                       | opcional (`null` = fila do setor); sem `*`                                                                                                                                                                                      |
+
+**Diálogos do detalhe**
+
+| Formulário        | Campo            | Controle                                                               | `required` | Observação                                                                                                                                                 |
+| ----------------- | ---------------- | ---------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enviar            | Destinatário     | `TicketAssigneeCombobox`, `description={describeCurrentAssignee(...)}` | —          | `*` até escolher; "diferente do atual" é `refine` do objeto, só ao salvar                                                                                  |
+| Enviar            | Comentário       | `HandoffCommentTextarea`                                               | —          | rótulo `HANDOFF_COMMENT_LABEL`                                                                                                                             |
+| Enviar para setor | Setor de destino | `Combobox` direto (opções de setor), rótulo `TRANSFER_TARGET_LABEL`    | —          | `changeTarget` continua no `children`; "setor diferente do atual" é `refine` do objeto                                                                     |
+| Enviar para setor | Destinatário     | `TicketAssigneeCombobox` com `queueLabel`                              | —          | opcional; montado só com setor escolhido, como hoje                                                                                                        |
+| Enviar para setor | Comentário       | `HandoffCommentTextarea`                                               | —          |                                                                                                                                                            |
+| Recusar           | Motivo           | `Textarea` (placeholder, `rows={4}`, `max-h-60 min-h-24`)              | —          | `isReasonIssue` pode continuar lendo `declineTicketTransferSchema.shape.reason`                                                                            |
+| Resolver          | Solução          | `TicketSolutionTextarea`                                               | —          | form com `id` e botão fora dele (`form={formId}`): o provider envolve o `<form>`, não muda nada no botão                                                   |
+| Comentar          | Comentário       | `Textarea` (`rows={3}`, `max-h-48 min-h-20`)                           | —          | `*` com a caixa vazia (aparece também depois do reset de sucesso)                                                                                          |
+| Comentar          | Privado          | **não** — continua `Controller` + `Checkbox`                           | —          | `z.boolean` recusa os três vazios e sairia `aria-required` num checkbox, o que diria "precisa marcar". Layout horizontal com rótulo depois também não cabe |
+| Editar comentário | Comentário       | `Textarea`, rótulo oculto                                              | —          | abre preenchido (sem `*`); apagar tudo traz o `*`, que fica oculto junto com o rótulo (abaixo)                                                             |
+
+**Rótulo oculto.** O editor de comentário (e, na 3b, a descrição da edição) usa
+rótulo `sr-only`. O `FormField` ganha `hideLabel?: boolean`, que aplica
+`sr-only` ao `FieldLabel`/`FieldTitle` inteiro (rótulo **e** `*`); o
+`aria-required` continua. Não passar `<span className="sr-only">` no `label`:
+o `*` ficaria visível sozinho.
+
+### Peças compartilhadas com a edição — estratégia
+
+Opção escolhida (menor risco **e** sem duplicar regra): **a peça de campo vira
+só o controle; o `FormField` fica no formulário.** Os invólucros atuais
+(`ticket-*-field.tsx`) continuam existindo **só para a edição**, com a
+**mesma API de props e o mesmo DOM**, montados por dentro sobre o controle
+novo. A edição não muda de linha nenhuma em 3a; na 3b ela passa ao
+`FormField` e os invólucros são apagados.
+
+Por que não "a edição continua com a versão atual intacta": a abertura teria
+de reescrever a lógica que hoje mora dentro das peças (conversão do valor do
+`Select` para o enum, trava da prioridade com toast, mapeamento fila/pessoa do
+destinatário, opções da empresa) — a mesma regra em dois lugares até a 3b.
+
+Controles novos (`"use client"` quando preciso; recebem o que o `children` do
+`FormField` entrega — `FormFieldControlProps` — e repassam `id`, `ref`,
+`aria-*` ao elemento focável):
+
+| Controle novo                                           | Origem (lógica movida de)      | Usado na 3a por                     | Invólucro mantido para a edição                                     |
+| ------------------------------------------------------- | ------------------------------ | ----------------------------------- | ------------------------------------------------------------------- |
+| `(app)/_components/ticket-company-autocomplete.tsx`     | `ticket-company-field.tsx`     | abertura                            | `ticket-company-field.tsx`                                          |
+| `(app)/_components/ticket-description-textarea.tsx`     | `ticket-description-field.tsx` | abertura                            | `ticket-description-field.tsx`                                      |
+| `(app)/_components/ticket-type-select.tsx`              | `ticket-type-field.tsx`        | abertura                            | `ticket-type-field.tsx`                                             |
+| `(app)/_components/ticket-priority-select.tsx`          | `ticket-priority-field.tsx`    | abertura                            | nenhum — **apagar** `ticket-priority-field.tsx` (só a abertura usa) |
+| `(app)/_components/ticket-tag-combobox.tsx`             | `ticket-tag-field.tsx`         | abertura                            | `ticket-tag-field.tsx`                                              |
+| `(app)/_components/ticket-assignee-combobox.tsx`        | `ticket-assignee-field.tsx`    | abertura, Enviar, Enviar para setor | `ticket-assignee-field.tsx`                                         |
+| `(app)/_components/handoff-comment-textarea.tsx`        | `handoff-comment-field.tsx`    | Enviar, Enviar para setor           | `handoff-comment-field.tsx`                                         |
+| `tickets/[id]/_components/ticket-solution-textarea.tsx` | `ticket-solution-field.tsx`    | Resolver                            | `ticket-solution-field.tsx`                                         |
+
+- Título não ganha controle: é `Input autoComplete="off"`, sem regra.
+- **`ComboboxField` é apagado na 3a** (resolve a atenção do `df-reviewer` da
+  Etapa 2). Seus últimos usos são Enviar para setor (vira `FormField` +
+  `Combobox`) e os invólucros `ticket-tag-field`/`ticket-assignee-field`, que
+  passam a montar `Field` + `FieldLabel htmlFor` + controle + `FieldError`/
+  `FieldDescription` com o **mesmo** markup, classes e ids que o
+  `ComboboxField` gerava (`${id}-error`, `${id}-hint`, `gap-1.5`, `min-w-0` no
+  destinatário). Duplicação transitória, some na 3b.
+- `Autocomplete` (`app/_components/autocomplete.tsx`) ganha
+  `"aria-required"?: boolean` repassado ao `Input`. O `aria-labelledby` vira
+  opcional no uso: no `FormField` o rótulo liga por `for`/`id` no próprio
+  `Input` (o invólucro da edição continua passando o `labelId` dele).
+- Os controles não importam `react-hook-form` para tipar o próprio valor:
+  props explícitas (`value`, `onChange`, `onBlur`, `ref`, `disabled`, `name?`
+  e as cinco de `FormFieldA11yProps`). `name` que o elemento não aceita
+  (`Autocomplete`) é descartado no controle.
+- Nenhum `FormField` sem `FormSchemaProvider` acima — os invólucros da edição
+  **não** usam `FormField` (o `TicketEditProvider` não tem provider de schema
+  até a 3b).
+
+### Cuidados que não podem regredir
+
+| Ref.                    | Onde                                | O que precisa continuar                                                                                                                                                                                   |
+| ----------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T10 / `INVALID_COMPANY` | abertura                            | `form.resetField("companyId")` **antes** do `setError(..., { shouldFocus: true })` e depois `router.refresh()`. O `ref` do `field` precisa chegar ao `Input` do `Autocomplete`, senão o foco não acontece |
+| `INVALID_TAG`           | abertura                            | `setError("tagId", …, { shouldFocus: true })` + `refresh`; `ref` no botão do `Combobox`                                                                                                                   |
+| `INVALID_ASSIGNEE`      | abertura, Enviar, Enviar para setor | `setError("assigneeId", …, { shouldFocus: true })` + `refresh`; no Enviar também `INVALID_INPUT` vai para o destinatário (`FIELD_ERROR_CODES`)                                                            |
+| `INVALID_TARGET`        | Enviar para setor                   | `setError("toDepartmentId", …, { shouldFocus: true })` + `refresh`                                                                                                                                        |
+| T15                     | abertura                            | busca sem resultado mostra `Nenhuma empresa encontrada.` e o foco continua no `Input` (o `Autocomplete` não muda por dentro)                                                                              |
+| L9                      | Enviar                              | o `key={\`${id}:${assignedTo}\`}`em`ticket-detail-header.tsx`continua: o remonte refaz o`useForm` com o destinatário novo. O provider fica **dentro** do diálogo                                          |
+| Anexos                  | abertura                            | `Controller` + `AttachmentUploader` intactos; bloqueio do envio com upload em andamento (`submitBlockMessage`) e `setUploadsBusy("idle")` no descarte continuam                                           |
+| Reset                   | todos                               | `form.reset(defaults)` ao fechar/cancelar e no sucesso do comentário: o `*` volta nos obrigatórios vazios                                                                                                 |
+| Edição intacta          | detalhe                             | invólucros da edição com mesmo DOM; E1–E14 de `ticket-company.md` e a edição de tipo/tag/destinatário/descrição/solução/comentário de passagem passam como antes                                          |
+
+### Limpeza do `df-architect` ao fim da 3a
+
+Depois da entrega do `df-ui`: remover `TICKET_PRIORITY_REQUIRED_HINT` de
+`app/_lib/domain/ticket.ts` e atualizar o "Aviso de campo vazio" em
+`docs/contracts/tag-priority.md` para o `*`.
+
 ## Riscos
 
 1. **Schema sem `shape`** — pipe, preprocess ou transform no topo, união ou
@@ -378,6 +515,17 @@ Feita depois da entrega do `df-ui`, sem mais uso no projeto. **Removidos**:
    que depende de outro campo (prioridade do chamado, expediente) não mexe no
    `*` sem `required` explícito.
 7. **Refinamento assíncrono em campo** — `z.safeParse` lança. Nenhum hoje.
+8. **Etapa 3a — invólucros da edição** — mexer por dentro de
+   `ticket-*-field.tsx` pode mudar ids, `aria-describedby` ou classes da
+   edição sem ninguém ver. Mitigação: mesma API e mesmo DOM (tabela da 3a) e
+   cenários H17–H18.
+9. **Etapa 3a — mudança visível** — `*` em Comentar, Recusar, Resolver,
+   Enviar e Enviar para setor; o aviso `Defina uma prioridade` some (o `*`
+   assume o papel). Decisão tomada pelo `df-architect` seguindo "nenhuma
+   legenda"; reverter é só manter o aviso na `TicketPrioritySelect`.
+10. **Etapa 3a — `ref`** — controle que não leva o `ref` ao elemento focável
+    quebra T10, `INVALID_TAG`, `INVALID_ASSIGNEE`, `INVALID_TARGET` e o
+    `shouldFocusError`. Conferir nos H6–H9.
 
 ## Cenários para o `df-qa`
 
@@ -416,6 +564,32 @@ Nenhum erro nem aviso no console/dev server em todos (MCP `next-devtools`).
 | G9  | M     | trocar senha com sucesso (e restaurar a senha de QA depois) | toast de sucesso, campos limpos com `*` de volta                                                                                                                                           |
 | G10 | todos | inspecionar os quatro formulários                           | `aria-required` só nos obrigatórios; `aria-invalid`/`aria-describedby` como F6; nenhuma legenda "Campos com \*…"                                                                           |
 
+### Etapa 3a — abertura e diálogos do detalhe
+
+Chamados criados pelo `df-qa` com prefixo `[QA]`. Empresas `QA Alfa`/`QA Beta`
+e `[QA] Empresa Temporária` como em `ticket-company.md`.
+
+| #   | Quem  | Ação                                                                                                                          | Esperado                                                                                                                                                                                                                                                                                        |
+| --- | ----- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H1  | M     | "Novo chamado"                                                                                                                | `*` em Empresa, Título, Descrição, Tipo, Prioridade, Tags; **sem** `*` em Anexos, Criador, Destinatário; sem `Defina uma prioridade`; sem erro; dica da tag visível                                                                                                                             |
+| H2  | M     | Título `ab` → `abc`; Descrição com 9 → 10 caracteres; Tipo; digitar `alfa` na Empresa sem escolher, depois escolher `QA Alfa` | `*` do Título some com 3; da Descrição com 10; do Tipo ao escolher; da Empresa só ao escolher a opção                                                                                                                                                                                           |
+| H3  | M     | escolher uma tag **sem** prioridade e depois uma **com** prioridade fixada; voltar à sem                                      | sem trava: `*` em Prioridade até escolher; com trava: prioridade preenchida, sem `*`, sem `aria-required`, toast de trava ao abrir; voltar limpa a prioridade e o `*` volta                                                                                                                     |
+| H4  | M     | "Abrir chamado" com tudo vazio                                                                                                | erro em Empresa, Título, Descrição, Tipo, Prioridade, Tags; foco na Empresa; nenhum erro em Anexos/Destinatário; nada criado                                                                                                                                                                    |
+| H5  | M     | criar `[QA] FormField abertura` com `QA Alfa`, um anexo e destinatário "fila"                                                 | toast `Chamado #N criado.`; diálogo fecha; reabrir mostra tudo vazio com os `*` de volta                                                                                                                                                                                                        |
+| H6  | D + M | T10: M escolhe `[QA] Empresa Temporária`; D a desativa; M envia                                                               | `Esta empresa não está disponível. Escolha uma empresa ativa.` na Empresa, **foco** no campo, campo vazio com `*`; lista recarrega sem ela; nada criado                                                                                                                                         |
+| H7  | M     | T15: digitar `zzz-nao-existe` na Empresa                                                                                      | `Nenhuma empresa encontrada.`; foco continua no campo                                                                                                                                                                                                                                           |
+| H8  | D + M | `INVALID_TAG` (D desativa a tag escolhida por M antes do envio) e `INVALID_ASSIGNEE` (D desativa a pessoa escolhida)          | erro no campo certo com foco; lista recarrega; nada criado                                                                                                                                                                                                                                      |
+| H9  | M     | anexo ainda subindo e "Abrir chamado"                                                                                         | toast de bloqueio; nada enviado; com o upload pronto, envia                                                                                                                                                                                                                                     |
+| H10 | A     | "Enviar" no detalhe                                                                                                           | `*` em Destinatário e Comentário; dica `Destinatário atual: …` abaixo do destinatário; salvar vazio → erro nos dois, foco no destinatário                                                                                                                                                       |
+| H11 | A     | L8 + L9: enviar para M; sem recarregar, "Enviar" de novo para outra pessoa                                                    | os dois enviam sem conflito; no segundo, `Destinatário atual: <M>.` e M fora da lista; o `*` volta no diálogo novo                                                                                                                                                                              |
+| H12 | A     | "Enviar para setor"                                                                                                           | `*` em Setor de destino e Comentário; Destinatário só depois de escolher setor e **sem** `*`; trocar o setor limpa o destinatário; salvar vazio → erros com foco no setor                                                                                                                       |
+| H13 | A     | recusar uma transferência pendente: salvar vazio, depois motivo `[QA] recusa FormField`                                       | `*` em Motivo; vazio → erro com foco; com texto → `*` some e recusa com toast                                                                                                                                                                                                                   |
+| H14 | M     | Resolver: salvar vazio; 9 caracteres; 10 caracteres                                                                           | `*` em Solução até 10; vazio → erro com foco; botão "Resolver" (fora do `<form>`) continua enviando                                                                                                                                                                                             |
+| H15 | M     | Comentar: `*` com caixa vazia; publicar `[QA] comentário FormField` (privado e público)                                       | `*` some ao digitar; "Comentário privado" sem `*` e sem `aria-required`; após publicar, caixa limpa com `*` de volta e altura restaurada                                                                                                                                                        |
+| H16 | M     | editar um comentário próprio: apagar tudo e salvar; depois salvar texto válido; Cancelar                                      | abre sem `*` visível, foco na caixa; vazio → erro com foco; `aria-required="true"` no textarea; o `*` não aparece sozinho (rótulo oculto); sucesso e Cancelar fecham e o foco volta ao lápis. Esc **não** fecha o editor (não há handler de `Escape`, comportamento anterior à 3a): só Cancelar |
+| H17 | M     | "Editar" o chamado (E1, E9 de `ticket-company.md`) e alterar Tipo, Tag, Destinatário, Descrição                               | idêntico a antes da 3a: sem `*` em lugar nenhum da edição, mesmos rótulos, dicas, erros e foco                                                                                                                                                                                                  |
+| H18 | todos | inspecionar os formulários da 3a                                                                                              | `aria-required` só nos obrigatórios (nunca no checkbox nem na prioridade travada); cada rótulo ligado por `for`/`id` (Empresa inclusive); `aria-describedby` → erro após salvar, senão a dica; `*` com `aria-hidden`; nenhum aviso no console                                                   |
+
 ## Checklist
 
 Etapa 1:
@@ -430,9 +604,18 @@ Etapa 2:
 
 - [x] Setores, Pessoas, Tags e Perfil migrados (`df-ui`); Combobox com `aria-labelledby` declarado e `name` repassado
 - [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado com atenções, aplicadas exceto o `ComboboxField`, levado à Etapa 3); cenários G1–G10 sem falhas, G5/G8 parciais e G9 não executado por restrição de escrita (não criar pessoa nem trocar senha) ([relatório](../test-reports/2026-11-10-form-field-etapa-2.md))
-- [ ] pausa para o usuário decidir a Etapa 3 — aguardando
+- [x] pausa para o usuário decidir a Etapa 3 — decidido: 3a agora, 3b depois
 
-Etapa 3 (aguardando decisão do usuário):
+Etapa 3a:
 
-- [ ] `ComboboxField` — atenção do `df-reviewer` na Etapa 2, adiada para cá
-- [ ] formulários de chamado (novo, editar, resolver, comentar, enviar, recusar), escopo a definir
+- [x] schemas conferidos com tsx; decisões por campo e estratégia das peças compartilhadas neste contrato (`df-architect`)
+- [x] `FormField` com `hideLabel`; `Autocomplete` com `aria-required` (`df-ui`)
+- [x] controles novos da tabela da 3a; invólucros da edição montados sobre eles com mesma API e DOM; `ticket-priority-field.tsx` e `combobox-field.tsx` apagados (`df-ui`)
+- [x] abertura, Enviar, Enviar para setor, Recusar, Resolver, Comentar e Editar comentário migrados (`df-ui`)
+- [x] limpeza: `TICKET_PRIORITY_REQUIRED_HINT` removido e `tag-priority.md` atualizado (`df-architect`)
+- [x] `npx tsc --noEmit`, `npm run lint`, `npm run build`; `df-reviewer` (aprovado, sem achados); cenários H1–H18 17/18, 0 falhas, H8 não executado por restrição de escrita (não desativar tag nem pessoa) ([relatório](../test-reports/2026-11-10-form-field-etapa-3a.md))
+- [ ] H8 (`INVALID_TAG`, `INVALID_ASSIGNEE`, `INVALID_TARGET`) aberto para o `df-debug`: confirmar em execução o `setError` com foco no campo certo e o `refresh`
+
+Etapa 3b (aguardando decisão do usuário):
+
+- [ ] edição do chamado no `FormField` (`TicketEditProvider` com `FormSchemaProvider` de `editTicketSchema`); invólucros `ticket-*-field.tsx` apagados

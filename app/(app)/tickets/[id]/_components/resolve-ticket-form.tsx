@@ -4,9 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, SendIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
+import FormField from "@/app/_components/form-field"
+import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
 import { resolveTicket } from "@/app/_lib/actions/ticket-resolution"
 import { SEND_TO_DEPARTMENT_LABEL } from "@/app/_lib/domain/ticket-transfer"
@@ -20,7 +22,7 @@ import HiddenWhileEditing from "./hidden-while-editing"
 import SendToDepartmentDialog, {
   type SendToDepartmentSetup,
 } from "./send-to-department-dialog"
-import TicketSolutionField from "./ticket-solution-field"
+import TicketSolutionTextarea from "./ticket-solution-textarea"
 
 interface ResolveTicketFormProps {
   defaults: ResolveTicketFormDefaults
@@ -38,7 +40,6 @@ const ResolveTicketForm = ({
   editingReplacement,
 }: ResolveTicketFormProps) => {
   const formId = useId()
-  const solutionId = useId()
   const router = useRouter()
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false)
 
@@ -74,24 +75,18 @@ const ResolveTicketForm = ({
   }
 
   const solutionForm = (
-    <form
-      id={formId}
-      noValidate
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="flex min-w-0 flex-col gap-4"
-    >
-      <Controller
-        name="solution"
-        control={form.control}
-        render={({ field, fieldState }) => (
-          <TicketSolutionField
-            id={solutionId}
-            {...field}
-            fieldState={fieldState}
-          />
-        )}
-      />
-    </form>
+    <FormSchemaProvider form={form} schema={resolveTicketSchema}>
+      <form
+        id={formId}
+        noValidate
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex min-w-0 flex-col gap-4"
+      >
+        <FormField control={form.control} name="solution" label="Solução">
+          {(field) => <TicketSolutionTextarea {...field} />}
+        </FormField>
+      </form>
+    </FormSchemaProvider>
   )
 
   const actionBar = (
