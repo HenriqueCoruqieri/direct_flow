@@ -15,6 +15,7 @@ import type {
 import type {
   AssumeTicketTarget,
   SendTicketFormDefaults,
+  SendTicketTarget,
   TicketAssigneeTarget,
   TicketAssignmentActorBlockReason,
   TicketAssignmentConflict,
@@ -25,7 +26,9 @@ import type {
   TicketAssumeDetailSource,
   TicketAttendBlockReason,
   TicketAttendConflict,
+  TicketAttendDetailFacts,
   TicketSendBlockReason,
+  TicketSendDetailSource,
 } from "@/app/_lib/types/ticket-assignment"
 
 const TICKET_STATUS_IS_ASSIGNABLE = {
@@ -157,17 +160,21 @@ export const canAssumeTicket = (
   ticket: TicketAssignmentFacts,
 ): boolean => ticketAssumeBlockFor(actor, ticket) === null
 
+const assignmentFactsFromDetail = (
+  ticket: TicketAttendDetailFacts,
+): TicketAssignmentFacts => ({
+  createdBy: ticket.createdBy,
+  assignedTo: ticket.assignedTo,
+  currentDepartmentId: ticket.currentDepartmentId,
+  status: ticket.status,
+  hasPendingTransfer: ticket.pendingTransfer !== null,
+})
+
 export const ticketAssumeTargetFor = (
   actor: TicketActorFacts,
   ticket: TicketAssumeDetailSource,
 ): AssumeTicketTarget | null =>
-  canAssumeTicket(actor, {
-    createdBy: ticket.createdBy,
-    assignedTo: ticket.assignedTo,
-    currentDepartmentId: ticket.currentDepartmentId,
-    status: ticket.status,
-    hasPendingTransfer: ticket.pendingTransfer !== null,
-  })
+  canAssumeTicket(actor, assignmentFactsFromDetail(ticket))
     ? { ticketId: ticket.id, expectedAssigneeId: ticket.assignedTo }
     : null
 
@@ -187,6 +194,18 @@ export const canSendTicket = (
   actor: TicketActorFacts,
   ticket: TicketAssignmentFacts,
 ): boolean => ticketSendBlockFor(actor, ticket) === null
+
+export const ticketSendTargetFor = (
+  actor: TicketActorFacts,
+  ticket: TicketSendDetailSource,
+): SendTicketTarget | null =>
+  canSendTicket(actor, assignmentFactsFromDetail(ticket))
+    ? {
+        id: ticket.id,
+        assignedTo: ticket.assignedTo,
+        assigneeName: ticket.assigneeName,
+      }
+    : null
 
 export const sendTargetOptions = (
   assignees: readonly AssigneeOption[],

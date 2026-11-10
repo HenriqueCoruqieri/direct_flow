@@ -23,7 +23,14 @@ import type {
 } from "@/app/_lib/types/department-queue"
 import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
-import { tag, ticket, ticketTag, ticketTransfer, user } from "@/db/schema"
+import {
+  company,
+  tag,
+  ticket,
+  ticketTag,
+  ticketTransfer,
+  user,
+} from "@/db/schema"
 
 const ASSIGNEE_CONDITIONS = {
   any: undefined,
@@ -66,10 +73,16 @@ export async function listQueueTickets(
       createdAt: ticket.createdAt,
       priority: ticket.priority,
       resolvedAt: ticket.resolvedAt,
+      company: {
+        id: company.id,
+        tradeName: company.tradeName,
+        cnpj: company.cnpj,
+      },
     })
     .from(ticket)
     .innerJoin(creator, eq(creator.id, ticket.createdBy))
     .leftJoin(assignee, eq(assignee.id, ticket.assignedTo))
+    .leftJoin(company, eq(company.id, ticket.companyId))
     .leftJoin(ticketTag, eq(ticketTag.ticketId, ticket.id))
     .leftJoin(tag, eq(tag.id, ticketTag.tagId))
     .where(

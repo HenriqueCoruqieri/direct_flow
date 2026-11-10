@@ -13,7 +13,6 @@ import {
   ATTENDABLE_TICKET_STATUSES,
   ATTENDED_TICKET_STATUS,
   canAssumeTicket,
-  canSendTicket,
 } from "@/app/_lib/domain/ticket-assignment"
 import { RESOLUTION_EDIT_WINDOW_DAYS } from "@/app/_lib/domain/ticket-closure"
 import type { DepartmentOption } from "@/app/_lib/types/department"
@@ -174,5 +173,4 @@ export const queueRowActionsFor = (
   row: TicketAssignmentFacts,
 ): DepartmentQueueRowActions => ({
   assume: canAssumeTicket(viewer, row),
-  send: canSendTicket(viewer, row),
 })

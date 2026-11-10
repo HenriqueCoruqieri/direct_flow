@@ -6,6 +6,7 @@ import type {
   TicketType,
 } from "@/app/_lib/types/ticket"
 import type { TicketAssignmentFacts } from "@/app/_lib/types/ticket-assignment"
+import type { TicketCompanyListFacts } from "@/app/_lib/types/ticket-company"
 
 export type DepartmentQueueTab = (typeof DEPARTMENT_QUEUE_TABS)[number]
 
@@ -31,7 +32,8 @@ export interface DepartmentQueueLocation {
   departmentId: number | null
 }
 
-export interface DepartmentQueueListItem extends TicketAssignmentFacts {
+export interface DepartmentQueueListItem
+  extends TicketAssignmentFacts, TicketCompanyListFacts {
   id: number
   title: string
   type: TicketType
@@ -46,5 +48,4 @@ export interface DepartmentQueueListItem extends TicketAssignmentFacts {
 
 export interface DepartmentQueueRowActions {
   assume: boolean
-  send: boolean
 }

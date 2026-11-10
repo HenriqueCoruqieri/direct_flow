@@ -4,6 +4,7 @@ import type {
   TicketStatus,
   TicketType,
 } from "@/app/_lib/types/ticket"
+import type { TicketCompanyListFacts } from "@/app/_lib/types/ticket-company"
 
 export type MyTicketsTab = (typeof MY_TICKETS_TABS)[number]
 
@@ -27,7 +28,7 @@ export interface MyTicketsEmptyCopy {
   description: string
 }
 
-export interface MyTicketListItem {
+export interface MyTicketListItem extends TicketCompanyListFacts {
   id: number
   title: string
   type: TicketType

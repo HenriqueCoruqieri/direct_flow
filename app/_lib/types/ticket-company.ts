@@ -12,5 +12,9 @@ export interface TicketCompanyOption extends TicketCompanyRef {
   cnpj: string
 }
 
+export interface TicketCompanyListFacts {
+  company: TicketCompanyOption | null
+}
+
 export interface TicketCompanySummary
   extends TicketCompanyOption, TicketCompanyFacts {}

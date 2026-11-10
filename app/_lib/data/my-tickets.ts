@@ -13,7 +13,7 @@ import type {
 } from "@/app/_lib/types/my-tickets"
 import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
-import { department, tag, ticket, ticketTag } from "@/db/schema"
+import { company, department, tag, ticket, ticketTag } from "@/db/schema"
 
 const DEPARTMENT_SCOPE_CONDITIONS = {
   origin: eq(ticket.currentDepartmentId, ticket.originDepartmentId),
@@ -49,9 +49,15 @@ export async function listMyTickets(
       createdAt: ticket.createdAt,
       priority: ticket.priority,
       resolvedAt: ticket.resolvedAt,
+      company: {
+        id: company.id,
+        tradeName: company.tradeName,
+        cnpj: company.cnpj,
+      },
     })
     .from(ticket)
     .innerJoin(department, eq(department.id, ticket.currentDepartmentId))
+    .leftJoin(company, eq(company.id, ticket.companyId))
     .leftJoin(ticketTag, eq(ticketTag.ticketId, ticket.id))
     .leftJoin(tag, eq(tag.id, ticketTag.tagId))
     .where(and(tabCondition(userId, tab), ticketPeriodCondition(range)))

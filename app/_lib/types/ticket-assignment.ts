@@ -122,6 +122,14 @@ export interface TicketAssumeDetailSource extends TicketAttendDetailFacts {
   id: number
 }
 
+export interface TicketSendDetailSource extends TicketAssumeDetailSource {
+  assigneeName: string | null
+}
+
+export interface SendTicketTarget extends TicketAssignmentSource {
+  assigneeName: string | null
+}
+
 export interface AssumeTicketTarget {
   ticketId: number
   expectedAssigneeId: number | null

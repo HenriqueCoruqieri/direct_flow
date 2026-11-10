@@ -47,6 +47,8 @@ export const PHONE_MIN_DIGITS = 10
 
 export const PHONE_MAX_DIGITS = 11
 
+export const CNPJ_TAIL_PREFIX = "…"
+
 export const CNPJ_PLACEHOLDER = "00.000.000/0000-00"
 
 export const CNPJ_PATTERN = /^[0-9A-Z]{12}[0-9]{2}$/
@@ -151,6 +153,16 @@ const applyMask = (
 
 export const formatCnpj = (digits: string): string =>
   applyMask(cleanCnpj(digits), CNPJ_GROUPS, CNPJ_SEPARATORS)
+
+const CNPJ_BRANCH_START = 8
+
+export const formatCnpjTail = (cnpj: string): string => {
+  const clean = cleanCnpj(cnpj)
+  if (clean.length < CNPJ_LENGTH) {
+    return formatCnpj(clean)
+  }
+  return `${CNPJ_TAIL_PREFIX}/${clean.slice(CNPJ_BRANCH_START, CNPJ_BASE_LENGTH)}-${clean.slice(CNPJ_BASE_LENGTH)}`
+}
 
 export const formatCep = (digits: string): string =>
   applyMask(cleanCep(digits), CEP_GROUPS, CEP_SEPARATORS)
