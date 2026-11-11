@@ -244,6 +244,24 @@ export async function findDepartmentName(
   return row?.name ?? null
 }
 
+export async function findDepartmentOption(
+  departmentId: number,
+): Promise<DepartmentOption | null> {
+  const [row] = await db
+    .select({
+      id: department.id,
+      name: department.name,
+      isBoard: department.isBoard,
+      isUnassigned: department.isUnassigned,
+      isActive: department.isActive,
+    })
+    .from(department)
+    .where(eq(department.id, departmentId))
+    .limit(1)
+
+  return row ?? null
+}
+
 export async function listDepartmentOptions(): Promise<DepartmentOption[]> {
   return db
     .select({
