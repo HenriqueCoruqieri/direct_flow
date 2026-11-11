@@ -145,6 +145,12 @@ export const monthToDateRange = (now: DateInput = new Date()): DateRange => ({
 export const formatMonthYear = (value: DateInput): string =>
   inAppZone(value).format("MMMM [de] YYYY")
 
+export const formatMonthName = (value: DateInput): string =>
+  inAppZone(value).format("MMMM")
+
+export const formatMonthFirstDay = (value: DateInput): string =>
+  inAppZone(value).format("[1º/]MM")
+
 export const formatDateAtTime = (value: DateInput): string =>
   inAppZone(value).format("DD/MM/YYYY [às] HH:mm")
 

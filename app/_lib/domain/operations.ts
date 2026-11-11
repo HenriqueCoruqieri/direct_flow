@@ -1,4 +1,9 @@
-import { formatDate, formatMonthYear } from "@/app/_lib/date"
+import {
+  formatDate,
+  formatMonthFirstDay,
+  formatMonthName,
+  formatMonthYear,
+} from "@/app/_lib/date"
 import {
   assignableDepartments,
   isAssignableDepartment,
@@ -158,3 +163,36 @@ export const productionEmptyCopy = (
   if (entries.length === 0) return PRODUCTION_NO_MEMBERS_COPY
   return isProductionEmpty(entries) ? PRODUCTION_EMPTY_COPY : null
 }
+
+export const operationsTabContext = (tab: OperationsTab, now: Date): string => {
+  switch (tab) {
+    case "minha-meta":
+      return `Suas metas de ${formatMonthName(now)}, de ${formatMonthFirstDay(now)} até hoje`
+    case "time":
+      return "Metas do setor · backlog e horas em atraso são de agora"
+    case "producao":
+      return "O período do gráfico fica no próprio card"
+  }
+}
+
+export const GOALS_LOADING_LABEL = "Carregando metas"
+
+export const PRODUCTION_PANEL_TITLE = "Produção da equipe"
+
+export const PRODUCTION_SELF_LABEL = "Você"
+
+export const peopleCountLabel = (count: number): string =>
+  `${count} ${count === 1 ? "pessoa" : "pessoas"}`
+
+export const productionTotalFor = (
+  entries: readonly TeamProductionEntry[],
+): number =>
+  entries.reduce((sum, entry) => sum + Math.max(entry.resolvedCount, 0), 0)
+
+export const productionSubtitle = (
+  entries: readonly TeamProductionEntry[],
+): string =>
+  `${PRODUCTION_CARD_LABEL} · ${productionCountLabel(productionTotalFor(entries))} no período · ${peopleCountLabel(entries.length)}`
+
+export const productionScrollHint = (count: number): string =>
+  `Arraste para ver as ${peopleCountLabel(count)}.`

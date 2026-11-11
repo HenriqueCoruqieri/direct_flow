@@ -9,6 +9,7 @@ import type {
   DepartmentGoals,
   DepartmentGoalsRecord,
   GoalAdherence,
+  GoalDirection,
   GoalEvaluation,
   GoalEvaluations,
   GoalFieldCopy,
@@ -18,6 +19,7 @@ import type {
   GoalResolutionFacts,
   GoalSummary,
   GoalUnit,
+  MeasuredGoalEvaluation,
   PersonGoalFacts,
   PersonGoalIndicator,
   PersonGoalResult,
@@ -367,10 +369,94 @@ export const goalValueLabel = (evaluation: GoalEvaluation): string =>
         evaluation.value,
       )
 
+export const GOAL_TARGET_PREFIXES = {
+  sla: "Meta",
+  tma: "Meta",
+  overdue: "Limite",
+  backlog: "Limite",
+  transferAcceptance: "Meta",
+} satisfies Record<GoalIndicator, string>
+
+export const GOAL_DIRECTION_SYMBOLS = {
+  min: "≥",
+  max: "≤",
+} satisfies Record<GoalDirection, string>
+
 export const goalTargetLabel = (evaluation: GoalEvaluation): string => {
   const rule = GOAL_INDICATOR_RULES[evaluation.indicator]
   const amount = formatGoalAmount(rule.unit, evaluation.target)
-  return rule.direction === "min" ? `Meta: ${amount}` : `Limite: ${amount}`
+  return `${GOAL_TARGET_PREFIXES[evaluation.indicator]} ${GOAL_DIRECTION_SYMBOLS[rule.direction]} ${amount}`
+}
+
+export const PERSON_GOAL_MET_DESCRIPTION =
+  "Você está aderente nas metas individuais do mês: SLA, TMA e horas em atraso."
+
+export const TEAM_GOAL_MET_DESCRIPTION =
+  "O time está aderente nos cinco indicadores do mês."
+
+const GOAL_MEASURE_PHRASES = {
+  sla: (amount: string) => `SLA de ${amount}`,
+  tma: (amount: string) => `TMA de ${amount}`,
+  overdue: (amount: string) => `${amount} em atraso`,
+  backlog: (amount: string) => `Backlog de ${amount}`,
+  transferAcceptance: (amount: string) =>
+    `Aceite de transferências de ${amount}`,
+} satisfies Record<GoalIndicator, (amount: string) => string>
+
+export const goalShortfallSentence = (
+  evaluation: MeasuredGoalEvaluation,
+): string => {
+  const rule = GOAL_INDICATOR_RULES[evaluation.indicator]
+  const measure = GOAL_MEASURE_PHRASES[evaluation.indicator](
+    formatGoalAmount(rule.unit, evaluation.value),
+  )
+  const target = formatGoalAmount(rule.unit, evaluation.target)
+  const gap = Math.abs(evaluation.value - evaluation.target)
+  return rule.direction === "min"
+    ? `${measure}: ${formatGoalInteger(gap)} p.p. abaixo da meta de ${target}.`
+    : `${measure}: ${formatGoalAmount(rule.unit, gap)} acima do limite de ${target}.`
+}
+
+const isNotAdherent = (
+  evaluation: GoalEvaluation,
+): evaluation is MeasuredGoalEvaluation =>
+  evaluation.adherence === "not_adherent"
+
+const goalSummaryDescriptionFor = (
+  evaluations: readonly GoalEvaluation[],
+  metDescription: string,
+): string => {
+  const shortfalls = evaluations.filter(isNotAdherent)
+  return shortfalls.length === 0
+    ? metDescription
+    : shortfalls.map(goalShortfallSentence).join(" ")
+}
+
+export const personGoalSummaryDescription = (
+  result: PersonGoalResult,
+): string =>
+  goalSummaryDescriptionFor(
+    orderedEvaluations(PERSON_GOAL_INDICATORS, result.evaluations),
+    PERSON_GOAL_MET_DESCRIPTION,
+  )
+
+export const teamGoalSummaryDescription = (result: TeamGoalResult): string =>
+  goalSummaryDescriptionFor(
+    orderedEvaluations(GOAL_INDICATORS, result.evaluations),
+    TEAM_GOAL_MET_DESCRIPTION,
+  )
+
+export const GOAL_MET_COUNT_RULE_DESCRIPTION =
+  "Cumpre a meta quem está aderente nas três metas individuais: SLA, TMA e horas em atraso."
+
+export const goalMetCountDescription = (
+  metCount: number,
+  memberCount: number,
+): string => {
+  if (memberCount <= 0) return GOAL_MET_COUNT_RULE_DESCRIPTION
+  const people = memberCount === 1 ? "pessoa" : "pessoas"
+  const verb = metCount === 1 ? "cumpriu" : "cumpriram"
+  return `${metCount} de ${memberCount} ${people} ${verb} as três metas individuais (SLA, TMA e horas em atraso).`
 }
 
 const percentDifferenceLine = (difference: number): string => {
