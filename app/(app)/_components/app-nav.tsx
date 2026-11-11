@@ -2,6 +2,7 @@ import {
   ArrowRightLeftIcon,
   HouseIcon,
   InboxIcon,
+  MonitorIcon,
   TicketIcon,
 } from "lucide-react"
 
@@ -11,6 +12,7 @@ import {
   DEPARTMENT_QUEUE_PATH,
 } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
+import { OPERATIONS_LABEL, OPERATIONS_PATH } from "@/app/_lib/domain/operations"
 import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
@@ -36,6 +38,13 @@ const AppNav = ({
             href="/dashboard"
             label="Início"
             icon={<HouseIcon aria-hidden="true" />}
+          />
+        </li>
+        <li>
+          <NavItem
+            href={OPERATIONS_PATH}
+            label={OPERATIONS_LABEL}
+            icon={<MonitorIcon aria-hidden="true" />}
           />
         </li>
         <li>
