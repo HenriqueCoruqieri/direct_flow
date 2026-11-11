@@ -137,6 +137,17 @@ export const resolvePeriodRange = (
   }
 }
 
+export const monthToDateRange = (now: DateInput = new Date()): DateRange => ({
+  start: zonedDateTime(monthStartKey(todayKey(now))),
+  end: dayjs(now).toDate(),
+})
+
+export const formatMonthYear = (value: DateInput): string =>
+  inAppZone(value).format("MMMM [de] YYYY")
+
+export const formatDateAtTime = (value: DateInput): string =>
+  inAppZone(value).format("DD/MM/YYYY [às] HH:mm")
+
 export const resolvePeriodFilterRange = (
   selection: PeriodFilterSelection,
   now: DateInput = new Date(),
@@ -341,6 +352,17 @@ export const formatTimeUntil = (value: DateInput, now: DateInput): string =>
 
 export const formatTotalHours = (durationMs: number): string =>
   `${integerFormat.format(Math.floor(Math.max(durationMs, 0) / HOUR_MS))}h`
+
+export const formatHoursMinutes = (durationMs: number): string => {
+  if (durationMs <= 0) return "0h"
+  const totalMinutes = Math.floor(durationMs / MINUTE_MS)
+  if (totalMinutes < 1) return "< 1min"
+  const hours = Math.floor(totalMinutes / MINUTES_PER_HOUR)
+  const minutes = totalMinutes % MINUTES_PER_HOUR
+  if (hours === 0) return `${minutes}min`
+  const hourText = `${integerFormat.format(hours)}h`
+  return minutes > 0 ? `${hourText} ${minutes}min` : hourText
+}
 
 export const elapsedMs = (
   value: DateInput,
