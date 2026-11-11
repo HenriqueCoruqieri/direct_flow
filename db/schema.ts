@@ -556,7 +556,52 @@ export const companyContact = pgTable(
   ],
 )
 
-export const departmentRelations = relations(department, ({ many }) => ({
+export const departmentGoal = pgTable(
+  "department_goal",
+  {
+    id: pk(),
+    departmentId: integer("department_id")
+      .notNull()
+      .references(() => department.id, { onDelete: "cascade" }),
+    slaMinPercent: smallint("sla_min_percent").notNull(),
+    tmaMaxHours: smallint("tma_max_hours").notNull(),
+    overdueHoursLimit: smallint("overdue_hours_limit").notNull(),
+    backlogLimit: integer("backlog_limit").notNull(),
+    transferAcceptanceMinPercent: smallint(
+      "transfer_acceptance_min_percent",
+    ).notNull(),
+    updatedBy: integer("updated_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("department_goal_department_idx").on(table.departmentId),
+    index("department_goal_updated_by_idx").on(table.updatedBy),
+    check(
+      "department_goal_sla_min_percent_range",
+      sql`${table.slaMinPercent} between 1 and 100`,
+    ),
+    check(
+      "department_goal_tma_max_hours_positive",
+      sql`${table.tmaMaxHours} >= 1`,
+    ),
+    check(
+      "department_goal_overdue_hours_limit_non_negative",
+      sql`${table.overdueHoursLimit} >= 0`,
+    ),
+    check(
+      "department_goal_backlog_limit_non_negative",
+      sql`${table.backlogLimit} >= 0`,
+    ),
+    check(
+      "department_goal_transfer_acceptance_min_percent_range",
+      sql`${table.transferAcceptanceMinPercent} between 1 and 100`,
+    ),
+  ],
+)
+
+export const departmentRelations = relations(department, ({ one, many }) => ({
   users: many(user),
   tags: many(tag),
   originTickets: many(ticket, { relationName: "ticket_origin_department" }),
@@ -569,6 +614,7 @@ export const departmentRelations = relations(department, ({ many }) => ({
   }),
   historyFrom: many(ticketHistory, { relationName: "history_from_department" }),
   historyTo: many(ticketHistory, { relationName: "history_to_department" }),
+  goal: one(departmentGoal),
 }))
 
 export const userRelations = relations(user, ({ one, many }) => ({
@@ -598,6 +644,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   historyToAssignee: many(ticketHistory, {
     relationName: "history_to_assignee",
   }),
+  updatedDepartmentGoals: many(departmentGoal),
 }))
 
 export const tagRelations = relations(tag, ({ one, many }) => ({
@@ -805,6 +852,17 @@ export const companyContactRelations = relations(companyContact, ({ one }) => ({
   }),
 }))
 
+export const departmentGoalRelations = relations(departmentGoal, ({ one }) => ({
+  department: one(department, {
+    fields: [departmentGoal.departmentId],
+    references: [department.id],
+  }),
+  updater: one(user, {
+    fields: [departmentGoal.updatedBy],
+    references: [user.id],
+  }),
+}))
+
 export type Department = typeof department.$inferSelect
 export type NewDepartment = typeof department.$inferInsert
 export type User = typeof user.$inferSelect
@@ -831,6 +889,8 @@ export type Company = typeof company.$inferSelect
 export type NewCompany = typeof company.$inferInsert
 export type CompanyContact = typeof companyContact.$inferSelect
 export type NewCompanyContact = typeof companyContact.$inferInsert
+export type DepartmentGoal = typeof departmentGoal.$inferSelect
+export type NewDepartmentGoal = typeof departmentGoal.$inferInsert
 
 export type Role = (typeof roleEnum.enumValues)[number]
 export type TicketType = (typeof ticketTypeEnum.enumValues)[number]

@@ -169,6 +169,13 @@
       "when": 1794246126382,
       "tag": "0023_ticket_company_history",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794433744049,
+      "tag": "0024_department_goal",
+      "breakpoints": true
     }
   ]
 }
