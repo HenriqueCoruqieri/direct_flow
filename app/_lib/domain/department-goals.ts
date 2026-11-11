@@ -1,4 +1,9 @@
-import { formatDateAtTime, formatHoursMinutes, HOUR_MS } from "@/app/_lib/date"
+import {
+  formatDateAtTime,
+  formatHoursMinutes,
+  formatInteger,
+  HOUR_MS,
+} from "@/app/_lib/date"
 import { ticketCountLabel } from "@/app/_lib/domain/dashboard"
 import {
   GOAL_INDICATORS,
@@ -54,13 +59,6 @@ export const GOAL_GAUGE_MIN_HOURS = 4
 export const GOAL_GAUGE_MIN_COUNT = 4
 
 export const GOAL_GAUGE_LIMIT_FACTOR = 2
-
-const integerFormat = new Intl.NumberFormat("pt-BR", {
-  maximumFractionDigits: 0,
-})
-
-export const formatGoalInteger = (value: number): string =>
-  integerFormat.format(value)
 
 export const GOAL_INDICATOR_RULES = {
   sla: { unit: "percent", direction: "min" },
@@ -175,6 +173,11 @@ export const SAVE_DEPARTMENT_GOALS_LABEL = "Salvar metas"
 export const SAVE_DEPARTMENT_GOALS_PENDING_LABEL = "Salvando…"
 
 export const DEPARTMENT_GOALS_SAVED_MESSAGE = "Metas salvas."
+
+export const departmentGoalsDialogDescription = (
+  departmentName: string,
+): string =>
+  `${departmentName} · as metas valem para cada pessoa do setor e para o time.`
 
 export const goalsLastChangeLabel = (record: DepartmentGoalsRecord): string =>
   record.updatedByName === null
@@ -353,7 +356,7 @@ export const goalMetCountLabel = (
 const formatGoalAmount = (unit: GoalUnit, amount: number): string => {
   switch (unit) {
     case "percent":
-      return `${formatGoalInteger(amount)}%`
+      return `${formatInteger(amount)}%`
     case "duration":
       return formatHoursMinutes(amount)
     case "count":
@@ -368,6 +371,11 @@ export const goalValueLabel = (evaluation: GoalEvaluation): string =>
         GOAL_INDICATOR_RULES[evaluation.indicator].unit,
         evaluation.value,
       )
+
+export const goalScaleLabel = (
+  indicator: GoalIndicator,
+  value: number,
+): string => formatGoalAmount(GOAL_INDICATOR_RULES[indicator].unit, value)
 
 export const GOAL_TARGET_PREFIXES = {
   sla: "Meta",
@@ -413,7 +421,7 @@ export const goalShortfallSentence = (
   const target = formatGoalAmount(rule.unit, evaluation.target)
   const gap = Math.abs(evaluation.value - evaluation.target)
   return rule.direction === "min"
-    ? `${measure}: ${formatGoalInteger(gap)} p.p. abaixo da meta de ${target}.`
+    ? `${measure}: ${formatInteger(gap)} p.p. abaixo da meta de ${target}.`
     : `${measure}: ${formatGoalAmount(rule.unit, gap)} acima do limite de ${target}.`
 }
 
@@ -461,7 +469,7 @@ export const goalMetCountDescription = (
 
 const percentDifferenceLine = (difference: number): string => {
   if (difference === 0) return GOAL_ON_TARGET_HINTS.percent
-  const points = `${formatGoalInteger(Math.abs(difference))} p.p.`
+  const points = `${formatInteger(Math.abs(difference))} p.p.`
   return difference > 0 ? `${points} acima da meta` : `Faltam ${points}`
 }
 

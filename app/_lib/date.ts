@@ -38,6 +38,9 @@ const integerFormat = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 0,
 })
 
+export const formatInteger = (value: number): string =>
+  integerFormat.format(value)
+
 const DATE_KEY_FORMAT = "YYYY-MM-DD"
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
@@ -357,7 +360,7 @@ export const formatTimeUntil = (value: DateInput, now: DateInput): string =>
   formatSignedDuration(dayjs(value).diff(dayjs(now)))
 
 export const formatTotalHours = (durationMs: number): string =>
-  `${integerFormat.format(Math.floor(Math.max(durationMs, 0) / HOUR_MS))}h`
+  `${formatInteger(Math.floor(Math.max(durationMs, 0) / HOUR_MS))}h`
 
 export const formatHoursMinutes = (durationMs: number): string => {
   if (durationMs <= 0) return "0h"
@@ -366,7 +369,7 @@ export const formatHoursMinutes = (durationMs: number): string => {
   const hours = Math.floor(totalMinutes / MINUTES_PER_HOUR)
   const minutes = totalMinutes % MINUTES_PER_HOUR
   if (hours === 0) return `${minutes}min`
-  const hourText = `${integerFormat.format(hours)}h`
+  const hourText = `${formatInteger(hours)}h`
   return minutes > 0 ? `${hourText} ${minutes}min` : hourText
 }
 

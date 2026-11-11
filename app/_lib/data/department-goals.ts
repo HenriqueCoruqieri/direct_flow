@@ -18,7 +18,7 @@ import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { departmentGoal, ticket, ticketTransfer, user } from "@/db/schema"
 
-function resolvedInMonthSql(month: DateRange) {
+function resolvedInRangeSql(month: DateRange) {
   return and(
     gte(ticket.resolvedAt, month.start),
     lt(ticket.resolvedAt, month.end),
@@ -27,7 +27,7 @@ function resolvedInMonthSql(month: DateRange) {
 }
 
 function goalFactColumns(month: DateRange, now: Date) {
-  const resolvedInMonth = resolvedInMonthSql(month)
+  const resolvedInMonth = resolvedInRangeSql(month)
 
   return {
     resolvedCount:
@@ -220,7 +220,7 @@ export async function findTeamProduction(
       and(
         eq(ticket.assignedTo, user.id),
         eq(ticket.currentDepartmentId, departmentId),
-        resolvedInMonthSql(range),
+        resolvedInRangeSql(range),
       ),
     )
     .where(and(eq(user.departmentId, departmentId), eq(user.isActive, true)))

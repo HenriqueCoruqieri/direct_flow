@@ -1,7 +1,7 @@
 import { z } from "zod"
 
+import { formatInteger } from "@/app/_lib/date"
 import {
-  formatGoalInteger,
   GOAL_BACKLOG_MAX,
   GOAL_HOURS_LIMIT_MAX,
   GOAL_PERCENT_MAX,
@@ -33,19 +33,19 @@ export const departmentGoalsSchema = z.object({
     `Informe o TMA máximo, em horas inteiras, a partir de ${GOAL_TMA_HOURS_MIN}.`,
     GOAL_TMA_HOURS_MIN,
     GOAL_TMA_HOURS_MAX,
-    `O valor máximo é ${formatGoalInteger(GOAL_TMA_HOURS_MAX)} horas.`,
+    `O valor máximo é ${formatInteger(GOAL_TMA_HOURS_MAX)} horas.`,
   ),
   overdueHoursLimit: goalNumberSchema(
     "Informe o limite de horas em atraso, em horas inteiras, a partir de 0.",
     0,
     GOAL_HOURS_LIMIT_MAX,
-    `O valor máximo é ${formatGoalInteger(GOAL_HOURS_LIMIT_MAX)} horas.`,
+    `O valor máximo é ${formatInteger(GOAL_HOURS_LIMIT_MAX)} horas.`,
   ),
   backlogLimit: goalNumberSchema(
     "Informe o limite de backlog, em chamados, a partir de 0.",
     0,
     GOAL_BACKLOG_MAX,
-    `O valor máximo é ${formatGoalInteger(GOAL_BACKLOG_MAX)} chamados.`,
+    `O valor máximo é ${formatInteger(GOAL_BACKLOG_MAX)} chamados.`,
   ),
   transferAcceptanceMinPercent: goalNumberSchema(
     `Informe a taxa de aceite de transferências, de ${GOAL_PERCENT_MIN} a ${GOAL_PERCENT_MAX}.`,

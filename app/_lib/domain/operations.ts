@@ -132,6 +132,9 @@ export const TEAM_MET_COUNT_CARD_LABEL = "Pessoas que cumpriram a meta"
 
 export const PRODUCTION_CARD_LABEL = "Chamados resolvidos por pessoa"
 
+export const PRODUCTION_SCROLL_REGION_LABEL =
+  "Gráfico de barras da produção; os valores estão na tabela a seguir"
+
 export const PRODUCTION_LOADING_LABEL =
   "Carregando chamados resolvidos por pessoa"
 

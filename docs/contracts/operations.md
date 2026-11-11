@@ -287,14 +287,15 @@ mas só Produção o usa (`usesOperationsPeriod`).
 
 ## Datas — `app/_lib/date.ts` (`df-architect`, pronto, acréscimos)
 
-| Export                       | Semântica                                                                 |
-| ---------------------------- | ------------------------------------------------------------------------- |
-| `monthToDateRange(now)`      | `{ start: 1º do mês corrente 00:00 em SP, end: now }`                     |
-| `formatMonthYear(value)`     | `novembro de 2026` (mês em SP, minúsculo)                                 |
-| `formatDateAtTime(value)`    | `11/11/2026 às 14:32`                                                     |
-| `formatHoursMinutes(ms)`     | horas sem virar dias: `0h`, `< 1min`, `45min`, `6h`, `1h 20min`, `1.234h` |
-| `formatMonthName(value)`     | `novembro` (mês em SP, minúsculo)                                         |
-| `formatMonthFirstDay(value)` | `1º/11` (primeiro dia do mês em SP)                                       |
+| Export                       | Semântica                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `monthToDateRange(now)`      | `{ start: 1º do mês corrente 00:00 em SP, end: now }`                            |
+| `formatMonthYear(value)`     | `novembro de 2026` (mês em SP, minúsculo)                                        |
+| `formatDateAtTime(value)`    | `11/11/2026 às 14:32`                                                            |
+| `formatHoursMinutes(ms)`     | horas sem virar dias: `0h`, `< 1min`, `45min`, `6h`, `1h 20min`, `1.234h`        |
+| `formatMonthName(value)`     | `novembro` (mês em SP, minúsculo)                                                |
+| `formatMonthFirstDay(value)` | `1º/11` (primeiro dia do mês em SP)                                              |
+| `formatInteger(value)`       | inteiro em pt-BR sem casas: `1.234`. Fonte única (substitui `formatGoalInteger`) |
 
 ## Domínio (`df-architect`, pronto)
 
@@ -320,6 +321,7 @@ mas só Produção o usa (`usesOperationsPeriod`).
 | `operationsSubtitle(departmentName, goals, now)`                          | `Suporte · metas de novembro de 2026 · definidas por Ana em 10/11/2026`. Sem meta: só `Suporte · metas de novembro de 2026`. `updatedByName` nulo: `· definidas em …`                                                          |
 | `MY_GOAL_CARD_LABEL`, `TEAM_GOAL_CARD_LABEL`, `TEAM_MET_COUNT_CARD_LABEL` | `Minha meta`, `Meta do time`, `Pessoas que cumpriram a meta`                                                                                                                                                                   |
 | `PRODUCTION_CARD_LABEL`, `PRODUCTION_LOADING_LABEL`                       | `Chamados resolvidos por pessoa`, `Carregando chamados resolvidos por pessoa`                                                                                                                                                  |
+| `PRODUCTION_SCROLL_REGION_LABEL`                                          | `Gráfico de barras da produção; os valores estão na tabela a seguir` (`aria-label` da região rolável focável do gráfico; distinto do `caption` da tabela `sr-only`)                                                            |
 | `productionCountLabel(n)`, `productionEntryLabel(entry)`                  | `1 resolvido` / `3 resolvidos`; `Ana Souza: 3 resolvidos` (rótulo acessível da barra e linha da tabela `sr-only`)                                                                                                              |
 | `operationsTabContext(tab, now)`                                          | linha de contexto sob o cabeçalho. Minha meta: `Suas metas de novembro, de 1º/11 até hoje` (mês em SP); Time: `Metas do setor · backlog e horas em atraso são de agora`; Produção: `O período do gráfico fica no próprio card` |
 | `GOALS_LOADING_LABEL`                                                     | `Carregando metas` (`aria-label` do esqueleto das abas de meta)                                                                                                                                                                |
@@ -354,6 +356,7 @@ mas só Produção o usa (`usesOperationsPeriod`).
 | `goalSummaryLabel(summary)`                                                                                                                                            | `Meta cumprida` ou `Meta não cumprida · não aderente em TMA` / `… em SLA e TMA` / `… em SLA, TMA e horas em atraso`                                                                                                                                                                                                           |
 | `goalMetCountLabel(n, m)`                                                                                                                                              | `3 de 5 cumpriram`, `1 de 5 cumpriu`; `m = 0` → `Nenhuma pessoa ativa no setor`                                                                                                                                                                                                                                               |
 | `goalValueLabel(evaluation)`                                                                                                                                           | `92%`, `5h 12min`, `0h`, `6 chamados`; sem dados → `—`                                                                                                                                                                                                                                                                        |
+| `goalScaleLabel(indicator, value)`                                                                                                                                     | rótulo das pontas do gauge (`0` e `gauge.max`), na formatação por unidade de `goalValueLabel`: `0%`/`100%`, `0h`/`16h`, `0 chamados`/`80 chamados`                                                                                                                                                                            |
 | `goalTargetLabel(evaluation)`                                                                                                                                          | como no Figma: `Meta ≥ 90%` (SLA, aceite), `Meta ≤ 8h` (TMA), `Limite ≤ 10h` (horas em atraso), `Limite ≤ 40 chamados` (backlog). Prefixo em `GOAL_TARGET_PREFIXES` (por indicador), símbolo em `GOAL_DIRECTION_SYMBOLS` (`min` → `≥`, `max` → `≤`)                                                                           |
 | `PERSON_GOAL_MET_DESCRIPTION` / `TEAM_GOAL_MET_DESCRIPTION`                                                                                                            | `Você está aderente nas metas individuais do mês: SLA, TMA e horas em atraso.` / `O time está aderente nos cinco indicadores do mês.`                                                                                                                                                                                         |
 | `goalShortfallSentence(evaluation: MeasuredGoalEvaluation)`                                                                                                            | uma frase por indicador não aderente: `SLA de 80%: 10 p.p. abaixo da meta de 90%.`, `TMA de 9h 20min: 1h 20min acima do limite de 8h.`, `12h em atraso: 2h acima do limite de 10h.`, `Backlog de 52 chamados: 12 chamados acima do limite de 40 chamados.`, `Aceite de transferências de 60%: 20 p.p. abaixo da meta de 80%.` |
@@ -519,16 +522,19 @@ visível, logo abaixo de Início (antes de Meus chamados). Conferir
 
 ### Textos do domínio (substituem as constantes locais do `df-ui`)
 
-| Componente                   | Hoje (local)                                                               | Trocar por                                                                                                         |
-| ---------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `operations-header.tsx`      | `TAB_CONTEXT[location.tab]`                                                | `operationsTabContext(location.tab, now)` — o cabeçalho passa a receber `now: Date` da página                      |
-| `my-goal-panel.tsx`          | `MET_DESCRIPTION` / `NOT_MET_DESCRIPTION`                                  | `personGoalSummaryDescription(result)`                                                                             |
-| `team-goal-panel.tsx`        | `MET_DESCRIPTION` / `NOT_MET_DESCRIPTION`                                  | `teamGoalSummaryDescription(result)`                                                                               |
-| `goal-met-count-card.tsx`    | `MET_COUNT_DESCRIPTION`                                                    | `goalMetCountDescription(metCount, memberCount)`                                                                   |
-| `production-panel-frame.tsx` | `PRODUCTION_TITLE`                                                         | `PRODUCTION_PANEL_TITLE`                                                                                           |
-| `production-panel.tsx`       | `peopleCountLabel`, `productionSubtitle`, "Arraste para ver as N pessoas." | `peopleCountLabel`, `productionSubtitle(entries)`, `productionScrollHint(entries.length)` (de `domain/operations`) |
-| `production-chart.tsx`       | `SELF_LABEL`                                                               | `PRODUCTION_SELF_LABEL`                                                                                            |
-| `goal-panel-skeleton.tsx`    | `GOALS_LOADING_LABEL` local                                                | `GOALS_LOADING_LABEL` de `domain/operations`                                                                       |
+| Componente                              | Hoje (local)                                                               | Trocar por                                                                                                         |
+| --------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `operations-header.tsx`                 | `TAB_CONTEXT[location.tab]`                                                | `operationsTabContext(location.tab, now)` — o cabeçalho passa a receber `now: Date` da página                      |
+| `my-goal-panel.tsx`                     | `MET_DESCRIPTION` / `NOT_MET_DESCRIPTION`                                  | `personGoalSummaryDescription(result)`                                                                             |
+| `team-goal-panel.tsx`                   | `MET_DESCRIPTION` / `NOT_MET_DESCRIPTION`                                  | `teamGoalSummaryDescription(result)`                                                                               |
+| `goal-met-count-card.tsx`               | `MET_COUNT_DESCRIPTION`                                                    | `goalMetCountDescription(metCount, memberCount)`                                                                   |
+| `production-panel-frame.tsx`            | `PRODUCTION_TITLE`                                                         | `PRODUCTION_PANEL_TITLE`                                                                                           |
+| `production-panel.tsx`                  | `peopleCountLabel`, `productionSubtitle`, "Arraste para ver as N pessoas." | `peopleCountLabel`, `productionSubtitle(entries)`, `productionScrollHint(entries.length)` (de `domain/operations`) |
+| `production-chart.tsx`                  | `SELF_LABEL`                                                               | `PRODUCTION_SELF_LABEL`                                                                                            |
+| `goal-panel-skeleton.tsx`               | `GOALS_LOADING_LABEL` local                                                | `GOALS_LOADING_LABEL` de `domain/operations`                                                                       |
+| `department-goals-dialog.tsx`           | `DialogDescription` com só o nome do setor                                 | `departmentGoalsDialogDescription(departmentName)` (de `domain/department-goals`)                                  |
+| `goal-gauge-card.tsx`                   | `scaleLabel` (monta uma avaliação falsa para `goalValueLabel`)             | `goalScaleLabel(evaluation.indicator, 0)` / `goalScaleLabel(evaluation.indicator, gauge.max)`                      |
+| `production-chart.tsx` (região rolável) | `aria-label` igual ao `caption` da tabela                                  | `PRODUCTION_SCROLL_REGION_LABEL` (de `domain/operations`)                                                          |
 
 Os textos de resumo e de contexto mudaram em relação aos locais (seguem o
 Figma aprovado): o resumo não cumprido agora diz **quanto** falta em cada
@@ -712,7 +718,7 @@ backlog, de `BACKLOG_TICKET_STATUSES`. Conferir no código se mudarem.)
       `validation/operations.ts`, `domain/operations.ts`,
       `domain/operations-tabs.ts`, `domain/goal-indicators.ts`,
       `domain/department-goals.ts`, acréscimos em `date.ts` (`df-architect`)
-- [ ] `data/department-goals.ts` + `findDepartmentOption` (`df-data`)
-- [ ] `actions/department-goals.ts` (`df-actions`)
-- [ ] nav, rota, abas, gauges, produção, diálogo, estados (`df-ui`)
+- [x] `data/department-goals.ts` + `findDepartmentOption` (`df-data`)
+- [x] `actions/department-goals.ts` (`df-actions`)
+- [x] nav, rota, abas, gauges, produção, diálogo, estados (`df-ui`)
 - [ ] relatório do `df-qa` em `docs/test-reports/`
