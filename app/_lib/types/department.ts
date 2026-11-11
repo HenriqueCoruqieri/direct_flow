@@ -54,10 +54,22 @@ export interface DepartmentDeactivationRefused {
   block: DepartmentDeactivationBlocked
 }
 
+export interface DepartmentAdminsNotEditable {
+  status: "admins_not_editable"
+}
+
+export interface DepartmentMembersChanged {
+  status: "members_changed"
+}
+
 export type InsertDepartmentOutcome = DepartmentSaved | DepartmentNameTaken
 
 export type UpdateDepartmentNameOutcome =
-  DepartmentSaved | DepartmentNameTaken | DepartmentNotFound
+  | DepartmentSaved
+  | DepartmentNameTaken
+  | DepartmentNotFound
+  | DepartmentAdminsNotEditable
+  | DepartmentMembersChanged
 
 export type UpdateDepartmentActiveOutcome =
   DepartmentSaved | DepartmentNotFound | DepartmentDeactivationRefused

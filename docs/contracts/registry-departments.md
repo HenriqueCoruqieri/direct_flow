@@ -7,6 +7,13 @@ nas decisões. Poder global da Diretoria em
 Versões observadas: `next@16.3.5`, `better-auth@1.7.5`, `drizzle-orm@0.45.2`,
 `zod@4.6.5`.
 
+> **Atualizado pela feature Administradores na edição do setor**
+> (`docs/contracts/department-admins-shortcut.md`, 2026-11-10): o Dialog de
+> edição ganha o campo "Administradores" (membros ativos do setor, marcados =
+> admin), gravado na mesma transação do renomear. `renameDepartmentSchema` ganha
+> `admins` opcional; `updateDepartmentName` recebe `admins` e devolve também
+> `admins_not_editable` e `members_changed`. O botão da linha passa a "Editar".
+
 > **Atualizado pela feature Tags** (`docs/contracts/registry-tags.md`):
 > `listDepartments` ordena com a Diretoria primeiro; a guarda de diretor saiu do
 > layout de `/registry` e foi para `app/(app)/registry/departments/page.tsx`

@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm"
 
 import { isUniqueViolation } from "@/app/_lib/data/db-errors"
 import { checkDepartmentDeactivation } from "@/app/_lib/domain/department"
+import { planDepartmentAdmins } from "@/app/_lib/domain/department-admins"
 import { OPEN_TICKET_STATUSES } from "@/app/_lib/domain/ticket"
 import type {
   DepartmentListItem,
@@ -10,6 +11,10 @@ import type {
   UpdateDepartmentActiveOutcome,
   UpdateDepartmentNameOutcome,
 } from "@/app/_lib/types/department"
+import type {
+  DepartmentAdminsRequest,
+  DepartmentMember,
+} from "@/app/_lib/types/department-admins"
 import { db } from "@/db"
 import { department, ticket, user } from "@/db/schema"
 
@@ -67,22 +72,98 @@ export async function insertDepartment(
   }
 }
 
+export async function listEditableDepartmentMembers(): Promise<
+  DepartmentMember[]
+> {
+  return db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      departmentId: department.id,
+    })
+    .from(user)
+    .innerJoin(department, eq(user.departmentId, department.id))
+    .where(
+      and(
+        eq(user.isActive, true),
+        eq(department.isActive, true),
+        eq(department.isBoard, false),
+        eq(department.isUnassigned, false),
+      ),
+    )
+    .orderBy(sql`lower(${user.name})`, user.id)
+}
+
 export async function updateDepartmentName(
   id: number,
   name: string,
+  admins: DepartmentAdminsRequest | null,
 ): Promise<UpdateDepartmentNameOutcome> {
   try {
-    const [row] = await db
-      .update(department)
-      .set({ name, updatedAt: new Date() })
-      .where(eq(department.id, id))
-      .returning({ id: department.id })
+    return await db.transaction(
+      async (tx): Promise<UpdateDepartmentNameOutcome> => {
+        const [current] = await tx
+          .select({
+            isActive: department.isActive,
+            isBoard: department.isBoard,
+            isUnassigned: department.isUnassigned,
+          })
+          .from(department)
+          .where(eq(department.id, id))
+          .for("update")
 
-    if (!row) {
-      return { status: "not_found" }
-    }
+        if (!current) {
+          return { status: "not_found" }
+        }
 
-    return { status: "saved", id: row.id }
+        let promotedIds: number[] = []
+        let demotedIds: number[] = []
+
+        if (admins !== null) {
+          const members = await tx
+            .select({ id: user.id, role: user.role })
+            .from(user)
+            .where(and(eq(user.departmentId, id), eq(user.isActive, true)))
+            .for("update")
+
+          const plan = planDepartmentAdmins(current, members, admins)
+
+          if (!plan.ok) {
+            return plan.reason === "NOT_EDITABLE"
+              ? { status: "admins_not_editable" }
+              : { status: "members_changed" }
+          }
+
+          promotedIds = plan.promotedIds
+          demotedIds = plan.demotedIds
+        }
+
+        const now = new Date()
+
+        await tx
+          .update(department)
+          .set({ name, updatedAt: now })
+          .where(eq(department.id, id))
+
+        if (promotedIds.length > 0) {
+          await tx
+            .update(user)
+            .set({ role: "admin", updatedAt: now })
+            .where(inArray(user.id, promotedIds))
+        }
+
+        if (demotedIds.length > 0) {
+          await tx
+            .update(user)
+            .set({ role: "member", updatedAt: now })
+            .where(inArray(user.id, demotedIds))
+        }
+
+        return { status: "saved", id }
+      },
+    )
   } catch (error) {
     if (isDepartmentNameTakenError(error)) {
       return { status: "name_taken" }

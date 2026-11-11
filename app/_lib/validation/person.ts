@@ -17,7 +17,7 @@ export const personEmailSchema = registryEmailSchema
 
 export const personRoleSchema = z.enum(ROLES, { error: "Papel inválido." })
 
-const personIdSchema = registryIdSchema("Pessoa inválida.")
+export const personIdSchema = registryIdSchema("Pessoa inválida.")
 
 const personDepartmentIdSchema = registryIdSchema("Selecione o setor.")
 

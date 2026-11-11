@@ -6,17 +6,22 @@ import {
   isDepartmentDeactivationLocked,
 } from "@/app/_lib/domain/department"
 import type { DepartmentListItem } from "@/app/_lib/types/department"
+import type { DepartmentMember } from "@/app/_lib/types/department-admins"
 
 import DeactivateRegistryDialog from "../../_components/deactivate-registry-dialog"
 import ReactivateRegistryButton from "../../_components/reactivate-registry-button"
 import RegistryRowActions from "../../_components/registry-row-actions"
-import DepartmentFormDialog from "./department-form-dialog"
+import DepartmentEditDialog from "./department-edit-dialog"
 
 interface DepartmentRowActionsProps {
   department: DepartmentListItem
+  members: DepartmentMember[]
 }
 
-const DepartmentRowActions = ({ department }: DepartmentRowActionsProps) => {
+const DepartmentRowActions = ({
+  department,
+  members,
+}: DepartmentRowActionsProps) => {
   const check = checkDepartmentDeactivation(department)
   const isLocked = isDepartmentDeactivationLocked(check)
   const peopleHref = check.ok
@@ -54,10 +59,10 @@ const DepartmentRowActions = ({ department }: DepartmentRowActionsProps) => {
     <RegistryRowActions
       slots={[
         {
-          id: "rename",
+          id: "edit",
           width: "fit",
           action: (
-            <DepartmentFormDialog mode="rename" department={department} />
+            <DepartmentEditDialog department={department} members={members} />
           ),
         },
         { id: "status", width: "md", action: statusAction },

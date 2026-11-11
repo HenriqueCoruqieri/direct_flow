@@ -9,6 +9,7 @@ import {
   updateDepartmentName,
 } from "@/app/_lib/data/departments"
 import { describeDepartmentDeactivationBlock } from "@/app/_lib/domain/department"
+import { DEPARTMENT_ADMINS_DENIAL_MESSAGES } from "@/app/_lib/domain/department-admins"
 import { DEPARTMENTS_REGISTRY_PATH } from "@/app/_lib/domain/registry"
 import type {
   InsertDepartmentOutcome,
@@ -33,6 +34,8 @@ export type DepartmentErrorCode =
   | "IS_UNASSIGNED"
   | "HAS_ACTIVE_USERS"
   | "HAS_OPEN_TICKETS"
+  | "ADMINS_NOT_EDITABLE"
+  | "MEMBERS_CHANGED"
 
 export interface DepartmentActionSuccess {
   ok: true
@@ -50,6 +53,7 @@ export type DepartmentActionResult =
 
 const DEPARTMENT_CREATED_MESSAGE = "Setor criado."
 const DEPARTMENT_RENAMED_MESSAGE = "Setor renomeado."
+const DEPARTMENT_UPDATED_MESSAGE = "Setor atualizado."
 const DEPARTMENT_ACTIVATED_MESSAGE = "Setor ativado."
 const DEPARTMENT_DEACTIVATED_MESSAGE = "Setor desativado."
 const FORBIDDEN_MESSAGE = "Você não tem permissão para gerenciar setores."
@@ -80,6 +84,18 @@ const NOT_FOUND_FAILURE: DepartmentActionFailure = {
   ok: false,
   code: "NOT_FOUND",
   message: NOT_FOUND_MESSAGE,
+}
+
+const ADMINS_NOT_EDITABLE_FAILURE: DepartmentActionFailure = {
+  ok: false,
+  code: "ADMINS_NOT_EDITABLE",
+  message: DEPARTMENT_ADMINS_DENIAL_MESSAGES.NOT_EDITABLE,
+}
+
+const MEMBERS_CHANGED_FAILURE: DepartmentActionFailure = {
+  ok: false,
+  code: "MEMBERS_CHANGED",
+  message: DEPARTMENT_ADMINS_DENIAL_MESSAGES.MEMBERS_CHANGED,
 }
 
 const invalidInput = (
@@ -127,7 +143,11 @@ export const renameDepartment = async (
   let outcome: UpdateDepartmentNameOutcome
 
   try {
-    outcome = await updateDepartmentName(parsed.data.id, parsed.data.name)
+    outcome = await updateDepartmentName(
+      parsed.data.id,
+      parsed.data.name,
+      parsed.data.admins ?? null,
+    )
   } catch (error) {
     console.error("[renameDepartment]", error)
     return UNEXPECTED_FAILURE
@@ -135,10 +155,23 @@ export const renameDepartment = async (
 
   if (outcome.status === "name_taken") return NAME_TAKEN_FAILURE
   if (outcome.status === "not_found") return NOT_FOUND_FAILURE
+  if (outcome.status === "admins_not_editable") {
+    return ADMINS_NOT_EDITABLE_FAILURE
+  }
+
+  if (outcome.status === "members_changed") {
+    revalidatePath(DEPARTMENTS_REGISTRY_PATH)
+    return MEMBERS_CHANGED_FAILURE
+  }
 
   revalidatePath("/(app)", "layout")
 
-  return { ok: true, message: DEPARTMENT_RENAMED_MESSAGE }
+  return {
+    ok: true,
+    message: parsed.data.admins
+      ? DEPARTMENT_UPDATED_MESSAGE
+      : DEPARTMENT_RENAMED_MESSAGE,
+  }
 }
 
 export const setDepartmentActive = async (
