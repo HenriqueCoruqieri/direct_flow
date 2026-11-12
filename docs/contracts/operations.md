@@ -816,6 +816,9 @@ backlog, de `BACKLOG_TICKET_STATUSES`. Conferir no código se mudarem.)
   pelo SLA na mesma varredura: sem leitura nova.
 - **Gauge de horas em atraso:** com o atraso acumulado (ADR 023), valores de 4
   ou 5 dígitos de horas ficam comuns; ver "Rodada 2 — o que muda no `df-ui`".
+  Observação do `df-qa` (rodada 2): em 390 px, um valor de 6 dígitos de horas
+  provavelmente encosta no anel do gauge; não verificado, porque nenhum valor
+  desse tamanho existe nos dados atuais.
 - **Mudança de meta no meio do mês** reavalia o mês inteiro (ADR 022).
 - **Limite de horas em atraso igual para pessoa e time** (decisão do usuário)
   tende a reprovar o time antes — explicado na descrição do campo.
@@ -841,6 +844,12 @@ backlog, de `BACKLOG_TICKET_STATUSES`. Conferir no código se mudarem.)
       (`DEPARTMENT_GOALS_FIELD_COPY.overdueHoursLimit.description`,
       `GOAL_NO_DATA_HINTS.overdue`, frase de `goalShortfallSentence` para
       `overdue`, `operationsTabContext("time")`); contrato (`df-architect`)
-- [ ] `overdueMs` de `goalFactColumns` com a expressão nova (`df-data`)
-- [ ] gauge com valor longo cabendo no arco (`df-ui`)
-- [ ] relatório do `df-qa` (OP11 com a consulta nova, OP19–OP24)
+- [x] `overdueMs` de `goalFactColumns` com a expressão nova —
+      `monthOverdueMsSql` em `data/department-goals.ts` (`df-data`)
+- [x] gauge com valor longo cabendo no arco — `goal-value.tsx` com fonte por
+      comprimento do valor (`df-ui`)
+- [x] revisão do `df-reviewer`: APROVADO, sem atenções
+- [x] relatório do `df-qa` (OP11 com a consulta nova, OP19–OP24) —
+      `2026-11-11-operations.md`, seção Rodada 2: 6 de 7 passaram, 0 falhas
+      (OP21 parcial: cancelados só na Diretoria, que não tem meta; valor de 6
+      dígitos não existe nos dados)

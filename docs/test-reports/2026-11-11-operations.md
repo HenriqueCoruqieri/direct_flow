@@ -91,3 +91,74 @@ Nenhum.
 | 3   | QA Suporte (18) | 80%      | 12h      | 24h         | 3            | 70%         | QA Diretor (id 21)               |
 
 A linha do Suporte foi criada com backlog 5 e editada para 20 durante o teste (OP17). Nenhuma outra escrita foi feita.
+
+## Rodada 2 — horas em atraso acumuladas no mês (ADR 023)
+
+- **Commit:** `cc346ed` · alterações não comitadas: sim (`app/_lib/data/department-goals.ts`, `app/(app)/operations/_components/goal-value.tsx`; domínio e docs já em stage)
+- **Resultado:** 6 de 7 passaram · 0 falharam · 1 parcial (OP21: a parte do cancelado só por consulta e código) · OP11 reexecutado com a regra nova: passou
+- **Contas:** Diretor `diretorqa@gmail.com`, Admin `cazalbe@gmail.com` (Suporte), Membro `rodalv@gmail.com` (Suporte). Uma tentativa de login por conta. **Nenhuma escrita**: nenhum chamado ou meta alterado (o diálogo de metas foi aberto e fechado com Esc).
+- **Relógio:** `now()` do banco = 2026-11-12 00:4x UTC = 2026-11-11 21:4x em São Paulo; `$start` = `2026-11-01 00:00-03`. O valor da tela cresce com os chamados ativos; a comparação tela × banco tem diferença de segundos (nº de ativos × segundos / 3600).
+
+### Cenários
+
+| #    | Cenário                                                     | Papel                   | Status  |
+| ---- | ----------------------------------------------------------- | ----------------------- | ------- |
+| OP11 | Conferência numérica de horas em atraso com a consulta nova | Diretor, Admin, Membro  | PASSOU  |
+| OP19 | Resolver não diminui                                        | consulta + tela (Admin) | PASSOU  |
+| OP20 | Atraso anterior ao dia 1º conta só de 1º 00:00 SP em diante | consulta + tela (Admin) | PASSOU  |
+| OP21 | Resolvido em mês anterior e cancelado ficam fora            | consulta + tela         | PARCIAL |
+| OP22 | Virada de mês, só por consulta                              | consulta                | PASSOU  |
+| OP23 | Valor longo cabe no arco (1280 e 390, claro e escuro)       | Diretor, Admin          | PASSOU  |
+| OP24 | Textos novos                                                | Diretor, Admin, Membro  | PASSOU  |
+
+### Evidência
+
+**OP11 (tela × banco, consulta "Horas em atraso do mês").**
+
+| Tela                            | Valor na tela | Banco                                                                            |
+| ------------------------------- | ------------- | -------------------------------------------------------------------------------- |
+| Time do Suporte (Diretor, 1280) | 2.520h 7min   | 2520,10 h às 00:42:17 UTC; 8 ativos crescem ~0,03 h até o instante da tela: bate |
+| Time do QA Suporte (Diretor)    | 28.538h 22min | 28538,483 h às 00:42:39 (109 ativos; tela lida ~3 s antes): bate                 |
+| Time do Suporte (Admin)         | 2.520h 17min  | 2520,292 h às 00:43:45: bate                                                     |
+| Minha meta do Admin (id 19)     | 826h 39min    | 826,655 h (= 826h 39min), estável porque todos estão resolvidos: bate            |
+| Minha meta do Membro (id 18)    | 1.633h 4min   | 1633,078 h às 00:43:54 (1633h 4,7min; tela lida antes): bate                     |
+
+SQL (recorte do contrato; `$dep` = 14 ou 18, com `and assigned_to = 19|18` nas pessoas):
+`select round((sum(extract(epoch from (fim-ini))) filter (where fim>ini)/3600)::numeric,3) from (select greatest(created_at + make_interval(hours => case priority when 'critica' then 3 when 'alta' then 6 when 'media' then 12 when 'baixa' then 24 end), timestamptz '2026-11-01 00:00-03') ini, case when status in ('resolvido','fechado') then resolved_at else now() end fim from ticket where current_department_id = $dep and ((status in ('resolvido','fechado') and resolved_at >= timestamptz '2026-11-01 00:00-03' and resolved_at < now()) or status in ('aberto','em_analise','encaminhado','recusado','em_andamento'))) t`
+
+Soma por pessoa fecha com o time do Suporte: Admin 826,66 h + Membro 1632,86 h + chamados do id 11 (286 e 290: 30,93 h + 29,65 h) = 2520,10 h. As frases de não aderência também conferem: "2.520h 7min em atraso no mês: 2.510h 7min acima do limite de 10h" (Suporte) e "28.538h 22min … 28.514h 22min acima do limite de 24h" (QA Suporte).
+
+**OP19 (resolver não diminui).** Os chamados 125, 161 e 164 (Suporte, Admin, prioridade média, vencidos em 09–13/10) foram resolvidos hoje (2026-11-11 23:31 UTC) por rodadas anteriores. Na consulta por chamado continuam contando 260,53 / 260,52 / 260,52 h (fim = `resolved_at`), e a Minha meta do Admin mostra 826h 39min, igual à soma deles (781,57 h) + 287 (30,84 h) + 293 (7,16 h) + 294 (7,09 h). Os chamados 293 e 294 (vencidos em 11/11 ~16:30 UTC, resolvidos às 23:36 UTC) contam 7,16 h e 7,09 h: a resolução fixou o atraso em vez de zerá-lo. O 292 (resolvido dentro do prazo) dá −23,92 h e não entra. Limitação: o antes e depois da resolução não foi observado ao vivo (sem escrita nesta rodada); a prova é que os já resolvidos continuam na soma exibida.
+
+**OP20 (vencido antes do dia 1º).** Chamado 125: vencimento 2026-10-09 07:25 UTC, resolvido 2026-11-11 23:31 UTC; `ini` = 2026-11-01 03:00:00 UTC (1º 00:00 SP); contribuição 260,53 h, não os ~800 h de `fim − due`. Idem 161 e 164. Os 6 ativos do Álvaro (276–282, vencidos em 28/10) contam 261,70 h cada (de 1º 03:00 UTC até agora). O 285 (vencido em 10/11 16:44 UTC, depois de `$start`) conta de `due`: 31,95 h.
+
+**OP21 (fora da soma).** Resolvidos em outubro com atraso no Suporte: 101, 107, 108, 123, 124, 149, 153, 165, 198, 222; 25 chamados do Suporte têm `resolved_at` antes do mês. Nenhum entra: a tela confere com a consulta, que os exclui, e a soma teria sido bem maior com eles. **Parcial:** os 3 cancelados do banco (12, 20, 28) estão na Diretoria, que não tem meta, então não há tela para comparar; nenhum cancelado tem `resolved_at`. Pelo código (`monthOverdueMsSql` em `app/_lib/data/department-goals.ts`), `cancelado` não está nem em `DASHBOARD_RESOLVED_STATUSES` nem em `OVERDUE_TICKET_STATUSES`, logo fica fora; não verificado na tela.
+
+**OP22 (virada de mês, consulta).** Com `$start` = 2026-12-01 00:00-03 e `now` = `$start + 5 min`: Suporte, 8 chamados no recorte, 8 contam, 0 resolvidos, soma 40 min (8 × 5 min); QA Suporte, 109 no recorte, 109 contam, 0 resolvidos, soma 9h 05min (109 × 5 min). Os resolvidos de novembro somem. Bate com o contrato.
+
+**OP23 (valor longo).** Maior valor observado: `28.538h 22min` (Time do QA Suporte, 5 dígitos). Outros: `2.520h 7min` (Time do Suporte) e `1.633h 4min` (Minha meta do Membro).
+
+- 1280, claro e escuro: texto centrado no arco, sem encostar no anel e sem truncar (`.qa-output/r2-dir-time-qa-light.png`, `.qa-output/r2-dir-time-qa-dark.png`, `.qa-output/r2-dir-time-suporte-light.png`).
+- 390, claro e escuro: sem truncar e sem rolagem horizontal da página (`scrollWidth` = `clientWidth`). Com `28.538h 22min` o texto (x 58–160, arco de 144 px) cabe, mas a folga até os pés do anel é de poucos pixels (`.qa-output/r2-gauge-qa-light-390.png`, `.qa-output/r2-gauge-qa-dark-390-zoom.png`, `.qa-output/r2-dir-time-qa-dark-390.png`, `.qa-output/r2-admin-time-suporte-dark-390.png`).
+- Minha meta do Admin e do Membro em 1280 também cabem (`.qa-output/r2-admin-minha-light.png`, `.qa-output/r2-member-minha-light.png`).
+
+**OP24 (textos).** Contexto do Time: "Metas do setor · backlog é de agora" (Suporte e QA Suporte, Diretor). Descrição do campo no diálogo: "Soma máxima das horas em atraso no mês, incluindo chamados já resolvidos." (`.qa-output/r2-dialog.png`). Resumo não aderente: "… em atraso no mês: … acima do limite de …" no Time do Suporte, no Time do QA Suporte e na Minha meta do Membro ("1.633h 4min em atraso no mês: 1.623h 4min acima do limite de 10h.").
+
+**Erros:** `get_errors` do `next-devtools` com `configErrors: []` e `sessionErrors: []` após cada papel; console do navegador com 0 erros e 0 avisos.
+
+### Falhas
+
+Nenhuma.
+
+### Não executados / ressalvas
+
+- **OP21, cancelado na tela:** os cancelados existentes estão na Diretoria, sem meta (e sem escrita autorizada para criar uma). Só confirmado por leitura do código.
+- **OP19 ao vivo (antes e depois de resolver):** exigiria escrita; coberto por chamados já resolvidos hoje.
+- **Valor de 6 dígitos (≥ 100.000h) no gauge:** não existe nos dados; o maior foi 28.538h 22min.
+- **Produção e demais telas:** sem mudança nesta rodada; não repetidas.
+
+### Observações
+
+1. A folga do texto longo no gauge em 390 px é pequena (poucos pixels dos pés do anel com `28.538h 22min`). Cabe, mas um valor de 6 dígitos provavelmente encostaria. Atenção para o `df-ui`, sem ser falha do contrato (que cita 4.456h 8min ou maior).
+2. Com o ADR 023, qualquer pessoa com chamado vencido desde outubro fica "Não aderente" em horas em atraso com o limite de 10h (Admin 826h, Membro 1.633h). Consequência prevista pelo contrato.
+3. O Admin aparece com "SLA de 0%: 90 p.p. abaixo da meta de 90%": só resolveu chamados fora do prazo; correto pela regra do SLA.
