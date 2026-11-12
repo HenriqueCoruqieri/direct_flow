@@ -950,6 +950,8 @@ async function seedDemo(admin: SeedAdminResult): Promise<void> {
         ),
       )
 
+      const dueAt = departmentDueAtFrom(blueprint.createdAt, null, priority)
+
       const ticketValues: NewTicket = {
         title: `${TAG_TITLES[blueprint.tagName ?? "geral"]} #${index + 1}`,
         description:
@@ -960,6 +962,7 @@ async function seedDemo(admin: SeedAdminResult): Promise<void> {
         createdBy: admin.adminId,
         originDepartmentId: admin.departmentId,
         currentDepartmentId: admin.departmentId,
+        dueAt,
         createdAt: blueprint.createdAt,
         updatedAt,
         resolvedAt,
@@ -977,6 +980,7 @@ async function seedDemo(admin: SeedAdminResult): Promise<void> {
           changedBy: admin.adminId,
           event: "criacao",
           toStatus: initialStatus,
+          toDueAt: dueAt,
           changedAt: blueprint.createdAt,
         },
       ]

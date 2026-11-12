@@ -1,10 +1,12 @@
 import { and, asc, eq, gt, gte, inArray, isNotNull, lt, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 
 import {
   BACKLOG_TICKET_STATUSES,
   DASHBOARD_RESOLVED_STATUSES,
   OVERDUE_TICKET_STATUSES,
 } from "@/app/_lib/domain/dashboard"
+import { REJECTED_TRANSFER_STATUS } from "@/app/_lib/domain/ticket-transfer"
 import type {
   DepartmentGoals,
   DepartmentGoalsRecord,
@@ -16,6 +18,8 @@ import type {
 import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
 import { departmentGoal, ticket, ticketTransfer, user } from "@/db/schema"
+
+const returnedTransfer = alias(ticketTransfer, "r")
 
 function resolvedInRangeSql(month: DateRange) {
   return and(
@@ -47,7 +51,7 @@ function goalFactColumns(month: DateRange, now: Date) {
 }
 
 function monthOverdueMsSql(month: DateRange, now: Date) {
-  const returnedAt = sql`(select max(r.reviewed_at) from ticket_transfer r where r.ticket_id = ${ticket.id} and r.status = 'rejeitado' and r.from_due_at is not null)`
+  const returnedAt = sql`(select max(${returnedTransfer.reviewedAt}) from ${ticketTransfer} ${sql.identifier("r")} where ${returnedTransfer.ticketId} = ${ticket.id} and ${returnedTransfer.status} = ${REJECTED_TRANSFER_STATUS} and ${returnedTransfer.fromDueAt} is not null)`
   const overdueStart = sql`greatest(${ticket.dueAt}, ${month.start}::timestamptz, ${returnedAt})`
   const overdueEnd = sql`case when ${inArray(ticket.status, [...DASHBOARD_RESOLVED_STATUSES])} then ${ticket.resolvedAt} else ${now}::timestamptz end`
   const overdueEligible = sql`(${isNotNull(ticket.dueAt)} and (${resolvedInRangeSql(month)} or ${inArray(ticket.status, [...OVERDUE_TICKET_STATUSES])}))`
@@ -56,7 +60,7 @@ function monthOverdueMsSql(month: DateRange, now: Date) {
 }
 
 function sendOverdueMsSql(month: DateRange, now: Date) {
-  const prevReturnedAt = sql`(select max(r.reviewed_at) from ticket_transfer r where r.ticket_id = ${ticketTransfer.ticketId} and r.id <> ${ticketTransfer.id} and r.status = 'rejeitado' and r.from_due_at is not null and r.reviewed_at <= ${ticketTransfer.createdAt})`
+  const prevReturnedAt = sql`(select max(${returnedTransfer.reviewedAt}) from ${ticketTransfer} ${sql.identifier("r")} where ${returnedTransfer.ticketId} = ${ticketTransfer.ticketId} and ${returnedTransfer.id} <> ${ticketTransfer.id} and ${returnedTransfer.status} = ${REJECTED_TRANSFER_STATUS} and ${returnedTransfer.fromDueAt} is not null and ${returnedTransfer.reviewedAt} <= ${ticketTransfer.createdAt})`
   const sendStart = sql`greatest(${ticketTransfer.fromDueAt}, ${month.start}::timestamptz, ${prevReturnedAt})`
   const sendEnd = sql`least(${ticketTransfer.createdAt}, ${now}::timestamptz)`
 
