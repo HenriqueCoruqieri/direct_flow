@@ -455,7 +455,7 @@ export const teamGoalSummaryDescription = (result: TeamGoalResult): string =>
   )
 
 export const GOAL_MET_COUNT_RULE_DESCRIPTION =
-  "Cumpre a meta quem está aderente nas três metas individuais: SLA, TMA e horas em atraso."
+  "Ficará aderente a meta caso atinja os indicadores de SLA, TMA e horas em atraso."
 
 export const goalMetCountDescription = (
   metCount: number,
