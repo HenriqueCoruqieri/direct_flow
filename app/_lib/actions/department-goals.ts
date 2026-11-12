@@ -34,10 +34,10 @@ export type DepartmentGoalsActionResult =
   DepartmentGoalsActionSuccess | DepartmentGoalsActionFailure
 
 const FORBIDDEN_MESSAGE =
-  "Você não tem permissão para editar as metas deste setor."
+  "Você não tem permissão para editar os objetivos deste setor."
 const NOT_FOUND_MESSAGE = "Setor não encontrado."
 const UNEXPECTED_ERROR_MESSAGE =
-  "Não foi possível salvar as metas agora. Tente novamente."
+  "Não foi possível salvar os objetivos agora. Tente novamente."
 
 const FORBIDDEN_FAILURE: DepartmentGoalsActionFailure = {
   ok: false,

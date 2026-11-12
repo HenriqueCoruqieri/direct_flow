@@ -93,9 +93,9 @@ export const GOAL_ADHERENCE_LABELS = {
   no_data: "Sem dados",
 } satisfies Record<GoalAdherence, string>
 
-export const GOAL_MET_LABEL = "Meta cumprida"
+export const GOAL_MET_LABEL = "Objetivo atingido"
 
-export const GOAL_NOT_MET_LABEL = "Meta não cumprida"
+export const GOAL_NOT_MET_LABEL = "Objetivo não atingido"
 
 export const GOAL_NO_DATA_HINTS = {
   sla: "Nenhum chamado resolvido no mês",
@@ -106,7 +106,7 @@ export const GOAL_NO_DATA_HINTS = {
 } satisfies Record<GoalIndicator, string>
 
 export const GOAL_ON_TARGET_HINTS = {
-  percent: "Na meta",
+  percent: "No objetivo",
   duration: "No limite",
   count: "No limite",
 } satisfies Record<GoalUnit, string>
@@ -155,24 +155,24 @@ export const TEAM_ONLY_GOAL_FIELDS = [
 ] as const satisfies readonly (keyof DepartmentGoals)[]
 
 export const PERSON_AND_TEAM_GOALS_GROUP_LABEL =
-  "Metas de cada pessoa e do time"
+  "Objetivos de cada pessoa e do time"
 
-export const TEAM_ONLY_GOALS_GROUP_LABEL = "Metas só do time"
+export const TEAM_ONLY_GOALS_GROUP_LABEL = "Objetivos da equipe"
 
-export const EDIT_DEPARTMENT_GOALS_LABEL = "Editar metas"
+export const EDIT_DEPARTMENT_GOALS_LABEL = "Editar objetivos"
 
-export const DEFINE_DEPARTMENT_GOALS_LABEL = "Definir metas"
+export const DEFINE_DEPARTMENT_GOALS_LABEL = "Definir objetivos"
 
-export const SAVE_DEPARTMENT_GOALS_LABEL = "Salvar metas"
+export const SAVE_DEPARTMENT_GOALS_LABEL = "Salvar objetivos"
 
 export const SAVE_DEPARTMENT_GOALS_PENDING_LABEL = "Salvando…"
 
-export const DEPARTMENT_GOALS_SAVED_MESSAGE = "Metas salvas."
+export const DEPARTMENT_GOALS_SAVED_MESSAGE = "Objetivos gravados."
 
 export const departmentGoalsDialogDescription = (
   departmentName: string,
 ): string =>
-  `${departmentName} · as metas valem para cada pessoa do setor e para o time.`
+  `${departmentName} · os objetivos valem para cada pessoa do setor e para o time.`
 
 export const goalsLastChangeLabel = (record: DepartmentGoalsRecord): string =>
   lastChangeLabel(record)
@@ -371,11 +371,11 @@ export const goalScaleLabel = (
 ): string => formatGoalAmount(GOAL_INDICATOR_RULES[indicator].unit, value)
 
 export const GOAL_TARGET_PREFIXES = {
-  sla: "Meta",
-  tma: "Meta",
+  sla: "Objetivo",
+  tma: "Objetivo",
   overdue: "Limite",
   backlog: "Limite",
-  transferAcceptance: "Meta",
+  transferAcceptance: "Objetivo",
 } satisfies Record<GoalIndicator, string>
 
 export const GOAL_DIRECTION_SYMBOLS = {
@@ -390,7 +390,7 @@ export const goalTargetLabel = (evaluation: GoalEvaluation): string => {
 }
 
 export const PERSON_GOAL_MET_DESCRIPTION =
-  "Você está aderente nas metas individuais do mês: SLA, TMA e horas em atraso."
+  "Você atingiu o objetivo de todos os indicadores individuais: SLA, TMA e horas em atraso."
 
 export const TEAM_GOAL_MET_DESCRIPTION =
   "O time está aderente nos cinco indicadores do mês."
@@ -414,7 +414,7 @@ export const goalShortfallSentence = (
   const target = formatGoalAmount(rule.unit, evaluation.target)
   const gap = Math.abs(evaluation.value - evaluation.target)
   return rule.direction === "min"
-    ? `${measure}: ${formatInteger(gap)} p.p. abaixo da meta de ${target}.`
+    ? `${measure}: ${formatInteger(gap)} p.p. abaixo do objetivo de ${target}.`
     : `${measure}: ${formatGoalAmount(rule.unit, gap)} acima do limite de ${target}.`
 }
 
@@ -448,7 +448,7 @@ export const teamGoalSummaryDescription = (result: TeamGoalResult): string =>
   )
 
 export const GOAL_MET_COUNT_RULE_DESCRIPTION =
-  "Ficará aderente a meta caso atinja os indicadores de SLA, TMA e horas em atraso."
+  "Ficará aderente ao objetivo caso atinja os indicadores de SLA, TMA e horas em atraso."
 
 export const goalMetCountDescription = (
   metCount: number,
@@ -457,13 +457,13 @@ export const goalMetCountDescription = (
   if (memberCount <= 0) return GOAL_MET_COUNT_RULE_DESCRIPTION
   const people = memberCount === 1 ? "pessoa" : "pessoas"
   const verb = metCount === 1 ? "cumpriu" : "cumpriram"
-  return `${metCount} de ${memberCount} ${people} ${verb} as três metas individuais (SLA, TMA e horas em atraso).`
+  return `${metCount} de ${memberCount} ${people} ${verb} os três objetivos individuais (SLA, TMA e horas em atraso).`
 }
 
 const percentDifferenceLine = (difference: number): string => {
   if (difference === 0) return GOAL_ON_TARGET_HINTS.percent
   const points = `${formatInteger(Math.abs(difference))} p.p.`
-  return difference > 0 ? `${points} acima da meta` : `Faltam ${points}`
+  return difference > 0 ? `${points} acima do objetivo` : `Faltam ${points}`
 }
 
 const limitDifferenceLine = (unit: GoalUnit, difference: number): string => {

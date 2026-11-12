@@ -45,6 +45,25 @@ Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 > `listOldestIncomingTransfers` e `countPendingApprovals` ganham
 > `recipientId?` opcional (sem ele, SQL e números da Etapa 3a inalterados).
 
+> **Revisão 2026-11-12 — card Backlog volta a mostrar o total.** Supera a
+> revisão de 2026-10-26 sobre o card. (1) O **valor** de
+> `backlogValueLabel(overview)` passa a ser `ticketCountLabel(backlogCount)`:
+> todo o backlog, vencido ou não (antes, só `overdueBacklogCount`, o que exibia
+> `0 chamados` com chamado em andamento no prazo). (2) A linha de apoio
+> `backlogHint(overview, mode)` passa a ser `N vencido(s) · Xh em backlog`
+> (`1 vencido · 3h em backlog`, `2 vencidos · 5h em backlog`); com
+> `overdueBacklogCount = 0`, só `Xh em backlog`; com `backlogCount = 0`, o
+> `emptyBacklog` do modo, como antes. (3) `BACKLOG_TICKET_STATUSES` passa a ser
+> `ACTIVE_TICKET_STATUSES` e inclui `aguardando_aprovacao`: pela ADR 016 o
+> pendente já está em `current_department_id = destino` desde o envio, então é
+> backlog do setor de destino (antes não era backlog de ninguém). O pendente tem
+> `due_at = null` e nunca conta como vencido; no modo Individual não entra
+> porque `assigned_to = null`. (4) `OVERDUE_TICKET_STATUSES` deixa de derivar de
+> `BACKLOG_TICKET_STATUSES` e fica explícito em `DEPARTMENT_QUEUE_OPEN_STATUSES`
+> (mesmos cinco status de antes): "Maiores atrasos" e as horas em atraso da
+> Operação (ADR 023) não mudam. Sem mudança de assinatura, de tipo ou de SQL
+> escrito em `app/_lib/data/`; a UI já chama as duas funções.
+
 ---
 
 ## Etapa 1 — grade da página e linha 1
@@ -174,19 +193,19 @@ export const illustrativeBacklogMs: (backlogCount: number) => number
 export const backlogHoursHint: (backlogCount: number) => string
 ```
 
-| Nome                             | Semântica                                                                                                                                                                                                        |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DASHBOARD_OVERVIEW_LABELS`      | `Chamados no período`, `Taxa de resolução`, `Tempo médio de resolução`, `Backlog`                                                                                                                                |
-| `DASHBOARD_RESOLVED_STATUSES`    | `resolvido`, `fechado`                                                                                                                                                                                           |
-| `BACKLOG_TICKET_STATUSES`        | `= DEPARTMENT_QUEUE_OPEN_STATUSES`: `aberto`, `em_analise`, `encaminhado`, `recusado`, `em_andamento`. Sem `aguardando_aprovacao` (justificativa no plano: ADR 016, o pendente vive em Aprovações e não na Fila) |
-| `receivedTransfersHint`          | `0` → `Nenhum recebido de outros setores`; `1` → `+1 recebido de outros setores`; `N` → `+N recebidos de outros setores`                                                                                         |
-| `resolutionRatePercent`          | `ticketCount ≤ 0` → `null` (sem divisão por zero). Senão `floor(resolved / ticketCount × 100)`, com `resolved` limitado a `[0, ticketCount]`. 100 só se todos resolvidos                                         |
-| `formatResolutionRate`           | `75` → `75%`                                                                                                                                                                                                     |
-| `ILLUSTRATIVE_FIRST_RESPONSE_MS` | 22 min                                                                                                                                                                                                           |
-| `ILLUSTRATIVE_HANDLING_TIME_MS`  | 2 h por chamado (TMA de exemplo)                                                                                                                                                                                 |
-| `firstResponseHint`              | `1ª resposta em 22min`                                                                                                                                                                                           |
-| `illustrativeBacklogMs`          | `backlogCount × 2h` (negativo vale 0)                                                                                                                                                                            |
-| `backlogHoursHint`               | `18` → `36h em backlog`                                                                                                                                                                                          |
+| Nome                             | Semântica                                                                                                                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DASHBOARD_OVERVIEW_LABELS`      | `Chamados no período`, `Taxa de resolução`, `Tempo médio de resolução`, `Backlog`                                                                                                                                       |
+| `DASHBOARD_RESOLVED_STATUSES`    | `resolvido`, `fechado`                                                                                                                                                                                                  |
+| `BACKLOG_TICKET_STATUSES`        | `= ACTIVE_TICKET_STATUSES`: `aberto`, `em_analise`, `encaminhado`, `aguardando_aprovacao`, `recusado`, `em_andamento`. Inclui o pendente: pela ADR 016 a posse é do setor de destino desde o envio — revisão 2026-11-12 |
+| `receivedTransfersHint`          | `0` → `Nenhum recebido de outros setores`; `1` → `+1 recebido de outros setores`; `N` → `+N recebidos de outros setores`                                                                                                |
+| `resolutionRatePercent`          | `ticketCount ≤ 0` → `null` (sem divisão por zero). Senão `floor(resolved / ticketCount × 100)`, com `resolved` limitado a `[0, ticketCount]`. 100 só se todos resolvidos                                                |
+| `formatResolutionRate`           | `75` → `75%`                                                                                                                                                                                                            |
+| `ILLUSTRATIVE_FIRST_RESPONSE_MS` | 22 min                                                                                                                                                                                                                  |
+| `ILLUSTRATIVE_HANDLING_TIME_MS`  | 2 h por chamado (TMA de exemplo)                                                                                                                                                                                        |
+| `firstResponseHint`              | `1ª resposta em 22min`                                                                                                                                                                                                  |
+| `illustrativeBacklogMs`          | `backlogCount × 2h` (negativo vale 0)                                                                                                                                                                                   |
+| `backlogHoursHint`               | `18` → `36h em backlog`                                                                                                                                                                                                 |
 
 Vazio de valor continua sendo `EMPTY_VALUE_LABEL` (`—`) de
 `app/_lib/domain/labels.ts`.
@@ -297,7 +316,7 @@ de apoio). Rótulos de `DASHBOARD_OVERVIEW_LABELS`.
 | Chamados no período      | `ticketCount`                                                                                                                                         | `receivedTransfersHint(receivedTransferCount)`                                                                                                                                                                                            |
 | Taxa de resolução        | `formatResolutionRate(p)`, `p = resolutionRatePercent(resolvedTicketCount, ticketCount)`; `p === null` → `—`                                          | `p !== null`: barra horizontal 0–100% (cor primária, trilho neutro, largura `p%`), `role="progressbar"` com `aria-valuenow`/`aria-valuemin`/`aria-valuemax` e nome = rótulo do card. `p === null`: `NO_TICKETS_IN_PERIOD_HINT`, sem barra |
 | Tempo médio de resolução | `averageResolutionMs !== null`: `durationParts(...)`, número no tamanho do valor e unidade menor (ex. `text-base`), espaço entre partes. `null` → `—` | não nulo: `firstResponseHint()` + marca ilustrativa. Nulo: `NO_RESOLUTIONS_IN_PERIOD_HINT`, sem marca                                                                                                                                     |
-| Backlog                  | `backlogValueLabel(overview)` (atrasados do backlog: `X chamados`, `1 chamado`) — revisão 2026-10-26                                                  | `backlogHint(overview)`: `Xh em backlog`; `backlogCount = 0` → `EMPTY_BACKLOG_HINT`. Sem marca ilustrativa — revisão 2026-10-26                                                                                                           |
+| Backlog                  | `backlogValueLabel(overview)` (todo o backlog: `X chamados`, `1 chamado`) — revisão 2026-11-12                                                        | `backlogHint(overview)`: `N vencido(s) · Xh em backlog`; sem vencidos, `Xh em backlog`; `backlogCount = 0` → `EMPTY_BACKLOG_HINT`. Sem marca ilustrativa — revisão 2026-11-12                                                             |
 
 - **Barra**: não existe `progress` em `app/_components/ui/`. Se usar o
   primitivo do shadcn, `npx shadcn@latest add progress` (trocar o import do
@@ -588,7 +607,7 @@ export const tagBarPercent: (count: number, maxCount: number) => number
 
 | Nome                      | Semântica                                                                                                                                                                                                                                             |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OVERDUE_TICKET_STATUSES` | `= BACKLOG_TICKET_STATUSES` (`aberto`, `em_analise`, `encaminhado`, `recusado`, `em_andamento`). Atraso é "backlog vencido": `aguardando_aprovacao` fica fora pelo mesmo motivo do backlog (ADR 016); `resolvido` já saiu da fila                     |
+| `OVERDUE_TICKET_STATUSES` | `= DEPARTMENT_QUEUE_OPEN_STATUSES` (`aberto`, `em_analise`, `encaminhado`, `recusado`, `em_andamento`). `aguardando_aprovacao` fica fora: o pendente tem `due_at = null` (ADR 016); `resolvido` já saiu da fila — revisão 2026-11-12                  |
 | `OVERDUE_TICKETS_LIMIT`   | 5 linhas na tabela                                                                                                                                                                                                                                    |
 | `TOP_TAGS_LIMIT`          | 6 = linhas da tabela + 1. Regra de altura em "`df-ui`"                                                                                                                                                                                                |
 | `OVERDUE_QUEUE_TAB`       | `all` ("Todos"): é a **única** aba que contém todos os chamados da lista. "Em aberto" só mostra sem destinatário, "Encaminhados" só com destinatário antes do atendimento, "Em andamento" só `em_andamento`; qualquer outra esconderia linhas do card |

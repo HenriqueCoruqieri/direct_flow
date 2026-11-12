@@ -13,7 +13,7 @@ const OperationsTabSkeleton = ({
   filter = null,
 }: OperationsTabSkeletonProps) => {
   switch (tab) {
-    case "minha-meta":
+    case "meu-objetivo":
       return <GoalPanelSkeleton scope="person" />
     case "time":
       return <GoalPanelSkeleton scope="team" />

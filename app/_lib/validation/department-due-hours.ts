@@ -11,7 +11,7 @@ import { departmentIdSchema } from "@/app/_lib/validation/department"
 import { idSearchParamSchema } from "@/app/_lib/validation/search-params"
 
 const dueHoursSchema = (priority: TicketPriority) => {
-  const requiredMessage = `Informe o prazo da prioridade ${TICKET_PRIORITY_LABELS[priority]}, em horas inteiras, de ${DUE_HOURS_MIN} a ${DUE_HOURS_MAX}.`
+  const requiredMessage = `Informe um prazo em horas inteiras para a prioridade ${TICKET_PRIORITY_LABELS[priority]}.`
 
   return z
     .int({ error: requiredMessage })

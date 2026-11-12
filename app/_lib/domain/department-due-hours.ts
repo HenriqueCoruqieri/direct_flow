@@ -151,7 +151,7 @@ export const DUE_HOURS_DEFAULT_DESCRIPTION = `Este setor ainda usa o padrão do 
 
 const dueHoursFieldCopy = (priority: TicketPriority): DueHoursFieldCopy => ({
   label: TICKET_PRIORITY_LABELS[priority],
-  description: `Horas corridas, a partir da abertura ou do aceite, para resolver um chamado de prioridade ${TICKET_PRIORITY_LABELS[priority]}.`,
+  description: `Prazo de horas corridas para chamados de prioridade ${TICKET_PRIORITY_LABELS[priority]}.`,
   unit: "h",
 })
 

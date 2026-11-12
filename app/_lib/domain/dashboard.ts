@@ -15,6 +15,7 @@ import {
 import { APPROVALS_LABEL } from "@/app/_lib/domain/approvals"
 import { DEPARTMENT_QUEUE_OPEN_STATUSES } from "@/app/_lib/domain/department-queue"
 import {
+  ACTIVE_TICKET_STATUSES,
   type ActiveTicketStatus,
   CLOSED_TICKET_STATUS,
   RESOLVED_TICKET_STATUS,
@@ -73,7 +74,7 @@ export const DASHBOARD_RESOLVED_STATUSES: readonly TicketStatus[] = [
 ]
 
 export const BACKLOG_TICKET_STATUSES: readonly ActiveTicketStatus[] =
-  DEPARTMENT_QUEUE_OPEN_STATUSES
+  ACTIVE_TICKET_STATUSES
 
 export const NO_TICKETS_IN_PERIOD_HINT = "Nenhum chamado no período"
 
@@ -160,15 +161,24 @@ export const ticketCountLabel = (count: number): string =>
   `${count} ${count === 1 ? "chamado" : "chamados"}`
 
 export const backlogValueLabel = (overview: DashboardOverview): string =>
-  ticketCountLabel(Math.max(overview.overdueBacklogCount, 0))
+  ticketCountLabel(Math.max(overview.backlogCount, 0))
+
+const overdueCountLabel = (count: number): string =>
+  `${count} ${count === 1 ? "vencido" : "vencidos"}`
 
 export const backlogHint = (
   overview: DashboardOverview,
   mode: DashboardViewMode = DEFAULT_DASHBOARD_VIEW_MODE,
-): string =>
-  overview.backlogCount > 0
-    ? `${formatTotalHours(overview.backlogAgeMs)} em backlog`
-    : DASHBOARD_OVERVIEW_EMPTY_HINTS[mode].emptyBacklog
+): string => {
+  if (overview.backlogCount <= 0) {
+    return DASHBOARD_OVERVIEW_EMPTY_HINTS[mode].emptyBacklog
+  }
+  const ageLabel = `${formatTotalHours(overview.backlogAgeMs)} em backlog`
+  const overdueCount = Math.max(overview.overdueBacklogCount, 0)
+  return overdueCount > 0
+    ? `${overdueCountLabel(overdueCount)} · ${ageLabel}`
+    : ageLabel
+}
 
 export const TOP_TAGS_CARD_LABEL = "Principal ofensor"
 
@@ -185,7 +195,7 @@ export const OVERDUE_TICKETS_LIMIT = 5
 export const TOP_TAGS_LIMIT = OVERDUE_TICKETS_LIMIT + 1
 
 export const OVERDUE_TICKET_STATUSES: readonly ActiveTicketStatus[] =
-  BACKLOG_TICKET_STATUSES
+  DEPARTMENT_QUEUE_OPEN_STATUSES
 
 export const OVERDUE_COLUMN_LABELS = {
   number: "Nº",

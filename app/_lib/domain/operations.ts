@@ -35,11 +35,11 @@ export const OPERATIONS_DEPARTMENT_PARAM = "setor"
 
 export const OPERATIONS_DEPARTMENT_FILTER_LABEL = "Setor"
 
-export const DEFAULT_OPERATIONS_TAB: OperationsTab = "minha-meta"
+export const DEFAULT_OPERATIONS_TAB: OperationsTab = "meu-objetivo"
 
 export const OPERATIONS_TAB_LABELS = {
-  "minha-meta": "Minha meta",
-  time: "Time",
+  "meu-objetivo": "Individual",
+  time: "Equipe",
   producao: "Produção",
 } satisfies Record<OperationsTab, string>
 
@@ -53,7 +53,7 @@ export const usesOperationsPeriod = (tab: OperationsTab): boolean =>
   tab === "producao"
 
 export const usesOperationsDepartment = (tab: OperationsTab): boolean =>
-  tab !== "minha-meta"
+  tab !== "meu-objetivo"
 
 export const OPERATIONS_UNASSIGNED_MESSAGE =
   TICKET_CREATION_BLOCK_MESSAGES.DEPARTMENT_UNASSIGNED
@@ -93,13 +93,13 @@ export const canEditDepartmentGoals = (
   target: GoalTargetDepartment,
 ): boolean => canManageDepartmentSettings(access, target)
 
-export const GOALS_UNDEFINED_TITLE = "Metas ainda não definidas"
+export const GOALS_UNDEFINED_TITLE = "Objetivos ainda não definidos"
 
 export const GOALS_UNDEFINED_MEMBER_DESCRIPTION =
-  "O administrador do setor ainda não definiu as metas da operação. Quando forem definidas, sua meta e as metas do time aparecem aqui."
+  "O administrador do setor ainda não definiu os objetivos da operação. Quando forem definidos, seus objetivos individuais e os da equipe serão exibidos aqui."
 
 export const GOALS_UNDEFINED_EDITOR_DESCRIPTION =
-  "Defina as metas de SLA, TMA, horas em atraso, backlog e aceite de transferências. Elas valem para cada pessoa do setor e para o time."
+  "Defina os objetivos de SLA, TMA, horas em atraso, backlog e aceite de transferências. Eles valem para cada pessoa do setor e para o time."
 
 export const goalsUndefinedCopy = (canEdit: boolean): OperationsEmptyCopy => ({
   title: GOALS_UNDEFINED_TITLE,
@@ -113,18 +113,18 @@ export const operationsSubtitle = (
   goals: DepartmentGoalsRecord | null,
   now: Date,
 ): string => {
-  const scope = `${departmentName} · metas de ${formatMonthYear(now)}`
+  const scope = `${departmentName} · objetivos de ${formatMonthYear(now)}`
   if (goals === null) return scope
   const author =
     goals.updatedByName === null ? "" : ` por ${goals.updatedByName}`
   return `${scope} · definidas${author} em ${formatDate(goals.updatedAt)}`
 }
 
-export const MY_GOAL_CARD_LABEL = "Minha meta"
+export const MY_GOAL_CARD_LABEL = "Meu objetivo"
 
-export const TEAM_GOAL_CARD_LABEL = "Meta do time"
+export const TEAM_GOAL_CARD_LABEL = "Objetivo do time"
 
-export const TEAM_MET_COUNT_CARD_LABEL = "Pessoas que cumpriram a meta"
+export const TEAM_MET_COUNT_CARD_LABEL = "Pessoas que cumpriram os objetivos"
 
 export const PRODUCTION_CARD_LABEL = "Chamados resolvidos por pessoa"
 
@@ -165,16 +165,16 @@ export const productionEmptyCopy = (
 
 export const operationsTabContext = (tab: OperationsTab, now: Date): string => {
   switch (tab) {
-    case "minha-meta":
-      return `Suas metas de ${formatMonthName(now)}, de ${formatMonthFirstDay(now)} até hoje`
+    case "meu-objetivo":
+      return `Seus objetivos de ${formatMonthName(now)}, de ${formatMonthFirstDay(now)} até hoje`
     case "time":
-      return "Metas do setor · backlog é de agora"
+      return "Objetivos do setor · backlog é de agora"
     case "producao":
       return "O período do gráfico fica no próprio card"
   }
 }
 
-export const GOALS_LOADING_LABEL = "Carregando metas"
+export const GOALS_LOADING_LABEL = "Carregando objetivos"
 
 export const PRODUCTION_PANEL_TITLE = "Produção da equipe"
 
