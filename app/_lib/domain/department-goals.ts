@@ -105,7 +105,7 @@ export const GOAL_NOT_MET_LABEL = "Meta não cumprida"
 export const GOAL_NO_DATA_HINTS = {
   sla: "Nenhum chamado resolvido no mês",
   tma: "Nenhum chamado resolvido no mês",
-  overdue: "Nenhum chamado em atraso",
+  overdue: "Nenhum atraso no mês",
   backlog: "Nenhum chamado em backlog",
   transferAcceptance: "Nenhuma transferência revisada no mês",
 } satisfies Record<GoalIndicator, string>
@@ -132,7 +132,7 @@ export const DEPARTMENT_GOALS_FIELD_COPY = {
   overdueHoursLimit: {
     label: "Limite de horas em atraso",
     description:
-      "Soma máxima do tempo já passado do vencimento, nos chamados ativos vencidos agora.",
+      "Soma máxima das horas em atraso no mês, incluindo chamados já resolvidos.",
     unit: "h",
   },
   backlogLimit: {
@@ -405,7 +405,7 @@ export const TEAM_GOAL_MET_DESCRIPTION =
 const GOAL_MEASURE_PHRASES = {
   sla: (amount: string) => `SLA de ${amount}`,
   tma: (amount: string) => `TMA de ${amount}`,
-  overdue: (amount: string) => `${amount} em atraso`,
+  overdue: (amount: string) => `${amount} em atraso no mês`,
   backlog: (amount: string) => `Backlog de ${amount}`,
   transferAcceptance: (amount: string) =>
     `Aceite de transferências de ${amount}`,

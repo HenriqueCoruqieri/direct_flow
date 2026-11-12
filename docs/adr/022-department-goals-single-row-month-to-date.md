@@ -37,3 +37,5 @@ update`). Quem salvou e quando ficam em `updated_by` e `updated_at`; não há
   retroativamente, como já acontece no resto da aplicação.
 - Migration `0024_department_goal`, não destrutiva e sem backfill. Setores
   existentes começam sem metas (estado vazio da tela).
+- O cálculo de Horas em atraso (atraso acumulado dentro do mês, não foto dos
+  ativos) está no ADR 023.

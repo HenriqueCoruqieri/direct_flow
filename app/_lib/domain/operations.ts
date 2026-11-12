@@ -172,7 +172,7 @@ export const operationsTabContext = (tab: OperationsTab, now: Date): string => {
     case "minha-meta":
       return `Suas metas de ${formatMonthName(now)}, de ${formatMonthFirstDay(now)} até hoje`
     case "time":
-      return "Metas do setor · backlog e horas em atraso são de agora"
+      return "Metas do setor · backlog é de agora"
     case "producao":
       return "O período do gráfico fica no próprio card"
   }
