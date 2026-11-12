@@ -1,6 +1,15 @@
 "use client"
 
-import { ChevronRightIcon, FolderIcon } from "lucide-react"
+import {
+  Building2Icon,
+  ChevronRightIcon,
+  ClockIcon,
+  FolderIcon,
+  type LucideIcon,
+  NetworkIcon,
+  TagsIcon,
+  UsersIcon,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -9,7 +18,18 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/app/_components/ui/collapsible"
-import type { RegistryNavItem } from "@/app/_lib/types/registry"
+import type {
+  RegistryNavItem,
+  RegistrySection,
+} from "@/app/_lib/types/registry"
+
+const REGISTRY_SECTION_ICONS = {
+  people: UsersIcon,
+  departments: NetworkIcon,
+  tags: TagsIcon,
+  companies: Building2Icon,
+  "due-hours": ClockIcon,
+} satisfies Record<RegistrySection, LucideIcon>
 
 interface RegistryNavProps {
   items: RegistryNavItem[]
@@ -41,17 +61,25 @@ const RegistryNav = ({ items }: RegistryNavProps) => {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <ul className="mt-1 ml-5 flex flex-col gap-1 border-l border-border-subtle pl-3">
-          {items.map((item) => (
-            <li key={item.section}>
-              <Link
-                href={item.href}
-                aria-current={isCurrent(item.href) ? "page" : undefined}
-                className="flex h-9 items-center rounded-lg px-3 text-sm font-semibold text-text-tertiary transition-colors outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-[current=page]:bg-surface-active aria-[current=page]:font-extrabold aria-[current=page]:text-foreground"
-              >
-                {item.label}
-              </Link>
-            </li>
-          ))}
+          {items.map((item) => {
+            const Icon = REGISTRY_SECTION_ICONS[item.section]
+
+            return (
+              <li key={item.section}>
+                <Link
+                  href={item.href}
+                  aria-current={isCurrent(item.href) ? "page" : undefined}
+                  className="group/registry-item flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-text-tertiary transition-colors outline-none hover:bg-surface-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-[current=page]:bg-surface-active aria-[current=page]:font-extrabold aria-[current=page]:text-foreground"
+                >
+                  <Icon
+                    aria-hidden="true"
+                    className="size-4 shrink-0 group-aria-[current=page]/registry-item:text-primary"
+                  />
+                  {item.label}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </CollapsibleContent>
     </Collapsible>

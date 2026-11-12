@@ -1,4 +1,8 @@
-import type { TicketStatus, TicketType } from "@/app/_lib/types/ticket"
+import type {
+  TicketPriority,
+  TicketStatus,
+  TicketType,
+} from "@/app/_lib/types/ticket"
 import type { TicketCompanyListFacts } from "@/app/_lib/types/ticket-company"
 import type { TicketSlaFacts } from "@/app/_lib/types/ticket-due"
 
@@ -12,7 +16,9 @@ export interface TicketListRow {
   createdAt: Date
 }
 
-export interface TicketSlaListRow extends TicketListRow, TicketSlaFacts {}
+export interface TicketSlaListRow extends TicketListRow, TicketSlaFacts {
+  priority: TicketPriority
+}
 
 export interface TicketCompanyListRow
   extends TicketListRow, TicketCompanyListFacts {}
