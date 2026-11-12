@@ -43,11 +43,16 @@ function goalFactColumns(month: DateRange, now: Date) {
     >`(avg(extract(epoch from (${ticket.resolvedAt} - ${ticket.createdAt})) * 1000) filter (where ${resolvedInMonth}))::float8`.as(
       "average_resolution_ms",
     ),
-    overdueMs:
-      sql<number>`(coalesce(sum(extract(epoch from (${now}::timestamptz - ${ticketDueAtSql})) * 1000) filter (where ${inArray(ticket.status, [...OVERDUE_TICKET_STATUSES])} and ${ticketDueAtSql} < ${now}), 0))::float8`.as(
-        "overdue_ms",
-      ),
+    overdueMs: monthOverdueMsSql(month, now).as("overdue_ms"),
   }
+}
+
+function monthOverdueMsSql(month: DateRange, now: Date) {
+  const overdueStart = sql`greatest(${ticketDueAtSql}, ${month.start}::timestamptz)`
+  const overdueEnd = sql`case when ${inArray(ticket.status, [...DASHBOARD_RESOLVED_STATUSES])} then ${ticket.resolvedAt} else ${now}::timestamptz end`
+  const overdueEligible = sql`(${resolvedInRangeSql(month)} or ${inArray(ticket.status, [...OVERDUE_TICKET_STATUSES])})`
+
+  return sql<number>`coalesce(sum(extract(epoch from (${overdueEnd} - ${overdueStart})) * 1000) filter (where ${overdueEligible} and ${overdueEnd} > ${overdueStart}), 0)::float8`
 }
 
 export async function findDepartmentGoals(
