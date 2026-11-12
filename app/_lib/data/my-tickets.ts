@@ -48,6 +48,7 @@ export async function listMyTickets(
       currentDepartmentName: department.name,
       createdAt: ticket.createdAt,
       priority: ticket.priority,
+      dueAt: ticket.dueAt,
       resolvedAt: ticket.resolvedAt,
       company: {
         id: company.id,

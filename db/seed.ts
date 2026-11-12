@@ -13,6 +13,7 @@ import {
   zonedDateTime,
 } from "@/app/_lib/date"
 import { BOARD_DEPARTMENT_NAME } from "@/app/_lib/domain/department"
+import { departmentDueAtFrom } from "@/app/_lib/domain/department-due-hours"
 import { RESOLVED_TICKET_STATUS, TICKET_TYPES } from "@/app/_lib/domain/ticket"
 import { creationStatusFor } from "@/app/_lib/domain/ticket-assignment"
 import {
@@ -325,6 +326,7 @@ async function seedQaWindowTickets(
       : RESOLUTION_EDIT_WINDOW_MS + DAY_MS
     const resolvedAt = new Date(now.getTime() - resolvedAgeMs)
     const createdAt = new Date(resolvedAt.getTime() - DAY_MS)
+    const dueAt = departmentDueAtFrom(createdAt, null, "media")
 
     const [created] = await tx
       .insert(ticket)
@@ -341,6 +343,7 @@ async function seedQaWindowTickets(
         currentDepartmentId: departmentId,
         solution: QA_WINDOW_SOLUTION,
         createdAt,
+        dueAt,
         updatedAt: resolvedAt,
         resolvedAt,
       })
@@ -359,6 +362,7 @@ async function seedQaWindowTickets(
         toPriority: "media",
         toDepartmentId: departmentId,
         toCompanyId: windowCompany.id,
+        toDueAt: dueAt,
         changedAt: createdAt,
       },
       {

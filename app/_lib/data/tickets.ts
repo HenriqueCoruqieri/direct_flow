@@ -2,7 +2,12 @@ import { and, asc, eq, inArray, isNull, lte, or } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { lockActorFacts } from "@/app/_lib/data/actor-facts"
+import { findDepartmentDueHoursIn } from "@/app/_lib/data/department-due-hours"
 import { toTransferRecipient } from "@/app/_lib/data/transfer-recipient"
+import {
+  declinedDueAtFor,
+  departmentDueAtFrom,
+} from "@/app/_lib/domain/department-due-hours"
 import { resolveTicketPriority } from "@/app/_lib/domain/tag-priority"
 import {
   canViewTicket,
@@ -154,6 +159,7 @@ export async function findTicketDetail(
         tagName: tag.name,
         createdAt: ticket.createdAt,
         solution: ticket.solution,
+        dueAt: ticket.dueAt,
         resolvedAt: ticket.resolvedAt,
       })
       .from(ticket)
@@ -221,6 +227,7 @@ export async function findTicketDetail(
         fromAssigneeName: fromAssignee.name,
         toAssigneeId: ticketHistory.toAssigneeId,
         toAssigneeName: toAssignee.name,
+        toDueAt: ticketHistory.toDueAt,
         fromTagName: fromTag.name,
         toTagName: toTag.name,
         fromCompanyName: fromCompany.tradeName,
@@ -340,9 +347,18 @@ export async function insertTicket(
       assigneeTargetFor(values.createdBy, values.assigneeId),
     )
 
+    const createdAt = new Date()
+    const dueAt = departmentDueAtFrom(
+      createdAt,
+      await findDepartmentDueHoursIn(tx, values.originDepartmentId),
+      priority,
+    )
+
     const [created] = await tx
       .insert(ticket)
       .values({
+        createdAt,
+        dueAt,
         companyId: values.companyId,
         title: values.title,
         description: values.description,
@@ -371,6 +387,7 @@ export async function insertTicket(
       toDepartmentId: values.originDepartmentId,
       toAssigneeId: values.assigneeId,
       toCompanyId: values.companyId,
+      toDueAt: dueAt,
       changedAt: created.createdAt,
     })
 
@@ -1184,6 +1201,7 @@ export async function requestTicketTransfer(
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
         status: ticket.status,
+        dueAt: ticket.dueAt,
       })
       .from(ticket)
       .where(eq(ticket.id, ticketId))
@@ -1288,6 +1306,7 @@ export async function requestTicketTransfer(
         currentDepartmentId: toDepartmentId,
         assignedTo: null,
         status: TRANSFER_REQUESTED_TICKET_STATUS,
+        dueAt: null,
         updatedAt: changedAt,
       })
       .where(eq(ticket.id, ticketId))
@@ -1295,6 +1314,8 @@ export async function requestTicketTransfer(
     await tx.insert(ticketTransfer).values({
       ticketId,
       fromDepartmentId: ticketRow.currentDepartmentId,
+      fromDueAt: ticketRow.dueAt,
+      fromAssigneeId: ticketRow.assignedTo,
       toDepartmentId,
       toUserId: assigneeId,
       requestedBy: actorId,
@@ -1384,6 +1405,7 @@ export async function approveTicketTransfer(
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
         status: ticket.status,
+        priority: ticket.priority,
       })
       .from(ticket)
       .where(eq(ticket.id, ticketId))
@@ -1484,11 +1506,18 @@ export async function approveTicketTransfer(
 
     const changedAt = new Date()
 
+    const dueAt = departmentDueAtFrom(
+      changedAt,
+      await findDepartmentDueHoursIn(tx, pendingTransfer.toDepartmentId),
+      ticketRow.priority,
+    )
+
     await tx
       .update(ticket)
       .set({
         assignedTo: actorId,
         status: ATTENDED_TICKET_STATUS,
+        dueAt,
         updatedAt: changedAt,
       })
       .where(eq(ticket.id, ticketId))
@@ -1513,6 +1542,7 @@ export async function approveTicketTransfer(
       toDepartmentId: pendingTransfer.toDepartmentId,
       fromAssigneeId: ticketRow.assignedTo,
       toAssigneeId: actorId,
+      toDueAt: dueAt,
       changedAt,
     })
 
@@ -1532,6 +1562,7 @@ export async function rejectTicketTransfer(
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
         status: ticket.status,
+        priority: ticket.priority,
       })
       .from(ticket)
       .where(eq(ticket.id, ticketId))
@@ -1560,6 +1591,8 @@ export async function rejectTicketTransfer(
         toDepartmentId: ticketTransfer.toDepartmentId,
         toUserId: ticketTransfer.toUserId,
         requestedBy: ticketTransfer.requestedBy,
+        fromDueAt: ticketTransfer.fromDueAt,
+        createdAt: ticketTransfer.createdAt,
       })
       .from(ticketTransfer)
       .where(
@@ -1649,6 +1682,17 @@ export async function rejectTicketTransfer(
 
     const changedAt = new Date()
 
+    const dueAt = declinedDueAtFor({
+      fromDueAt: pendingTransfer.fromDueAt,
+      sentAt: pendingTransfer.createdAt,
+      returnedAt: changedAt,
+      priority: ticketRow.priority,
+      returnDepartmentHours: await findDepartmentDueHoursIn(
+        tx,
+        pendingTransfer.fromDepartmentId,
+      ),
+    })
+
     await tx.insert(message).values({
       ticketId,
       userId: actorId,
@@ -1675,6 +1719,7 @@ export async function rejectTicketTransfer(
         currentDepartmentId: pendingTransfer.fromDepartmentId,
         assignedTo: returnAssigneeId,
         status: DECLINED_TICKET_STATUS,
+        dueAt,
         updatedAt: changedAt,
       })
       .where(eq(ticket.id, ticketId))
@@ -1689,6 +1734,7 @@ export async function rejectTicketTransfer(
       toDepartmentId: pendingTransfer.fromDepartmentId,
       fromAssigneeId: ticketRow.assignedTo,
       toAssigneeId: returnAssigneeId,
+      toDueAt: dueAt,
       note: null,
       changedAt,
     })

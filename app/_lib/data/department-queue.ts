@@ -72,6 +72,7 @@ export async function listQueueTickets(
       assigneeName: assignee.name,
       createdAt: ticket.createdAt,
       priority: ticket.priority,
+      dueAt: ticket.dueAt,
       resolvedAt: ticket.resolvedAt,
       company: {
         id: company.id,

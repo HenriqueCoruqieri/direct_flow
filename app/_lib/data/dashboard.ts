@@ -1,14 +1,23 @@
-import { and, asc, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  sql,
+} from "drizzle-orm"
 import { unionAll } from "drizzle-orm/pg-core"
 
 import { countPendingApprovals } from "@/app/_lib/data/approvals"
-import { ticketDueAtSql } from "@/app/_lib/data/ticket-due"
 import {
   BACKLOG_TICKET_STATUSES,
   DASHBOARD_RESOLVED_STATUSES,
   OVERDUE_TICKET_STATUSES,
 } from "@/app/_lib/domain/dashboard"
-import { ticketDueAt } from "@/app/_lib/domain/ticket-due"
 import {
   PENDING_TRANSFER_STATUS,
   REJECTED_TRANSFER_STATUS,
@@ -86,7 +95,7 @@ export async function findDashboardOverview(
         backlogAgeMs: sql<
           string | null
         >`coalesce(sum(extract(epoch from greatest(${now}::timestamptz - ${ticket.createdAt}, interval '0')) * 1000) filter (where ${isBacklogStatus}), 0)`,
-        overdueBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${ticketDueAtSql} < ${now}))::int`,
+        overdueBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${ticket.dueAt} < ${now}))::int`,
         mineTicketCount: sql<number>`(count(*) filter (where ${createdInRange} and ${isMine}))::int`,
         minePeriodResolvedCount: sql<number>`(count(*) filter (where ${resolvedInRange} and ${isResolvedStatus} and ${isMine}))::int`,
         mineAverageResolutionMs: sql<
@@ -96,7 +105,7 @@ export async function findDashboardOverview(
         mineBacklogAgeMs: sql<
           string | null
         >`coalesce(sum(extract(epoch from greatest(${now}::timestamptz - ${ticket.createdAt}, interval '0')) * 1000) filter (where ${isBacklogStatus} and ${isMine}), 0)`,
-        mineOverdueBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${ticketDueAtSql} < ${now} and ${isMine}))::int`,
+        mineOverdueBacklogCount: sql<number>`(count(*) filter (where ${isBacklogStatus} and ${ticket.dueAt} < ${now} and ${isMine}))::int`,
       })
       .from(ticket)
       .where(eq(ticket.currentDepartmentId, departmentId)),
@@ -195,7 +204,7 @@ export async function listOverdueTickets(
       id: ticket.id,
       title: ticket.title,
       priority: ticket.priority,
-      createdAt: ticket.createdAt,
+      dueAt: ticket.dueAt,
     })
     .from(ticket)
     .where(
@@ -205,18 +214,25 @@ export async function listOverdueTickets(
           ? undefined
           : eq(ticket.assignedTo, assigneeId),
         inArray(ticket.status, [...OVERDUE_TICKET_STATUSES]),
-        sql`${ticketDueAtSql} < ${now}`,
+        isNotNull(ticket.dueAt),
+        sql`${ticket.dueAt} < ${now}`,
       ),
     )
-    .orderBy(asc(ticketDueAtSql), asc(ticket.createdAt), asc(ticket.id))
+    .orderBy(asc(ticket.dueAt), asc(ticket.createdAt), asc(ticket.id))
     .limit(limit)
 
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    priority: row.priority,
-    dueAt: ticketDueAt({ createdAt: row.createdAt, priority: row.priority }),
-  }))
+  return rows.flatMap((row) =>
+    row.dueAt === null
+      ? []
+      : [
+          {
+            id: row.id,
+            title: row.title,
+            priority: row.priority,
+            dueAt: row.dueAt,
+          },
+        ],
+  )
 }
 
 interface ActivityCountRow extends Record<string, unknown> {
