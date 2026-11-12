@@ -20,6 +20,12 @@ export const BOARD_DEPARTMENT_BADGE = "Diretoria"
 
 export const UNASSIGNED_DEPARTMENT_BADGE = "Não alocado"
 
+export const DEPARTMENT_FILTER_PLACEHOLDER = "Selecione o setor"
+
+export const DEPARTMENT_FILTER_SEARCH_PLACEHOLDER = "Buscar setor"
+
+export const DEPARTMENT_FILTER_EMPTY_TEXT = "Nenhum setor encontrado."
+
 export const departmentBadgeFor = ({
   isBoard,
   isUnassigned,

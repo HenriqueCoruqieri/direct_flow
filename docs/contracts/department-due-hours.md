@@ -335,14 +335,14 @@ Nenhuma outra função de `tickets.ts` grava `due_at` (`updateTicketByAssignee`,
 
 ### Leituras
 
-| Arquivo                             | Mudança                                                                                                                                                                                                                                                                                                                   |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/_lib/data/ticket-due.ts`       | **apagar** (`ticketDueAtSql` deixa de existir; a expressão é a coluna `ticket.dueAt`)                                                                                                                                                                                                                                     |
-| `app/_lib/data/dashboard.ts`        | `ticketDueAtSql` → `ticket.dueAt` em `overdueBacklogCount`, `mineOverdueBacklogCount` e `listOverdueTickets` (`where`, `orderBy`); `listOverdueTickets` seleciona `dueAt` e devolve a coluna (sai `ticketDueAt`). Nulo nunca passa em `< now`; se o TS reclamar do tipo na saída, `isNotNull(ticket.dueAt)` no `where`    |
-| `app/_lib/data/department-goals.ts` | `slaMetCount` com `ticket.dueAt`; `monthOverdueMsSql` conforme "Parte regular"; **somar** "Parte dos envios" em `findPersonGoalFacts` (S e P), em `findTeamGoalFacts` (time: S; membros: agrupado por `from_assignee_id`, somado ao `overdueMs` de cada membro com `coalesce(…, 0)`). Assinaturas e nomes de campo iguais |
-| `app/_lib/data/department-queue.ts` | selecionar `dueAt: ticket.dueAt`                                                                                                                                                                                                                                                                                          |
-| `app/_lib/data/my-tickets.ts`       | selecionar `dueAt: ticket.dueAt`                                                                                                                                                                                                                                                                                          |
-| `db/seed.ts`                        | ticket do QA (linha ~330): `dueAt = departmentDueAtFrom(createdAt, null, "media")`; `criacao` com `toDueAt` igual                                                                                                                                                                                                         |
+| Arquivo                             | Mudança                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/_lib/data/ticket-due.ts`       | **apagar** (`ticketDueAtSql` deixa de existir; a expressão é a coluna `ticket.dueAt`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `app/_lib/data/dashboard.ts`        | `ticketDueAtSql` → `ticket.dueAt` em `overdueBacklogCount`, `mineOverdueBacklogCount` e `listOverdueTickets` (`where`, `orderBy`); `listOverdueTickets` seleciona `dueAt` e devolve a coluna (sai `ticketDueAt`). Nulo nunca passa em `< now`; se o TS reclamar do tipo na saída, `isNotNull(ticket.dueAt)` no `where`                                                                                                                                                                                                                                                     |
+| `app/_lib/data/department-goals.ts` | `slaMetCount` com `ticket.dueAt`; `monthOverdueMsSql` conforme "Parte regular"; **somar** "Parte dos envios" em `findPersonGoalFacts` (S e P), em `findTeamGoalFacts` (time: S; membros: agrupado por `from_assignee_id`, somado ao `overdueMs` de cada membro com `coalesce(…, 0)`). Assinaturas e nomes de campo iguais                                                                                                                                                                                                                                                  |
+| `app/_lib/data/department-queue.ts` | selecionar `dueAt: ticket.dueAt`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `app/_lib/data/my-tickets.ts`       | selecionar `dueAt: ticket.dueAt`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `db/seed.ts`                        | ticket do QA (linha ~330): `dueAt = departmentDueAtFrom(createdAt, null, "media")`; `criacao` com `toDueAt` igual. **Também no `seedDemo`** (~953-978): cada chamado grava `dueAt = departmentDueAtFrom(blueprint.createdAt, null, priority)` em `ticketValues` e a linha `criacao` leva `toDueAt` igual, para o banco recém-semeado respeitar "`due_at` nulo ⇔ transferência pendente" (DH19). O `seedDemo` hoje não cria transferência; se passar a criar uma pendente, esse chamado fica com `due_at` nulo e a transferência leva `fromDueAt` com o prazo que ele tinha |
 
 ## `df-actions` — `app/_lib/actions/department-due-hours.ts` (novo)
 
@@ -504,6 +504,8 @@ order by t.id desc limit 5;
       `rejectTicketTransfer`, `findTicketDetail`
 - [ ] `dashboard.ts`, `department-goals.ts`, `department-queue.ts`,
       `my-tickets.ts`; apagar `ticket-due.ts`; `db/seed.ts`
+- [ ] (revisão) `db/seed.ts`: `dueAt` e `criacao.toDueAt` também nos chamados
+      do `seedDemo`, não só no do QA (DH19 num banco recém-semeado)
 
 ### Onda 1 — `df-ui` (layout)
 
@@ -516,6 +518,21 @@ order by t.id desc limit 5;
 ### Onda 2 — `df-ui` (tela)
 
 - [ ] `app/(app)/registry/due-hours/page.tsx` e formulário
+- [ ] (revisão) extrair para `app/_components/` um campo numérico de horas
+      compartilhado e um filtro de setor compartilhado, substituindo
+      `operations-department-filter.tsx`, `queue-department-filter.tsx` e
+      `due-hours-department-filter.tsx`; os textos vêm de
+      `DEPARTMENT_FILTER_PLACEHOLDER`, `DEPARTMENT_FILTER_SEARCH_PLACEHOLDER` e
+      `DEPARTMENT_FILTER_EMPTY_TEXT` (`app/_lib/domain/department.ts`)
+
+### Revisão pós-implementação
+
+- [x] `df-architect`: contrato do `db/seed.ts` estendido ao `seedDemo`
+- [x] `df-architect`: constantes do filtro de setor em
+      `app/_lib/domain/department.ts`
+- [ ] `df-data`: `seedDemo` com `dueAt` e `criacao.toDueAt`
+- [ ] `df-ui`: campo de horas e filtro de setor compartilhados em
+      `app/_components/`
 
 ### Onda 3/4
 
