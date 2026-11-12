@@ -1,4 +1,5 @@
 import type { Role } from "@/app/_lib/types/actor"
+import type { DepartmentAvailability } from "@/app/_lib/types/department"
 
 export interface RegistryAccessFacts {
   isActive: boolean
@@ -27,10 +28,20 @@ export type GrantedRegistryAccess = DirectorAccess | DepartmentAdminAccess
 
 export type RegistryAccess = GrantedRegistryAccess | NoRegistryAccess
 
-export type RegistrySection = "people" | "departments" | "tags" | "companies"
+export type RegistrySection =
+  "people" | "departments" | "tags" | "companies" | "due-hours"
 
 export interface RegistryNavItem {
   section: RegistrySection
   label: string
   href: string
+}
+
+export interface RegistryTargetDepartment extends DepartmentAvailability {
+  id: number
+}
+
+export interface ChangeStamp {
+  updatedAt: Date
+  updatedByName: string | null
 }

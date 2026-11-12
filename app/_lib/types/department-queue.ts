@@ -43,6 +43,7 @@ export interface DepartmentQueueListItem
   creatorName: string
   assigneeName: string | null
   createdAt: Date
+  dueAt: Date | null
   resolvedAt: Date | null
 }
 

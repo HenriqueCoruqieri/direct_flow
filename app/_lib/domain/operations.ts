@@ -6,7 +6,7 @@ import {
 } from "@/app/_lib/date"
 import {
   assignableDepartments,
-  isAssignableDepartment,
+  canManageDepartmentSettings,
 } from "@/app/_lib/domain/department"
 import { PRESET_PERIODS } from "@/app/_lib/domain/period"
 import { TICKET_CREATION_BLOCK_MESSAGES } from "@/app/_lib/domain/ticket"
@@ -91,11 +91,7 @@ export const operationsDepartmentIdFor = (
 export const canEditDepartmentGoals = (
   access: RegistryAccess,
   target: GoalTargetDepartment,
-): boolean => {
-  if (!isAssignableDepartment(target)) return false
-  if (access.kind === "director") return true
-  return access.kind === "department_admin" && access.departmentId === target.id
-}
+): boolean => canManageDepartmentSettings(access, target)
 
 export const GOALS_UNDEFINED_TITLE = "Metas ainda não definidas"
 

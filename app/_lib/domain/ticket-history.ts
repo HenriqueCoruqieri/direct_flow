@@ -1,3 +1,4 @@
+import { formatDateAtTime } from "@/app/_lib/date"
 import {
   TICKET_PRIORITY_LABELS,
   TICKET_STATUS_LABELS,
@@ -124,6 +125,9 @@ const describeTransferRequest = (entry: TicketHistoryEntry): string => {
     : `${actor} encaminhou o chamado para outro setor.`
 }
 
+export const describeNewDueAt = (dueAt: Date | null): string =>
+  dueAt ? ` Novo prazo: ${formatDateAtTime(dueAt)}.` : ""
+
 const describeTransferRejection = (entry: TicketHistoryEntry): string =>
   entry.fromDepartmentName
     ? `${entry.fromDepartmentName} recusou o chamado.`
@@ -140,7 +144,7 @@ const HISTORY_EVENT_DESCRIBERS = {
   atribuicao: describeAssignment,
   transferencia_solicitada: describeTransferRequest,
   transferencia_aprovada: (entry) =>
-    `${describeActorWithDepartment(entry)} aceitou o chamado e começou a atendê-lo.`,
+    `${describeActorWithDepartment(entry)} aceitou o chamado e começou a atendê-lo.${describeNewDueAt(entry.toDueAt)}`,
   transferencia_rejeitada: describeTransferRejection,
   reabertura: (entry) => `Reabriu o chamado${withStatus(entry.toStatus)}.`,
   encerramento: (entry) => `Encerrou o chamado${withStatus(entry.toStatus)}.`,

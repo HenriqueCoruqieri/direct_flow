@@ -181,6 +181,7 @@ export interface TicketHistoryEntry {
   toTagName: string | null
   fromCompanyName: string | null
   toCompanyName: string | null
+  toDueAt: Date | null
   note: string | null
 }
 
@@ -200,6 +201,7 @@ export interface TicketDetail extends TicketVisibilityFacts {
   tagName: string | null
   company: TicketCompanySummary | null
   createdAt: Date
+  dueAt: Date | null
   solution: string | null
   resolvedAt: Date | null
   pendingTransfer: TicketPendingTransfer | null

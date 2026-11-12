@@ -7,6 +7,10 @@ import type {
   DepartmentOption,
   DepartmentStamps,
 } from "@/app/_lib/types/department"
+import type {
+  RegistryAccess,
+  RegistryTargetDepartment,
+} from "@/app/_lib/types/registry"
 
 export const BOARD_DEPARTMENT_NAME = "Diretoria"
 
@@ -29,6 +33,15 @@ export const isAssignableDepartment = ({
   isActive,
   isUnassigned,
 }: DepartmentAvailability): boolean => isActive && !isUnassigned
+
+export const canManageDepartmentSettings = (
+  access: RegistryAccess,
+  target: RegistryTargetDepartment,
+): boolean => {
+  if (!isAssignableDepartment(target)) return false
+  if (access.kind === "director") return true
+  return access.kind === "department_admin" && access.departmentId === target.id
+}
 
 export const assignableDepartments = (
   options: readonly DepartmentOption[],

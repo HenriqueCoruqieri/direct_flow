@@ -18,6 +18,8 @@ export const TAGS_REGISTRY_PATH = "/registry/tags"
 
 export const COMPANIES_REGISTRY_PATH = "/registry/companies"
 
+export const DUE_HOURS_REGISTRY_PATH = "/registry/due-hours"
+
 const NO_REGISTRY_ACCESS: RegistryAccess = { kind: "none" }
 
 export const resolveRegistryAccess = (
@@ -67,14 +69,26 @@ const COMPANIES_ITEM: RegistryNavItem = {
   href: COMPANIES_REGISTRY_PATH,
 }
 
+const DUE_HOURS_ITEM: RegistryNavItem = {
+  section: "due-hours",
+  label: "Prazos",
+  href: DUE_HOURS_REGISTRY_PATH,
+}
+
 export const registryNavItemsFor = (
   access: RegistryAccess,
 ): RegistryNavItem[] => {
   if (access.kind === "director") {
-    return [PEOPLE_ITEM, DEPARTMENTS_ITEM, TAGS_ITEM, COMPANIES_ITEM]
+    return [
+      PEOPLE_ITEM,
+      DEPARTMENTS_ITEM,
+      TAGS_ITEM,
+      COMPANIES_ITEM,
+      DUE_HOURS_ITEM,
+    ]
   }
   if (access.kind === "department_admin") {
-    return [PEOPLE_ITEM, TAGS_ITEM]
+    return [PEOPLE_ITEM, TAGS_ITEM, DUE_HOURS_ITEM]
   }
   return []
 }

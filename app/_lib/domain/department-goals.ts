@@ -1,15 +1,10 @@
-import {
-  formatDateAtTime,
-  formatHoursMinutes,
-  formatInteger,
-  HOUR_MS,
-} from "@/app/_lib/date"
+import { formatHoursMinutes, formatInteger, HOUR_MS } from "@/app/_lib/date"
 import { ticketCountLabel } from "@/app/_lib/domain/dashboard"
 import {
   GOAL_INDICATORS,
   PERSON_GOAL_INDICATORS,
 } from "@/app/_lib/domain/goal-indicators"
-import { EMPTY_VALUE_LABEL } from "@/app/_lib/domain/labels"
+import { EMPTY_VALUE_LABEL, lastChangeLabel } from "@/app/_lib/domain/labels"
 import type {
   DepartmentGoals,
   DepartmentGoalsRecord,
@@ -180,9 +175,7 @@ export const departmentGoalsDialogDescription = (
   `${departmentName} · as metas valem para cada pessoa do setor e para o time.`
 
 export const goalsLastChangeLabel = (record: DepartmentGoalsRecord): string =>
-  record.updatedByName === null
-    ? `Última alteração em ${formatDateAtTime(record.updatedAt)}.`
-    : `Última alteração por ${record.updatedByName} em ${formatDateAtTime(record.updatedAt)}.`
+  lastChangeLabel(record)
 
 const floorPercent = (part: number, whole: number): number =>
   Math.floor((Math.max(part, 0) * 100) / whole)

@@ -39,5 +39,6 @@ export interface MyTicketListItem extends TicketCompanyListFacts {
   currentDepartmentId: number
   currentDepartmentName: string
   createdAt: Date
+  dueAt: Date | null
   resolvedAt: Date | null
 }

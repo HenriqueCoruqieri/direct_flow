@@ -1,18 +1,16 @@
-import type { TicketPriority, TicketStatus } from "@/app/_lib/types/ticket"
+import type { TicketStatus } from "@/app/_lib/types/ticket"
 
-export interface TicketDueFacts {
-  createdAt: Date
-  priority: TicketPriority
-}
-
-export interface TicketSlaFacts extends TicketDueFacts {
+export interface TicketSlaFacts {
   status: TicketStatus
+  dueAt: Date | null
   resolvedAt: Date | null
 }
 
 export type TicketRunningSlaStatus = "on_time" | "overdue"
 
 export type TicketSettledSlaStatus = "met" | "missed"
+
+export type TicketPausedSlaStatus = "awaiting_acceptance" | "neutral"
 
 export interface TicketRunningSla {
   status: TicketRunningSlaStatus
@@ -25,12 +23,11 @@ export interface TicketSettledSla {
   resolvedAt: Date
 }
 
-export interface TicketNeutralSla {
-  status: "neutral"
-  dueAt: Date
+export interface TicketPausedSla {
+  status: TicketPausedSlaStatus
 }
 
-export type TicketSla = TicketRunningSla | TicketSettledSla | TicketNeutralSla
+export type TicketSla = TicketRunningSla | TicketSettledSla | TicketPausedSla
 
 export type TicketSlaStatus = TicketSla["status"]
 
@@ -42,7 +39,7 @@ export interface TicketRunningSlaDetail {
 }
 
 export interface TicketStoppedSlaDetail {
-  status: TicketSettledSlaStatus | "neutral"
+  status: TicketSettledSlaStatus | TicketPausedSlaStatus
   label: string
   value: string
 }
