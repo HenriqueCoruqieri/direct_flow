@@ -52,3 +52,16 @@ resolvido em 5/11 conta de 1º/11 00:00 até a resolução.
   para o novo responsável.
 - Sem schema, sem migration. Só a expressão SQL do fato `overdueMs` muda; o nome
   do campo e o tipo ficam.
+
+> Revisão de 2026-11-12 (ADR 024, `docs/contracts/department-due-hours.md`,
+> seção "Horas em atraso do mês"): o vencimento passa a ser a coluna
+> `ticket.due_at`, e a consequência "chamado transferido leva todo o atraso
+> do mês com ele" deixa de valer para envio a outro setor. O atraso que o
+> chamado acumulou antes do envio continua contando para o setor de origem
+> (`ticket_transfer.from_department_id`) e para quem o tinha
+> (`from_assignee_id`): trecho `[max(from_due_at, início do mês, última
+volta por recusa), created_at da transferência]`, quando positivo. Na volta
+> por recusa, a regra normal recomeça na hora da volta, com o `due_at`
+> retomado, sem contar a espera nem repetir o trecho anterior. Trocar o
+> responsável dentro do setor continua levando o atraso do mês para o novo
+> responsável.

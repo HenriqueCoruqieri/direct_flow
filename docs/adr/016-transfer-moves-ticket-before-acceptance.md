@@ -99,3 +99,14 @@ na fila do destino e **qualquer pessoa do setor de destino** o aceita
 > só aquele diretor. A linha `transferencia_solicitada` grava o destinatário
 > indicado em `to_assignee_id` (o único evento em que esse campo não é o
 > `assigned_to` resultante), para que o ciclo de vida registre para quem foi.
+>
+> Revisão de 2026-11-12, prazo no envio, aceite e recusa (ADR 024,
+> `docs/contracts/department-due-hours.md`): o envio grava, na mesma
+> transação da decisão 1, `ticket.due_at = null` e, na linha
+> `ticket_transfer` pendente, o prazo que vigorava (`from_due_at`) e quem
+> tinha o chamado (`from_assignee_id`). O aceite grava `due_at =
+reviewed_at + horas do setor de destino`; a recusa grava `due_at =
+from_due_at + (reviewed_at − created_at)` da transferência (o relógio da
+> origem retoma de onde parou). A espera pendente não conta no SLA de nenhum
+> setor. As linhas `transferencia_aprovada` e `transferencia_rejeitada`
+> passam a gravar o prazo novo em `ticket_history.to_due_at`.

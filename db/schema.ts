@@ -250,6 +250,7 @@ export const ticket = pgTable(
     index("ticket_assigned_to_idx").on(table.assignedTo),
     index("ticket_origin_department_idx").on(table.originDepartmentId),
     index("ticket_company_idx").on(table.companyId),
+    index("ticket_dept_due_idx").on(table.currentDepartmentId, table.dueAt),
     check(
       "ticket_title_length",
       sql`char_length(${table.title}) between 3 and 200`,
@@ -301,6 +302,10 @@ export const ticketTransfer = pgTable(
     }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     reviewNote: text("review_note"),
+    fromDueAt: timestamp("from_due_at", { withTimezone: true }),
+    fromAssigneeId: integer("from_assignee_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     ...timestamps,
   },
   (table) => [
@@ -311,6 +316,7 @@ export const ticketTransfer = pgTable(
     ),
     index("transfer_ticket_idx").on(table.ticketId, table.createdAt.desc()),
     index("transfer_from_department_idx").on(table.fromDepartmentId),
+    index("transfer_from_assignee_idx").on(table.fromAssigneeId),
     index("transfer_to_user_idx").on(table.toUserId),
     index("transfer_requested_by_idx").on(table.requestedBy),
     index("transfer_reviewed_by_idx").on(table.reviewedBy),
@@ -365,6 +371,7 @@ export const ticketHistory = pgTable(
     toCompanyId: integer("to_company_id").references(() => company.id, {
       onDelete: "restrict",
     }),
+    toDueAt: timestamp("to_due_at", { withTimezone: true }),
     note: text("note"),
     changedAt: timestamp("changed_at", { withTimezone: true })
       .defaultNow()
@@ -601,6 +608,44 @@ export const departmentGoal = pgTable(
   ],
 )
 
+export const departmentDueHours = pgTable(
+  "department_due_hours",
+  {
+    id: pk(),
+    departmentId: integer("department_id")
+      .notNull()
+      .references(() => department.id, { onDelete: "cascade" }),
+    criticaHours: smallint("critica_hours").notNull(),
+    altaHours: smallint("alta_hours").notNull(),
+    mediaHours: smallint("media_hours").notNull(),
+    baixaHours: smallint("baixa_hours").notNull(),
+    updatedBy: integer("updated_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("department_due_hours_department_idx").on(table.departmentId),
+    index("department_due_hours_updated_by_idx").on(table.updatedBy),
+    check(
+      "department_due_hours_critica_range",
+      sql`${table.criticaHours} between 1 and 999`,
+    ),
+    check(
+      "department_due_hours_alta_range",
+      sql`${table.altaHours} between 1 and 999`,
+    ),
+    check(
+      "department_due_hours_media_range",
+      sql`${table.mediaHours} between 1 and 999`,
+    ),
+    check(
+      "department_due_hours_baixa_range",
+      sql`${table.baixaHours} between 1 and 999`,
+    ),
+  ],
+)
+
 export const departmentRelations = relations(department, ({ one, many }) => ({
   users: many(user),
   tags: many(tag),
@@ -615,6 +660,7 @@ export const departmentRelations = relations(department, ({ one, many }) => ({
   historyFrom: many(ticketHistory, { relationName: "history_from_department" }),
   historyTo: many(ticketHistory, { relationName: "history_to_department" }),
   goal: one(departmentGoal),
+  dueHours: one(departmentDueHours),
 }))
 
 export const userRelations = relations(user, ({ one, many }) => ({
@@ -645,6 +691,10 @@ export const userRelations = relations(user, ({ one, many }) => ({
     relationName: "history_to_assignee",
   }),
   updatedDepartmentGoals: many(departmentGoal),
+  updatedDepartmentDueHours: many(departmentDueHours),
+  heldTransfers: many(ticketTransfer, {
+    relationName: "transfer_from_assignee",
+  }),
 }))
 
 export const tagRelations = relations(tag, ({ one, many }) => ({
@@ -731,6 +781,11 @@ export const ticketTransferRelations = relations(ticketTransfer, ({ one }) => ({
     fields: [ticketTransfer.reviewedBy],
     references: [user.id],
     relationName: "transfer_reviewed_by",
+  }),
+  fromAssignee: one(user, {
+    fields: [ticketTransfer.fromAssigneeId],
+    references: [user.id],
+    relationName: "transfer_from_assignee",
   }),
 }))
 
@@ -863,6 +918,20 @@ export const departmentGoalRelations = relations(departmentGoal, ({ one }) => ({
   }),
 }))
 
+export const departmentDueHoursRelations = relations(
+  departmentDueHours,
+  ({ one }) => ({
+    department: one(department, {
+      fields: [departmentDueHours.departmentId],
+      references: [department.id],
+    }),
+    updater: one(user, {
+      fields: [departmentDueHours.updatedBy],
+      references: [user.id],
+    }),
+  }),
+)
+
 export type Department = typeof department.$inferSelect
 export type NewDepartment = typeof department.$inferInsert
 export type User = typeof user.$inferSelect
@@ -891,6 +960,8 @@ export type CompanyContact = typeof companyContact.$inferSelect
 export type NewCompanyContact = typeof companyContact.$inferInsert
 export type DepartmentGoal = typeof departmentGoal.$inferSelect
 export type NewDepartmentGoal = typeof departmentGoal.$inferInsert
+export type DepartmentDueHoursRow = typeof departmentDueHours.$inferSelect
+export type NewDepartmentDueHoursRow = typeof departmentDueHours.$inferInsert
 
 export type Role = (typeof roleEnum.enumValues)[number]
 export type TicketType = (typeof ticketTypeEnum.enumValues)[number]

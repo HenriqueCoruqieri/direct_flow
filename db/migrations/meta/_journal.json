@@ -176,6 +176,20 @@
       "when": 1794433744049,
       "tag": "0024_department_goal",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794464469399,
+      "tag": "0025_department_due_hours",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794464473903,
+      "tag": "0026_backfill_ticket_due_at",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,9 @@
 # 019 — SLA em horas corridas, calculado e não gravado em `due_at`
 
+> **Substituído pelo ADR 024** (2026-11-12, `docs/adr/024-department-due-hours-and-frozen-due-date.md`):
+> o prazo passa a ser configurado por setor e o vencimento é gravado em
+> `ticket.due_at`. Este ADR fica como registro histórico.
+
 ## Contexto
 
 O plano `docs/plans/ticket-priority-and-sla.md` (aprovado em 2026-10-26) deixa
