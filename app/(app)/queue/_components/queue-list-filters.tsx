@@ -1,14 +1,19 @@
+import DepartmentFilter from "@/app/_components/department-filter"
 import {
+  DEPARTMENT_QUEUE_DEPARTMENT_FILTER_LABEL,
   DEPARTMENT_QUEUE_PATH,
   DEPARTMENT_QUEUE_PERIOD_PRESETS,
+  queueDepartmentParamFor,
 } from "@/app/_lib/domain/department-queue"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import type { DepartmentQueueLocation } from "@/app/_lib/types/department-queue"
 import type { TicketActorFacts } from "@/app/_lib/types/ticket"
-import { departmentQueueKeepParams } from "@/app/_lib/validation/department-queue"
+import {
+  departmentQueueHref,
+  departmentQueueKeepParams,
+} from "@/app/_lib/validation/department-queue"
 
 import PeriodFilter from "../../_components/period-filter"
-import QueueDepartmentFilter from "./queue-department-filter"
 
 interface QueueListFiltersProps {
   viewer: TicketActorFacts
@@ -32,10 +37,16 @@ const QueueListFilters = ({
         selection={location.period}
       />
       {departmentOptions.length > 0 ? (
-        <QueueDepartmentFilter
-          viewer={viewer}
-          location={location}
-          options={departmentOptions}
+        <DepartmentFilter
+          label={DEPARTMENT_QUEUE_DEPARTMENT_FILTER_LABEL}
+          options={departmentOptions.map((option) => ({
+            id: option.id,
+            name: option.name,
+            href: departmentQueueHref({
+              ...location,
+              departmentId: queueDepartmentParamFor(viewer, option.id),
+            }),
+          }))}
           value={departmentId}
         />
       ) : null}

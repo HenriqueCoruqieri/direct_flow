@@ -1,6 +1,6 @@
 "use client"
 
-import type { Control } from "react-hook-form"
+import type { Control, FieldPath, FieldValues } from "react-hook-form"
 
 import FormField from "@/app/_components/form-field"
 import {
@@ -9,27 +9,39 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/app/_components/ui/input-group"
-import { DUE_HOURS_FIELD_COPY } from "@/app/_lib/domain/department-due-hours"
-import type { DueHoursField as DueHoursFieldName } from "@/app/_lib/types/department-due-hours"
-import type { DepartmentDueHoursInput } from "@/app/_lib/validation/department-due-hours"
 
-const inputValueOf = (value: number | undefined): number | "" =>
+const inputValueOf = (value: unknown): number | "" =>
   typeof value === "number" && Number.isFinite(value) ? value : ""
 
-interface DueHoursFieldProps {
-  control: Control<DepartmentDueHoursInput>
-  name: DueHoursFieldName
+interface NumberUnitFieldProps<
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+  TTransformedValues,
+> {
+  control: Control<TFieldValues, unknown, TTransformedValues>
+  name: TName
+  label: string
+  description: string
+  unit: string
 }
 
-const DueHoursField = ({ control, name }: DueHoursFieldProps) => {
-  const copy = DUE_HOURS_FIELD_COPY[name]
-
+const NumberUnitField = <
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+  TTransformedValues = TFieldValues,
+>({
+  control,
+  name,
+  label,
+  description,
+  unit,
+}: NumberUnitFieldProps<TFieldValues, TName, TTransformedValues>) => {
   return (
     <FormField
       control={control}
       name={name}
-      label={copy.label}
-      description={copy.description}
+      label={label}
+      description={description}
     >
       {({ value, onChange, ...field }) => (
         <InputGroup>
@@ -50,7 +62,7 @@ const DueHoursField = ({ control, name }: DueHoursFieldProps) => {
             className="tabular-nums"
           />
           <InputGroupAddon align="inline-end">
-            <InputGroupText>{copy.unit}</InputGroupText>
+            <InputGroupText>{unit}</InputGroupText>
           </InputGroupAddon>
         </InputGroup>
       )}
@@ -58,4 +70,4 @@ const DueHoursField = ({ control, name }: DueHoursFieldProps) => {
   )
 }
 
-export default DueHoursField
+export default NumberUnitField

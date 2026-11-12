@@ -7,10 +7,12 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import FormSchemaProvider from "@/app/_components/form-schema-provider"
+import NumberUnitField from "@/app/_components/number-unit-field"
 import { Button } from "@/app/_components/ui/button"
 import { saveDepartmentDueHours } from "@/app/_lib/actions/department-due-hours"
 import {
   DUE_HOURS_APPLIES_FROM_NOW_HINT,
+  DUE_HOURS_FIELD_COPY,
   DUE_HOURS_FIELDS,
   SAVE_DUE_HOURS_LABEL,
   SAVE_DUE_HOURS_PENDING_LABEL,
@@ -20,8 +22,6 @@ import {
   type DepartmentDueHoursInput,
   departmentDueHoursSchema,
 } from "@/app/_lib/validation/department-due-hours"
-
-import DueHoursField from "./due-hours-field"
 
 interface DueHoursFormProps {
   departmentId: number
@@ -83,7 +83,12 @@ const DueHoursForm = ({
             className="grid gap-5 px-6 py-5 sm:grid-cols-2"
           >
             {DUE_HOURS_FIELDS.map((name) => (
-              <DueHoursField key={name} control={form.control} name={name} />
+              <NumberUnitField
+                key={name}
+                control={form.control}
+                name={name}
+                {...DUE_HOURS_FIELD_COPY[name]}
+              />
             ))}
           </fieldset>
 

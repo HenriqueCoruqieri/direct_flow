@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { Suspense } from "react"
 
+import DepartmentFilter from "@/app/_components/department-filter"
 import { getAccountFacts } from "@/app/_lib/auth/account-facts"
 import { getRegistryAccess } from "@/app/_lib/auth/registry-access"
 import { requireSession } from "@/app/_lib/auth/session"
@@ -17,10 +18,12 @@ import {
   canEditDepartmentGoals,
   goalsUndefinedCopy,
   hasOperations,
+  OPERATIONS_DEPARTMENT_FILTER_LABEL,
   OPERATIONS_LABEL,
   OPERATIONS_UNASSIGNED_MESSAGE,
   operationsDepartmentIdFor,
   operationsDepartmentOptions,
+  operationsDepartmentParamFor,
   operationsSubtitle,
   usesOperationsDepartment,
   usesOperationsPeriod,
@@ -29,6 +32,7 @@ import type { OperationsLocation } from "@/app/_lib/types/operations"
 import type { TicketViewerFacts } from "@/app/_lib/types/ticket"
 import {
   operationsCanonicalHref,
+  operationsHref,
   parseOperationsParams,
   serializeOperationsParams,
 } from "@/app/_lib/validation/operations"
@@ -38,7 +42,6 @@ import TicketListEmptyState from "../_components/ticket-list-empty-state"
 import DepartmentGoalsDialog from "./_components/department-goals-dialog"
 import GoalsEmptyState from "./_components/goals-empty-state"
 import MyGoalSection from "./_components/my-goal-section"
-import OperationsDepartmentFilter from "./_components/operations-department-filter"
 import OperationsHeader from "./_components/operations-header"
 import OperationsPeriodFilter from "./_components/operations-period-filter"
 import OperationsTabSkeleton from "./_components/operations-tab-skeleton"
@@ -162,10 +165,16 @@ const OperationsPage = async ({ searchParams }: PageProps<"/operations">) => {
     showDepartmentFilter || showEditButton ? (
       <>
         {showDepartmentFilter ? (
-          <OperationsDepartmentFilter
-            viewer={viewer}
-            location={location}
-            options={departmentOptions}
+          <DepartmentFilter
+            label={OPERATIONS_DEPARTMENT_FILTER_LABEL}
+            options={departmentOptions.map((option) => ({
+              id: option.id,
+              name: option.name,
+              href: operationsHref({
+                ...location,
+                departmentId: operationsDepartmentParamFor(viewer, option.id),
+              }),
+            }))}
             value={departmentId}
           />
         ) : null}

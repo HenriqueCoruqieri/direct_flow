@@ -6,35 +6,38 @@ import { useId } from "react"
 import Combobox from "@/app/_components/combobox"
 import { Label } from "@/app/_components/ui/label"
 import {
-  DUE_HOURS_DEPARTMENT_FILTER_LABEL,
-  dueHoursHref,
-} from "@/app/_lib/domain/department-due-hours"
-import type { DepartmentOption } from "@/app/_lib/types/department"
-import type { RegistryAccess } from "@/app/_lib/types/registry"
+  DEPARTMENT_FILTER_EMPTY_TEXT,
+  DEPARTMENT_FILTER_PLACEHOLDER,
+  DEPARTMENT_FILTER_SEARCH_PLACEHOLDER,
+} from "@/app/_lib/domain/department"
 
-interface DueHoursDepartmentFilterProps {
-  access: RegistryAccess
-  options: DepartmentOption[]
+export interface DepartmentFilterOption {
+  id: number
+  name: string
+  href: string
+}
+
+interface DepartmentFilterProps {
+  label: string
+  options: DepartmentFilterOption[]
   value: number
 }
 
-const DueHoursDepartmentFilter = ({
-  access,
-  options,
-  value,
-}: DueHoursDepartmentFilterProps) => {
+const DepartmentFilter = ({ label, options, value }: DepartmentFilterProps) => {
   const router = useRouter()
   const id = useId()
 
   const select = (departmentId: number) => {
     if (departmentId === value) return
-    router.push(dueHoursHref(access, departmentId), { scroll: false })
+    const target = options.find((option) => option.id === departmentId)
+    if (!target) return
+    router.push(target.href, { scroll: false })
   }
 
   return (
     <div className="flex items-center gap-2.5">
       <Label htmlFor={id} className="shrink-0">
-        {DUE_HOURS_DEPARTMENT_FILTER_LABEL}
+        {label}
       </Label>
       <div className="w-56">
         <Combobox
@@ -45,13 +48,13 @@ const DueHoursDepartmentFilter = ({
           }))}
           value={value}
           onChange={select}
-          placeholder="Selecione o setor"
-          searchPlaceholder="Buscar setor"
-          emptyText="Nenhum setor encontrado."
+          placeholder={DEPARTMENT_FILTER_PLACEHOLDER}
+          searchPlaceholder={DEPARTMENT_FILTER_SEARCH_PLACEHOLDER}
+          emptyText={DEPARTMENT_FILTER_EMPTY_TEXT}
         />
       </div>
     </div>
   )
 }
 
-export default DueHoursDepartmentFilter
+export default DepartmentFilter

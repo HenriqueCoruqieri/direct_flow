@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
+import DepartmentFilter from "@/app/_components/department-filter"
 import { requireRegistryAccess } from "@/app/_lib/auth/registry-access"
 import { findDepartmentDueHours } from "@/app/_lib/data/department-due-hours"
 import {
@@ -10,18 +11,19 @@ import {
 import {
   canEditDepartmentDueHours,
   DUE_HOURS_ADMIN_DESCRIPTION,
+  DUE_HOURS_DEPARTMENT_FILTER_LABEL,
   DUE_HOURS_DEPARTMENT_PARAM,
   DUE_HOURS_DIRECTOR_DESCRIPTION,
   DUE_HOURS_PAGE_TITLE,
   dueHoursDepartmentIdFor,
   dueHoursDepartmentOptions,
+  dueHoursHref,
   dueHoursViewFor,
 } from "@/app/_lib/domain/department-due-hours"
 import { isDirectorAccess } from "@/app/_lib/domain/registry"
 import type { DepartmentOption } from "@/app/_lib/types/department"
 import { dueHoursSearchParamsSchema } from "@/app/_lib/validation/department-due-hours"
 
-import DueHoursDepartmentFilter from "./_components/due-hours-department-filter"
 import DueHoursForm from "./_components/due-hours-form"
 import DueHoursStatus from "./_components/due-hours-status"
 
@@ -71,9 +73,13 @@ const DueHoursPage = async ({
           </p>
         </div>
         {options.length > 0 ? (
-          <DueHoursDepartmentFilter
-            access={access}
-            options={options}
+          <DepartmentFilter
+            label={DUE_HOURS_DEPARTMENT_FILTER_LABEL}
+            options={options.map((option) => ({
+              id: option.id,
+              name: option.name,
+              href: dueHoursHref(access, option.id),
+            }))}
             value={target.id}
           />
         ) : null}

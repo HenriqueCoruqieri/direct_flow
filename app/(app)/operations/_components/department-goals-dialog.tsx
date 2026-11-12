@@ -7,6 +7,7 @@ import { type DefaultValues, useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import FormSchemaProvider from "@/app/_components/form-schema-provider"
+import NumberUnitField from "@/app/_components/number-unit-field"
 import { Button } from "@/app/_components/ui/button"
 import {
   Dialog,
@@ -22,6 +23,7 @@ import { FieldLegend, FieldSet } from "@/app/_components/ui/field"
 import { saveDepartmentGoals } from "@/app/_lib/actions/department-goals"
 import {
   DEFINE_DEPARTMENT_GOALS_LABEL,
+  DEPARTMENT_GOALS_FIELD_COPY,
   departmentGoalsDialogDescription,
   EDIT_DEPARTMENT_GOALS_LABEL,
   PERSON_AND_TEAM_GOAL_FIELDS,
@@ -36,8 +38,6 @@ import {
   type DepartmentGoalsInput,
   departmentGoalsSchema,
 } from "@/app/_lib/validation/department-goals"
-
-import DepartmentGoalField from "./department-goal-field"
 
 const LEGEND_CLASS =
   "mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
@@ -131,10 +131,11 @@ const DepartmentGoalsDialog = ({
                 </FieldLegend>
                 <div className="flex flex-col gap-4">
                   {PERSON_AND_TEAM_GOAL_FIELDS.map((name) => (
-                    <DepartmentGoalField
+                    <NumberUnitField
                       key={name}
                       control={form.control}
                       name={name}
+                      {...DEPARTMENT_GOALS_FIELD_COPY[name]}
                     />
                   ))}
                 </div>
@@ -146,10 +147,11 @@ const DepartmentGoalsDialog = ({
                 </FieldLegend>
                 <div className="flex flex-col gap-4">
                   {TEAM_ONLY_GOAL_FIELDS.map((name) => (
-                    <DepartmentGoalField
+                    <NumberUnitField
                       key={name}
                       control={form.control}
                       name={name}
+                      {...DEPARTMENT_GOALS_FIELD_COPY[name]}
                     />
                   ))}
                 </div>
