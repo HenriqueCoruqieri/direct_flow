@@ -92,6 +92,18 @@ export async function listQueueTickets(
     .orderBy(desc(ticket.createdAt), desc(ticket.id))
 }
 
+export async function countQueueTickets(
+  departmentId: number,
+  tab: DepartmentQueueTab,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(ticket)
+    .where(queueTabCondition(departmentId, tab))
+
+  return row?.total ?? 0
+}
+
 export async function countQueueTicketsByTab(
   departmentId: number,
   range: DateRange | null = null,
