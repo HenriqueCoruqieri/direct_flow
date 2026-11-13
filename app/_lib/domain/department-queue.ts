@@ -1,6 +1,7 @@
 import { APPROVALS_LABEL } from "@/app/_lib/domain/approvals"
 import { assignableDepartments } from "@/app/_lib/domain/department"
 import { MY_TICKETS_EMPTY_PERIOD } from "@/app/_lib/domain/my-tickets"
+import { navBadgeFor } from "@/app/_lib/domain/nav-badge"
 import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
 import {
   ACTIVE_TICKET_STATUSES,
@@ -23,6 +24,7 @@ import type {
   DepartmentQueueTabRule,
 } from "@/app/_lib/types/department-queue"
 import type { MyTicketsEmptyCopy } from "@/app/_lib/types/my-tickets"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 import type { PeriodFilterSelection } from "@/app/_lib/types/period"
 import type {
   TicketActorFacts,
@@ -174,3 +176,11 @@ export const queueRowActionsFor = (
 ): DepartmentQueueRowActions => ({
   assume: canAssumeTicket(viewer, row),
 })
+
+export const DEPARTMENT_QUEUE_NAV_BADGE_TAB: DepartmentQueueTab = "open"
+
+export const departmentQueueNavBadgeFor = (count: number): NavBadge | null =>
+  navBadgeFor(
+    count,
+    `${DEPARTMENT_QUEUE_LABEL}, ${count} ${DEPARTMENT_QUEUE_TAB_RULES[DEPARTMENT_QUEUE_NAV_BADGE_TAB].label.toLowerCase()}`,
+  )

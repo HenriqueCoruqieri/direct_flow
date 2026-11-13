@@ -1,9 +1,10 @@
+import {
+  navBadgeDepartmentIdFor,
+  navBadgeFor,
+} from "@/app/_lib/domain/nav-badge"
 import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
-import type {
-  ApprovalsAccessFacts,
-  ApprovalsNavBadge,
-} from "@/app/_lib/types/approvals"
 import type { MyTicketsEmptyCopy } from "@/app/_lib/types/my-tickets"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 import type { PeriodFilterSelection } from "@/app/_lib/types/period"
 
 export const APPROVALS_PATH = "/approvals"
@@ -26,22 +27,7 @@ export const APPROVALS_FROM_DEPARTMENT_LABEL = "Veio de"
 
 export const APPROVALS_SENT_AT_LABEL = "Enviado em"
 
-export const APPROVALS_BADGE_MAX = 99
+export const approvalsDepartmentIdFor = navBadgeDepartmentIdFor
 
-export const approvalsDepartmentIdFor = (
-  facts: ApprovalsAccessFacts | null,
-): number | null =>
-  facts === null || facts.isUnassigned ? null : facts.departmentId
-
-export const formatApprovalsBadgeCount = (count: number): string =>
-  count > APPROVALS_BADGE_MAX ? `${APPROVALS_BADGE_MAX}+` : String(count)
-
-export const approvalsNavBadgeFor = (
-  count: number,
-): ApprovalsNavBadge | null =>
-  count > 0
-    ? {
-        text: formatApprovalsBadgeCount(count),
-        accessibleLabel: `${APPROVALS_LABEL}, ${count} aguardando`,
-      }
-    : null
+export const approvalsNavBadgeFor = (count: number): NavBadge | null =>
+  navBadgeFor(count, `${APPROVALS_LABEL}, ${count} aguardando`)

@@ -4,11 +4,6 @@ import type {
   TicketType,
 } from "@/app/_lib/types/ticket"
 
-export interface ApprovalsAccessFacts {
-  departmentId: number
-  isUnassigned: boolean
-}
-
 export interface ApprovalListItem {
   id: number
   title: string
@@ -23,9 +18,4 @@ export interface ApprovalListItem {
   toDepartmentId: number
   recipient: TicketTransferRecipient | null
   sentAt: Date
-}
-
-export interface ApprovalsNavBadge {
-  text: string
-  accessibleLabel: string
 }
