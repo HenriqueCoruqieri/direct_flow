@@ -125,6 +125,9 @@ export const isValidCnpj = (digits: string): boolean => {
   return digits.slice(CNPJ_BASE_LENGTH) === `${first}${second}`
 }
 
+export const isAlphanumericCnpj = (cnpj: string): boolean =>
+  /[A-Z]/.test(cleanCnpj(cnpj))
+
 export const isValidCep = (digits: string): boolean => CEP_PATTERN.test(digits)
 
 export const isValidPhone = (digits: string): boolean =>
