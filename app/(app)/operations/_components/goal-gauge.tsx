@@ -11,6 +11,7 @@ const GAUGE_COLORS = {
   adherent: "var(--status-resolvido)",
   not_adherent: "var(--destructive)",
   no_data: "var(--muted-foreground)",
+  no_target: "var(--muted-foreground)",
 } satisfies Record<GoalAdherence, string>
 
 const GAUGE_START_ANGLE = 180
@@ -34,7 +35,7 @@ const markerAngleFor = (targetPercent: number): number =>
   ((GAUGE_START_ANGLE - GAUGE_END_ANGLE) * targetPercent) / 100
 
 const renderGaugeSector = (
-  targetPercent: number,
+  targetPercent: number | null,
   {
     cx,
     cy,
@@ -46,6 +47,21 @@ const renderGaugeSector = (
 ): ReactElement => {
   const centerX = cx ?? 0
   const centerY = cy ?? 0
+  const sector = (
+    <Sector
+      cx={centerX}
+      cy={centerY}
+      innerRadius={innerRadius}
+      outerRadius={outerRadius}
+      startAngle={startAngle}
+      endAngle={endAngle}
+      cornerRadius={6}
+      fill="var(--color-value)"
+    />
+  )
+
+  if (targetPercent === null) return sector
+
   const inner = (innerRadius ?? GAUGE_INNER_RADIUS) - GAUGE_MARKER_OVERHANG
   const outer = (outerRadius ?? GAUGE_OUTER_RADIUS) + GAUGE_MARKER_OVERHANG
   const angle = toRadians(markerAngleFor(targetPercent))
@@ -54,16 +70,7 @@ const renderGaugeSector = (
 
   return (
     <g>
-      <Sector
-        cx={centerX}
-        cy={centerY}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        cornerRadius={6}
-        fill="var(--color-value)"
-      />
+      {sector}
       <line
         x1={centerX + inner * cos}
         y1={centerY - inner * sin}
@@ -79,7 +86,7 @@ const renderGaugeSector = (
 
 interface GoalGaugeProps {
   fillPercent: number
-  targetPercent: number
+  targetPercent: number | null
   adherence: GoalAdherence
 }
 

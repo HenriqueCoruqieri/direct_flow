@@ -141,3 +141,46 @@ Nenhuma.
 - **Horas restauradas:** **Suporte** = 3/6/12/24 (valores originais; `updated_by` agora é o Carlos/diretorqa, `updated_at` mudou). **QA Suporte** não tinha linha; como não há exclusão pela interface, ficou uma linha com 3/6/12/24 (igual ao padrão do sistema), mas ela passa a mostrar "Última alteração por QA Diretor" em vez do selo "Padrão do sistema". Consequência prática: nenhum prazo efetivo mudou.
 - **Chamados `[QA]` criados:** `#296 [QA] DH8 crítica editada` (resolvido), `#297 [QA] DH15 recusa atrasado` (em andamento, Suporte, vence 01:10Z), `#298 [QA] DH16 aceite atrasado` (em andamento, Suporte, vence 01:10Z), `#299 [QA] DH11 aceite` (resolvido na Diretoria), `#300 [QA] DH12 recusa` (recusado, de volta ao Suporte), `#301 [QA] DH17 backlog pendente` (criado na Diretoria, aguardando aceite no Suporte, `due_at` nulo).
 - Chamados reais e contas não foram tocados.
+
+## Reteste 1
+
+- **Data:** 2026-11-12 (execução às 01:07Z–01:22Z de 2026-11-13)
+- **Commit:** `43a5373` · alterações não comitadas: sim (ver relatório da Etapa B)
+- **Cenários:** DH14, DH15, DH16 e "Fora do prazo" do DH18, mais o card Backlog do Início visto pelo Admin do Suporte
+- **Chamados:** `#297 [QA] DH15 recusa atrasado` e `#298 [QA] DH16 aceite atrasado` (Crítica, Suporte, `due_at` 01:10:25Z e 01:10:29Z). Os dois estavam vencidos quando o Admin os enviou (01:11:27Z e 01:11:36Z).
+- **Papéis:** Diretor `diretorqa@gmail.com`, Admin Suporte `cazalbe@gmail.com` (um login cada). `get_errors` do dev server vazio.
+- **Resultado:** 4 de 4 passaram (DH14, DH15, DH16, DH18 "Fora do prazo") · 0 falharam
+
+| #                    | Cenário                                                    | Papel          | Status |
+| -------------------- | ---------------------------------------------------------- | -------------- | ------ |
+| DH14                 | Atraso anterior ao envio conta na Operação (time e pessoa) | Admin          | PASSOU |
+| DH15                 | Venc. → envio → recusa → agora: origem não conta a espera  | Diretor, Admin | PASSOU |
+| DH16                 | Aceito no destino, vencendo lá                             | Diretor        | PASSOU |
+| DH18 (Fora do prazo) | Resolvido depois do `due_at` gravado                       | Admin          | PASSOU |
+| (DH17 parcial)       | Card Backlog do Início visto pelo Admin do Suporte         | Admin          | PASSOU |
+
+### Evidência
+
+**DH14.** Transferências criadas: `ticket_transfer 67` (`#297`, `from_due_at 01:10:25.275`, `from_assignee_id 19`, `created_at 01:11:27.486`) e `68` (`#298`, `from_due_at 01:10:29.410`, `created_at 01:11:36.739`). `ticket.due_at` nulo, `status aguardando_aprovacao`. Fatias de envio: 62,2s + 67,3s = 129,5s. Operação do Suporte, Equipe: `2.664h 27min` antes do envio, `2.664h 29min` logo depois (+2 min, o trecho do envio, enquanto os dois saíram da parte regular); SQL (fórmula do contrato): regular 9.592.047.231ms + envios 129.540ms = 2.664,49h. Individual de Carlos Alberto Jr (Admin): tela `826h 41min`, SQL `826,691h` (inclui 129,5s de envios; `envios_carlos_ms = 129540`). Contagem de "Chamados em atraso" passou de 17 para 19 (os dois, via `ticket_transfer`).
+
+**DH15.** `#297` recusado pelo Diretor às 01:13:37.492: `ticket.status recusado`, `current_department_id 14`, `due_at = from_due_at + (reviewed_at − created_at) = 01:12:35.281` (já passado, ainda vencido na volta). Horas em atraso do `#297` pela fórmula, às 01:14:24: parte dos envios 62,2s (01:10:25 → 01:11:27) + parte regular 46,8s a partir de `max(due retomado 01:12:35, volta 01:13:37)`; a espera de 2min10s (01:11:27 → 01:13:37) **não** conta. Depois de resolvê-lo (01:16:12.476): regular 155,0s (volta → `resolved_at`) + envio 62,2s. Tela × SQL no mesmo instante: Equipe `2.664h 36min` (01:16:49) × `2.664,611h`; Individual Carlos `826h 48min` (01:16:51) × `826,809h`. Sem dupla contagem.
+
+**DH16.** `#298` aceito pelo Diretor às 01:13:18.735: `transferencia_aprovada`, `current_department_id 11`, `assigned_to 21`, `due_at = reviewed_at + 3h = 04:13:18.735` (Diretoria sem linha de prazos, Crítica = padrão 3h; ver DH11 do relatório original). A Diretoria não conta o chamado (prazo no futuro, `due_at < now()` falso), o Suporte mantém o trecho de 67,3s do envio e não conta o resto. O chamado continua entrando em "Chamados em atraso" do Suporte pelo envio vencido (`from_due_at < created_at`).
+
+**DH18 (Fora do prazo).** `#297` resolvido pelo Admin às 01:16:12Z, depois do `due_at 01:12:35Z`: detalhe com `SLA: Fora do prazo` (`.qa-output/dh18-fora-do-prazo.png`); `resolved_at > due_at = true`. (Contagem de "no prazo" da Operação segue coerente: o `#306` e o `#310`, resolvidos antes do prazo, não entram em atrasos.)
+
+**Backlog do Início (Admin do Suporte).** Período Hoje: antes dos testes `Backlog 4 chamados · 3h em backlog` (3 ativos mais `#301` aguardando aceite, pendente no destino conta, como no relatório original) e depois `Backlog 11 chamados · 2 vencidos`; SQL: 11 chamados de `current_department_id 14` em status de backlog (inclui `#301`); vencidos `#297` e `#300`. "Maiores atrasos" lista `#300` e `#297` por `due_at` crescente. Fecha a pendência de "card do Início visto pelo Admin do Suporte" do relatório original (`.qa-output/to21-admin-backlog.png`).
+
+### Falhas
+
+Nenhuma.
+
+### Esperas de fila exercitadas (Etapa B)
+
+Os mesmos envios e a recusa exercitaram `transferencia_recebida` e `devolucao_por_recusa` (`ticket_queue_wait`): `#297` `transferencia_recebida:11 01:11:27.486 → 01:13:37.492` e `devolucao_por_recusa:14 01:13:37.492 → 01:16:12.476` (fechada na resolução). Detalhes no relatório `2026-11-12-operations-tmr-overdue.md`.
+
+### Observações
+
+1. O DH3 com Admin de setor sem configuração segue não exercido (Suporte e QA Suporte já têm linha em `department_due_hours`); fica como estava.
+2. As observações 1 e 2 do relatório original (mensagem do DH5 e descrição dos campos divergindo do contrato) não foram retestadas.
+3. Estado dos dados: `department_due_hours` de Suporte e QA Suporte segue em 3/6/12/24, nada alterado. Os `[QA]` `#297` (resolvido) e `#298` (em andamento na Diretoria, vence 04:13Z) saem do roteiro; chamados criados nesta rodada estão listados no relatório da Etapa B.

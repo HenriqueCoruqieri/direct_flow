@@ -48,8 +48,8 @@ const valuesFor = (
   slaMinPercent: goals?.slaMinPercent,
   tmaMaxHours: goals?.tmaMaxHours,
   overdueHoursLimit: goals?.overdueHoursLimit,
-  backlogLimit: goals?.backlogLimit,
-  transferAcceptanceMinPercent: goals?.transferAcceptanceMinPercent,
+  overdueTicketsLimit: goals?.overdueTicketsLimit,
+  tmrMaxHours: goals?.tmrMaxHours ?? undefined,
 })
 
 interface DepartmentGoalsDialogProps {

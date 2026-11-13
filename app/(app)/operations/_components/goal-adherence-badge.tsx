@@ -1,4 +1,4 @@
-import { CheckIcon, MinusIcon, XIcon } from "lucide-react"
+import { CheckIcon, CircleDashedIcon, MinusIcon, XIcon } from "lucide-react"
 
 import { Badge } from "@/app/_components/ui/badge"
 import { GOAL_ADHERENCE_LABELS } from "@/app/_lib/domain/department-goals"
@@ -10,12 +10,14 @@ const ADHERENCE_CLASSES = {
     "border-status-resolvido/30 bg-status-resolvido/10 text-status-resolvido",
   not_adherent: "border-destructive/30 bg-destructive/10 text-destructive",
   no_data: "border-border-strong bg-surface-muted text-muted-foreground",
+  no_target: "border-border-strong bg-surface-muted text-muted-foreground",
 } satisfies Record<GoalAdherence, string>
 
 const ADHERENCE_ICONS = {
   adherent: CheckIcon,
   not_adherent: XIcon,
   no_data: MinusIcon,
+  no_target: CircleDashedIcon,
 } satisfies Record<GoalAdherence, typeof CheckIcon>
 
 interface GoalAdherenceBadgeProps {
