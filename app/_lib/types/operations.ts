@@ -37,8 +37,8 @@ export interface DepartmentGoals {
   slaMinPercent: number
   tmaMaxHours: number
   overdueHoursLimit: number
-  backlogLimit: number
-  transferAcceptanceMinPercent: number
+  overdueTicketsLimit: number
+  tmrMaxHours: number | null
 }
 
 export interface DepartmentGoalsRecord extends DepartmentGoals {
@@ -67,20 +67,23 @@ export interface TeamMemberGoalFacts extends PersonGoalFacts {
   image: string | null
 }
 
-export interface TeamTransferReviewFacts {
-  approvedCount: number
-  rejectedCount: number
+export interface TeamTmrFacts {
+  queueWaitCount: number
+  averageQueueWaitMs: number | null
 }
 
-export interface TeamGoalFacts
-  extends PersonGoalFacts, TeamTransferReviewFacts {
-  backlogCount: number
+export interface TeamGoalFacts extends PersonGoalFacts, TeamTmrFacts {
+  overdueTicketCount: number
   members: TeamMemberGoalFacts[]
 }
 
-export type GoalAdherence = "adherent" | "not_adherent" | "no_data"
+export type GoalAdherence =
+  "adherent" | "not_adherent" | "no_data" | "no_target"
 
-export type MeasuredGoalAdherence = Exclude<GoalAdherence, "no_data">
+export type MeasuredGoalAdherence = Exclude<
+  GoalAdherence,
+  "no_data" | "no_target"
+>
 
 export interface MeasuredGoalEvaluation {
   indicator: GoalIndicator
@@ -96,7 +99,15 @@ export interface UnmeasuredGoalEvaluation {
   target: number
 }
 
-export type GoalEvaluation = MeasuredGoalEvaluation | UnmeasuredGoalEvaluation
+export interface UntargetedGoalEvaluation {
+  indicator: GoalIndicator
+  adherence: "no_target"
+  value: number | null
+  target: null
+}
+
+export type GoalEvaluation =
+  MeasuredGoalEvaluation | UnmeasuredGoalEvaluation | UntargetedGoalEvaluation
 
 export type GoalEvaluations<TIndicator extends GoalIndicator> = Record<
   TIndicator,
@@ -129,7 +140,7 @@ export interface TeamGoalResult {
 export interface GoalGauge {
   max: number
   fillPercent: number
-  targetPercent: number
+  targetPercent: number | null
 }
 
 export interface GoalFieldCopy {

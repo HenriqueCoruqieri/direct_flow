@@ -27,14 +27,14 @@ import type {
   TeamGoalResult,
   TeamMemberGoalFacts,
   TeamOnlyGoalIndicator,
-  TeamTransferReviewFacts,
+  TeamTmrFacts,
 } from "@/app/_lib/types/operations"
 
 export { GOAL_INDICATORS, PERSON_GOAL_INDICATORS }
 
 export const TEAM_ONLY_GOAL_INDICATORS = [
-  "backlog",
-  "transferAcceptance",
+  "overdueTickets",
+  "tmr",
 ] as const satisfies readonly TeamOnlyGoalIndicator[]
 
 export const GOAL_PERCENT_MIN = 1
@@ -47,7 +47,11 @@ export const GOAL_TMA_HOURS_MAX = 999
 
 export const GOAL_HOURS_LIMIT_MAX = 9999
 
-export const GOAL_BACKLOG_MAX = 9999
+export const GOAL_OVERDUE_TICKETS_MAX = 9999
+
+export const GOAL_TMR_HOURS_MIN = 1
+
+export const GOAL_TMR_HOURS_MAX = 999
 
 export const GOAL_GAUGE_MIN_HOURS = 4
 
@@ -59,38 +63,39 @@ export const GOAL_INDICATOR_RULES = {
   sla: { unit: "percent", direction: "min" },
   tma: { unit: "duration", direction: "max" },
   overdue: { unit: "duration", direction: "max" },
-  backlog: { unit: "count", direction: "max" },
-  transferAcceptance: { unit: "percent", direction: "min" },
+  overdueTickets: { unit: "count", direction: "max" },
+  tmr: { unit: "duration", direction: "max" },
 } satisfies Record<GoalIndicator, GoalIndicatorRule>
 
 export const GOAL_FIELD_BY_INDICATOR = {
   sla: "slaMinPercent",
   tma: "tmaMaxHours",
   overdue: "overdueHoursLimit",
-  backlog: "backlogLimit",
-  transferAcceptance: "transferAcceptanceMinPercent",
+  overdueTickets: "overdueTicketsLimit",
+  tmr: "tmrMaxHours",
 } as const satisfies Record<GoalIndicator, keyof DepartmentGoals>
 
 export const GOAL_INDICATOR_LABELS = {
   sla: "SLA no prazo",
   tma: "Tempo médio de resolução",
   overdue: "Horas em atraso",
-  backlog: "Backlog",
-  transferAcceptance: "Aceite de transferências",
+  overdueTickets: "Quantidade de chamados em atraso",
+  tmr: "TMR",
 } satisfies Record<GoalIndicator, string>
 
 export const GOAL_INDICATOR_SHORT_LABELS = {
   sla: "SLA",
   tma: "TMA",
   overdue: "horas em atraso",
-  backlog: "backlog",
-  transferAcceptance: "aceite de transferências",
+  overdueTickets: "chamados em atraso",
+  tmr: "TMR",
 } satisfies Record<GoalIndicator, string>
 
 export const GOAL_ADHERENCE_LABELS = {
   adherent: "Aderente",
   not_adherent: "Não aderente",
   no_data: "Sem dados",
+  no_target: "Sem objetivo",
 } satisfies Record<GoalAdherence, string>
 
 export const GOAL_MET_LABEL = "Objetivo atingido"
@@ -101,8 +106,8 @@ export const GOAL_NO_DATA_HINTS = {
   sla: "Nenhum chamado resolvido no mês",
   tma: "Nenhum chamado resolvido no mês",
   overdue: "Nenhum atraso no mês",
-  backlog: "Nenhum chamado em backlog",
-  transferAcceptance: "Nenhuma transferência revisada no mês",
+  overdueTickets: "Nenhum chamado em atraso no mês",
+  tmr: "Nenhuma espera na fila no mês",
 } satisfies Record<GoalIndicator, string>
 
 export const GOAL_ON_TARGET_HINTS = {
@@ -130,16 +135,17 @@ export const DEPARTMENT_GOALS_FIELD_COPY = {
       "Soma máxima das horas em atraso no mês, incluindo chamados já resolvidos.",
     unit: "h",
   },
-  backlogLimit: {
-    label: "Limite de backlog",
-    description: "Quantidade máxima de chamados em aberto no setor agora.",
+  overdueTicketsLimit: {
+    label: "Limite de chamados em atraso",
+    description:
+      "Quantidade máxima de chamados em atraso no mês: resolvidos fora do prazo, abertos com o prazo vencido e enviados a outro setor já vencidos.",
     unit: "chamados",
   },
-  transferAcceptanceMinPercent: {
-    label: "Taxa de aceite de transferências",
+  tmrMaxHours: {
+    label: "TMR máximo",
     description:
-      "Percentual mínimo de transferências recebidas de outros setores aceitas no mês, entre as aceitas e as recusadas.",
-    unit: "%",
+      "Tempo médio de resposta máximo no mês: da chegada do chamado à fila do setor até alguém assumir, aceitar, recusar, enviar ou resolver.",
+    unit: "h",
   },
 } satisfies Record<keyof DepartmentGoals, GoalFieldCopy>
 
@@ -150,8 +156,8 @@ export const PERSON_AND_TEAM_GOAL_FIELDS = [
 ] as const satisfies readonly (keyof DepartmentGoals)[]
 
 export const TEAM_ONLY_GOAL_FIELDS = [
-  "backlogLimit",
-  "transferAcceptanceMinPercent",
+  "overdueTicketsLimit",
+  "tmrMaxHours",
 ] as const satisfies readonly (keyof DepartmentGoals)[]
 
 export const PERSON_AND_TEAM_GOALS_GROUP_LABEL =
@@ -195,19 +201,20 @@ export const averageResolutionFor = (
     ? Math.max(facts.averageResolutionMs, 0)
     : null
 
-export const transferAcceptancePercentFor = (
-  facts: TeamTransferReviewFacts,
-): number | null => {
-  const approved = Math.max(facts.approvedCount, 0)
-  const reviewed = approved + Math.max(facts.rejectedCount, 0)
-  return reviewed > 0 ? floorPercent(approved, reviewed) : null
-}
+export const tmrFor = (facts: TeamTmrFacts): number =>
+  facts.queueWaitCount > 0 && facts.averageQueueWaitMs !== null
+    ? Math.max(facts.averageQueueWaitMs, 0)
+    : 0
+
+export const overdueTicketCountFor = (facts: TeamGoalFacts): number =>
+  Math.max(facts.overdueTicketCount, 0)
 
 export const goalTargetFor = (
   indicator: GoalIndicator,
   goals: DepartmentGoals,
-): number => {
+): number | null => {
   const target = goals[GOAL_FIELD_BY_INDICATOR[indicator]]
+  if (target === null) return null
   return GOAL_INDICATOR_RULES[indicator].unit === "duration"
     ? target * HOUR_MS
     : target
@@ -228,6 +235,9 @@ export const evaluateGoal = (
   goals: DepartmentGoals,
 ): GoalEvaluation => {
   const target = goalTargetFor(indicator, goals)
+  if (target === null) {
+    return { indicator, adherence: "no_target", value, target }
+  }
   if (value === null) {
     return { indicator, adherence: "no_data", value: null, target }
   }
@@ -255,12 +265,12 @@ export const evaluateTeamGoals = (
   facts: TeamGoalFacts,
 ): GoalEvaluations<GoalIndicator> => ({
   ...evaluatePersonGoals(goals, facts),
-  backlog: evaluateGoal("backlog", Math.max(facts.backlogCount, 0), goals),
-  transferAcceptance: evaluateGoal(
-    "transferAcceptance",
-    transferAcceptancePercentFor(facts),
+  overdueTickets: evaluateGoal(
+    "overdueTickets",
+    overdueTicketCountFor(facts),
     goals,
   ),
+  tmr: evaluateGoal("tmr", tmrFor(facts), goals),
 })
 
 export const goalSummaryFor = (
@@ -374,9 +384,14 @@ export const GOAL_TARGET_PREFIXES = {
   sla: "Objetivo",
   tma: "Objetivo",
   overdue: "Limite",
-  backlog: "Limite",
-  transferAcceptance: "Objetivo",
+  overdueTickets: "Limite",
+  tmr: "Objetivo",
 } satisfies Record<GoalIndicator, string>
+
+export const GOAL_NO_TARGET_LABEL = "Objetivo não definido"
+
+export const GOAL_NO_TARGET_HINT =
+  "O objetivo deste indicador ainda não foi definido."
 
 export const GOAL_DIRECTION_SYMBOLS = {
   min: "≥",
@@ -384,6 +399,7 @@ export const GOAL_DIRECTION_SYMBOLS = {
 } satisfies Record<GoalDirection, string>
 
 export const goalTargetLabel = (evaluation: GoalEvaluation): string => {
+  if (evaluation.target === null) return GOAL_NO_TARGET_LABEL
   const rule = GOAL_INDICATOR_RULES[evaluation.indicator]
   const amount = formatGoalAmount(rule.unit, evaluation.target)
   return `${GOAL_TARGET_PREFIXES[evaluation.indicator]} ${GOAL_DIRECTION_SYMBOLS[rule.direction]} ${amount}`
@@ -399,9 +415,8 @@ const GOAL_MEASURE_PHRASES = {
   sla: (amount: string) => `SLA de ${amount}`,
   tma: (amount: string) => `TMA de ${amount}`,
   overdue: (amount: string) => `${amount} em atraso no mês`,
-  backlog: (amount: string) => `Backlog de ${amount}`,
-  transferAcceptance: (amount: string) =>
-    `Aceite de transferências de ${amount}`,
+  overdueTickets: (amount: string) => `${amount} em atraso no mês`,
+  tmr: (amount: string) => `TMR de ${amount}`,
 } satisfies Record<GoalIndicator, (amount: string) => string>
 
 export const goalShortfallSentence = (
@@ -473,6 +488,7 @@ const limitDifferenceLine = (unit: GoalUnit, difference: number): string => {
 }
 
 export const goalSupportLine = (evaluation: GoalEvaluation): string => {
+  if (evaluation.target === null) return GOAL_NO_TARGET_HINT
   if (evaluation.value === null) {
     return GOAL_NO_DATA_HINTS[evaluation.indicator]
   }
@@ -486,18 +502,21 @@ export const goalSupportLine = (evaluation: GoalEvaluation): string => {
 const clampPercent = (value: number): number =>
   Math.min(Math.max(value, 0), 100)
 
+const gaugeReferenceFor = (evaluation: GoalEvaluation): number =>
+  Math.max(evaluation.target ?? evaluation.value ?? 0, 0)
+
 export const goalGaugeMaxFor = (evaluation: GoalEvaluation): number => {
   switch (GOAL_INDICATOR_RULES[evaluation.indicator].unit) {
     case "percent":
       return GOAL_PERCENT_MAX
     case "duration":
       return Math.max(
-        evaluation.target * GOAL_GAUGE_LIMIT_FACTOR,
+        gaugeReferenceFor(evaluation) * GOAL_GAUGE_LIMIT_FACTOR,
         GOAL_GAUGE_MIN_HOURS * HOUR_MS,
       )
     case "count":
       return Math.max(
-        evaluation.target * GOAL_GAUGE_LIMIT_FACTOR,
+        gaugeReferenceFor(evaluation) * GOAL_GAUGE_LIMIT_FACTOR,
         GOAL_GAUGE_MIN_COUNT,
       )
   }
@@ -511,6 +530,9 @@ export const goalGaugeFor = (evaluation: GoalEvaluation): GoalGauge => {
       evaluation.value === null
         ? 0
         : clampPercent((evaluation.value / max) * 100),
-    targetPercent: clampPercent((evaluation.target / max) * 100),
+    targetPercent:
+      evaluation.target === null
+        ? null
+        : clampPercent((evaluation.target / max) * 100),
   }
 }

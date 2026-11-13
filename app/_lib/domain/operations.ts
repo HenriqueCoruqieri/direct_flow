@@ -99,7 +99,7 @@ export const GOALS_UNDEFINED_MEMBER_DESCRIPTION =
   "O administrador do setor ainda não definiu os objetivos da operação. Quando forem definidos, seus objetivos individuais e os da equipe serão exibidos aqui."
 
 export const GOALS_UNDEFINED_EDITOR_DESCRIPTION =
-  "Defina os objetivos de SLA, TMA, horas em atraso, backlog e aceite de transferências. Eles valem para cada pessoa do setor e para o time."
+  "Defina os objetivos de SLA, TMA, horas em atraso, quantidade de chamados em atraso e TMR. Eles valem para cada pessoa do setor e para o time."
 
 export const goalsUndefinedCopy = (canEdit: boolean): OperationsEmptyCopy => ({
   title: GOALS_UNDEFINED_TITLE,
@@ -168,7 +168,7 @@ export const operationsTabContext = (tab: OperationsTab, now: Date): string => {
     case "meu-objetivo":
       return `Seus objetivos de ${formatMonthName(now)}, de ${formatMonthFirstDay(now)} até hoje`
     case "time":
-      return "Objetivos do setor · backlog é de agora"
+      return `Objetivos da equipe de ${formatMonthName(now)}, de ${formatMonthFirstDay(now)} até hoje`
     case "producao":
       return "O período do gráfico fica no próprio card"
   }
