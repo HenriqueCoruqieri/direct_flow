@@ -13,7 +13,7 @@ import {
 } from "@/app/_lib/domain/department-queue"
 import { MY_TICKETS_LABEL, MY_TICKETS_PATH } from "@/app/_lib/domain/my-tickets"
 import { OPERATIONS_LABEL, OPERATIONS_PATH } from "@/app/_lib/domain/operations"
-import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 import NavItem from "./nav-item"
@@ -22,13 +22,15 @@ import RegistryNav from "./registry-nav"
 interface AppNavProps {
   registryItems: RegistryNavItem[]
   showDepartmentQueue: boolean
-  approvalsBadge: ApprovalsNavBadge | null
+  approvalsBadge: NavBadge | null
+  departmentQueueBadge: NavBadge | null
 }
 
 const AppNav = ({
   registryItems,
   showDepartmentQueue,
   approvalsBadge,
+  departmentQueueBadge,
 }: AppNavProps) => {
   return (
     <nav aria-label="Principal">
@@ -60,6 +62,7 @@ const AppNav = ({
               href={DEPARTMENT_QUEUE_PATH}
               label={DEPARTMENT_QUEUE_LABEL}
               icon={<InboxIcon aria-hidden="true" />}
+              badge={departmentQueueBadge}
             />
           </li>
         ) : null}

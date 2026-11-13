@@ -160,7 +160,7 @@ const DepartmentGoalsDialog = ({
 
             <DialogFooter className="m-0 shrink-0 px-6 py-4">
               {lastChange !== null ? (
-                <p className="order-last text-caption text-muted-foreground sm:order-none sm:mr-auto sm:self-center">
+                <p className="order-last text-caption text-muted-foreground sm:order-0 sm:mr-auto sm:self-center">
                   {lastChange}
                 </p>
               ) : null}

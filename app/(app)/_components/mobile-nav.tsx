@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/app/_components/ui/sheet"
-import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 import AppNav from "./app-nav"
@@ -22,13 +22,15 @@ import AppNav from "./app-nav"
 interface MobileNavProps {
   registryItems: RegistryNavItem[]
   showDepartmentQueue: boolean
-  approvalsBadge: ApprovalsNavBadge | null
+  approvalsBadge: NavBadge | null
+  departmentQueueBadge: NavBadge | null
 }
 
 const MobileNav = ({
   registryItems,
   showDepartmentQueue,
   approvalsBadge,
+  departmentQueueBadge,
 }: MobileNavProps) => {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -73,6 +75,7 @@ const MobileNav = ({
           registryItems={registryItems}
           showDepartmentQueue={showDepartmentQueue}
           approvalsBadge={approvalsBadge}
+          departmentQueueBadge={departmentQueueBadge}
         />
       </SheetContent>
     </Sheet>

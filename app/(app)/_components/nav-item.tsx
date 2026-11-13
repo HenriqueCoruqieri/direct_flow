@@ -3,13 +3,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 
 interface NavItemProps {
   href: string
   label: string
   icon: React.ReactNode
-  badge?: ApprovalsNavBadge | null
+  badge?: NavBadge | null
 }
 
 const NavItem = ({ href, label, icon, badge = null }: NavItemProps) => {

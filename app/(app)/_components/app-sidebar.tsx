@@ -1,5 +1,5 @@
 import LogoMark from "@/app/_components/logo-mark"
-import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 import AppNav from "./app-nav"
@@ -13,7 +13,8 @@ interface AppSidebarProps {
   membership: string
   registryItems: RegistryNavItem[]
   showDepartmentQueue: boolean
-  approvalsBadge: ApprovalsNavBadge | null
+  approvalsBadge: NavBadge | null
+  departmentQueueBadge: NavBadge | null
 }
 
 const AppSidebar = ({
@@ -24,6 +25,7 @@ const AppSidebar = ({
   registryItems,
   showDepartmentQueue,
   approvalsBadge,
+  departmentQueueBadge,
 }: AppSidebarProps) => {
   return (
     <aside className="sticky top-0 hidden h-dvh w-58 shrink-0 flex-col gap-1.5 border-r border-border-subtle bg-surface-bar px-3.5 py-5 lg:flex">
@@ -38,6 +40,7 @@ const AppSidebar = ({
         registryItems={registryItems}
         showDepartmentQueue={showDepartmentQueue}
         approvalsBadge={approvalsBadge}
+        departmentQueueBadge={departmentQueueBadge}
       />
 
       <div className="flex-1" />

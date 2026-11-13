@@ -1,4 +1,4 @@
-import type { ApprovalsNavBadge } from "@/app/_lib/types/approvals"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 import type { RegistryNavItem } from "@/app/_lib/types/registry"
 
 import MobileNav from "./mobile-nav"
@@ -12,7 +12,8 @@ interface MobileHeaderProps {
   membership: string
   registryItems: RegistryNavItem[]
   showDepartmentQueue: boolean
-  approvalsBadge: ApprovalsNavBadge | null
+  approvalsBadge: NavBadge | null
+  departmentQueueBadge: NavBadge | null
 }
 
 const MobileHeader = ({
@@ -23,6 +24,7 @@ const MobileHeader = ({
   registryItems,
   showDepartmentQueue,
   approvalsBadge,
+  departmentQueueBadge,
 }: MobileHeaderProps) => {
   return (
     <header className="flex items-center gap-3 pt-safe-5 px-safe-5 pb-3.5 lg:hidden">
@@ -30,6 +32,7 @@ const MobileHeader = ({
         registryItems={registryItems}
         showDepartmentQueue={showDepartmentQueue}
         approvalsBadge={approvalsBadge}
+        departmentQueueBadge={departmentQueueBadge}
       />
       <UserMenu
         label="Abrir menu do usuário"
