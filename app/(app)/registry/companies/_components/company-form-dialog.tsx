@@ -60,6 +60,12 @@ import {
   type CreateCompanyInput,
   createCompanySchema,
 } from "@/app/_lib/validation/company"
+import CompanyLookupAnnouncer from "@/app/(app)/registry/companies/_components/company-lookup-announcer"
+import CompanyLookupNotice from "@/app/(app)/registry/companies/_components/company-lookup-notice"
+import {
+  type CompanyLookupStatus,
+  useCompanyLookup,
+} from "@/app/(app)/registry/companies/_hooks/use-company-lookup"
 
 const EMPTY_VALUES: DefaultValues<CompanyFormValues> = {
   cnpj: "",
@@ -123,6 +129,9 @@ const initialValuesFor = (
   }
 }
 
+const lookupDescription = (status: CompanyLookupStatus) =>
+  status.kind === "idle" ? undefined : <CompanyLookupNotice status={status} />
+
 const LEGEND_CLASS =
   "mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
 
@@ -138,13 +147,21 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
     defaultValues: initialValuesFor(props),
   })
 
+  const lookup = useCompanyLookup(form)
+
   const isSubmitting = form.formState.isSubmitting
   const isEdit = props.mode === "edit"
 
+  const changeOpen = (nextOpen: boolean) => {
+    const values = initialValuesFor(props)
+    if (nextOpen) form.reset(values)
+    lookup.reset(values.cnpj ?? "", values.cep ?? "")
+    setOpen(nextOpen)
+  }
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting) return
-    if (nextOpen) form.reset(initialValuesFor(props))
-    setOpen(nextOpen)
+    changeOpen(nextOpen)
   }
 
   const onSubmit = async (values: CreateCompanyInput) => {
@@ -155,7 +172,7 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
 
     if (result.ok) {
       toast.success(result.message)
-      setOpen(false)
+      changeOpen(false)
       return
     }
 
@@ -204,6 +221,9 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
               </DialogTitle>
             </DialogHeader>
 
+            <CompanyLookupAnnouncer status={lookup.cnpjStatus} />
+            <CompanyLookupAnnouncer status={lookup.cepStatus} />
+
             <div className="flex min-h-0 flex-1 scroll-py-6 flex-col gap-6 overflow-y-auto px-6 py-5">
               <FieldSet className="gap-0">
                 <FieldLegend className={LEGEND_CLASS}>
@@ -215,10 +235,15 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
                     name="cnpj"
                     label="CNPJ"
                     className="sm:col-span-2"
+                    description={lookupDescription(lookup.cnpjStatus)}
                   >
                     {(field) => (
                       <MaskedInput
                         {...field}
+                        onChange={(value) => {
+                          field.onChange(value)
+                          lookup.handleCnpjChange(value)
+                        }}
                         clean={cleanCnpj}
                         format={formatCnpj}
                         inputMode="text"
@@ -294,10 +319,15 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
                     name="cep"
                     label="CEP"
                     className="sm:col-span-2"
+                    description={lookupDescription(lookup.cepStatus)}
                   >
                     {(field) => (
                       <MaskedInput
                         {...field}
+                        onChange={(value) => {
+                          field.onChange(value)
+                          lookup.handleCepChange(value)
+                        }}
                         clean={cleanCep}
                         format={formatCep}
                         placeholder={CEP_PLACEHOLDER}
