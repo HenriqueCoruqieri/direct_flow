@@ -584,21 +584,21 @@ mudarem.)
       `domain/queue-wait.ts`
 - [x] ADR 025; notas nos ADRs 022 e 023; `operations.md` revisado
 
-### Onda 1 — `df-data`
+### Onda 1 — `df-data` (pronto)
 
-- [ ] `app/_lib/data/queue-waits.ts`
-- [ ] os oito atos de `tickets.ts`
-- [ ] `department-goals.ts` (leitura, upsert, TMR, chamados em atraso)
-- [ ] `db/seed.ts` (`seedDemo`)
+- [x] `app/_lib/data/queue-waits.ts`
+- [x] os oito atos de `tickets.ts`
+- [x] `department-goals.ts` (leitura, upsert, TMR, chamados em atraso)
+- [x] `db/seed.ts` (`seedDemo`)
 
-### Onda 1/2 — `df-ui`
+### Onda 1/2 — `df-ui` (pronto)
 
-- [ ] correções de compilação (diálogo, selo, gauge)
-- [ ] conferência de textos na Equipe e no diálogo
+- [x] correções de compilação (diálogo, selo, gauge com `no_target`)
+- [x] conferência de textos na Equipe e no diálogo
 
-### Onda 2 — `df-actions`
+### Onda 2 — `df-actions` (pronto)
 
-- [ ] nada a mudar; confirmar `tsc` limpo em `actions/department-goals.ts`
+- [x] nada a mudar; `tsc` limpo em `actions/department-goals.ts`
 
 ### Onda 3/4
 

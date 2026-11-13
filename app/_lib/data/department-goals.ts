@@ -1,8 +1,19 @@
-import { and, asc, eq, gt, gte, inArray, isNotNull, lt, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+} from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import {
-  BACKLOG_TICKET_STATUSES,
   DASHBOARD_RESOLVED_STATUSES,
   OVERDUE_TICKET_STATUSES,
 } from "@/app/_lib/domain/dashboard"
@@ -17,7 +28,13 @@ import type {
 } from "@/app/_lib/types/operations"
 import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
-import { departmentGoal, ticket, ticketTransfer, user } from "@/db/schema"
+import {
+  departmentGoal,
+  ticket,
+  ticketQueueWait,
+  ticketTransfer,
+  user,
+} from "@/db/schema"
 
 const returnedTransfer = alias(ticketTransfer, "r")
 
@@ -75,6 +92,53 @@ function sendOverdueWhere(departmentId: number, month: DateRange) {
   )
 }
 
+function overdueTicketCountQuery(
+  departmentId: number,
+  month: DateRange,
+  now: Date,
+) {
+  const resolvedLate = and(
+    inArray(ticket.status, [...DASHBOARD_RESOLVED_STATUSES]),
+    gte(ticket.resolvedAt, month.start),
+    lt(ticket.resolvedAt, month.end),
+    gt(ticket.resolvedAt, ticket.dueAt),
+  )
+  const activeLate = and(
+    inArray(ticket.status, [...OVERDUE_TICKET_STATUSES]),
+    lt(ticket.dueAt, now),
+  )
+
+  const overdueTickets = db
+    .select({ ticketId: ticket.id })
+    .from(ticket)
+    .where(
+      and(
+        eq(ticket.currentDepartmentId, departmentId),
+        isNotNull(ticket.dueAt),
+        or(resolvedLate, activeLate),
+      ),
+    )
+    .union(
+      db
+        .select({ ticketId: ticketTransfer.ticketId })
+        .from(ticketTransfer)
+        .where(
+          and(
+            eq(ticketTransfer.fromDepartmentId, departmentId),
+            isNotNull(ticketTransfer.fromDueAt),
+            gte(ticketTransfer.createdAt, month.start),
+            lt(ticketTransfer.createdAt, month.end),
+            lt(ticketTransfer.fromDueAt, ticketTransfer.createdAt),
+          ),
+        ),
+    )
+    .as("overdue_tickets")
+
+  return db
+    .select({ overdueTicketCount: sql<number>`(count(*))::int` })
+    .from(overdueTickets)
+}
+
 export async function findDepartmentGoals(
   departmentId: number,
 ): Promise<DepartmentGoalsRecord | null> {
@@ -84,8 +148,8 @@ export async function findDepartmentGoals(
       slaMinPercent: departmentGoal.slaMinPercent,
       tmaMaxHours: departmentGoal.tmaMaxHours,
       overdueHoursLimit: departmentGoal.overdueHoursLimit,
-      backlogLimit: departmentGoal.backlogLimit,
-      transferAcceptanceMinPercent: departmentGoal.transferAcceptanceMinPercent,
+      overdueTicketsLimit: departmentGoal.overdueTicketsLimit,
+      tmrMaxHours: departmentGoal.tmrMaxHours,
       updatedAt: departmentGoal.updatedAt,
       updatedByName: user.name,
     })
@@ -106,8 +170,8 @@ export async function upsertDepartmentGoals(
     slaMinPercent: goals.slaMinPercent,
     tmaMaxHours: goals.tmaMaxHours,
     overdueHoursLimit: goals.overdueHoursLimit,
-    backlogLimit: goals.backlogLimit,
-    transferAcceptanceMinPercent: goals.transferAcceptanceMinPercent,
+    overdueTicketsLimit: goals.overdueTicketsLimit,
+    tmrMaxHours: goals.tmrMaxHours,
     updatedBy: actorId,
   }
 
@@ -161,7 +225,6 @@ export async function findTeamGoalFacts(
   now: Date,
 ): Promise<TeamGoalFacts> {
   const inDepartment = eq(ticket.currentDepartmentId, departmentId)
-  const isBacklog = inArray(ticket.status, [...BACKLOG_TICKET_STATUSES])
 
   const perAssignee = db
     .select({
@@ -173,68 +236,71 @@ export async function findTeamGoalFacts(
     .groupBy(ticket.assignedTo)
     .as("goal_facts")
 
-  const [teamRows, transferRows, memberRows, sentTeamRows, sentMemberRows] =
-    await Promise.all([
-      db
-        .select({
-          ...goalFactColumns(month, now),
-          backlogCount:
-            sql<number>`(count(*) filter (where ${isBacklog}))::int`.as(
-              "backlog_count",
+  const [
+    teamRows,
+    tmrRows,
+    overdueRows,
+    memberRows,
+    sentTeamRows,
+    sentMemberRows,
+  ] = await Promise.all([
+    db.select(goalFactColumns(month, now)).from(ticket).where(inDepartment),
+    db
+      .select({
+        queueWaitCount: sql<number>`(count(*))::int`,
+        averageQueueWaitMs: sql<
+          number | null
+        >`(avg(extract(epoch from (coalesce(${ticketQueueWait.endedAt}, ${now}::timestamptz) - ${ticketQueueWait.startedAt})) * 1000))::float8`,
+      })
+      .from(ticketQueueWait)
+      .where(
+        and(
+          eq(ticketQueueWait.departmentId, departmentId),
+          or(
+            isNull(ticketQueueWait.endedAt),
+            and(
+              gte(ticketQueueWait.endedAt, month.start),
+              lt(ticketQueueWait.endedAt, month.end),
             ),
-        })
-        .from(ticket)
-        .where(inDepartment),
-      db
-        .select({
-          approvedCount: sql<number>`(count(*) filter (where ${eq(ticketTransfer.status, "aprovado")}))::int`,
-          rejectedCount: sql<number>`(count(*) filter (where ${eq(ticketTransfer.status, "rejeitado")}))::int`,
-        })
-        .from(ticketTransfer)
-        .where(
-          and(
-            eq(ticketTransfer.toDepartmentId, departmentId),
-            gte(ticketTransfer.reviewedAt, month.start),
-            lt(ticketTransfer.reviewedAt, month.end),
           ),
         ),
-      db
-        .select({
-          userId: user.id,
-          name: user.name,
-          image: user.image,
-          resolvedCount: sql<number>`coalesce(${perAssignee.resolvedCount}, 0)::int`,
-          slaMetCount: sql<number>`coalesce(${perAssignee.slaMetCount}, 0)::int`,
-          averageResolutionMs: perAssignee.averageResolutionMs,
-          overdueMs: sql<number>`coalesce(${perAssignee.overdueMs}, 0)::float8`,
-        })
-        .from(user)
-        .leftJoin(perAssignee, eq(perAssignee.assignedTo, user.id))
-        .where(
-          and(eq(user.departmentId, departmentId), eq(user.isActive, true)),
-        )
-        .orderBy(asc(sql`lower(${user.name})`), asc(user.id)),
-      db
-        .select({ overdueMs: sendOverdueMsSql(month, now) })
-        .from(ticketTransfer)
-        .where(sendOverdueWhere(departmentId, month)),
-      db
-        .select({
-          userId: ticketTransfer.fromAssigneeId,
-          overdueMs: sendOverdueMsSql(month, now),
-        })
-        .from(ticketTransfer)
-        .where(
-          and(
-            sendOverdueWhere(departmentId, month),
-            isNotNull(ticketTransfer.fromAssigneeId),
-          ),
-        )
-        .groupBy(ticketTransfer.fromAssigneeId),
-    ])
+      ),
+    overdueTicketCountQuery(departmentId, month, now),
+    db
+      .select({
+        userId: user.id,
+        name: user.name,
+        image: user.image,
+        resolvedCount: sql<number>`coalesce(${perAssignee.resolvedCount}, 0)::int`,
+        slaMetCount: sql<number>`coalesce(${perAssignee.slaMetCount}, 0)::int`,
+        averageResolutionMs: perAssignee.averageResolutionMs,
+        overdueMs: sql<number>`coalesce(${perAssignee.overdueMs}, 0)::float8`,
+      })
+      .from(user)
+      .leftJoin(perAssignee, eq(perAssignee.assignedTo, user.id))
+      .where(and(eq(user.departmentId, departmentId), eq(user.isActive, true)))
+      .orderBy(asc(sql`lower(${user.name})`), asc(user.id)),
+    db
+      .select({ overdueMs: sendOverdueMsSql(month, now) })
+      .from(ticketTransfer)
+      .where(sendOverdueWhere(departmentId, month)),
+    db
+      .select({
+        userId: ticketTransfer.fromAssigneeId,
+        overdueMs: sendOverdueMsSql(month, now),
+      })
+      .from(ticketTransfer)
+      .where(
+        and(
+          sendOverdueWhere(departmentId, month),
+          isNotNull(ticketTransfer.fromAssigneeId),
+        ),
+      )
+      .groupBy(ticketTransfer.fromAssigneeId),
+  ])
 
   const team = teamRows[0]
-  const transfers = transferRows[0]
+  const tmr = tmrRows[0]
   const sentOverdueByUser = new Map<number, number>()
   for (const sent of sentMemberRows) {
     if (sent.userId !== null) sentOverdueByUser.set(sent.userId, sent.overdueMs)
@@ -254,9 +320,9 @@ export async function findTeamGoalFacts(
     slaMetCount: team?.slaMetCount ?? 0,
     averageResolutionMs: team?.averageResolutionMs ?? null,
     overdueMs: (team?.overdueMs ?? 0) + (sentTeamRows[0]?.overdueMs ?? 0),
-    backlogCount: team?.backlogCount ?? 0,
-    approvedCount: transfers?.approvedCount ?? 0,
-    rejectedCount: transfers?.rejectedCount ?? 0,
+    overdueTicketCount: overdueRows[0]?.overdueTicketCount ?? 0,
+    queueWaitCount: tmr?.queueWaitCount ?? 0,
+    averageQueueWaitMs: tmr?.averageQueueWaitMs ?? null,
     members,
   }
 }

@@ -3,11 +3,18 @@ import { alias } from "drizzle-orm/pg-core"
 
 import { lockActorFacts } from "@/app/_lib/data/actor-facts"
 import { findDepartmentDueHoursIn } from "@/app/_lib/data/department-due-hours"
+import { closeOpenQueueWait, openQueueWait } from "@/app/_lib/data/queue-waits"
 import { toTransferRecipient } from "@/app/_lib/data/transfer-recipient"
 import {
   declinedDueAtFor,
   departmentDueAtFrom,
 } from "@/app/_lib/domain/department-due-hours"
+import {
+  DECLINED_QUEUE_WAIT_REASON,
+  OPENING_QUEUE_WAIT_REASON,
+  opensQueueWaitAtCreation,
+  RECEIVED_QUEUE_WAIT_REASON,
+} from "@/app/_lib/domain/queue-wait"
 import { resolveTicketPriority } from "@/app/_lib/domain/tag-priority"
 import {
   canViewTicket,
@@ -343,9 +350,11 @@ export async function insertTicket(
       }
     }
 
-    const initialStatus = creationStatusFor(
-      assigneeTargetFor(values.createdBy, values.assigneeId),
+    const creationTarget = assigneeTargetFor(
+      values.createdBy,
+      values.assigneeId,
     )
+    const initialStatus = creationStatusFor(creationTarget)
 
     const createdAt = new Date()
     const dueAt = departmentDueAtFrom(
@@ -427,6 +436,15 @@ export async function insertTicket(
           changedAt: created.createdAt,
         })),
       )
+    }
+
+    if (opensQueueWaitAtCreation(creationTarget)) {
+      await openQueueWait(tx, {
+        ticketId: created.id,
+        departmentId: values.originDepartmentId,
+        reason: OPENING_QUEUE_WAIT_REASON,
+        startedAt: createdAt,
+      })
     }
 
     return { status: "saved", ticketId: created.id }
@@ -822,6 +840,10 @@ export async function updateTicketByAssignee(
       await tx.insert(ticketHistory).values(historyRows)
     }
 
+    if (nextStatus !== ticketRow.status) {
+      await closeOpenQueueWait(tx, ticketId, changedAt)
+    }
+
     return {
       status: "saved",
       ticketId,
@@ -868,8 +890,6 @@ export async function updateTicketResolution(
   const { ticketId, solution, resolverId } = values
 
   return db.transaction(async (tx) => {
-    const changedAt = new Date()
-
     const [ticketRow] = await tx
       .select({
         createdBy: ticket.createdBy,
@@ -883,6 +903,8 @@ export async function updateTicketResolution(
       .for("update")
 
     if (!ticketRow) return { status: "not_found" }
+
+    const changedAt = new Date()
 
     const resolver = await lockActorFacts(tx, resolverId)
 
@@ -943,6 +965,8 @@ export async function updateTicketResolution(
       toStatus: RESOLVED_TICKET_STATUS,
       changedAt,
     })
+
+    await closeOpenQueueWait(tx, ticketId, changedAt)
 
     return { status: "saved", ticketId }
   })
@@ -1090,6 +1114,8 @@ export async function assignTicket(
       })
     }
 
+    await closeOpenQueueWait(tx, ticketId, changedAt)
+
     return { status: "saved", ticketId, assigneeName: newAssigneeName }
   })
 }
@@ -1177,6 +1203,8 @@ export async function startTicketWork(
       toStatus: ATTENDED_TICKET_STATUS,
       changedAt,
     })
+
+    await closeOpenQueueWait(tx, ticketId, changedAt)
 
     return { status: "saved", ticketId }
   })
@@ -1336,6 +1364,14 @@ export async function requestTicketTransfer(
       fromAssigneeId: ticketRow.assignedTo,
       toAssigneeId: assigneeId,
       changedAt,
+    })
+
+    await closeOpenQueueWait(tx, ticketId, changedAt)
+    await openQueueWait(tx, {
+      ticketId,
+      departmentId: toDepartmentId,
+      reason: RECEIVED_QUEUE_WAIT_REASON,
+      startedAt: changedAt,
     })
 
     return {
@@ -1546,6 +1582,8 @@ export async function approveTicketTransfer(
       changedAt,
     })
 
+    await closeOpenQueueWait(tx, ticketId, changedAt)
+
     return { status: "saved", ticketId }
   })
 }
@@ -1737,6 +1775,14 @@ export async function rejectTicketTransfer(
       toDueAt: dueAt,
       note: null,
       changedAt,
+    })
+
+    await closeOpenQueueWait(tx, ticketId, changedAt)
+    await openQueueWait(tx, {
+      ticketId,
+      departmentId: pendingTransfer.fromDepartmentId,
+      reason: DECLINED_QUEUE_WAIT_REASON,
+      startedAt: changedAt,
     })
 
     return {

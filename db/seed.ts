@@ -14,6 +14,10 @@ import {
 } from "@/app/_lib/date"
 import { BOARD_DEPARTMENT_NAME } from "@/app/_lib/domain/department"
 import { departmentDueAtFrom } from "@/app/_lib/domain/department-due-hours"
+import {
+  OPENING_QUEUE_WAIT_REASON,
+  opensQueueWaitAtCreation,
+} from "@/app/_lib/domain/queue-wait"
 import { RESOLVED_TICKET_STATUS, TICKET_TYPES } from "@/app/_lib/domain/ticket"
 import { creationStatusFor } from "@/app/_lib/domain/ticket-assignment"
 import {
@@ -40,6 +44,7 @@ import {
   tag,
   ticket,
   ticketHistory,
+  ticketQueueWait,
   ticketTag,
   user,
 } from "@/db/schema"
@@ -1000,6 +1005,23 @@ async function seedDemo(admin: SeedAdminResult): Promise<void> {
       }
 
       await tx.insert(ticketHistory).values(historyRows)
+
+      if (opensQueueWaitAtCreation("queue")) {
+        const isFinal = status === "resolvido" || status === "fechado"
+        const waitEndedAt = isFinal
+          ? (historyRows[1]?.changedAt ?? updatedAt)
+          : null
+
+        await tx.insert(ticketQueueWait).values({
+          ticketId: createdTicket.id,
+          departmentId: admin.departmentId,
+          reason: OPENING_QUEUE_WAIT_REASON,
+          startedAt: blueprint.createdAt,
+          endedAt: waitEndedAt,
+          createdAt: blueprint.createdAt,
+          updatedAt: waitEndedAt ?? blueprint.createdAt,
+        })
+      }
 
       if (blueprint.tagName) {
         const tagId = tagIds.get(blueprint.tagName)
