@@ -1,5 +1,4 @@
 import type { DASHBOARD_VIEW_MODES } from "@/app/_lib/domain/dashboard-view-modes"
-import type { TimeBucketGranularity } from "@/app/_lib/types/period"
 import type { TicketPriority } from "@/app/_lib/types/ticket"
 
 export type DashboardViewMode = (typeof DASHBOARD_VIEW_MODES)[number]
@@ -76,7 +75,6 @@ export type DashboardOverdueByMode = DashboardByMode<DashboardOverdueTicket[]>
 
 export interface DashboardOverdueEmptyCopy {
   title: string
-  description: string
 }
 
 export type DashboardTransferCounter = "incoming" | "outgoing" | "rejected"
@@ -106,7 +104,6 @@ export type DashboardIncomingTransfersByMode = DashboardByMode<
 
 export interface DashboardIncomingTransfersEmptyCopy {
   title: string
-  description: string
 }
 
 export type DashboardActivitySeries = "opened" | "resolved"
@@ -129,5 +126,4 @@ export type DashboardActivityByMode = DashboardByMode<DashboardActivityPoint[]>
 
 export interface DashboardActivityEmptyCopy {
   title: string
-  descriptions: Record<TimeBucketGranularity, string>
 }

@@ -60,12 +60,7 @@ const DashboardTransfersContent = ({
         ))}
       </dl>
       {transfers.length === 0 ? (
-        <div className="mt-3 flex flex-col gap-1">
-          <p className="text-sm font-semibold">{emptyCopy.title}</p>
-          <p className="text-caption text-muted-foreground">
-            {emptyCopy.description}
-          </p>
-        </div>
+        <p className="mt-3 text-sm font-semibold">{emptyCopy.title}</p>
       ) : (
         <ul className="mt-2 flex flex-col">
           {transfers.map((transfer) => (

@@ -31,11 +31,8 @@ const DashboardActivityContent = ({
   if (isActivityEmpty(points)) {
     const copy = EMPTY_ACTIVITY_COPY[mode]
     return (
-      <div className="mt-3 flex min-h-56 flex-1 flex-col items-center justify-center gap-1 text-center">
+      <div className="mt-3 flex min-h-56 flex-1 flex-col items-center justify-center text-center">
         <p className="text-sm font-semibold">{copy.title}</p>
-        <p className="text-caption text-muted-foreground">
-          {copy.descriptions[granularity]}
-        </p>
       </div>
     )
   }

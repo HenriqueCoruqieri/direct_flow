@@ -42,14 +42,7 @@ const DashboardOverdueContent = ({
   if (tickets.length === 0) {
     const emptyCopy = EMPTY_OVERDUE_COPY[mode]
 
-    return (
-      <div className="mt-3 flex flex-col gap-1">
-        <p className="text-sm font-semibold">{emptyCopy.title}</p>
-        <p className="text-caption text-muted-foreground">
-          {emptyCopy.description}
-        </p>
-      </div>
-    )
+    return <p className="mt-3 text-sm font-semibold">{emptyCopy.title}</p>
   }
 
   return (

@@ -8,6 +8,16 @@ sem mudança, inclusive a taxa da revisão de 2026-10-23 e as revisões de
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 `drizzle-orm@0.45.2`.
 
+> **Revisão 2026-11-13 — estado vazio dos cards de atrasados, aguardando aceite e
+> atividade mostra só o título.** Saem `EMPTY_OVERDUE_DESCRIPTION`,
+> `EMPTY_OWN_OVERDUE_DESCRIPTION`, `EMPTY_INCOMING_TRANSFERS_DESCRIPTION`,
+> `EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION`, `EMPTY_ACTIVITY_DESCRIPTIONS` e
+> `EMPTY_OWN_ACTIVITY_DESCRIPTIONS` (com o auxiliar privado que montava as duas
+> últimas e a cadência `hora a hora` … `mês a mês`).
+> `DashboardOverdueEmptyCopy`, `DashboardIncomingTransfersEmptyCopy` e
+> `DashboardActivityEmptyCopy` ficam só com `title`; `EMPTY_INCOMING_TRANSFERS_COPY`
+> e `EMPTY_ACTIVITY_COPY` levam só `title` por modo. Os títulos não mudam.
+
 ---
 
 ## Etapa 1 — switch e linha 1
@@ -729,7 +739,6 @@ export type DashboardOverdueByMode = DashboardByMode<DashboardOverdueTicket[]>
 
 export interface DashboardOverdueEmptyCopy {
   title: string
-  description: string
 }
 ```
 
@@ -737,16 +746,15 @@ export interface DashboardOverdueEmptyCopy {
 
 ### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo)
 
-| Export                          | Valor / semântica                                                                                                                                                                       |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OVERDUE_MY_TICKETS_TAB`        | `"assigned"` (`MyTicketsTab`) — aba "Atribuídos a mim" de Meus chamados, destino do "Ver na fila" no Individual. Par de `OVERDUE_QUEUE_TAB` (inalterado)                                |
-| `EMPTY_OWN_OVERDUE_TITLE`       | `"Nenhum chamado seu em atraso"`                                                                                                                                                        |
-| `EMPTY_OWN_OVERDUE_DESCRIPTION` | `"Os chamados do setor destinados a você com vencimento já passado aparecem aqui."`                                                                                                     |
-| `EMPTY_OVERDUE_COPY`            | por modo (`satisfies Record<DashboardViewMode, DashboardOverdueEmptyCopy>`): `coletivo` = `EMPTY_OVERDUE_TITLE`/`EMPTY_OVERDUE_DESCRIPTION` (inalterados), `individual` = as duas acima |
+| Export                    | Valor / semântica                                                                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OVERDUE_MY_TICKETS_TAB`  | `"assigned"` (`MyTicketsTab`) — aba "Atribuídos a mim" de Meus chamados, destino do "Ver na fila" no Individual. Par de `OVERDUE_QUEUE_TAB` (inalterado)                        |
+| `EMPTY_OWN_OVERDUE_TITLE` | `"Nenhum chamado seu em atraso"`                                                                                                                                                |
+| `EMPTY_OVERDUE_COPY`      | por modo (`satisfies Record<DashboardViewMode, DashboardOverdueEmptyCopy>`): `coletivo` = `{ title: EMPTY_OVERDUE_TITLE }`, `individual` = `{ title: EMPTY_OWN_OVERDUE_TITLE }` |
 
 Sem mudança: `OVERDUE_CARD_LABEL`, `OVERDUE_QUEUE_LINK_LABEL`,
 `OVERDUE_QUEUE_TAB`, `OVERDUE_TICKETS_LIMIT`, `OVERDUE_TICKET_STATUSES`,
-`OVERDUE_COLUMN_LABELS`, `EMPTY_OVERDUE_TITLE`, `EMPTY_OVERDUE_DESCRIPTION`.
+`OVERDUE_COLUMN_LABELS`, `EMPTY_OVERDUE_TITLE`.
 A aba é constante própria, e não `DEFAULT_MY_TICKETS_TAB`: o destino é uma
 decisão deste card, não "a aba padrão de Meus chamados", que pode mudar.
 
@@ -866,11 +874,10 @@ então são **dois** pontos com `DashboardViewPane`, ambos **dentro** de um
   `dashboardTicketDetailHref(selection, ticket.id)` (origem `dashboard`) nos
   dois modos.
 
-| Onde              | Antes                       | Agora                                  |
-| ----------------- | --------------------------- | -------------------------------------- |
-| vazio, título     | `EMPTY_OVERDUE_TITLE`       | `EMPTY_OVERDUE_COPY[mode].title`       |
-| vazio, descrição  | `EMPTY_OVERDUE_DESCRIPTION` | `EMPTY_OVERDUE_COPY[mode].description` |
-| link do cabeçalho | `OVERDUE_QUEUE_HREF`        | `OVERDUE_QUEUE_HREFS[mode]`            |
+| Onde              | Antes                 | Agora                            |
+| ----------------- | --------------------- | -------------------------------- |
+| vazio, título     | `EMPTY_OVERDUE_TITLE` | `EMPTY_OVERDUE_COPY[mode].title` |
+| link do cabeçalho | `OVERDUE_QUEUE_HREF`  | `OVERDUE_QUEUE_HREFS[mode]`      |
 
 **Modo inativo.** Como nas Etapas 1 e 2: `hidden` no `div` do
 `DashboardViewPane`, sem classe de `display` nele. Nos dois pontos (link e
@@ -978,8 +985,7 @@ que são do `df-ui` e mudam na mesma onda; nada fora do `df-ui` depende disso.
 
 - [x] Este contrato e o plano; `DashboardOverdueByMode`,
       `DashboardOverdueEmptyCopy`; `OVERDUE_MY_TICKETS_TAB`,
-      `EMPTY_OWN_OVERDUE_TITLE`, `EMPTY_OWN_OVERDUE_DESCRIPTION`,
-      `EMPTY_OVERDUE_COPY`; `OVERDUE_MY_TICKETS_HREF`, `OVERDUE_QUEUE_HREFS`
+      `EMPTY_OWN_OVERDUE_TITLE`, `EMPTY_OVERDUE_COPY`; `OVERDUE_MY_TICKETS_HREF`, `OVERDUE_QUEUE_HREFS`
       (`df-architect`)
 - [x] `listOverdueTickets` com `assigneeId?`, `EXPLAIN ANALYZE` com e sem
       pessoa na resposta (`df-data`)
@@ -1067,7 +1073,6 @@ export type DashboardActivityByMode = DashboardByMode<DashboardActivityPoint[]>
 
 export interface DashboardActivityEmptyCopy {
   title: string
-  descriptions: Record<TimeBucketGranularity, string>
 }
 ```
 
@@ -1078,14 +1083,12 @@ export interface DashboardActivityEmptyCopy {
 
 ### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo, já publicado)
 
-| Export                                                        | Valor / semântica                                                                                                                                                                                    |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EMPTY_ACTIVITY_DESCRIPTIONS`                                 | **mesmo valor** de hoje (`Os chamados abertos e resolvidos no setor aparecem aqui, hora a hora.` etc.), agora montado por um auxiliar privado com a cadência (`hora a hora` … `mês a mês`)           |
-| `EMPTY_OWN_ACTIVITY_TITLE`                                    | `"Nenhum chamado seu aberto ou resolvido no período"`                                                                                                                                                |
-| `EMPTY_OWN_ACTIVITY_DESCRIPTIONS`                             | por granularidade: `Os chamados do setor destinados a você abertos e resolvidos aparecem aqui, hora a hora.` (e `dia a dia`, `semana a semana`, `mês a mês`), pelo mesmo auxiliar, sem repetir texto |
-| `EMPTY_ACTIVITY_COPY`                                         | por modo (`satisfies Record<DashboardViewMode, DashboardActivityEmptyCopy>`): `coletivo` = `EMPTY_ACTIVITY_TITLE`/`EMPTY_ACTIVITY_DESCRIPTIONS` (inalterados), `individual` = as duas acima          |
-| `ACTIVITY_OWN_SCOPE_LABEL`                                    | `"seus chamados"`                                                                                                                                                                                    |
-| `activityTableCaption(range, granularity, mode = "coletivo")` | Coletivo igual a hoje (`Abertos × resolvidos, 24 out 2026 · por hora`). Individual: `Abertos × resolvidos, seus chamados, 24 out 2026 · por hora`                                                    |
+| Export                                                        | Valor / semântica                                                                                                                                                                               |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMPTY_OWN_ACTIVITY_TITLE`                                    | `"Nenhum chamado seu aberto ou resolvido no período"`                                                                                                                                           |
+| `EMPTY_ACTIVITY_COPY`                                         | por modo (`satisfies Record<DashboardViewMode, DashboardActivityEmptyCopy>`): `coletivo` = `{ title: EMPTY_ACTIVITY_TITLE }` (inalterado), `individual` = `{ title: EMPTY_OWN_ACTIVITY_TITLE }` |
+| `ACTIVITY_OWN_SCOPE_LABEL`                                    | `"seus chamados"`                                                                                                                                                                               |
+| `activityTableCaption(range, granularity, mode = "coletivo")` | Coletivo igual a hoje (`Abertos × resolvidos, 24 out 2026 · por hora`). Individual: `Abertos × resolvidos, seus chamados, 24 out 2026 · por hora`                                               |
 
 Decisões:
 
@@ -1223,13 +1226,12 @@ vazio de cada modo), então são **dois** pontos com `DashboardViewPane`, ambos
   desenha hoje abaixo do cabeçalho (o vazio com `mt-3 … min-h-56 flex-1`, ou o
   `div relative mt-3 min-h-56 flex-1` do gráfico e a `div sr-only` da tabela).
 
-| Onde          | Antes                                      | Agora                                                 |
-| ------------- | ------------------------------------------ | ----------------------------------------------------- |
-| vazio, título | `EMPTY_ACTIVITY_TITLE`                     | `EMPTY_ACTIVITY_COPY[mode].title`                     |
-| vazio, texto  | `EMPTY_ACTIVITY_DESCRIPTIONS[granularity]` | `EMPTY_ACTIVITY_COPY[mode].descriptions[granularity]` |
-| `caption`     | `activityTableCaption(range, granularity)` | `activityTableCaption(range, granularity, mode)`      |
-| gráfico       | `<ActivityChart points={points} />`        | `<ActivityChart points={points} mode={mode} />`       |
-| legenda       | `isEmpty ? null : <ActivityLegend />`      | painel por modo com dados (acima)                     |
+| Onde          | Antes                                      | Agora                                            |
+| ------------- | ------------------------------------------ | ------------------------------------------------ |
+| vazio, título | `EMPTY_ACTIVITY_TITLE`                     | `EMPTY_ACTIVITY_COPY[mode].title`                |
+| `caption`     | `activityTableCaption(range, granularity)` | `activityTableCaption(range, granularity, mode)` |
+| gráfico       | `<ActivityChart points={points} />`        | `<ActivityChart points={points} mode={mode} />`  |
+| legenda       | `isEmpty ? null : <ActivityLegend />`      | painel por modo com dados (acima)                |
 
 **Altura e `flex-1`: `className` em `DashboardViewPane`.** Hoje a área do
 gráfico (e o vazio) é `flex-1` dentro do `DashboardPanel`
@@ -1475,7 +1477,7 @@ muda o chamador na mesma onda.
 
 - [x] Este contrato e o plano; `DashboardActivityByMode`,
       `DashboardActivityEmptyCopy`; `EMPTY_OWN_ACTIVITY_TITLE`,
-      `EMPTY_OWN_ACTIVITY_DESCRIPTIONS`, `EMPTY_ACTIVITY_COPY`,
+      `EMPTY_ACTIVITY_COPY`,
       `ACTIVITY_OWN_SCOPE_LABEL`, `activityTableCaption` com `mode`
       (`df-architect`)
 - [x] `listActivityBuckets` com `assigneeId?` no `on` do `left join`,
@@ -1625,7 +1627,6 @@ export type DashboardIncomingTransfersByMode = DashboardByMode<
 
 export interface DashboardIncomingTransfersEmptyCopy {
   title: string
-  description: string
 }
 ```
 
@@ -1634,13 +1635,12 @@ export interface DashboardIncomingTransfersEmptyCopy {
 
 ### Domínio — `app/_lib/domain/dashboard.ts` (acréscimo, já publicado)
 
-| Export                                     | Valor / semântica                                                                                                                                                                               |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OWN_TRANSFER_COUNTER_LABELS`              | `incoming` → `Aguardando seu aceite` · `outgoing` → `Seus envios pendentes` · `rejected` → `Seus envios recusados` (`satisfies Record<DashboardTransferCounter, string>`)                       |
-| `TRANSFER_COUNTER_LABELS_BY_MODE`          | por modo: `coletivo` = `TRANSFER_COUNTER_LABELS` (inalterado), `individual` = `OWN_TRANSFER_COUNTER_LABELS`                                                                                     |
-| `EMPTY_OWN_INCOMING_TRANSFERS_TITLE`       | `"Nenhum chamado aguardando seu aceite"`                                                                                                                                                        |
-| `EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION` | `"Os chamados que outros setores enviarem para você aparecem aqui até você atender ou recusar."`                                                                                                |
-| `EMPTY_INCOMING_TRANSFERS_COPY`            | por modo (`satisfies Record<DashboardViewMode, DashboardIncomingTransfersEmptyCopy>`): `coletivo` = `EMPTY_INCOMING_TRANSFERS_TITLE`/`_DESCRIPTION` (inalterados), `individual` = as duas acima |
+| Export                               | Valor / semântica                                                                                                                                                                                                            |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OWN_TRANSFER_COUNTER_LABELS`        | `incoming` → `Aguardando seu aceite` · `outgoing` → `Seus envios pendentes` · `rejected` → `Seus envios recusados` (`satisfies Record<DashboardTransferCounter, string>`)                                                    |
+| `TRANSFER_COUNTER_LABELS_BY_MODE`    | por modo: `coletivo` = `TRANSFER_COUNTER_LABELS` (inalterado), `individual` = `OWN_TRANSFER_COUNTER_LABELS`                                                                                                                  |
+| `EMPTY_OWN_INCOMING_TRANSFERS_TITLE` | `"Nenhum chamado aguardando seu aceite"`                                                                                                                                                                                     |
+| `EMPTY_INCOMING_TRANSFERS_COPY`      | por modo (`satisfies Record<DashboardViewMode, DashboardIncomingTransfersEmptyCopy>`): `coletivo` = `{ title: EMPTY_INCOMING_TRANSFERS_TITLE }` (inalterado), `individual` = `{ title: EMPTY_OWN_INCOMING_TRANSFERS_TITLE }` |
 
 Rótulos do Individual com até 21 caracteres, como os do Coletivo (o maior,
 `Aguardando nosso aceite`, tem 23): cabem em até 2 linhas no mini-card de
@@ -1649,7 +1649,7 @@ Rótulos do Individual com até 21 caracteres, como os do Coletivo (o maior,
 modos, então **não** há mapa por modo para ela),
 `TRANSFERS_APPROVALS_LINK_LABEL`, `INCOMING_TRANSFERS_LIMIT`,
 `INCOMING_TRANSFER_STALE_*`, `STALE_INCOMING_TRANSFER_LABEL`,
-`EMPTY_INCOMING_TRANSFERS_TITLE`, `EMPTY_INCOMING_TRANSFERS_DESCRIPTION`,
+`EMPTY_INCOMING_TRANSFERS_TITLE`,
 `transferCounterToneFor`, `incomingTransferOriginLabel`,
 `isStaleIncomingTransfer`.
 
@@ -1782,11 +1782,10 @@ const transfersByMode: DashboardIncomingTransfersByMode = {
 - `DashboardViewPane` **sem** `className`: o conteúdo flui em bloco dentro do
   `div`, como hoje dentro do `DashboardPanel` (nada aqui é `flex-1`).
 
-| Onde               | Antes                                  | Agora                                             |
-| ------------------ | -------------------------------------- | ------------------------------------------------- |
-| rótulo do contador | `TRANSFER_COUNTER_LABELS[counter]`     | `TRANSFER_COUNTER_LABELS_BY_MODE[mode][counter]`  |
-| vazio, título      | `EMPTY_INCOMING_TRANSFERS_TITLE`       | `EMPTY_INCOMING_TRANSFERS_COPY[mode].title`       |
-| vazio, descrição   | `EMPTY_INCOMING_TRANSFERS_DESCRIPTION` | `EMPTY_INCOMING_TRANSFERS_COPY[mode].description` |
+| Onde               | Antes                              | Agora                                            |
+| ------------------ | ---------------------------------- | ------------------------------------------------ |
+| rótulo do contador | `TRANSFER_COUNTER_LABELS[counter]` | `TRANSFER_COUNTER_LABELS_BY_MODE[mode][counter]` |
+| vazio, título      | `EMPTY_INCOMING_TRANSFERS_TITLE`   | `EMPTY_INCOMING_TRANSFERS_COPY[mode].title`      |
 
 Iguais nos dois modos: `transferCounterToneFor`, a marca
 `REJECTED_TRANSFERS_SCOPE_HINT` só no "Recusados" e `IncomingTransferItem`
@@ -1931,7 +1930,6 @@ compilar até o `df-ui` entrar. Esperado entre as ondas; os dois fecham juntos.
       `DashboardIncomingTransfersByMode`,
       `DashboardIncomingTransfersEmptyCopy`; `OWN_TRANSFER_COUNTER_LABELS`,
       `TRANSFER_COUNTER_LABELS_BY_MODE`, `EMPTY_OWN_INCOMING_TRANSFERS_TITLE`,
-      `EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION`,
       `EMPTY_INCOMING_TRANSFERS_COPY`; notas nos contratos do Coletivo e de
       Aprovações (`df-architect`)
 - [x] `countPendingApprovals` com `recipientId?`; `findTransferSummary` com

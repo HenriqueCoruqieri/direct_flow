@@ -217,22 +217,14 @@ export const NO_TAGGED_TICKETS_IN_PERIOD_HINTS = {
 
 export const EMPTY_OVERDUE_TITLE = "Nenhum chamado em atraso"
 
-export const EMPTY_OVERDUE_DESCRIPTION =
-  "Os chamados do setor com vencimento já passado aparecem aqui."
-
 export const EMPTY_OWN_OVERDUE_TITLE = "Nenhum chamado seu em atraso"
-
-export const EMPTY_OWN_OVERDUE_DESCRIPTION =
-  "Os chamados do setor destinados a você com vencimento já passado aparecem aqui."
 
 export const EMPTY_OVERDUE_COPY = {
   coletivo: {
     title: EMPTY_OVERDUE_TITLE,
-    description: EMPTY_OVERDUE_DESCRIPTION,
   },
   individual: {
     title: EMPTY_OWN_OVERDUE_TITLE,
-    description: EMPTY_OWN_OVERDUE_DESCRIPTION,
   },
 } satisfies Record<DashboardViewMode, DashboardOverdueEmptyCopy>
 
@@ -308,23 +300,15 @@ export const STALE_INCOMING_TRANSFER_LABEL = `Aguardando aceite há ${formatDura
 
 export const EMPTY_INCOMING_TRANSFERS_TITLE = "Nenhum chamado aguardando aceite"
 
-export const EMPTY_INCOMING_TRANSFERS_DESCRIPTION =
-  "Os chamados enviados por outros setores aparecem aqui até alguém do setor atender ou recusar."
-
 export const EMPTY_OWN_INCOMING_TRANSFERS_TITLE =
   "Nenhum chamado aguardando seu aceite"
-
-export const EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION =
-  "Os chamados que outros setores enviarem para você aparecem aqui até você atender ou recusar."
 
 export const EMPTY_INCOMING_TRANSFERS_COPY = {
   coletivo: {
     title: EMPTY_INCOMING_TRANSFERS_TITLE,
-    description: EMPTY_INCOMING_TRANSFERS_DESCRIPTION,
   },
   individual: {
     title: EMPTY_OWN_INCOMING_TRANSFERS_TITLE,
-    description: EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION,
   },
 } satisfies Record<DashboardViewMode, DashboardIncomingTransfersEmptyCopy>
 
@@ -386,41 +370,15 @@ export const ACTIVITY_TODAY_LABEL = "Hoje"
 export const EMPTY_ACTIVITY_TITLE =
   "Nenhum chamado aberto ou resolvido no período"
 
-const ACTIVITY_CADENCE_LABELS = {
-  hour: "hora a hora",
-  day: "dia a dia",
-  week: "semana a semana",
-  month: "mês a mês",
-} satisfies Record<TimeBucketGranularity, string>
-
-const activityEmptyDescriptions = (
-  subject: string,
-): Record<TimeBucketGranularity, string> => ({
-  hour: `${subject}, ${ACTIVITY_CADENCE_LABELS.hour}.`,
-  day: `${subject}, ${ACTIVITY_CADENCE_LABELS.day}.`,
-  week: `${subject}, ${ACTIVITY_CADENCE_LABELS.week}.`,
-  month: `${subject}, ${ACTIVITY_CADENCE_LABELS.month}.`,
-})
-
-export const EMPTY_ACTIVITY_DESCRIPTIONS = activityEmptyDescriptions(
-  "Os chamados abertos e resolvidos no setor aparecem aqui",
-)
-
 export const EMPTY_OWN_ACTIVITY_TITLE =
   "Nenhum chamado seu aberto ou resolvido no período"
-
-export const EMPTY_OWN_ACTIVITY_DESCRIPTIONS = activityEmptyDescriptions(
-  "Os chamados do setor destinados a você abertos e resolvidos aparecem aqui",
-)
 
 export const EMPTY_ACTIVITY_COPY = {
   coletivo: {
     title: EMPTY_ACTIVITY_TITLE,
-    descriptions: EMPTY_ACTIVITY_DESCRIPTIONS,
   },
   individual: {
     title: EMPTY_OWN_ACTIVITY_TITLE,
-    descriptions: EMPTY_OWN_ACTIVITY_DESCRIPTIONS,
   },
 } satisfies Record<DashboardViewMode, DashboardActivityEmptyCopy>
 

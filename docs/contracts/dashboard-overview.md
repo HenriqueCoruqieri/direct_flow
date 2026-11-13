@@ -64,6 +64,16 @@ Versões observadas: `next@16.3.5`, `zod@4.6.5`, `dayjs@1.11.23`,
 > Operação (ADR 023) não mudam. Sem mudança de assinatura, de tipo ou de SQL
 > escrito em `app/_lib/data/`; a UI já chama as duas funções.
 
+> **Revisão 2026-11-13 — estado vazio dos cards de atrasados, aguardando aceite e
+> atividade mostra só o título.** Saem `EMPTY_OVERDUE_DESCRIPTION`,
+> `EMPTY_OWN_OVERDUE_DESCRIPTION`, `EMPTY_INCOMING_TRANSFERS_DESCRIPTION`,
+> `EMPTY_OWN_INCOMING_TRANSFERS_DESCRIPTION`, `EMPTY_ACTIVITY_DESCRIPTIONS` e
+> `EMPTY_OWN_ACTIVITY_DESCRIPTIONS` (com o auxiliar privado que montava as duas
+> últimas e a cadência `hora a hora` … `mês a mês`).
+> `DashboardOverdueEmptyCopy`, `DashboardIncomingTransfersEmptyCopy` e
+> `DashboardActivityEmptyCopy` ficam só com `title`; `EMPTY_INCOMING_TRANSFERS_COPY`
+> e `EMPTY_ACTIVITY_COPY` levam só `title` por modo. Os títulos não mudam.
+
 ---
 
 ## Etapa 1 — grade da página e linha 1
@@ -593,8 +603,6 @@ export const OVERDUE_COLUMN_LABELS: Record<DashboardOverdueColumn, string>
 export const NO_TAGGED_TICKETS_IN_PERIOD_HINT =
   "Nenhum chamado com tag no período"
 export const EMPTY_OVERDUE_TITLE = "Nenhum chamado em atraso"
-export const EMPTY_OVERDUE_DESCRIPTION =
-  "Os chamados do setor com vencimento já passado aparecem aqui."
 
 export const topTagsEmptyHint: (ticketCount: number) => string
 export const tagVolumePercent: (
@@ -784,8 +792,8 @@ OVERDUE_TICKETS_LIMIT)`, com o mesmo `now` da página:
     célula.
   - Vencimento: `formatShortDateTime(dueAt, now)`, `whitespace-nowrap`, com
     `title={formatDateTime(dueAt)}`.
-- Lista vazia: no lugar da tabela, `EMPTY_OVERDUE_TITLE` e
-  `EMPTY_OVERDUE_DESCRIPTION`, texto pequeno e neutro.
+- Lista vazia: no lugar da tabela, só `EMPTY_OVERDUE_TITLE`, texto pequeno e
+  neutro.
 - Em 390 px a tabela mantém as 4 colunas; o título é o que encolhe. Não
   esconder coluna.
 
@@ -1054,7 +1062,6 @@ export const INCOMING_TRANSFER_STALE_HOURS = 4
 export const INCOMING_TRANSFER_STALE_MS: number
 export const STALE_INCOMING_TRANSFER_LABEL = "Aguardando aceite há 4h ou mais"
 export const EMPTY_INCOMING_TRANSFERS_TITLE = "Nenhum chamado aguardando aceite"
-export const EMPTY_INCOMING_TRANSFERS_DESCRIPTION: string
 
 export const transferCounterToneFor: (
   counter: DashboardTransferCounter,
@@ -1064,18 +1071,17 @@ export const incomingTransferOriginLabel: (departmentName: string) => string
 export const isStaleIncomingTransfer: (sentAt: Date, now: Date) => boolean
 ```
 
-| Nome                                   | Semântica                                                                                                                                                                                                     |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRANSFER_COUNTER_LABELS`              | `incoming` → `Aguardando nosso aceite` · `outgoing` → `Enviados, pendentes` · `rejected` → `Recusados por outros`. Ordem na tela: incoming, outgoing, rejected                                                |
-| `REJECTED_TRANSFERS_SCOPE_HINT`        | Marca, no mini-card de recusados, que só ele segue o período. Os outros dois não levam marca (situação atual é o padrão do card, como em "Maiores atrasos")                                                   |
-| `TRANSFERS_APPROVALS_LINK_LABEL`       | `Ver em ` + `APPROVALS_LABEL`                                                                                                                                                                                 |
-| `INCOMING_TRANSFERS_LIMIT`             | 5 itens, igual a `OVERDUE_TICKETS_LIMIT` por coerência entre as linhas. A regra de altura contra o gráfico é da 3b; se ela pedir outro número, muda aqui, nunca na UI                                         |
-| `INCOMING_TRANSFER_STALE_HOURS`        | 4h: teto para um chamado ficar parado sem ninguém aceitar. Constante própria, não derivada de `TICKET_PRIORITY_DUE_HOURS`: são regras diferentes                                                              |
-| `STALE_INCOMING_TRANSFER_LABEL`        | Texto acessível do item destacado; montado com `formatDuration`, então acompanha a constante                                                                                                                  |
-| `EMPTY_INCOMING_TRANSFERS_DESCRIPTION` | `Os chamados enviados por outros setores aparecem aqui até alguém do setor atender ou recusar.`                                                                                                               |
-| `transferCounterToneFor`               | `count ≤ 0` → `neutral` (qualquer contador). `incoming` com `count > 0` → `highlight` (fundo e número `warning`). `rejected` com `count > 0` → `alert` (só o número `warning`). `outgoing` → sempre `neutral` |
-| `incomingTransferOriginLabel`          | `RH` → `de RH`                                                                                                                                                                                                |
-| `isStaleIncomingTransfer`              | `elapsedMs(sentAt, now) ≥ INCOMING_TRANSFER_STALE_MS`, **inclusivo**. Vale para **todo** item acima do limite, não só o primeiro; como a lista é "mais antigas primeiro", os destacados ficam juntos no topo  |
+| Nome                             | Semântica                                                                                                                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRANSFER_COUNTER_LABELS`        | `incoming` → `Aguardando nosso aceite` · `outgoing` → `Enviados, pendentes` · `rejected` → `Recusados por outros`. Ordem na tela: incoming, outgoing, rejected                                                |
+| `REJECTED_TRANSFERS_SCOPE_HINT`  | Marca, no mini-card de recusados, que só ele segue o período. Os outros dois não levam marca (situação atual é o padrão do card, como em "Maiores atrasos")                                                   |
+| `TRANSFERS_APPROVALS_LINK_LABEL` | `Ver em ` + `APPROVALS_LABEL`                                                                                                                                                                                 |
+| `INCOMING_TRANSFERS_LIMIT`       | 5 itens, igual a `OVERDUE_TICKETS_LIMIT` por coerência entre as linhas. A regra de altura contra o gráfico é da 3b; se ela pedir outro número, muda aqui, nunca na UI                                         |
+| `INCOMING_TRANSFER_STALE_HOURS`  | 4h: teto para um chamado ficar parado sem ninguém aceitar. Constante própria, não derivada de `TICKET_PRIORITY_DUE_HOURS`: são regras diferentes                                                              |
+| `STALE_INCOMING_TRANSFER_LABEL`  | Texto acessível do item destacado; montado com `formatDuration`, então acompanha a constante                                                                                                                  |
+| `transferCounterToneFor`         | `count ≤ 0` → `neutral` (qualquer contador). `incoming` com `count > 0` → `highlight` (fundo e número `warning`). `rejected` com `count > 0` → `alert` (só o número `warning`). `outgoing` → sempre `neutral` |
+| `incomingTransferOriginLabel`    | `RH` → `de RH`                                                                                                                                                                                                |
+| `isStaleIncomingTransfer`        | `elapsedMs(sentAt, now) ≥ INCOMING_TRANSFER_STALE_MS`, **inclusivo**. Vale para **todo** item acima do limite, não só o primeiro; como a lista é "mais antigas primeiro", os destacados ficam juntos no topo  |
 
 Por que o destaque do "Aguardando" some com `0`: no print o mini-card está
 destacado porque há o que aceitar; com zero não há alerta a dar, e manter o
@@ -1234,7 +1240,7 @@ entre itens):
 
 **Vazio** (`incomingPendingCount = 0`, lista `[]`): mini-cards com os números
 e tons normais (o "Aguardando" fica `neutral` com `0`), e no lugar da lista
-`EMPTY_INCOMING_TRANSFERS_TITLE` + `EMPTY_INCOMING_TRANSFERS_DESCRIPTION`,
+`EMPTY_INCOMING_TRANSFERS_TITLE` (só o título, revisão 2026-11-13),
 texto pequeno e neutro, como o vazio de atrasos. O link "Ver em Aprovações"
 continua.
 
@@ -2063,7 +2069,6 @@ export const ACTIVITY_BUCKET_COLUMN_LABELS: Record<
 >
 export const EMPTY_ACTIVITY_TITLE =
   "Nenhum chamado aberto ou resolvido no período"
-export const EMPTY_ACTIVITY_DESCRIPTIONS: Record<TimeBucketGranularity, string>
 
 export const activityGranularityFor: (range: DateRange) => TimeBucketGranularity
 export const activityPeriodLabel: (
@@ -2102,7 +2107,6 @@ export const isActivityEmpty: (
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ACTIVITY_GRANULARITY_LABELS`   | `por hora` · `por dia` · `por semana` · `por mês`                                                                                                                    |
 | `ACTIVITY_BUCKET_COLUMN_LABELS` | primeira coluna da tabela acessível: `Hora` · `Dia` · `Semana` · `Mês` (era sempre `Dia`)                                                                            |
-| `EMPTY_ACTIVITY_DESCRIPTIONS`   | `Os chamados abertos e resolvidos no setor aparecem aqui, hora a hora.` (e `dia a dia`, `semana a semana`, `mês a mês`)                                              |
 | `activityGranularityFor`        | tabela das Definições: 1 dia → `hour`; ≤ 31 dias → `day`; ≤ 53 semanas → `week`; senão `month`                                                                       |
 | `activityPeriodLabel`           | linha embaixo do título: `formatRangeLabel(range)` + `·` + granularidade — `24 out 2026 · por hora`, `19–25 out 2026 · por dia`, `1 ago – 24 out 2026 · por semana`  |
 | `activityTableCaption`          | `caption` da tabela: `Abertos × resolvidos, 24 out 2026 · por hora`                                                                                                  |
@@ -2196,7 +2200,7 @@ mostra o período (é síncrono, não depende da consulta), com
 **Tabela acessível**: `caption` = `activityTableCaption(range, granularity)`;
 primeira coluna `ACTIVITY_BUCKET_COLUMN_LABELS[granularity]`; linhas =
 `recordedActivityPoints(points)` com `longLabel`. **Vazio**:
-`EMPTY_ACTIVITY_TITLE` + `EMPTY_ACTIVITY_DESCRIPTIONS[granularity]`, mesmo
+`EMPTY_ACTIVITY_TITLE` (só o título, revisão 2026-11-13), mesmo
 desenho da 3b.
 
 ### Riscos da revisão
