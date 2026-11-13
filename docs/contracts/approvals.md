@@ -4,6 +4,14 @@ Aprovado pelo usuário em `/consult` em 2026-10-15. Plano em
 `docs/plans/approvals.md`. Este documento é a referência técnica: tipos,
 domínio, validação, consulta, telas e cenários.
 
+> Revisão de 2026-11-12 (`docs/contracts/department-queue-nav-badge.md`, que
+> prevalece no que diverge): o selo ficou genérico. `ApprovalsNavBadge` →
+> `NavBadge` e `ApprovalsAccessFacts` → `NavBadgeAccessFacts`
+> (`app/_lib/types/nav-badge.ts`); `APPROVALS_BADGE_MAX` → `NAV_BADGE_MAX` e
+> `formatApprovalsBadgeCount` → `formatNavBadgeCount`
+> (`app/_lib/domain/nav-badge.ts`). `approvalsNavBadgeFor` e
+> `approvalsDepartmentIdFor` mantêm nome e comportamento.
+
 Relação com o ADR 016 (`docs/adr/016-transfer-moves-ticket-before-acceptance.md`):
 o ADR diz que a "caixa de aprovações" do desenho original foi superada. Continua
 superada no sentido do ADR — **ninguém aprova numa caixa**; aceite e recusa

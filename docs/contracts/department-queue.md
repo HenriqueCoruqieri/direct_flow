@@ -1,5 +1,11 @@
 # Contrato — Fila do setor
 
+> **Revisão 2026-11-12 — selo no menu** (`docs/contracts/department-queue-nav-badge.md`,
+> que prevalece no que diverge): o item `Fila do setor` do menu mostra o número
+> da aba **Em aberto** do setor da própria pessoa, sem período
+> (`DEPARTMENT_QUEUE_NAV_BADGE_TAB`, `departmentQueueNavBadgeFor`,
+> `countQueueTickets`). Não alocado: sem item e sem selo.
+
 > **Revisão 2026-11-09 — coluna "Empresa" e "Enviar" fora da tabela (a
 > implementar na Etapa 3 de `docs/contracts/ticket-company.md`, que prevalece
 > no que diverge).** `DepartmentQueueListItem` ganha `company:
