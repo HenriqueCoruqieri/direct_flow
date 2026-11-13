@@ -83,6 +83,7 @@ de estado assíncrono complexo. Quem introduzir registra o motivo em
 ```
 app/ (UI) ─┬─→ app/_lib/actions/ ─┬─→ app/_lib/data/ ──→ db/
            │                     ├─→ app/_lib/storage/ ──→ Cloudflare R2
+           │                     ├─→ app/_lib/lookup/ ──→ BrasilAPI · ViaCEP
            │                     ├─→ app/_lib/email/
            │                     └─→ app/_lib/auth/ ─┬─→ app/_lib/email/
            │                                         └─→ db/   (só identidade e permissão)
@@ -107,11 +108,13 @@ As setas são de mão única. Em particular:
   cliente chega a elas pela action ou por props vindas do Server Component.
   Ler direto não dispensa autorizar: a página decide o que mostrar aplicando
   `app/_lib/domain/` sobre a sessão que carregou.
-  **Exceção única — busca enquanto se digita (ADR 015).** A busca de chamados
-  do topo (`searchTickets`) é uma Server Action de **leitura**, chamada pelo
-  cliente: valida, autentica, chama `app/_lib/data/` e devolve, sem revalidar.
-  A exceção não se estende: qualquer outra leitura iniciada pelo cliente
-  precisa de ADR próprio.
+  **Exceções — leitura iniciada pelo cliente (ADR 015, ADR 026).** São duas, e
+  só duas. A busca de chamados do topo (`searchTickets`, ADR 015) e a consulta
+  de CNPJ e CEP do cadastro de empresas (`lookupCnpj`, `lookupCep`, ADR 026)
+  são Server Actions de **leitura**, chamadas pelo cliente: validam,
+  autenticam, chamam `app/_lib/data/` ou `app/_lib/lookup/` e devolvem, sem
+  revalidar. A exceção não se estende: qualquer outra leitura iniciada pelo
+  cliente precisa de ADR próprio.
 - **Server Actions nunca escrevem query.** Uma action valida, autoriza, chama
   `app/_lib/data/`, revalida e devolve. O SQL vive em `app/_lib/data/`.
 - **Arquivo só entra e sai por `app/_lib/storage/`.** É o único lugar que
@@ -122,6 +125,13 @@ As setas são de mão única. Em particular:
   `app/_lib/storage/` não importa `app/_lib/data/`, `app/_lib/auth/` nem
   `app/_lib/email/`: grava e apaga arquivo, e a action decide o que fazer com a
   URL devolvida.
+- **Cadastro público de terceiros só por `app/_lib/lookup/`.** É o único
+  lugar que chama, por `fetch`, API externa de consulta (BrasilAPI para CNPJ,
+  ViaCEP para CEP — ADR 026) e conhece URL, User-Agent e timeout. Devolve o
+  formato normalizado de `app/_lib/types/company-lookup.ts`, nunca o JSON do
+  provedor, e nunca lança. Quem chama é a action; UI não importa, nem em
+  Server Component. `app/_lib/lookup/` não importa `app/_lib/data/`,
+  `app/_lib/auth/`, `app/_lib/email/` nem `@/db`, e não grava nada.
 - **`app/_lib/auth/` envia e-mail apenas pelos callbacks do Better Auth.** O
   `sendResetPassword` é configurado dentro da instância do Better Auth, então
   quem dispara o e-mail de redefinição é a camada de auth, não a action — a
@@ -341,7 +351,7 @@ shadcn, e o ESLint garante (`@typescript-eslint/consistent-type-definitions`).
   reporta a pasta proposta, os arquivos que iriam para ela e por que formam uma
   peça só, e encerra o turno. O orquestrador leva a pergunta ao usuário.
 - **Camadas e utilitários** → `app/_lib/` (`data`, `actions`, `validation`,
-  `domain`, `types`, `auth`, `email`, `date.ts`, `utils.ts`).
+  `domain`, `types`, `auth`, `email`, `storage`, `lookup`, `date.ts`, `utils.ts`).
 - **Hooks seguem a mesma colocation dos componentes.** Usado por **uma rota
   só** → `_hooks/` da rota (`app/(app)/tickets/[id]/_hooks/use-ticket-edit.ts`);
   por várias rotas do mesmo grupo → `_hooks/` do grupo; por áreas diferentes →
@@ -382,7 +392,7 @@ agentes podem **ler** qualquer arquivo.
 | `docs/**` (exceto `docs/test-reports/**`)                                                                                            | `df-architect`                            |
 | `docs/test-reports/**`                                                                                                               | `df-qa`                                   |
 | `db/auth-schema.ts` (só `session`, `account`, `verification`), `app/_lib/auth/**`, `proxy.ts`, `app/(auth)/**`, `app/api/auth/**`    | `df-auth`                                 |
-| `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`, `app/_lib/storage/**`                                                               | `df-data`                                 |
+| `db/index.ts`, `db/seed.ts`, `app/_lib/data/**`, `app/_lib/storage/**`, `app/_lib/lookup/**`                                         | `df-data`                                 |
 | `app/_lib/actions/**`, `app/api/cron/**`, `app/api/attachments/**`                                                                   | `df-actions`                              |
 | `app/_lib/email/**`, `emails/**`                                                                                                     | `df-email`                                |
 | `app/**` (exceto `app/(auth)/**`, `app/api/**` e `app/_lib/**`), incluindo `app/_components/**`, `app/_hooks/**` e `app/globals.css` | `df-ui`                                   |

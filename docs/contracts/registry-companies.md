@@ -27,7 +27,7 @@ não está marcado como Etapa 2 é Etapa 1.
 | Telefones  | Primário (obrigatório), Secundário (opcional), Contato do responsável (obrigatório). 10 ou 11 dígitos, DDD de 2 dígitos sem 0 inicial, máscara dinâmica                                                                                                                      |
 | Expediente | Opcional, tudo-ou-nada, "Às" > "Das". Informativo: não altera prazo nem SLA (ADR 019 continua valendo)                                                                                                                                                                       |
 | E-mail     | Formato válido; não único                                                                                                                                                                                                                                                    |
-| Fora       | Botões "Buscar" de CNPJ e CEP (não aparecem); vínculo empresa ↔ chamado                                                                                                                                                                                                      |
+| Fora       | Vínculo empresa ↔ chamado. Consulta de CNPJ e CEP: `docs/contracts/company-lookup.md` (ADR 026)                                                                                                                                                                              |
 
 ## Tabelas, enums e migration — Etapa 1
 
