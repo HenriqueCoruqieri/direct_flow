@@ -132,6 +132,12 @@ export const companyContactPositionEnum = pgEnum("company_contact_position", [
   "secondary",
 ])
 
+export const queueWaitReasonEnum = pgEnum("queue_wait_reason", [
+  "abertura",
+  "transferencia_recebida",
+  "devolucao_por_recusa",
+])
+
 export const department = pgTable(
   "department",
   {
@@ -573,10 +579,8 @@ export const departmentGoal = pgTable(
     slaMinPercent: smallint("sla_min_percent").notNull(),
     tmaMaxHours: smallint("tma_max_hours").notNull(),
     overdueHoursLimit: smallint("overdue_hours_limit").notNull(),
-    backlogLimit: integer("backlog_limit").notNull(),
-    transferAcceptanceMinPercent: smallint(
-      "transfer_acceptance_min_percent",
-    ).notNull(),
+    overdueTicketsLimit: integer("overdue_tickets_limit").notNull(),
+    tmrMaxHours: smallint("tmr_max_hours"),
     updatedBy: integer("updated_by").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -598,12 +602,12 @@ export const departmentGoal = pgTable(
       sql`${table.overdueHoursLimit} >= 0`,
     ),
     check(
-      "department_goal_backlog_limit_non_negative",
-      sql`${table.backlogLimit} >= 0`,
+      "department_goal_overdue_tickets_limit_non_negative",
+      sql`${table.overdueTicketsLimit} >= 0`,
     ),
     check(
-      "department_goal_transfer_acceptance_min_percent_range",
-      sql`${table.transferAcceptanceMinPercent} between 1 and 100`,
+      "department_goal_tmr_max_hours_positive",
+      sql`${table.tmrMaxHours} >= 1`,
     ),
   ],
 )
@@ -646,6 +650,37 @@ export const departmentDueHours = pgTable(
   ],
 )
 
+export const ticketQueueWait = pgTable(
+  "ticket_queue_wait",
+  {
+    id: pk(),
+    ticketId: integer("ticket_id")
+      .notNull()
+      .references(() => ticket.id, { onDelete: "cascade" }),
+    departmentId: integer("department_id")
+      .notNull()
+      .references(() => department.id, { onDelete: "restrict" }),
+    reason: queueWaitReasonEnum("reason").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index("queue_wait_ticket_idx").on(table.ticketId, table.startedAt),
+    index("queue_wait_department_ended_idx").on(
+      table.departmentId,
+      table.endedAt,
+    ),
+    uniqueIndex("queue_wait_one_open_per_ticket_idx")
+      .on(table.ticketId)
+      .where(sql`ended_at is null`),
+    check(
+      "queue_wait_ended_after_started",
+      sql`${table.endedAt} is null or ${table.endedAt} >= ${table.startedAt}`,
+    ),
+  ],
+)
+
 export const departmentRelations = relations(department, ({ one, many }) => ({
   users: many(user),
   tags: many(tag),
@@ -661,6 +696,7 @@ export const departmentRelations = relations(department, ({ one, many }) => ({
   historyTo: many(ticketHistory, { relationName: "history_to_department" }),
   goal: one(departmentGoal),
   dueHours: one(departmentDueHours),
+  queueWaits: many(ticketQueueWait),
 }))
 
 export const userRelations = relations(user, ({ one, many }) => ({
@@ -739,6 +775,7 @@ export const ticketRelations = relations(ticket, ({ one, many }) => ({
   messageHistory: many(messageHistory),
   attachments: many(attachment),
   attachmentHistory: many(attachmentHistory),
+  queueWaits: many(ticketQueueWait),
 }))
 
 export const ticketTagRelations = relations(ticketTag, ({ one }) => ({
@@ -932,6 +969,20 @@ export const departmentDueHoursRelations = relations(
   }),
 )
 
+export const ticketQueueWaitRelations = relations(
+  ticketQueueWait,
+  ({ one }) => ({
+    ticket: one(ticket, {
+      fields: [ticketQueueWait.ticketId],
+      references: [ticket.id],
+    }),
+    department: one(department, {
+      fields: [ticketQueueWait.departmentId],
+      references: [department.id],
+    }),
+  }),
+)
+
 export type Department = typeof department.$inferSelect
 export type NewDepartment = typeof department.$inferInsert
 export type User = typeof user.$inferSelect
@@ -962,6 +1013,8 @@ export type DepartmentGoal = typeof departmentGoal.$inferSelect
 export type NewDepartmentGoal = typeof departmentGoal.$inferInsert
 export type DepartmentDueHoursRow = typeof departmentDueHours.$inferSelect
 export type NewDepartmentDueHoursRow = typeof departmentDueHours.$inferInsert
+export type TicketQueueWait = typeof ticketQueueWait.$inferSelect
+export type NewTicketQueueWait = typeof ticketQueueWait.$inferInsert
 
 export type Role = (typeof roleEnum.enumValues)[number]
 export type TicketType = (typeof ticketTypeEnum.enumValues)[number]
@@ -978,3 +1031,4 @@ export type AttachmentHistoryEvent =
 export type BrazilianState = (typeof brazilianStateEnum.enumValues)[number]
 export type CompanyContactPosition =
   (typeof companyContactPositionEnum.enumValues)[number]
+export type QueueWaitReason = (typeof queueWaitReasonEnum.enumValues)[number]

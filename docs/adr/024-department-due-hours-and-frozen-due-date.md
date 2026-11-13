@@ -67,3 +67,7 @@ em qual momento.
   está medida por `ticket_transfer.created_at` e `reviewed_at`. Uma meta ou
   prazo de aceite por setor entra como coluna nova em `department_due_hours`
   ou em `department_goal`, sem mudar esta decisão.
+
+> Revisão de 2026-11-12 (ADR 025): a Etapa B mede a espera de aceite como
+> espera de fila (`ticket_queue_wait`, motivo `transferencia_recebida`) e o
+> limite entrou em `department_goal.tmr_max_hours`. Este ADR não muda.

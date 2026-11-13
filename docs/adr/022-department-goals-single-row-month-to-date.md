@@ -39,3 +39,11 @@ update`). Quem salvou e quando ficam em `updated_by` e `updated_at`; não há
   existentes começam sem metas (estado vazio da tela).
 - O cálculo de Horas em atraso (atraso acumulado dentro do mês, não foto dos
   ativos) está no ADR 023.
+
+> Revisão de 2026-11-12 (ADR 025, `docs/contracts/operations-tmr-overdue.md`):
+> os objetivos só da equipe passam a ser **Quantidade de chamados em atraso**
+> (`backlog_limit` renomeada para `overdue_tickets_limit`, valores mantidos) e
+> **TMR** (`tmr_max_hours`, nula até ser salva; `transfer_acceptance_min_percent`
+> apagada). Todos os objetivos agora são do mês corrente; nenhum é mais "de
+> agora". Continua uma linha por setor, nada gravado de resultado, exceto as
+> esperas de fila (`ticket_queue_wait`), que são fato dos atos e não resultado.

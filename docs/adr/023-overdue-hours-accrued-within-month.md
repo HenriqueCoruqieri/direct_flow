@@ -65,3 +65,10 @@ volta por recusa), created_at da transferência]`, quando positivo. Na volta
 > retomado, sem contar a espera nem repetir o trecho anterior. Trocar o
 > responsável dentro do setor continua levando o atraso do mês para o novo
 > responsável.
+
+> Revisão de 2026-11-12 (ADR 025): este ADR continua valendo só para **Horas
+> em atraso**. A **Quantidade de chamados em atraso** (novo objetivo da equipe,
+> no lugar do Backlog) usa a mesma ideia de atribuição ao setor de origem do
+> envio vencido (`ticket_transfer.from_department_id`, com
+> `from_due_at < created_at`), mas conta chamados, cada um no máximo uma vez
+> por setor no mês.
