@@ -25,7 +25,7 @@ const nameColumn = columnHelper.accessor("name", {
   header: "Nome",
   filterFn: "includesString",
   cell: ({ getValue }) => (
-    <span title={getValue()} className="block max-w-48 truncate font-medium">
+    <span title={getValue()} className="block max-w-96 truncate font-medium">
       {getValue()}
     </span>
   ),
