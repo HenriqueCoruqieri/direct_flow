@@ -207,7 +207,7 @@ const BUSINESS_HOURS_FIELDS: readonly string[] = [
 const BUSINESS_HOURS_PROBLEM_FIELDS = {
   DAYS_WITHOUT_OPENS_AT: "opensAt",
   DAYS_WITHOUT_CLOSES_AT: "closesAt",
-  CLOSES_NOT_AFTER_OPENS: "closesAt",
+  CLOSES_EQUALS_OPENS: "closesAt",
   TIMES_WITHOUT_DAYS: "businessDays",
 } satisfies Record<BusinessHoursProblem, string>
 

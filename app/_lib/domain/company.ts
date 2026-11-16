@@ -58,10 +58,17 @@ export const COMPANY_MANAGER_NAME_PLACEHOLDER = "Nome completo"
 export const BUSINESS_HOURS_MESSAGES = {
   DAYS_WITHOUT_OPENS_AT: "Informe o horário de abertura.",
   DAYS_WITHOUT_CLOSES_AT: "Informe o horário de fechamento.",
-  CLOSES_NOT_AFTER_OPENS:
-    "O horário de fechamento precisa ser depois do de abertura.",
+  CLOSES_EQUALS_OPENS:
+    "O horário de fechamento precisa ser diferente do de abertura.",
   TIMES_WITHOUT_DAYS: "Marque os dias de atendimento ou apague os horários.",
 } satisfies Record<BusinessHoursProblem, string>
+
+export const BUSINESS_HOURS_OVERNIGHT_HINT = "Fecha no dia seguinte."
+
+export const businessHoursCrossMidnight = (
+  opensAt: string | null | undefined,
+  closesAt: string | null | undefined,
+): boolean => Boolean(opensAt && closesAt && closesAt < opensAt)
 
 export const checkBusinessHours = (
   hours: BusinessHoursDraft,
@@ -75,8 +82,8 @@ export const checkBusinessHours = (
     if (!closesAt) {
       problems.push("DAYS_WITHOUT_CLOSES_AT")
     }
-    if (opensAt && closesAt && closesAt <= opensAt) {
-      problems.push("CLOSES_NOT_AFTER_OPENS")
+    if (opensAt && closesAt && closesAt === opensAt) {
+      problems.push("CLOSES_EQUALS_OPENS")
     }
   } else if (opensAt || closesAt) {
     problems.push("TIMES_WITHOUT_DAYS")

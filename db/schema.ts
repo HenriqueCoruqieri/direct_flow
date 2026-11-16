@@ -540,7 +540,7 @@ export const company = pgTable(
     ),
     check(
       "company_business_hours_order",
-      sql`closes_at is null or opens_at is null or closes_at > opens_at`,
+      sql`closes_at is null or opens_at is null or closes_at <> opens_at`,
     ),
     check(
       "company_business_days_range",

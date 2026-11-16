@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, PencilIcon, PlusIcon } from "lucide-react"
 import { useState } from "react"
-import { type DefaultValues, useForm } from "react-hook-form"
+import { type DefaultValues, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 
 import FormField from "@/app/_components/form-field"
@@ -46,6 +46,8 @@ import {
   PHONE_PLACEHOLDER,
 } from "@/app/_lib/domain/brazilian-formats"
 import {
+  BUSINESS_HOURS_OVERNIGHT_HINT,
+  businessHoursCrossMidnight,
   COMPANY_COMPLEMENT_PLACEHOLDER,
   COMPANY_MANAGER_NAME_PLACEHOLDER,
   COMPANY_NOTES_PLACEHOLDER,
@@ -148,6 +150,9 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
   })
 
   const lookup = useCompanyLookup(form)
+
+  const opensAt = useWatch({ control: form.control, name: "opensAt" })
+  const closesAt = useWatch({ control: form.control, name: "closesAt" })
 
   const isSubmitting = form.formState.isSubmitting
   const isEdit = props.mode === "edit"
@@ -500,7 +505,16 @@ const CompanyFormDialog = (props: CompanyFormDialogProps) => {
                       <Input {...field} value={field.value ?? ""} type="time" />
                     )}
                   </FormField>
-                  <FormField control={form.control} name="closesAt" label="Às">
+                  <FormField
+                    control={form.control}
+                    name="closesAt"
+                    label="Às"
+                    description={
+                      businessHoursCrossMidnight(opensAt, closesAt)
+                        ? BUSINESS_HOURS_OVERNIGHT_HINT
+                        : undefined
+                    }
+                  >
                     {(field) => (
                       <Input {...field} value={field.value ?? ""} type="time" />
                     )}

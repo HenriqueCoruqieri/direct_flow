@@ -1,0 +1,2 @@
+ALTER TABLE "company" DROP CONSTRAINT "company_business_hours_order";--> statement-breakpoint
+ALTER TABLE "company" ADD CONSTRAINT "company_business_hours_order" CHECK (closes_at is null or opens_at is null or closes_at <> opens_at);

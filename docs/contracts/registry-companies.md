@@ -14,6 +14,12 @@ Cada seção diz a que etapa pertence. **Etapa 1** = tabelas, migration, lista,
 busca, filtros e criação. **Etapa 2** = edição, desativar e reativar. Tudo o que
 não está marcado como Etapa 2 é Etapa 1.
 
+> Revisão de 2026-11-16 (seção "Revisão de 2026-11-16 — Expediente que vira a
+> noite", que prevalece no que diverge): "Às" menor que "Das" passa a ser
+> válido e significa que o expediente termina no dia seguinte; horários iguais
+> continuam recusados (`CLOSES_EQUALS_OPENS`). O texto abaixo já está
+> atualizado; o cenário C16 (b) muda de esperado.
+
 ## Decisões fixadas pelo usuário (resumo do plano)
 
 | Tema       | Decisão                                                                                                                                                                                                                                                                      |
@@ -25,7 +31,7 @@ não está marcado como Etapa 2 é Etapa 1.
 | CEP        | 8 dígitos; máscara `00000-000`                                                                                                                                                                                                                                               |
 | UF         | Enum fixo das 27 siglas                                                                                                                                                                                                                                                      |
 | Telefones  | Primário (obrigatório), Secundário (opcional), Contato do responsável (obrigatório). 10 ou 11 dígitos, DDD de 2 dígitos sem 0 inicial, máscara dinâmica                                                                                                                      |
-| Expediente | Opcional, tudo-ou-nada, "Às" > "Das". Informativo: não altera prazo nem SLA (ADR 019 continua valendo)                                                                                                                                                                       |
+| Expediente | Opcional, tudo-ou-nada, "Às" ≠ "Das"; "Às" < "Das" fecha no dia seguinte, e os dias marcados são os dias em que o expediente começa (revisão de 2026-11-16). Informativo: não altera prazo nem SLA (ADR 019 continua valendo)                                                |
 | E-mail     | Formato válido; não único                                                                                                                                                                                                                                                    |
 | Fora       | Vínculo empresa ↔ chamado. Consulta de CNPJ e CEP: `docs/contracts/company-lookup.md` (ADR 026)                                                                                                                                                                              |
 
@@ -110,7 +116,7 @@ Restrições:
 | `company_cep_digits`              | `check (cep ~ '^[0-9]{8}$')`                                                                                                                                        |
 | `company_manager_phone_digits`    | `check (manager_phone ~ '^[1-9][0-9]{9,10}$')`                                                                                                                      |
 | `company_business_hours_complete` | `check ((business_days is null and opens_at is null and closes_at is null) or (cardinality(business_days) > 0 and opens_at is not null and closes_at is not null))` |
-| `company_business_hours_order`    | `check (closes_at is null or opens_at is null or closes_at > opens_at)`                                                                                             |
+| `company_business_hours_order`    | `check (closes_at is null or opens_at is null or closes_at <> opens_at)` — migration `0029` (revisão de 2026-11-16); era `closes_at > opens_at` na `0021`           |
 | `company_business_days_range`     | `check (business_days is null or business_days <@ array[1,2,3,4,5,6,7]::smallint[])`                                                                                |
 
 Os dígitos verificadores do CNPJ **não** viram check no banco (o cálculo sobre
@@ -147,6 +153,14 @@ Gerada por `drizzle-kit generate --name company`. Só `CREATE TYPE`,
 `CREATE TABLE`, `CREATE UNIQUE INDEX`, `ALTER TABLE ... ADD CONSTRAINT` (FK e
 checks) nas tabelas novas. Nenhuma tabela existente muda. Quem aplica
 (`npm run db:migrate`) é o usuário.
+
+### Migration `db/migrations/0029_company_overnight_hours.sql` (revisão de 2026-11-16)
+
+Gerada por `drizzle-kit generate --name company_overnight_hours`: `DROP
+CONSTRAINT "company_business_hours_order"` seguido de `ADD CONSTRAINT` com
+`closes_at <> opens_at`. Só afrouxa: toda linha que passava em
+`closes_at > opens_at` passa em `closes_at <> opens_at`, então o `ADD
+CONSTRAINT` não falha sobre os dados existentes. Quem aplica é o usuário.
 
 ### Lidas pelo fluxo
 
@@ -347,6 +361,11 @@ export const checkBusinessHours: (
   hours: BusinessHoursDraft,
 ) => BusinessHoursCheck
 export const BUSINESS_HOURS_MESSAGES // satisfies Record<BusinessHoursProblem, string>
+export const BUSINESS_HOURS_OVERNIGHT_HINT = "Fecha no dia seguinte."
+export const businessHoursCrossMidnight: (
+  opensAt: string | null | undefined,
+  closesAt: string | null | undefined,
+) => boolean
 
 export const describeCompanyCnpjTaken: (existingIsActive: boolean) => string
 export const describeCompanyCnpjTakenOnUpdate: (
@@ -375,7 +394,7 @@ export type BusinessHoursProblem =
   | "DAYS_WITHOUT_OPENS_AT"
   | "DAYS_WITHOUT_CLOSES_AT"
   | "TIMES_WITHOUT_DAYS"
-  | "CLOSES_NOT_AFTER_OPENS"
+  | "CLOSES_EQUALS_OPENS"
 
 export interface BusinessHoursValid {
   ok: true
@@ -394,19 +413,20 @@ export type CompanySearchable = Pick<
 >
 ```
 
-| Nome                               | Semântica                                                                                                                                                                                                                                                                                                                                                                |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `WEEKDAY_SHORT_LABELS`             | `1: "Seg"`, `2: "Ter"`, `3: "Qua"`, `4: "Qui"`, `5: "Sex"`, `6: "Sáb"`, `7: "Dom"`. Texto do botão                                                                                                                                                                                                                                                                       |
-| `WEEKDAY_LABELS`                   | `Segunda-feira` … `Domingo`. `aria-label` do botão                                                                                                                                                                                                                                                                                                                       |
-| `WEEKDAYS`                         | `[1, 2, 3, 4, 5, 6, 7]`, ordem dos botões (segunda primeiro)                                                                                                                                                                                                                                                                                                             |
-| `isWeekday`                        | Guard para ler `smallint[]` do banco sem `as`                                                                                                                                                                                                                                                                                                                            |
-| `normalizeBusinessDays`            | Ordena e tira repetição                                                                                                                                                                                                                                                                                                                                                  |
-| `checkBusinessHours`               | **A** regra do expediente. Sem dia e sem horário → `ok`. Com dia: falta "Das" → `DAYS_WITHOUT_OPENS_AT`; falta "Às" → `DAYS_WITHOUT_CLOSES_AT`; os dois presentes e `closesAt <= opensAt` (comparação de `HH:MM` como texto) → `CLOSES_NOT_AFTER_OPENS`. Sem dia e algum horário → `TIMES_WITHOUT_DAYS`. Devolve **todos** os problemas, para cada campo ganhar seu erro |
-| `describeCompanyCnpjTaken`         | Mensagem de `CNPJ_TAKEN` na **criação** (tabela abaixo)                                                                                                                                                                                                                                                                                                                  |
-| `describeCompanyCnpjTakenOnUpdate` | Etapa 2. Mensagem de `CNPJ_TAKEN` na **edição**: igual à da criação quando a outra empresa está ativa; quando está inativa, sem o "Reative-a em vez de cadastrar de novo", que não faz sentido para quem está corrigindo o CNPJ de uma empresa existente                                                                                                                 |
-| `companySearchText`                | `` `${tradeName}\n${legalName}\n${cnpj}\n${formatCnpj(cnpj)}` ``. Valor da coluna de busca: o texto digitado acha o CNPJ sem máscara **e** com máscara. `includesString` compara os dois lados em minúsculas, então a busca ignora caixa: `12abc` acha `12ABC34501DE35`                                                                                                  |
-| `companyLocationLabel`             | `São Paulo / SP`                                                                                                                                                                                                                                                                                                                                                         |
-| `statesPresentIn`                  | UFs distintas da lista recebida, na ordem de `BRAZILIAN_STATES`. Opções do filtro UF (ver `df-ui`)                                                                                                                                                                                                                                                                       |
+| Nome                               | Semântica                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WEEKDAY_SHORT_LABELS`             | `1: "Seg"`, `2: "Ter"`, `3: "Qua"`, `4: "Qui"`, `5: "Sex"`, `6: "Sáb"`, `7: "Dom"`. Texto do botão                                                                                                                                                                                                                                                                                          |
+| `WEEKDAY_LABELS`                   | `Segunda-feira` … `Domingo`. `aria-label` do botão                                                                                                                                                                                                                                                                                                                                          |
+| `WEEKDAYS`                         | `[1, 2, 3, 4, 5, 6, 7]`, ordem dos botões (segunda primeiro)                                                                                                                                                                                                                                                                                                                                |
+| `isWeekday`                        | Guard para ler `smallint[]` do banco sem `as`                                                                                                                                                                                                                                                                                                                                               |
+| `normalizeBusinessDays`            | Ordena e tira repetição                                                                                                                                                                                                                                                                                                                                                                     |
+| `checkBusinessHours`               | **A** regra do expediente. Sem dia e sem horário → `ok`. Com dia: falta "Das" → `DAYS_WITHOUT_OPENS_AT`; falta "Às" → `DAYS_WITHOUT_CLOSES_AT`; os dois presentes e `closesAt === opensAt` → `CLOSES_EQUALS_OPENS` ("Às" menor que "Das" é válido e fecha no dia seguinte). Sem dia e algum horário → `TIMES_WITHOUT_DAYS`. Devolve **todos** os problemas, para cada campo ganhar seu erro |
+| `businessHoursCrossMidnight`       | Revisão de 2026-11-16. `true` quando os dois horários estão preenchidos e `closesAt < opensAt` (comparação de `HH:MM` como texto); `false` com algum vazio (`""`, `null`, `undefined`) ou iguais. Decide se o campo "Às" mostra `BUSINESS_HOURS_OVERNIGHT_HINT`                                                                                                                             |
+| `describeCompanyCnpjTaken`         | Mensagem de `CNPJ_TAKEN` na **criação** (tabela abaixo)                                                                                                                                                                                                                                                                                                                                     |
+| `describeCompanyCnpjTakenOnUpdate` | Etapa 2. Mensagem de `CNPJ_TAKEN` na **edição**: igual à da criação quando a outra empresa está ativa; quando está inativa, sem o "Reative-a em vez de cadastrar de novo", que não faz sentido para quem está corrigindo o CNPJ de uma empresa existente                                                                                                                                    |
+| `companySearchText`                | `` `${tradeName}\n${legalName}\n${cnpj}\n${formatCnpj(cnpj)}` ``. Valor da coluna de busca: o texto digitado acha o CNPJ sem máscara **e** com máscara. `includesString` compara os dois lados em minúsculas, então a busca ignora caixa: `12abc` acha `12ABC34501DE35`                                                                                                                     |
+| `companyLocationLabel`             | `São Paulo / SP`                                                                                                                                                                                                                                                                                                                                                                            |
+| `statesPresentIn`                  | UFs distintas da lista recebida, na ordem de `BRAZILIAN_STATES`. Opções do filtro UF (ver `df-ui`)                                                                                                                                                                                                                                                                                          |
 
 Mensagens:
 
@@ -414,7 +434,8 @@ Mensagens:
 | ----------------------------------------- | ------------------------------------------------------------------------------------- |
 | `DAYS_WITHOUT_OPENS_AT`                   | `Informe o horário de abertura.`                                                      |
 | `DAYS_WITHOUT_CLOSES_AT`                  | `Informe o horário de fechamento.`                                                    |
-| `CLOSES_NOT_AFTER_OPENS`                  | `O horário de fechamento precisa ser depois do de abertura.`                          |
+| `CLOSES_EQUALS_OPENS`                     | `O horário de fechamento precisa ser diferente do de abertura.`                       |
+| `BUSINESS_HOURS_OVERNIGHT_HINT`           | `Fecha no dia seguinte.`                                                              |
 | `TIMES_WITHOUT_DAYS`                      | `Marque os dias de atendimento ou apague os horários.`                                |
 | `describeCompanyCnpjTaken(true)`          | `Já existe uma empresa com este CNPJ.`                                                |
 | `describeCompanyCnpjTaken(false)`         | `Já existe uma empresa inativa com este CNPJ. Reative-a em vez de cadastrar de novo.` |
@@ -490,7 +511,7 @@ Forma de `createCompanySchema` (entrada → saída):
   action validar de novo.
 - A regra do expediente é um `superRefine` que chama `checkBusinessHours` e põe
   cada problema no campo dele: `DAYS_WITHOUT_OPENS_AT` → `opensAt`;
-  `DAYS_WITHOUT_CLOSES_AT` e `CLOSES_NOT_AFTER_OPENS` → `closesAt`;
+  `DAYS_WITHOUT_CLOSES_AT` e `CLOSES_EQUALS_OPENS` → `closesAt`;
   `TIMES_WITHOUT_DAYS` → `businessDays`. Mensagens de `BUSINESS_HOURS_MESSAGES`.
 - O `superRefine` do expediente roda com `when`: dispara mesmo que outros
   campos estejam inválidos (o formulário vazio com Seg marcada mostra os erros
@@ -1020,7 +1041,9 @@ novo.
 4. **Senha do Diretor** — o QA depende da senha do `.env` (`SEED_ADMIN_*`). Se
    foi trocada pela interface, o QA não entra; conferir antes da Onda 4. Nunca
    escrever a senha em documento ou relatório.
-5. **Expediente que atravessa a meia-noite** não é representável. Aceito.
+5. **Expediente que atravessa a meia-noite** — representável desde a revisão
+   de 2026-11-16 ("Às" < "Das"). 24 horas não tem forma própria: usa-se
+   00:00 às 23:59, porque horários iguais são recusados.
 6. **Lista com o registro inteiro** — volume pequeno; se crescer, paginar no
    servidor.
 7. **`tsc` entre ondas** — `RegistrySection` ganha `"companies"`: se algum
@@ -1080,7 +1103,7 @@ QA Membro Suporte. Viewport padrão 1280×800 salvo indicação.
 | C13 | D        | com `(11) 9123-2341`, cursor depois de `(11) 91`, digitar `5`; Backspace no meio; cursor logo depois do `-` e Backspace                                           | o `5` entra na posição e o cursor fica logo depois dele (vira `(11) 91523-2341`), sem pular para o fim; Backspace no meio apaga o dígito à esquerda e mantém o cursor; Backspace depois do `-` apaga o dígito antes do hífen                                                                                                                                                                                                                                                                                                                         |
 | C14 | D        | CEP `01310100`; depois 7 dígitos e salvar                                                                                                                         | `01310-100`; com 7 → `O CEP precisa ter 8 dígitos.`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | C15 | D        | abrir o select UF                                                                                                                                                 | 27 opções, de `AC — Acre` a `TO — Tocantins`, na ordem alfabética do nome                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| C16 | D        | Expediente: (a) marcar Seg sem horário; (b) Das 18:00 Às 08:00; (c) desmarcar os dias com horários preenchidos; (d) tudo vazio — salvar em cada caso              | (a) `Informe o horário de abertura.` e `Informe o horário de fechamento.`; (b) `O horário de fechamento precisa ser depois do de abertura.` em Às; (c) `Marque os dias de atendimento ou apague os horários.` abaixo dos dias; (d) sem erro no grupo                                                                                                                                                                                                                                                                                                 |
+| C16 | D        | Expediente: (a) marcar Seg sem horário; (b) Das 18:00 Às 08:00; (c) desmarcar os dias com horários preenchidos; (d) tudo vazio — salvar em cada caso              | (a) `Informe o horário de abertura.` e `Informe o horário de fechamento.`; (b) desde 2026-11-16, sem erro em Às e com `Fecha no dia seguinte.` como descrição (ver N2); (c) `Marque os dias de atendimento ou apague os horários.` abaixo dos dias; (d) sem erro no grupo                                                                                                                                                                                                                                                                            |
 | C17 | D        | criar `[QA] Empresa Completa` com CNPJ `11.222.333/0001-81`, os dois telefones, complemento, Seg a Sex 08:00–18:00 e observação                                   | toast "Empresa criada.", Dialog fecha, linha aparece como Ativo; no banco: `cnpj = '11222333000181'`, CEP e telefones só dígitos, `business_days = {1,2,3,4,5}`, `opens_at = 08:00:00`, `closes_at = 18:00:00`; `company_contact` com `primary` e `secondary`                                                                                                                                                                                                                                                                                        |
 | C18 | D        | criar `[QA] Empresa Mínima` com CNPJ `11.444.777/0001-61`, sem secundário, sem complemento, sem expediente                                                        | toast "Empresa criada."; no banco: uma linha `primary` em `company_contact`; `complement`, `business_days`, `opens_at`, `closes_at`, `notes` nulos                                                                                                                                                                                                                                                                                                                                                                                                   |
 | C19 | D        | "Nova empresa" com CNPJ `11222333000181` (sem máscara) e o resto válido; depois com `45.678.901/0001-75` (`QA Gama`, inativa)                                     | erro no campo CNPJ: `Já existe uma empresa com este CNPJ.`; depois `Já existe uma empresa inativa com este CNPJ. Reative-a em vez de cadastrar de novo.`; foco no CNPJ; Dialog aberto com os valores; **nenhum** toast; nada gravado                                                                                                                                                                                                                                                                                                                 |
@@ -1124,7 +1147,77 @@ equivalente, nunca a uma do seed.
 corrida de CNPJ não são testáveis pelo navegador: ficam para o `df-debug`
 (checklist).
 
+## Revisão de 2026-11-16 — Expediente que vira a noite
+
+Um expediente como o de um bar, das 20:30 às 03:00, era recusado por
+`closesAt <= opensAt`. Prevalece sobre o restante do documento no que diverge.
+
+### Regra
+
+1. "Às" menor que "Das" é válido e significa que o expediente termina no dia
+   seguinte.
+2. Os dias marcados são os dias em que o expediente **começa**. Sexta, das
+   20:30 às 03:00, termina sábado às 03:00. Não se marca o sábado por causa da
+   madrugada.
+3. Horários iguais continuam recusados (`CLOSES_EQUALS_OPENS`, mensagem
+   `O horário de fechamento precisa ser diferente do de abertura.` em "Às"),
+   porque seriam ambíguos entre 24 horas e fechado. **Para 24 horas, a
+   orientação é 00:00 às 23:59.**
+4. O expediente continua informativo: nenhuma regra de prazo, SLA ou "aberta
+   agora" o lê (conferido em todo o projeto nesta revisão; os únicos leitores
+   de `opensAt`/`closesAt` são o cadastro, `app/_lib/data/companies.ts` e o
+   seed).
+
+### O que mudou por camada
+
+| Camada                | Mudança                                                                                                                                                          | Dono           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `db/schema.ts`        | `company_business_hours_order` passa a `closes_at is null or opens_at is null or closes_at <> opens_at`                                                          | `df-architect` |
+| migration             | `0029_company_overnight_hours.sql` (drop e add do check); só afrouxa, dados existentes continuam válidos; **não aplicada** — o usuário roda `npm run db:migrate` | `df-architect` |
+| `app/_lib/types`      | `BusinessHoursProblem`: `CLOSES_NOT_AFTER_OPENS` → `CLOSES_EQUALS_OPENS`                                                                                         | `df-architect` |
+| `app/_lib/domain`     | `checkBusinessHours` só recusa iguais; novos `businessHoursCrossMidnight` e `BUSINESS_HOURS_OVERNIGHT_HINT`                                                      | `df-architect` |
+| `app/_lib/validation` | mapeamento `CLOSES_EQUALS_OPENS` → `closesAt`; `createCompanySchema` e `updateCompanySchema` herdam a regra sem mudança de forma                                 | `df-architect` |
+| `app/_lib/data`       | nenhuma                                                                                                                                                          | `df-data`      |
+| `app/_lib/actions`    | nenhuma (o resultado `VALIDATION` já carrega a mensagem nova)                                                                                                    | `df-actions`   |
+| `company-form-dialog` | ver abaixo                                                                                                                                                       | `df-ui`        |
+
+### `df-ui` — `app/(app)/registry/companies/_components/company-form-dialog.tsx`
+
+- No `FormField` de `closesAt` ("Às"), passar
+  `description={businessHoursCrossMidnight(opensAt, closesAt) ? BUSINESS_HOURS_OVERNIGHT_HINT : undefined}`,
+  lendo os dois valores com `useWatch` (`name: ["opensAt", "closesAt"]`). Os
+  dois vêm de `@/app/_lib/domain/company`; nada de comparar horário no
+  componente.
+- O `FormField` já troca a descrição pelo erro quando o campo está inválido e
+  aponta o `aria-describedby` para quem estiver visível
+  (`docs/contracts/form-field.md`), então não há lógica extra.
+- O aviso aparece e some enquanto se digita, sem esperar o envio.
+
+### Cenários para o `df-qa`
+
+Regras de dados da seção "Regras de dados do `df-qa` nesta feature": criar e
+editar só empresas `[QA] `; CNPJs da linha "reserva", em ordem, pulando os já
+usados. Conferência no banco com a consulta da mesma seção (`opens_at` e
+`closes_at` voltam como `HH:MM:SS`). Pré-condição: migration `0029` aplicada
+pelo usuário.
+
+| #   | Quem | Ação                                                                                                                                                  | Esperado                                                                                                                                                                                                                                           |
+| --- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N1  | D    | "Nova empresa" `[QA] Bar Noturno`, todos os obrigatórios válidos, dias Sex e Sáb, Das 20:30, Às 03:00; salvar                                         | enquanto preenche, "Às" mostra `Fecha no dia seguinte.`; toast "Empresa criada."; no banco `business_days = {5,6}`, `opens_at = 20:30:00`, `closes_at = 03:00:00`                                                                                  |
+| N2  | D    | "Nova empresa" `[QA] Fecha Meia-Noite e Meia`, dias Seg a Sex, Das 18:00, Às 00:30; salvar                                                            | antes de salvar, `Fecha no dia seguinte.` abaixo de "Às", sem estilo de erro; toast "Empresa criada."; no banco `opens_at = 18:00:00`, `closes_at = 00:30:00`                                                                                      |
+| N3  | D    | "Nova empresa" com dias Seg, Das 08:00, Às 08:00; salvar                                                                                              | não salva; `O horário de fechamento precisa ser diferente do de abertura.` abaixo de "Às", no lugar do aviso; nenhuma linha nova no banco. Mudar "Às" para 08:01 tira o erro                                                                       |
+| N4  | D    | "Nova empresa" `[QA] Horário Comercial`, dias Seg a Sex, Das 08:00, Às 18:00; salvar                                                                  | nenhum aviso em "Às" em momento algum; toast "Empresa criada."; no banco `opens_at = 08:00:00`, `closes_at = 18:00:00`                                                                                                                             |
+| N5  | D    | "Editar" em `[QA] Horário Comercial` (N4): o Dialog abre sem aviso; trocar só a cidade e salvar; depois "Editar" de novo, Das 22:00, Às 06:00, salvar | primeira gravação: toast "Empresa atualizada.", horários intactos; segunda: aviso em "Às" antes de salvar, toast "Empresa atualizada.", no banco `opens_at = 22:00:00`, `closes_at = 06:00:00`; reabrir "Editar" mostra o aviso já no carregamento |
+| N6  | D    | "Editar" em `QA Alfa` (seed, 08:00 às 18:00) e cancelar sem salvar                                                                                    | Dialog abre com os horários do seed e sem aviso; nada muda no banco                                                                                                                                                                                |
+
 ## Checklist de encerramento
+
+Revisão de 2026-11-16 — expediente que vira a noite:
+
+- [x] `company_business_hours_order` com `<>`, migration `0029_company_overnight_hours` gerada e revisada; `CLOSES_EQUALS_OPENS`, `businessHoursCrossMidnight`, `BUSINESS_HOURS_OVERNIGHT_HINT` (`df-architect`)
+- [ ] `npm run db:migrate` aplicado (usuário)
+- [ ] aviso `Fecha no dia seguinte.` no campo "Às" (`df-ui`)
+- [ ] cenários N1–N6 e C16 (b) revisado (`df-qa`)
 
 Etapa 1 — concluída em 2026-11-06 (`df-reviewer` aprovado com atenções;
 `df-qa` 28/28 em `docs/test-reports/2026-11-06-registry-companies-etapa-1.md`):

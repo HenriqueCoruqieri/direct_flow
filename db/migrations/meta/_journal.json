@@ -204,6 +204,13 @@
       "when": 1794529740591,
       "tag": "0028_backfill_ticket_queue_wait",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794861127392,
+      "tag": "0029_company_overnight_hours",
+      "breakpoints": true
     }
   ]
 }

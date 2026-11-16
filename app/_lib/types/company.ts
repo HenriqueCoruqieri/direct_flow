@@ -63,7 +63,7 @@ export type BusinessHoursProblem =
   | "DAYS_WITHOUT_OPENS_AT"
   | "DAYS_WITHOUT_CLOSES_AT"
   | "TIMES_WITHOUT_DAYS"
-  | "CLOSES_NOT_AFTER_OPENS"
+  | "CLOSES_EQUALS_OPENS"
 
 export interface BusinessHoursValid {
   ok: true
