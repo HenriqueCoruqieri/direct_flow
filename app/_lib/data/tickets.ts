@@ -23,6 +23,13 @@ import {
   isUsableTicketTag,
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
+import {
+  canEditTicketActionsInEdit,
+  canSaveTicketActions,
+  normalizeTicketActions,
+  TICKET_ACTIONS_WRITABLE_STATUS,
+  ticketActionsChanged,
+} from "@/app/_lib/domain/ticket-actions"
 import { isUsableTicketAssignee } from "@/app/_lib/domain/ticket-assignee"
 import {
   assigneeTargetFor,
@@ -76,6 +83,10 @@ import type {
   TicketDetail,
   TicketTransferRecipient,
 } from "@/app/_lib/types/ticket"
+import type {
+  UpdateTicketActionsOutcome,
+  UpdateTicketActionsValues,
+} from "@/app/_lib/types/ticket-actions"
 import type {
   AssignTicketOutcome,
   AssignTicketValues,
@@ -166,6 +177,7 @@ export async function findTicketDetail(
         tagName: tag.name,
         createdAt: ticket.createdAt,
         solution: ticket.solution,
+        actions: ticket.actions,
         dueAt: ticket.dueAt,
         resolvedAt: ticket.resolvedAt,
       })
@@ -468,6 +480,7 @@ export async function updateTicketByAssignee(
         description: ticket.description,
         type: ticket.type,
         solution: ticket.solution,
+        actions: ticket.actions,
         resolvedAt: ticket.resolvedAt,
       })
       .from(ticket)
@@ -509,6 +522,16 @@ export async function updateTicketByAssignee(
 
     if (values.solution !== undefined && !canEditSolution(ticketRow.status)) {
       return { status: "not_editable" }
+    }
+
+    if (values.actions !== undefined) {
+      const hasBeenInProgress =
+        ticketRow.status === TICKET_ACTIONS_WRITABLE_STATUS ||
+        (await ticketHasBeenInProgress(tx, ticketId))
+
+      if (!canEditTicketActionsInEdit(ticketRow.status, hasBeenInProgress)) {
+        return { status: "not_editable" }
+      }
     }
 
     const added = values.addedAttachments ?? []
@@ -632,8 +655,14 @@ export async function updateTicketByAssignee(
       { id: chosenCompanyRow.id, tradeName: chosenCompanyRow.tradeName },
     )
 
+    const actionsChanged = ticketActionsChanged(
+      ticketRow.actions,
+      values.actions,
+    )
+
     if (
       !hasTicketEditChanges(changes) &&
+      !actionsChanged &&
       !hasTicketAttachmentChanges({
         saved: savedAttachments.length,
         removed: removedIds.length,
@@ -679,6 +708,9 @@ export async function updateTicketByAssignee(
         type: values.type,
         ...(changes.company ? { companyId: changes.company.to.id } : {}),
         ...(changes.solution ? { solution: values.solution } : {}),
+        ...(values.actions !== undefined && actionsChanged
+          ? { actions: normalizeTicketActions(values.actions) }
+          : {}),
         ...(changes.assignee ? { assignedTo: values.assigneeId } : {}),
         ...(nextStatus !== ticketRow.status ? { status: nextStatus } : {}),
         updatedAt: changedAt,
@@ -850,6 +882,81 @@ export async function updateTicketByAssignee(
       tagChanged: changes.tag !== null,
       removedStorageKeys,
     }
+  })
+}
+
+async function ticketHasBeenInProgress(
+  tx: Transaction,
+  ticketId: number,
+): Promise<boolean> {
+  const [row] = await tx
+    .select({ id: ticketHistory.id })
+    .from(ticketHistory)
+    .where(
+      and(
+        eq(ticketHistory.ticketId, ticketId),
+        eq(ticketHistory.toStatus, TICKET_ACTIONS_WRITABLE_STATUS),
+      ),
+    )
+    .limit(1)
+
+  return row !== undefined
+}
+
+export async function updateTicketActions(
+  values: UpdateTicketActionsValues,
+): Promise<UpdateTicketActionsOutcome> {
+  const { ticketId, actions, actorId } = values
+
+  return db.transaction(async (tx) => {
+    const [ticketRow] = await tx
+      .select({
+        createdBy: ticket.createdBy,
+        assignedTo: ticket.assignedTo,
+        currentDepartmentId: ticket.currentDepartmentId,
+        status: ticket.status,
+        actions: ticket.actions,
+      })
+      .from(ticket)
+      .where(eq(ticket.id, ticketId))
+      .for("update")
+
+    if (!ticketRow) return { status: "not_found" }
+
+    const actor = await lockActorFacts(tx, actorId)
+
+    if (!actor) return { status: "not_editable" }
+
+    if (!canViewTicket(actor, ticketRow)) return { status: "not_found" }
+
+    const [pendingTransfer] = await tx
+      .select({ id: ticketTransfer.id })
+      .from(ticketTransfer)
+      .where(
+        and(
+          eq(ticketTransfer.ticketId, ticketId),
+          eq(ticketTransfer.status, "pendente"),
+        ),
+      )
+      .limit(1)
+
+    if (
+      !canSaveTicketActions(actor, {
+        ...ticketRow,
+        hasPendingTransfer: pendingTransfer !== undefined,
+      })
+    ) {
+      return { status: "not_editable" }
+    }
+
+    if (actions === ticketRow.actions) return { status: "saved", ticketId }
+
+    await tx
+      .update(ticket)
+      .set({ actions, updatedAt: new Date() })
+      .where(eq(ticket.id, ticketId))
+
+    return { status: "saved", ticketId }
   })
 }
 
