@@ -1,4 +1,4 @@
-import { XIcon } from "lucide-react"
+import { DownloadIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/app/_components/ui/button"
 import {
@@ -8,33 +8,37 @@ import {
 } from "@/app/_lib/domain/attachment"
 import type { TicketAttachmentItem } from "@/app/_lib/types/attachment"
 
-import AttachmentTileBody from "../../../_components/attachment-tile-body"
+import AttachmentRowBody from "../../../_components/attachment-row-body"
 
-interface TicketAttachmentTileProps {
+interface TicketAttachmentRowProps {
   attachment: TicketAttachmentItem
   onRemove?: () => void
   disabled?: boolean
 }
 
-const TicketAttachmentTile = ({
+const TicketAttachmentRow = ({
   attachment,
   onRemove,
   disabled,
-}: TicketAttachmentTileProps) => {
+}: TicketAttachmentRowProps) => {
   const sizeId = `ticket-attachment-${attachment.id}-size`
 
   return (
-    <li className="relative w-34 shrink-0">
+    <li className="flex h-13 min-w-0 shrink-0 items-center gap-1">
       <a
         href={attachmentDownloadPath(attachment.id)}
         aria-label={downloadAttachmentLabel(attachment.fileName)}
         aria-describedby={sizeId}
-        className="flex h-full flex-col items-center gap-1 rounded-lg border border-transparent bg-surface-muted px-2 pt-3 pb-2.5 text-center transition-colors outline-none hover:border-border-strong hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="group/attachment flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-transparent bg-surface-muted px-2.5 transition-colors outline-none hover:border-border-strong hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <AttachmentTileBody
+        <AttachmentRowBody
           fileName={attachment.fileName}
           sizeBytes={attachment.sizeBytes}
           sizeId={sizeId}
+        />
+        <DownloadIcon
+          aria-hidden="true"
+          className="size-4 shrink-0 text-muted-foreground transition-colors group-hover/attachment:text-foreground"
         />
       </a>
       {onRemove !== undefined ? (
@@ -45,7 +49,7 @@ const TicketAttachmentTile = ({
           disabled={disabled}
           aria-label={removeAttachmentLabel(attachment.fileName)}
           onClick={onRemove}
-          className="absolute top-1 right-1"
+          className="shrink-0"
         >
           <XIcon aria-hidden="true" className="size-3.5" />
         </Button>
@@ -54,4 +58,4 @@ const TicketAttachmentTile = ({
   )
 }
 
-export default TicketAttachmentTile
+export default TicketAttachmentRow

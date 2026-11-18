@@ -215,11 +215,6 @@ const TicketDetailPage = async ({
               description={ticket.description}
               editable={editable}
             />
-            <TicketAttachments
-              attachments={attachments}
-              editable={editable}
-              canAttach={canAttach}
-            />
             <TicketTimeline entries={ticket.history} />
             <TicketConclusion
               ticketId={ticket.id}
@@ -233,6 +228,11 @@ const TicketDetailPage = async ({
         aside={
           <>
             <TicketDetailFields ticket={ticket} now={now} editable={editable} />
+            <TicketAttachments
+              attachments={attachments}
+              editable={editable}
+              canAttach={canAttach}
+            />
             <TicketComments
               ticketId={ticket.id}
               entries={commentEntries}

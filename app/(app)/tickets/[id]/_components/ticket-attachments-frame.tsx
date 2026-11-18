@@ -37,30 +37,30 @@ const TicketAttachmentsFrame = ({
       aria-describedby={describedBy}
       className="flex min-w-0 flex-col gap-3 rounded-xl border border-border-subtle bg-surface p-5"
     >
-      {details === undefined ? (
+      {action === undefined ? (
         heading
       ) : (
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 items-center justify-between gap-2">
           {heading}
-          {details}
+          <div className="shrink-0">{action}</div>
         </div>
       )}
+      {details !== undefined ? (
+        <div className="flex min-w-0 flex-col gap-1">{details}</div>
+      ) : null}
       <div aria-live={announceChanges ? "polite" : undefined}>
         {isEmpty ? (
           <AttachmentsEmpty />
         ) : (
-          <div className="-mx-1 min-w-0 scroll-p-1 overflow-x-auto p-1">
-            <ul
-              ref={listRef}
-              aria-labelledby={HEADING_ID}
-              className="flex w-max gap-2"
-            >
-              {children}
-            </ul>
-          </div>
+          <ul
+            ref={listRef}
+            aria-labelledby={HEADING_ID}
+            className="-m-1 flex max-h-44 min-w-0 scroll-py-1 flex-col gap-1.5 overflow-y-auto overscroll-contain p-1"
+          >
+            {children}
+          </ul>
         )}
       </div>
-      {action !== undefined ? <div className="self-start">{action}</div> : null}
       {footer}
     </section>
   )

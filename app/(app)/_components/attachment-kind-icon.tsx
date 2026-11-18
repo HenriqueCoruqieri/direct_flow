@@ -40,11 +40,13 @@ const UNKNOWN_KIND_VISUAL: AttachmentKindVisual = {
 
 interface AttachmentKindIconProps {
   fileName: string
+  compact?: boolean
   className?: string
 }
 
 const AttachmentKindIcon = ({
   fileName,
+  compact = false,
   className,
 }: AttachmentKindIconProps) => {
   const kind = attachmentKindFor(fileName)
@@ -57,8 +59,14 @@ const AttachmentKindIcon = ({
       aria-hidden="true"
       className={cn("flex shrink-0 flex-col items-center gap-1", className)}
     >
-      <Icon className={cn("size-8 shrink-0", visual.className)} />
-      {extension !== null ? (
+      <Icon
+        className={cn(
+          "shrink-0",
+          compact ? "size-5" : "size-8",
+          visual.className,
+        )}
+      />
+      {!compact && extension !== null ? (
         <span className="text-micro font-semibold tracking-wide text-muted-foreground">
           {extension}
         </span>

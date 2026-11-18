@@ -28,7 +28,7 @@ import AttachmentFilePicker from "../../../_components/attachment-file-picker"
 import AttachmentUploadItem from "../../../_components/attachment-upload-item"
 import { useAttachmentUploads } from "../../../_hooks/use-attachment-uploads"
 import { useTicketEdit } from "../_hooks/use-ticket-edit"
-import TicketAttachmentTile from "./ticket-attachment-tile"
+import TicketAttachmentRow from "./ticket-attachment-row"
 import TicketAttachmentsFrame from "./ticket-attachments-frame"
 
 interface TicketAttachmentsEditorProps {
@@ -37,8 +37,6 @@ interface TicketAttachmentsEditorProps {
   ref?: React.Ref<HTMLButtonElement>
   fieldState: ControllerFieldState
 }
-
-const STRIP_ITEM_CLASS = "w-34 shrink-0"
 
 const TicketAttachmentsEditor = ({
   attachments,
@@ -160,7 +158,7 @@ const TicketAttachmentsEditor = ({
       }
     >
       {keptAttachments.map((attachment) => (
-        <TicketAttachmentTile
+        <TicketAttachmentRow
           key={attachment.id}
           attachment={attachment}
           disabled={isSubmitting}
@@ -176,7 +174,7 @@ const TicketAttachmentsEditor = ({
           error={item.error}
           disabled={isSubmitting}
           onRemove={() => handleRemoveUpload(item.id)}
-          className={STRIP_ITEM_CLASS}
+          layout="row"
         />
       ))}
     </TicketAttachmentsFrame>

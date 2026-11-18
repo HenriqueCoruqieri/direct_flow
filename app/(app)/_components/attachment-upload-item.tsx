@@ -14,7 +14,10 @@ import {
 import type { AttachmentUploadStatus } from "@/app/_lib/types/attachment"
 import { cn } from "@/app/_lib/utils"
 
+import AttachmentRowBody from "./attachment-row-body"
 import AttachmentTileBody from "./attachment-tile-body"
+
+type AttachmentUploadItemLayout = "tile" | "row"
 
 interface AttachmentUploadItemProps {
   fileName: string
@@ -23,6 +26,7 @@ interface AttachmentUploadItemProps {
   error: string | null
   disabled?: boolean
   onRemove: () => void
+  layout?: AttachmentUploadItemLayout
   className?: string
 }
 
@@ -35,8 +39,90 @@ const AttachmentUploadItem = ({
   error,
   disabled,
   onRemove,
+  layout = "tile",
   className,
 }: AttachmentUploadItemProps) => {
+  const isRow = layout === "row"
+  const statusLabel = ATTACHMENT_UPLOAD_STATUS_LABELS[status]
+  const statusTone =
+    status === "failed" ? "text-destructive" : "text-muted-foreground"
+
+  const statusIcon = (
+    <>
+      {status === "uploading" ? (
+        <Loader2Icon
+          aria-hidden="true"
+          className={cn(
+            STATUS_ICON_CLASS,
+            "animate-spin motion-reduce:animate-none",
+          )}
+        />
+      ) : null}
+      {status === "uploaded" ? (
+        <CircleCheckIcon
+          aria-hidden="true"
+          className={cn(STATUS_ICON_CLASS, "text-primary")}
+        />
+      ) : null}
+      {status === "failed" ? (
+        <CircleAlertIcon aria-hidden="true" className={STATUS_ICON_CLASS} />
+      ) : null}
+    </>
+  )
+
+  const statusDescription = (
+    <span className="sr-only">
+      {describeAttachmentUploadStatus(fileName, status)}
+    </span>
+  )
+
+  const removeButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      disabled={disabled}
+      aria-label={removeAttachmentLabel(fileName)}
+      onClick={onRemove}
+      className={isRow ? "shrink-0" : "absolute top-1 right-1"}
+    >
+      <XIcon aria-hidden="true" className="size-3.5" />
+    </Button>
+  )
+
+  if (isRow) {
+    const rowStatusText = error ?? statusLabel
+
+    return (
+      <li
+        className={cn(
+          "flex h-13 min-w-0 shrink-0 items-center gap-1",
+          className,
+        )}
+      >
+        <div className="flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-transparent bg-surface-muted px-2.5">
+          <AttachmentRowBody fileName={fileName} sizeBytes={sizeBytes}>
+            <span aria-hidden="true" className="text-muted-foreground">
+              ·
+            </span>
+            <span
+              title={rowStatusText}
+              className={cn("flex min-w-0 items-center gap-1", statusTone)}
+            >
+              {statusIcon}
+              <span aria-hidden="true" className="truncate">
+                {rowStatusText}
+              </span>
+              {statusDescription}
+              {error !== null ? <span className="sr-only">{error}</span> : null}
+            </span>
+          </AttachmentRowBody>
+        </div>
+        {removeButton}
+      </li>
+    )
+  }
+
   return (
     <li className={cn("min-w-0", className)}>
       <div className="relative flex h-full min-w-0 flex-col items-center gap-1 rounded-lg bg-surface-muted px-2 pt-3 pb-2.5 text-center">
@@ -44,51 +130,21 @@ const AttachmentUploadItem = ({
         <p
           className={cn(
             "flex max-w-full items-center justify-center gap-1 text-xs",
-            status === "failed" ? "text-destructive" : "text-muted-foreground",
+            statusTone,
           )}
         >
-          {status === "uploading" ? (
-            <Loader2Icon
-              aria-hidden="true"
-              className={cn(
-                STATUS_ICON_CLASS,
-                "animate-spin motion-reduce:animate-none",
-              )}
-            />
-          ) : null}
-          {status === "uploaded" ? (
-            <CircleCheckIcon
-              aria-hidden="true"
-              className={cn(STATUS_ICON_CLASS, "text-primary")}
-            />
-          ) : null}
-          {status === "failed" ? (
-            <CircleAlertIcon aria-hidden="true" className={STATUS_ICON_CLASS} />
-          ) : null}
+          {statusIcon}
           <span aria-hidden="true" className="min-w-0">
-            {ATTACHMENT_UPLOAD_STATUS_LABELS[status]}
+            {statusLabel}
           </span>
-          <span className="sr-only">
-            {describeAttachmentUploadStatus(fileName, status)}
-          </span>
+          {statusDescription}
         </p>
         {error !== null ? (
           <p className="w-full text-xs wrap-break-word text-destructive">
             {error}
           </p>
         ) : null}
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          disabled={disabled}
-          aria-label={removeAttachmentLabel(fileName)}
-          onClick={onRemove}
-          className="absolute top-1 right-1"
-        >
-          <XIcon aria-hidden="true" className="size-3.5" />
-        </Button>
+        {removeButton}
       </div>
     </li>
   )
