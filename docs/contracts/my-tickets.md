@@ -37,7 +37,7 @@ Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 
 > **Revisão 2026-10-26 — coluna SLA.** `MyTicketListItem` ganha
 > `priority: TicketPriority` e `resolvedAt: Date | null`; `listMyTickets`
-> passa a selecioná-los. A tabela ganha a coluna "SLA" logo após "Aberto em"
+> passa a selecioná-los. A tabela ganha a coluna "Prazo" (`TICKET_SLA_LABEL`) logo após "Aberto em"
 > (`ticketSlaFor`/`describeTicketSla`, vermelho só para ativo vencido), com o
 > `now` da página. No detalhe, Prioridade e SLA vão para o card "Detalhes" e o
 > badge de prioridade sai do cabeçalho. Referência técnica:

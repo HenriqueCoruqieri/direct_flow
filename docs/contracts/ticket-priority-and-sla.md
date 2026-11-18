@@ -11,12 +11,17 @@ para cá): `ticket-creation.md`, `dashboard-overview.md`, `my-tickets.md`,
 Versões observadas: `next@16.3.5`, `zod@4.6.5`, `drizzle-orm@0.45.2`,
 `react-hook-form@7.88`, `@hookform/resolvers@5.9`.
 
+> **Revisão de 2026-11-18 — texto do rótulo.** `TICKET_SLA_LABEL` passa de
+> `SLA` para `Prazo`: o cabeçalho da coluna das tabelas e o rótulo do card
+> "Detalhes" no chamado resolvido/fechado ou neutro leem "Prazo". Só o texto
+> mudou; identificadores e regras continuam os mesmos.
+
 > **Revisão de 2026-10-27 — rótulo do SLA no detalhe.** No card "Detalhes" de
 > `/tickets/[id]` o campo usa `describeTicketSlaDetail(ticketSlaFor(ticket, now))`:
 > ativo vencido → rótulo `Vencido em`, valor `DD/MM/AAAA - HH:mm`
 > (`formatDateDashTime`), em vermelho; ativo no prazo → `Vence em` + mesmo
-> formato; resolvido/fechado → rótulo `SLA` com `No prazo`/`Fora do prazo`;
-> neutro → `SLA` com `—`. A coluna "SLA" das tabelas não muda.
+> formato; resolvido/fechado → rótulo `Prazo` com `No prazo`/`Fora do prazo`;
+> neutro → `Prazo` com `—`. A coluna "Prazo" das tabelas não muda.
 
 > **Revisão de 2026-10-26 — prioridade definida pela tag**
 > (`docs/contracts/tag-priority.md`, ADR 020). A prioridade do chamado passa a
@@ -66,7 +71,7 @@ export const ticketDueWindowMs: (priority: TicketPriority) => number
 export const ticketDueAt: (facts: TicketDueFacts) => Date
 export const isTicketOverdue: (facts: TicketDueFacts, now: Date) => boolean
 
-export const TICKET_SLA_LABEL = "SLA"
+export const TICKET_SLA_LABEL = "Prazo"
 export const TICKET_SLA_SETTLED_LABELS = {
   met: "No prazo",
   missed: "Fora do prazo",
@@ -423,7 +428,7 @@ extends TicketListRow, TicketSlaFacts` em `ticket-list-row.ts` e
 
 | Uso                       | Texto                                           |
 | ------------------------- | ----------------------------------------------- |
-| Cabeçalho/rótulo SLA      | `SLA`                                           |
+| Cabeçalho/rótulo SLA      | `Prazo`                                         |
 | Resolvido dentro do prazo | `No prazo`                                      |
 | Resolvido fora do prazo   | `Fora do prazo`                                 |
 | Acessível do vermelho     | `Vencido`                                       |
@@ -481,7 +486,7 @@ where current_department_id = :S
 | PS2  | Criar como Crítica                                                     | banco: `priority = critica` e `to_priority = critica` na `criacao`; detalhe: Prioridade "Crítica", SLA = abertura + 3h (`DD/MM/AAAA HH:mm`)                                                                          |
 | PS3  | Fechar e reabrir o dialog                                              | volta vazio (`Nenhuma`)                                                                                                                                                                                              |
 | PS4  | Detalhe                                                                | cabeçalho sem badge de prioridade; Prioridade e SLA no card Detalhes                                                                                                                                                 |
-| PS5  | `/tickets` e `/queue`                                                  | colunas "Aberto em", "Prioridade", "SLA" nessa ordem; ativo no prazo: "Expira em" + tempo restante, neutro; ativo vencido: "Expirado" + `-tempo`, em vermelho; recarregar atualiza o tempo                           |
+| PS5  | `/tickets` e `/queue`                                                  | colunas "Aberto em", "Prioridade", "Prazo" nessa ordem; ativo no prazo: "Expira em" + tempo restante, neutro; ativo vencido: "Expirado" + `-tempo`, em vermelho; recarregar atualiza o tempo                         |
 | PS6  | Resolvido dentro e fora do prazo (conferir `resolved_at` × vencimento) | "No prazo" / "Fora do prazo", sem vermelho                                                                                                                                                                           |
 | PS7  | Cancelado sem `resolved_at`                                            | `—`                                                                                                                                                                                                                  |
 | PS8  | Início, card Backlog                                                   | título "Backlog"; valor `{em_atraso} chamados` (`1 chamado`); linha `{horas}h em backlog` (`backlog = 0` → `0 chamados` e `Nenhum chamado em backlog`), sem "Ilustrativo"; Tempo médio continua com "Ilustrativo"    |

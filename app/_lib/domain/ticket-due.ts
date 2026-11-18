@@ -22,7 +22,7 @@ import type {
 const isPastDue = (dueAt: Date, reference: Date): boolean =>
   dueAt.getTime() < reference.getTime()
 
-export const TICKET_SLA_LABEL = "SLA"
+export const TICKET_SLA_LABEL = "Prazo"
 
 export const TICKET_SLA_SETTLED_LABELS = {
   met: "No prazo",

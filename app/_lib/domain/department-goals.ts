@@ -77,8 +77,8 @@ export const GOAL_FIELD_BY_INDICATOR = {
 
 export const GOAL_INDICATOR_LABELS = {
   sla: "SLA no prazo",
-  tma: "Tempo médio de resolução",
-  overdue: "Horas em atraso",
+  tma: "TMA",
+  overdue: "Horas acumuladas em atraso",
   overdueTickets: "Quantidade de chamados em atraso",
   tmr: "TMR",
 } satisfies Record<GoalIndicator, string>
@@ -411,6 +411,12 @@ export const PERSON_GOAL_MET_DESCRIPTION =
 export const TEAM_GOAL_MET_DESCRIPTION =
   "O time está aderente nos cinco indicadores do mês."
 
+const isSinglePercentPoint = (amount: number): boolean =>
+  formatInteger(Math.abs(amount)) === "1"
+
+const percentPointsLabel = (amount: number): string =>
+  `${formatInteger(Math.abs(amount))} ${isSinglePercentPoint(amount) ? "ponto" : "pontos"}`
+
 const GOAL_MEASURE_PHRASES = {
   sla: (amount: string) => `SLA de ${amount}`,
   tma: (amount: string) => `TMA de ${amount}`,
@@ -429,7 +435,7 @@ export const goalShortfallSentence = (
   const target = formatGoalAmount(rule.unit, evaluation.target)
   const gap = Math.abs(evaluation.value - evaluation.target)
   return rule.direction === "min"
-    ? `${measure}: ${formatInteger(gap)} p.p. abaixo do objetivo de ${target}.`
+    ? `${measure}: ${percentPointsLabel(gap)} abaixo do objetivo de ${target}.`
     : `${measure}: ${formatGoalAmount(rule.unit, gap)} acima do limite de ${target}.`
 }
 
@@ -477,8 +483,9 @@ export const goalMetCountDescription = (
 
 const percentDifferenceLine = (difference: number): string => {
   if (difference === 0) return GOAL_ON_TARGET_HINTS.percent
-  const points = `${formatInteger(Math.abs(difference))} p.p.`
-  return difference > 0 ? `${points} acima do objetivo` : `Faltam ${points}`
+  const points = percentPointsLabel(difference)
+  const missing = isSinglePercentPoint(difference) ? "Falta" : "Faltam"
+  return difference > 0 ? `${points} acima do objetivo` : `${missing} ${points}`
 }
 
 const limitDifferenceLine = (unit: GoalUnit, difference: number): string => {
