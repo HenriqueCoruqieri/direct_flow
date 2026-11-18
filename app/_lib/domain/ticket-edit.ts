@@ -5,6 +5,10 @@ import {
   TICKET_TYPE_LABELS,
 } from "@/app/_lib/domain/ticket"
 import {
+  canEditTicketActionsInEdit,
+  hasTicketBeenInProgress,
+} from "@/app/_lib/domain/ticket-actions"
+import {
   assigneeEditHintFor,
   preselectedAssigneeId,
   queueAssigneeLabel,
@@ -115,6 +119,10 @@ export const buildTicketEditFormOptions = (
   companies: readonly TicketCompanyOption[],
 ): TicketEditFormOptions => {
   const includesSolution = canEditSolution(ticket.status)
+  const includesActions = canEditTicketActionsInEdit(
+    ticket.status,
+    hasTicketBeenInProgress(ticket.history),
+  )
 
   const defaults: EditTicketFormDefaults = {
     ticketId: ticket.id,
@@ -129,9 +137,11 @@ export const buildTicketEditFormOptions = (
   }
 
   return {
-    defaults: includesSolution
-      ? { ...defaults, solution: ticket.solution ?? "" }
-      : defaults,
+    defaults: {
+      ...defaults,
+      ...(includesSolution ? { solution: ticket.solution ?? "" } : {}),
+      ...(includesActions ? { actions: ticket.actions ?? "" } : {}),
+    },
     companies: ticketCompanyEditOptions(ticket.company, companies),
     companyHint: companyEditHintFor(ticket.company),
     tags: [...tags],
@@ -140,6 +150,7 @@ export const buildTicketEditFormOptions = (
     assigneeHint: assigneeEditHintFor(ticket.assignedTo, assignees),
     queueLabel: queueAssigneeLabel(ticket.currentDepartmentName),
     includesSolution,
+    includesActions,
   }
 }
 

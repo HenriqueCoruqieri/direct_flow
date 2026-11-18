@@ -12,6 +12,7 @@ import type {
   TicketType,
   TicketViewerFacts,
 } from "@/app/_lib/types/ticket"
+import type { TicketStatusTrailEntry } from "@/app/_lib/types/ticket-actions"
 import type {
   TicketCompanyRef,
   TicketCompanySummary,
@@ -65,6 +66,8 @@ export interface TicketEditSource extends TicketEditSnapshot {
   id: number
   status: TicketStatus
   currentDepartmentName: string
+  actions: string | null
+  history: readonly TicketStatusTrailEntry[]
 }
 
 export interface TicketEditValues {
@@ -75,6 +78,7 @@ export interface TicketEditValues {
   tagId: number
   assigneeId: number | null
   solution?: string
+  actions?: string
 }
 
 export interface TicketTypeChange {
@@ -161,6 +165,7 @@ export interface EditTicketFormDefaults {
   tagId?: number
   assigneeId?: number | null
   solution?: string
+  actions?: string
   attachments: UploadedAttachmentRef[]
   removedAttachmentIds: number[]
 }
@@ -175,4 +180,5 @@ export interface TicketEditFormOptions {
   assigneeHint?: string
   queueLabel: string
   includesSolution: boolean
+  includesActions: boolean
 }

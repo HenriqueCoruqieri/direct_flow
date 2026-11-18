@@ -8,6 +8,10 @@ import {
   TICKET_TITLE_MIN_LENGTH,
   TICKET_TYPES,
 } from "@/app/_lib/domain/ticket"
+import {
+  TICKET_ACTIONS_MAX_LENGTH,
+  TICKET_ACTIONS_MAX_LENGTH_MESSAGE,
+} from "@/app/_lib/domain/ticket-actions"
 import { TICKET_COMPANY_REQUIRED_MESSAGE } from "@/app/_lib/domain/ticket-company"
 import {
   TICKET_SOLUTION_MAX_LENGTH,
@@ -66,6 +70,11 @@ export const ticketSolutionSchema = z
     error: `A solução precisa ter no máximo ${TICKET_SOLUTION_MAX_LENGTH} caracteres.`,
   })
 
+export const ticketActionsSchema = z
+  .string({ error: "Descreva as ações." })
+  .trim()
+  .max(TICKET_ACTIONS_MAX_LENGTH, { error: TICKET_ACTIONS_MAX_LENGTH_MESSAGE })
+
 const SELECT_ASSIGNEE_MESSAGE = "Selecione o destinatário."
 
 export const ticketCompanyIdSchema = registryIdSchema(
@@ -111,6 +120,7 @@ export const parseTicketIdParam = (value: string): number | null => {
 export const editTicketSchema = ticketFieldsSchema.extend({
   ticketId: ticketIdSchema,
   solution: ticketSolutionSchema.optional(),
+  actions: ticketActionsSchema.optional(),
   handoffComment: handoffCommentSchema.optional(),
   attachments: ticketAttachmentsToAddSchema.optional(),
   removedAttachmentIds: removedAttachmentIdsSchema.optional(),

@@ -203,6 +203,7 @@ export interface TicketDetail extends TicketVisibilityFacts {
   createdAt: Date
   dueAt: Date | null
   solution: string | null
+  actions: string | null
   resolvedAt: Date | null
   pendingTransfer: TicketPendingTransfer | null
   history: TicketHistoryEntry[]
