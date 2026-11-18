@@ -21,7 +21,7 @@ import { REJECTED_TRANSFER_STATUS } from "@/app/_lib/domain/ticket-transfer"
 import type {
   DepartmentGoals,
   DepartmentGoalsRecord,
-  PersonGoalFacts,
+  IndividualGoalFacts,
   TeamGoalFacts,
   TeamMemberGoalFacts,
   TeamProductionEntry,
@@ -92,7 +92,11 @@ function sendOverdueWhere(departmentId: number, month: DateRange) {
   )
 }
 
-function overdueTicketCountQuery(
+function activeMembersWhere(departmentId: number) {
+  return and(eq(user.departmentId, departmentId), eq(user.isActive, true))
+}
+
+function overdueTicketsWhere(
   departmentId: number,
   month: DateRange,
   now: Date,
@@ -108,35 +112,84 @@ function overdueTicketCountQuery(
     lt(ticket.dueAt, now),
   )
 
+  return and(
+    eq(ticket.currentDepartmentId, departmentId),
+    isNotNull(ticket.dueAt),
+    or(resolvedLate, activeLate),
+  )
+}
+
+function overdueSentWhere(departmentId: number, month: DateRange) {
+  return and(
+    eq(ticketTransfer.fromDepartmentId, departmentId),
+    isNotNull(ticketTransfer.fromDueAt),
+    gte(ticketTransfer.createdAt, month.start),
+    lt(ticketTransfer.createdAt, month.end),
+    lt(ticketTransfer.fromDueAt, ticketTransfer.createdAt),
+  )
+}
+
+function overdueTicketCountQuery(
+  departmentId: number,
+  month: DateRange,
+  now: Date,
+) {
   const overdueTickets = db
     .select({ ticketId: ticket.id })
     .from(ticket)
-    .where(
-      and(
-        eq(ticket.currentDepartmentId, departmentId),
-        isNotNull(ticket.dueAt),
-        or(resolvedLate, activeLate),
-      ),
-    )
+    .where(overdueTicketsWhere(departmentId, month, now))
     .union(
       db
         .select({ ticketId: ticketTransfer.ticketId })
         .from(ticketTransfer)
-        .where(
-          and(
-            eq(ticketTransfer.fromDepartmentId, departmentId),
-            isNotNull(ticketTransfer.fromDueAt),
-            gte(ticketTransfer.createdAt, month.start),
-            lt(ticketTransfer.createdAt, month.end),
-            lt(ticketTransfer.fromDueAt, ticketTransfer.createdAt),
-          ),
-        ),
+        .where(overdueSentWhere(departmentId, month)),
     )
     .as("overdue_tickets")
 
   return db
     .select({ overdueTicketCount: sql<number>`(count(*))::int` })
     .from(overdueTickets)
+}
+
+function overdueTicketCountByUserQuery(
+  departmentId: number,
+  month: DateRange,
+  now: Date,
+  userId?: number,
+) {
+  const overduePairs = db
+    .select({ ticketId: ticket.id, userId: ticket.assignedTo })
+    .from(ticket)
+    .where(
+      and(
+        overdueTicketsWhere(departmentId, month, now),
+        isNotNull(ticket.assignedTo),
+      ),
+    )
+    .union(
+      db
+        .select({
+          ticketId: ticketTransfer.ticketId,
+          userId: ticketTransfer.fromAssigneeId,
+        })
+        .from(ticketTransfer)
+        .where(
+          and(
+            overdueSentWhere(departmentId, month),
+            isNotNull(ticketTransfer.fromAssigneeId),
+          ),
+        ),
+    )
+    .as("overdue_pairs")
+
+  return db
+    .select({
+      userId: overduePairs.userId,
+      overdueTicketCount: sql<number>`(count(*))::int`,
+    })
+    .from(overduePairs)
+    .where(userId === undefined ? undefined : eq(overduePairs.userId, userId))
+    .groupBy(overduePairs.userId)
 }
 
 export async function findDepartmentGoals(
@@ -189,8 +242,8 @@ export async function findPersonGoalFacts(
   userId: number,
   month: DateRange,
   now: Date,
-): Promise<PersonGoalFacts> {
-  const [[row], [sent]] = await Promise.all([
+): Promise<IndividualGoalFacts> {
+  const [[row], [sent], [overdue], [members]] = await Promise.all([
     db
       .select(goalFactColumns(month, now))
       .from(ticket)
@@ -209,6 +262,11 @@ export async function findPersonGoalFacts(
           eq(ticketTransfer.fromAssigneeId, userId),
         ),
       ),
+    overdueTicketCountByUserQuery(departmentId, month, now, userId),
+    db
+      .select({ memberCount: sql<number>`(count(*))::int` })
+      .from(user)
+      .where(activeMembersWhere(departmentId)),
   ])
 
   return {
@@ -216,6 +274,8 @@ export async function findPersonGoalFacts(
     slaMetCount: row?.slaMetCount ?? 0,
     averageResolutionMs: row?.averageResolutionMs ?? null,
     overdueMs: (row?.overdueMs ?? 0) + (sent?.overdueMs ?? 0),
+    overdueTicketCount: overdue?.overdueTicketCount ?? 0,
+    memberCount: members?.memberCount ?? 0,
   }
 }
 
@@ -243,6 +303,7 @@ export async function findTeamGoalFacts(
     memberRows,
     sentTeamRows,
     sentMemberRows,
+    overdueMemberRows,
   ] = await Promise.all([
     db.select(goalFactColumns(month, now)).from(ticket).where(inDepartment),
     db
@@ -278,7 +339,7 @@ export async function findTeamGoalFacts(
       })
       .from(user)
       .leftJoin(perAssignee, eq(perAssignee.assignedTo, user.id))
-      .where(and(eq(user.departmentId, departmentId), eq(user.isActive, true)))
+      .where(activeMembersWhere(departmentId))
       .orderBy(asc(sql`lower(${user.name})`), asc(user.id)),
     db
       .select({ overdueMs: sendOverdueMsSql(month, now) })
@@ -297,6 +358,7 @@ export async function findTeamGoalFacts(
         ),
       )
       .groupBy(ticketTransfer.fromAssigneeId),
+    overdueTicketCountByUserQuery(departmentId, month, now),
   ])
 
   const team = teamRows[0]
@@ -304,6 +366,11 @@ export async function findTeamGoalFacts(
   const sentOverdueByUser = new Map<number, number>()
   for (const sent of sentMemberRows) {
     if (sent.userId !== null) sentOverdueByUser.set(sent.userId, sent.overdueMs)
+  }
+  const overdueCountByUser = new Map<number, number>()
+  for (const entry of overdueMemberRows) {
+    if (entry.userId !== null)
+      overdueCountByUser.set(entry.userId, entry.overdueTicketCount)
   }
   const members: TeamMemberGoalFacts[] = memberRows.map((member) => ({
     userId: member.userId,
@@ -313,6 +380,7 @@ export async function findTeamGoalFacts(
     slaMetCount: member.slaMetCount,
     averageResolutionMs: member.averageResolutionMs ?? null,
     overdueMs: member.overdueMs + (sentOverdueByUser.get(member.userId) ?? 0),
+    overdueTicketCount: overdueCountByUser.get(member.userId) ?? 0,
   }))
 
   return {
@@ -349,7 +417,7 @@ export async function findTeamProduction(
         resolvedInRangeSql(range),
       ),
     )
-    .where(and(eq(user.departmentId, departmentId), eq(user.isActive, true)))
+    .where(activeMembersWhere(departmentId))
     .groupBy(user.id)
     .orderBy(
       sql`${resolvedCount} desc`,
