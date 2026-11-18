@@ -19,6 +19,7 @@ export interface TicketEditContextValue {
   initialAssigneeId: number | null | undefined
   queueLabel: string
   includesSolution: boolean
+  includesActions: boolean
   isEditing: boolean
   isSubmitting: boolean
   saveBlockMessage: string | null

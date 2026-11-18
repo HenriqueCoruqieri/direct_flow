@@ -3,11 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, SendIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useId, useState } from "react"
+import { use, useId, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import FormField from "@/app/_components/form-field"
+import FormRequiredMark from "@/app/_components/form-required-mark"
 import FormSchemaProvider from "@/app/_components/form-schema-provider"
 import { Button } from "@/app/_components/ui/button"
 import { resolveTicket } from "@/app/_lib/actions/ticket-resolution"
@@ -18,11 +19,15 @@ import {
   resolveTicketSchema,
 } from "@/app/_lib/validation/ticket-resolution"
 
+import { TicketEditContext } from "../_hooks/use-ticket-edit"
 import HiddenWhileEditing from "./hidden-while-editing"
 import SendToDepartmentDialog, {
   type SendToDepartmentSetup,
 } from "./send-to-department-dialog"
-import TicketSolutionTextarea from "./ticket-solution-textarea"
+import TicketSolutionHeading, {
+  TICKET_SOLUTION_TITLE,
+} from "./ticket-solution-heading"
+import TicketTextArea from "./ticket-text-area"
 
 interface ResolveTicketFormProps {
   defaults: ResolveTicketFormDefaults
@@ -30,8 +35,6 @@ interface ResolveTicketFormProps {
   editable: boolean
   editingReplacement: React.ReactNode
 }
-
-const FOOTER_CLASS = "mt-auto"
 
 const ResolveTicketForm = ({
   defaults,
@@ -42,6 +45,7 @@ const ResolveTicketForm = ({
   const formId = useId()
   const router = useRouter()
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false)
+  const isEditing = use(TicketEditContext)?.isEditing ?? false
 
   const form = useForm<ResolveTicketInput>({
     resolver: zodResolver(resolveTicketSchema),
@@ -75,22 +79,25 @@ const ResolveTicketForm = ({
   }
 
   const solutionForm = (
-    <FormSchemaProvider form={form} schema={resolveTicketSchema}>
-      <form
-        id={formId}
-        noValidate
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex min-w-0 flex-col gap-4"
+    <form
+      id={formId}
+      noValidate
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="flex min-w-0 flex-col gap-4"
+    >
+      <FormField
+        control={form.control}
+        name="solution"
+        label={TICKET_SOLUTION_TITLE}
+        hideLabel
       >
-        <FormField control={form.control} name="solution" label="Solução">
-          {(field) => <TicketSolutionTextarea {...field} />}
-        </FormField>
-      </form>
-    </FormSchemaProvider>
+        {(field) => <TicketTextArea {...field} />}
+      </FormField>
+    </form>
   )
 
   const actionBar = (
-    <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border-subtle pt-4">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {sendToDepartment !== null ? (
         <Button
           type="button"
@@ -122,20 +129,29 @@ const ResolveTicketForm = ({
 
   return (
     <>
-      {editable ? (
-        <HiddenWhileEditing replacement={editingReplacement}>
-          {solutionForm}
-        </HiddenWhileEditing>
-      ) : (
-        solutionForm
-      )}
-      {editable ? (
-        <HiddenWhileEditing replacement={null} className={FOOTER_CLASS}>
-          {actionBar}
-        </HiddenWhileEditing>
-      ) : (
-        <div className={FOOTER_CLASS}>{actionBar}</div>
-      )}
+      <FormSchemaProvider form={form} schema={resolveTicketSchema}>
+        <TicketSolutionHeading
+          mark={
+            isEditing ? null : (
+              <FormRequiredMark control={form.control} name="solution" />
+            )
+          }
+        />
+        {editable ? (
+          <HiddenWhileEditing replacement={editingReplacement}>
+            {solutionForm}
+          </HiddenWhileEditing>
+        ) : (
+          solutionForm
+        )}
+        {editable ? (
+          <HiddenWhileEditing replacement={null}>
+            {actionBar}
+          </HiddenWhileEditing>
+        ) : (
+          actionBar
+        )}
+      </FormSchemaProvider>
 
       {sendToDepartment !== null ? (
         <SendToDepartmentDialog

@@ -30,9 +30,10 @@ fez antes de chegar à solução. Não é registro de entradas com autor e data
 1. **"Passou por Em andamento" vem do histórico, sem coluna nova.** Todo
    caminho que leva o chamado a `em_andamento` já grava `to_status =
 'em_andamento'` em `ticket_history`: `criacao` com o próprio autor como
-   destinatário (`app/_lib/data/tickets.ts:394`), `mudanca_status` por edição
-   (`:834`), por assumir (`:1112`), por atender (`:1203`) e
-   `transferencia_aprovada` (`:1576`). Como o histórico é append-only, a regra
+   destinatário (`insertTicket` em `app/_lib/data/tickets.ts`),
+   `mudanca_status` por edição (`updateTicketByAssignee`), por assumir
+   (`assignTicket`), por atender (`startTicketWork`) e
+   `transferencia_aprovada` (`approveTicketTransfer`). Como o histórico é append-only, a regra
    é: _existe linha do chamado com `to_status = 'em_andamento'`_. Na página o
    domínio lê `ticket.history` (já carregado por `findTicketDetail`); dentro
    da transação o `df-data` faz um `EXISTS` (abaixo). "Passou em qualquer
@@ -59,7 +60,12 @@ fez antes de chegar à solução. Não é registro de entradas com autor e data
    altera Ações e título grava `edicao` com a nota "Alterou título." apenas.
 5. **Concorrência.** Os dois caminhos travam a linha (`FOR UPDATE`) e
    reavaliam o domínio dentro da transação. Último a gravar vence, como nos
-   demais campos de texto do chamado.
+   demais campos de texto do chamado, com uma refinação no modo de edição:
+   `actions` só vai no payload do `editTicket` quando o campo foi alterado
+   (dirty). Se o usuário não mexeu nas Ações, a chave é omitida e as Ações
+   salvas por outra pessoa pelo formulário próprio enquanto a edição estava
+   aberta não são sobrescritas. Título e Solução mantêm o comportamento atual
+   (vão sempre no payload).
 
 ## Banco — `db/schema.ts`
 
@@ -170,10 +176,9 @@ Alterados:
 
 ## `df-data` — `app/_lib/data/tickets.ts`
 
-Hoje o `npx tsc --noEmit` falha só em `app/_lib/data/tickets.ts:278`
-(`actions` ausente em `TicketDetail`). Os três itens abaixo resolvem.
+Três itens, todos em `app/_lib/data/tickets.ts`.
 
-### `findTicketDetail` (`:120`)
+### `findTicketDetail`
 
 Selecionar `actions: ticket.actions` junto de `solution`. Nada mais.
 
@@ -183,10 +188,10 @@ Selecionar `actions: ticket.actions` junto de `solution`. Nada mais.
 TICKET_ACTIONS_WRITABLE_STATUS limit 1` dentro da `tx`. Usa
 `history_ticket_idx`. Não exportado.
 
-### `updateTicketByAssignee` (`:454`)
+### `updateTicketByAssignee`
 
 - O `select ... for update` ganha `actions: ticket.actions`.
-- Logo depois da checagem de `solution` (`:510`), mesma posição na ordem:
+- Logo depois da checagem de `solution`, mesma posição na ordem:
 
   ```ts
   if (values.actions !== undefined) {
@@ -209,13 +214,14 @@ actionsChanged`, `actions: normalizeTicketActions(values.actions)`.
 
 ### `updateTicketActions(values: UpdateTicketActionsValues): Promise<UpdateTicketActionsOutcome>` (nova)
 
-Transação, no padrão de `updateTicketResolution` (`:887`):
+Transação, no padrão de `updateTicketResolution`:
 
 1. `select createdBy, assignedTo, currentDepartmentId, status, actions from
 ticket where id = $1 for update`. Sem linha → `not_found`.
 2. `lockActorFacts(tx, actorId)`; `null` → `not_editable`.
 3. `!canViewTicket(actor, ticketRow)` → `not_found`.
-4. Transferência pendente do chamado (mesma query de `:913`).
+4. Transferência pendente do chamado (mesma query de
+   `updateTicketResolution`).
 5. `!canSaveTicketActions(actor, { ...ticketRow, hasPendingTransfer })` →
    `not_editable`. É aqui que a corrida com Resolver/Encaminhar fecha: se o
    status saiu de `em_andamento` entre o carregamento da tela e o clique, a
@@ -275,7 +281,9 @@ confira que o spread continua levando o campo.
 - `const actionsCard = ticketActionsCardStateFor(actor, ticket)`.
 - Novo card `TicketActions` entre `<TicketTimeline>` e `<TicketConclusion>`,
   com `state={actionsCard}` e `editable={editable}`.
-- `actionsCard.state` entra no `layoutKey`.
+- Entram no `layoutKey` `actionsCard.state` e o tamanho do texto de Ações
+  (`ticket.actions?.length ?? 0`), para realinhar a grade quando o texto lido
+  muda depois de um refresh.
 
 ### Contexto de edição
 
@@ -292,15 +300,17 @@ confira que o spread continua levando o campo.
   - `state === "editable"`: `TicketActionsForm` com `state.defaults`.
   - Com `editable` (há provider), o corpo vai dentro de `TicketEditActions`;
     sem provider, não chame `useTicketEdit` (ele lança fora do provider) — o
-    mesmo cuidado de `ticket-conclusion.tsx:55-59`.
+    mesmo cuidado de `ticket-conclusion.tsx`.
 - `ticket-edit-actions.tsx` (`"use client"`), no padrão de
   `ticket-edit-solution.tsx`: se `isEditing && includesActions`, renderiza
-  `FormField name="actions" label="Ações"` (não obrigatório) com textarea e
-  placeholder `TICKET_ACTIONS_PLACEHOLDER`; senão, `children`. Assim, durante
-  o modo de edição o formulário próprio some e o valor sai pelo "Salvar" da
-  edição.
+  `FormField name="actions" label="Ações"` (não obrigatório) com o mesmo
+  campo de texto da Solução e placeholder `TICKET_ACTIONS_PLACEHOLDER`;
+  senão, `children`. Assim, durante o modo de edição o formulário próprio
+  some e o valor sai pelo "Salvar" da edição — só quando o campo está dirty
+  (decisão 5).
 - `ticket-actions-form.tsx` (`"use client"`): `useForm<SaveTicketActionsInput>`
-  com `zodResolver(saveTicketActionsSchema)`, textarea com placeholder e
+  com `zodResolver(saveTicketActionsSchema)`, o mesmo campo de texto da
+  Solução com placeholder e
   botão `SAVE_TICKET_ACTIONS_LABEL` / `SAVE_TICKET_ACTIONS_PENDING_LABEL`,
   desabilitado sem alteração (`!isDirty`) ou enviando. Sucesso: toast com a
   mensagem e `form.reset` com o valor salvo. `FORBIDDEN` ou `NOT_FOUND`:
@@ -308,33 +318,34 @@ confira que o spread continua levando o campo.
 
 ## Cenários para o `df-qa`
 
-| #   | Cenário                                                                                     | Esperado                                                                                          |
-| --- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| A1  | Abrir chamado novo                                                                          | Formulário de abertura sem campo Ações; `ticket.actions` nulo                                     |
-| A2  | Detalhe de chamado `aberto`                                                                 | Card "Ações" entre Linha do tempo e Conclusão, "Nenhuma ação registrada.", sem textarea           |
-| A3  | Destinatário em `em_andamento` fora do modo de edição                                       | Textarea + Salvar; salvar mostra "Ações do chamado #… salvas."; recarregar mantém o texto         |
-| A4  | Admin do setor atual em `em_andamento` de outro destinatário                                | Pode salvar (regra de quem resolve)                                                               |
-| A5  | Pessoa do setor que não é destinatário nem admin, em `em_andamento` com destinatário        | Só leitura                                                                                        |
-| A6  | Salvar só espaços                                                                           | Grava `null`; card volta a "Nenhuma ação registrada."                                             |
-| A7  | Texto acima do máximo                                                                       | Erro no campo "As ações precisam ter no máximo … caracteres."; nada gravado                       |
-| A8  | Salvar Ações                                                                                | Nenhuma linha nova em `ticket_history`; nenhum e-mail; Linha do tempo igual                       |
-| A9  | Resolver chamado `em_andamento` com Ações preenchidas                                       | Resolver só pede Solução; Ações permanecem                                                        |
-| A10 | Destinatário entra no modo de edição em `em_andamento`                                      | Botão Salvar do card some; Ações vira campo da edição; salvar a edição grava as Ações             |
-| A11 | Edição que só altera Ações                                                                  | Salva; nenhuma linha `edicao`; `updated_at` muda                                                  |
-| A12 | Edição que altera título e Ações                                                            | `edicao` com nota "Alterou título."                                                               |
-| A13 | Resolvido que passou por Em andamento, dentro da janela, destinatário em modo de edição     | Ações editável na edição                                                                          |
-| A14 | Resolvido direto de Aberto, dentro da janela, modo de edição                                | Ações só leitura ("Nenhuma ação registrada."); solução editável                                   |
-| A15 | Resolvido fora do modo de edição (qualquer pessoa)                                          | Só leitura, sem Salvar                                                                            |
-| A16 | Fechado (janela vencida) e cancelado                                                        | Só leitura                                                                                        |
-| A17 | `aguardando_aprovacao` / `encaminhado` / `recusado` / `em_analise`                          | Só leitura                                                                                        |
-| A18 | Corrida: tela aberta em `em_andamento`, chamado resolvido em outra aba, depois Salvar Ações | Toast "As ações só podem ser registradas com o chamado em andamento."; tela recarrega; nada salvo |
-| A19 | Conta inativa ou com troca de senha pendente                                                | Só leitura; action recusa com `FORBIDDEN`                                                         |
-| A20 | Banco                                                                                       | `select actions from ticket where id = …` reflete cada salvamento                                 |
+| #   | Cenário                                                                                        | Esperado                                                                                          |
+| --- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| A1  | Abrir chamado novo                                                                             | Formulário de abertura sem campo Ações; `ticket.actions` nulo                                     |
+| A2  | Detalhe de chamado `aberto`                                                                    | Card "Ações" entre Linha do tempo e Conclusão, "Nenhuma ação registrada.", sem textarea           |
+| A3  | Destinatário em `em_andamento` fora do modo de edição                                          | Textarea + Salvar; salvar mostra "Ações do chamado #… salvas."; recarregar mantém o texto         |
+| A4  | Admin do setor atual em `em_andamento` de outro destinatário                                   | Pode salvar (regra de quem resolve)                                                               |
+| A5  | Pessoa do setor que não é destinatário nem admin, em `em_andamento` com destinatário           | Só leitura                                                                                        |
+| A6  | Salvar só espaços                                                                              | Grava `null`; card volta a "Nenhuma ação registrada."                                             |
+| A7  | Texto acima do máximo                                                                          | Erro no campo "As ações precisam ter no máximo … caracteres."; nada gravado                       |
+| A8  | Salvar Ações                                                                                   | Nenhuma linha nova em `ticket_history`; nenhum e-mail; Linha do tempo igual                       |
+| A9  | Resolver chamado `em_andamento` com Ações preenchidas                                          | Resolver só pede Solução; Ações permanecem                                                        |
+| A10 | Destinatário entra no modo de edição em `em_andamento`                                         | Botão Salvar do card some; Ações vira campo da edição; salvar a edição grava as Ações             |
+| A11 | Edição que só altera Ações                                                                     | Salva; nenhuma linha `edicao`; `updated_at` muda                                                  |
+| A12 | Edição que altera título e Ações                                                               | `edicao` com nota "Alterou título."                                                               |
+| A13 | Resolvido que passou por Em andamento, dentro da janela, destinatário em modo de edição        | Ações editável na edição                                                                          |
+| A14 | Resolvido direto de Aberto, dentro da janela, modo de edição                                   | Ações só leitura ("Nenhuma ação registrada."); solução editável                                   |
+| A15 | Resolvido fora do modo de edição (qualquer pessoa)                                             | Só leitura, sem Salvar                                                                            |
+| A16 | Fechado (janela vencida) e cancelado                                                           | Só leitura                                                                                        |
+| A17 | `aguardando_aprovacao` / `encaminhado` / `recusado` / `em_analise`                             | Só leitura                                                                                        |
+| A18 | Corrida: tela aberta em `em_andamento`, chamado resolvido em outra aba, depois Salvar Ações    | Toast "As ações só podem ser registradas com o chamado em andamento."; tela recarrega; nada salvo |
+| A19 | Conta inativa ou com troca de senha pendente                                                   | Só leitura; action recusa com `FORBIDDEN`                                                         |
+| A20 | Banco                                                                                          | `select actions from ticket where id = …` reflete cada salvamento                                 |
+| A21 | Edição aberta numa aba sem mexer em Ações; outra pessoa salva Ações pelo card; salvar a edição | Ações da outra pessoa permanecem (`actions` omitido do payload)                                   |
 
 ## Checklist
 
 1. Migration `0030_ticket_actions` aplicada pelo usuário antes do `df-qa`.
-2. `df-data`: os três itens acima; `tsc` volta a passar.
+2. `df-data`: os três itens acima.
 3. `df-actions`: `saveTicketActions`.
 4. `df-ui`: card, formulário próprio, campo no modo de edição, contexto.
 5. `npx tsc --noEmit`, `npm run lint` e `npm run build` passam; `df-reviewer`.

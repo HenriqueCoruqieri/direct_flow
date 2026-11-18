@@ -2,6 +2,8 @@ import { Field, FieldLabel } from "@/app/_components/ui/field"
 import { Textarea } from "@/app/_components/ui/textarea"
 import { cn } from "@/app/_lib/utils"
 
+import { TICKET_SOLUTION_TITLE } from "./ticket-solution-heading"
+
 const LOCKED_SOLUTION_ID = "ticket-locked-solution"
 
 interface LockedSolutionFieldProps {
@@ -15,7 +17,9 @@ const LockedSolutionField = ({
 }: LockedSolutionFieldProps) => {
   return (
     <Field className="gap-1.5">
-      <FieldLabel htmlFor={LOCKED_SOLUTION_ID}>Solução</FieldLabel>
+      <FieldLabel htmlFor={LOCKED_SOLUTION_ID} className="sr-only">
+        {TICKET_SOLUTION_TITLE}
+      </FieldLabel>
       <Textarea
         id={LOCKED_SOLUTION_ID}
         value={value}

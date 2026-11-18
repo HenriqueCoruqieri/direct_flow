@@ -54,6 +54,7 @@ const TicketEditProvider = ({
   })
 
   const isSubmitting = form.formState.isSubmitting
+  const actionsDirty = form.getFieldState("actions", form.formState).isDirty
   const uploadsBlockMessage = attachmentUploadsBlockMessage(uploadsBusy)
   const exceedsLimit = exceedsTicketAttachmentsLimit({
     saved: savedAttachmentCount,
@@ -82,7 +83,9 @@ const TicketEditProvider = ({
   }
 
   const onSubmit = async (values: EditTicketInput) => {
-    const result = await editTicket(values)
+    const result = await editTicket(
+      actionsDirty ? values : { ...values, actions: undefined },
+    )
 
     if (result.ok) {
       toast.success(result.message)
@@ -188,6 +191,7 @@ const TicketEditProvider = ({
         initialAssigneeId: options.defaults.assigneeId,
         queueLabel: options.queueLabel,
         includesSolution: options.includesSolution,
+        includesActions: options.includesActions,
         isEditing,
         isSubmitting,
         saveBlockMessage,

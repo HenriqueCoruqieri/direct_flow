@@ -17,6 +17,7 @@ import { listTicketMessages } from "@/app/_lib/data/ticket-messages"
 import { findTicketDetail } from "@/app/_lib/data/tickets"
 import { todayKey } from "@/app/_lib/date"
 import { canViewTicket, formatTicketNumber } from "@/app/_lib/domain/ticket"
+import { ticketActionsCardStateFor } from "@/app/_lib/domain/ticket-actions"
 import {
   ticketAssumeTargetFor,
   ticketSendTargetFor,
@@ -52,6 +53,7 @@ import type { DeclineTransferDialogProps } from "./_components/decline-transfer-
 import PendingTransferNotice from "./_components/pending-transfer-notice"
 import type { SendTicketDialogProps } from "./_components/send-ticket-dialog"
 import type { SendToDepartmentSetup } from "./_components/send-to-department-dialog"
+import TicketActions from "./_components/ticket-actions"
 import TicketAttachments from "./_components/ticket-attachments"
 import TicketComments from "./_components/ticket-comments"
 import TicketConclusion from "./_components/ticket-conclusion"
@@ -102,6 +104,7 @@ const TicketDetailPage = async ({
   )
   const conclusion = ticketConclusionStateFor(actor, ticket, now)
   const commentForm = ticketCommentFormStateFor(actor, ticket, now)
+  const actionsCard = ticketActionsCardStateFor(actor, ticket)
 
   const isEditable = canEditTicketDetail(actor, ticket, now)
   const canAttach = canAttachToTicketDetail(actor, ticket, now)
@@ -177,6 +180,8 @@ const TicketDetailPage = async ({
     messages.length,
     attachments.length,
     conclusion.state,
+    actionsCard.state,
+    ticket.actions?.length ?? 0,
     commentForm.state,
     editable,
   ].join(":")
@@ -216,12 +221,12 @@ const TicketDetailPage = async ({
               editable={editable}
             />
             <TicketTimeline entries={ticket.history} />
+            <TicketActions state={actionsCard} editable={editable} />
             <TicketConclusion
               ticketId={ticket.id}
               state={conclusion}
               sendToDepartment={sendToDepartment}
               editable={editable}
-              className="lg:flex-1"
             />
           </>
         }

@@ -12,8 +12,12 @@ interface TicketDetailGridProps {
   layoutKey: string
 }
 
-const alignColumns = (grid: HTMLElement, columns: readonly HTMLElement[]) => {
-  for (const column of columns) column.style.removeProperty("min-height")
+const alignColumns = (
+  grid: HTMLElement,
+  mainColumn: HTMLElement,
+  asideColumn: HTMLElement,
+) => {
+  asideColumn.style.removeProperty("min-height")
 
   if (!window.matchMedia(LG_QUERY).matches) {
     delete grid.dataset.aligned
@@ -26,13 +30,14 @@ const alignColumns = (grid: HTMLElement, columns: readonly HTMLElement[]) => {
   for (const textarea of textareas) textarea.style.removeProperty("height")
 
   const height = Math.max(
-    ...columns.map((column) => column.getBoundingClientRect().height),
+    mainColumn.getBoundingClientRect().height,
+    asideColumn.getBoundingClientRect().height,
   )
 
   textareas.forEach((textarea, index) => {
     textarea.style.height = draggedHeights[index] ?? ""
   })
-  for (const column of columns) column.style.minHeight = `${height}px`
+  asideColumn.style.minHeight = `${height}px`
 }
 
 const TicketDetailGrid = ({
@@ -53,7 +58,7 @@ const TicketDetailGrid = ({
     const mainColumn = mainRef.current
     const asideColumn = asideRef.current
     if (grid === null || mainColumn === null || asideColumn === null) return
-    alignColumns(grid, [mainColumn, asideColumn])
+    alignColumns(grid, mainColumn, asideColumn)
   }, [layoutKey, isEditing])
 
   useLayoutEffect(() => {
@@ -73,7 +78,7 @@ const TicketDetailGrid = ({
         const asideColumn = asideRef.current
         if (isEditingRef.current) return
         if (mainColumn === null || asideColumn === null) return
-        alignColumns(grid, [mainColumn, asideColumn])
+        alignColumns(grid, mainColumn, asideColumn)
       })
     })
     observer.observe(grid)

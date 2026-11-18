@@ -12,6 +12,7 @@ import {
   useWatch,
 } from "react-hook-form"
 
+import FormRequiredMark from "@/app/_components/form-required-mark"
 import {
   Field,
   FieldDescription,
@@ -24,7 +25,6 @@ import { cn } from "@/app/_lib/utils"
 import {
   fieldSchemaOf,
   resolveFieldRequired,
-  shouldShowRequiredMark,
 } from "@/app/_lib/validation/form-field"
 
 export interface FormFieldA11yProps {
@@ -91,7 +91,6 @@ const FormField = <
   const schema = useFormSchema()
   const fieldSchema = fieldSchemaOf(schema, name)
   const isRequired = resolveFieldRequired(fieldSchema, required)
-  const showMark = shouldShowRequiredMark(fieldSchema, value, required)
 
   const baseId = useId()
   const id = idProp ?? `${baseId}-control`
@@ -118,11 +117,14 @@ const FormField = <
 
   const labelClassName = cn("gap-0.5", hideLabel && "sr-only")
 
-  const mark = showMark ? (
-    <span aria-hidden="true" className="text-destructive">
-      *
-    </span>
-  ) : null
+  const mark = (
+    <FormRequiredMark
+      control={control}
+      name={name}
+      required={required}
+      defaultValue={defaultValue}
+    />
+  )
 
   return (
     <Field data-invalid={invalid} className={cn("gap-1.5", className)}>
