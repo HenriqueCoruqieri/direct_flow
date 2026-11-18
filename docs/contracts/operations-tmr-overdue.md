@@ -1,11 +1,16 @@
 # Contrato — Operação: TMR e quantidade de chamados em atraso (Etapa B)
 
+> **Revisão de 2026-11-18 (ADR 027):** a quantidade de chamados em atraso
+> deixou de ser só da equipe. Na pessoa, o limite é o do time dividido pelas
+> pessoas ativas (piso). TMR continua só da equipe. Ver
+> `docs/contracts/operations-individual-goal-split.md`.
+
 Os dois objetivos só da equipe da Operação mudam:
 
 - **Backlog** → **Quantidade de chamados em atraso** (`overdueTickets`);
 - **Aceite de transferências** → **TMR** (`tmr`, tempo médio de resposta).
 
-SLA, TMA e horas em atraso (pessoa e equipe) e a aba Produção não mudam. O
+SLA, TMA e horas em atraso e a aba Produção não mudam nesta etapa (o individual dividido veio depois, ver ADR 027). O
 card Backlog do Início (`BACKLOG_TICKET_STATUSES`, contrato
 `dashboard-overview.md`) **também não muda**: é outro indicador.
 
@@ -19,7 +24,7 @@ Fuso: ADR 009. Nomenclatura: "objetivo", nunca "meta", em todo texto novo.
 
 | Tema                   | Regra                                                                                                                                                                                                                                                                    |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Nível                  | Os dois objetivos são **só da equipe**. Nenhuma versão individual. "N de M cumpriram" continua só com SLA, TMA e horas em atraso                                                                                                                                         |
+| Nível                  | TMR é **só da equipe**. Chamados em atraso também é individual, com o limite do time dividido pelas pessoas ativas, e entra no "N de M" (ver ADR 027)                                                                                                                    |
 | Mês                    | `[1º do mês 00:00 SP, agora)` = `monthToDateRange(now)`, como o resto da Operação                                                                                                                                                                                        |
 | Chamados em atraso     | União, **sem repetir chamado**, de: (1) resolvido/fechado no mês em S com `resolved_at > due_at`; (2) ativo em S (`OVERDUE_TICKET_STATUSES`) com `due_at < now`; (3) enviado **por** S no mês com `from_due_at < created_at` da transferência. Aderente se `n <= limite` |
 | Envio vencido          | Conta para o setor de **origem** no mês do envio, qualquer que seja o desfecho (pendente, aceito, recusado). Se voltar por recusa e continuar vencido em S, é o mesmo chamado: conta uma vez                                                                             |
