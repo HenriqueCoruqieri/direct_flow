@@ -10,6 +10,7 @@ import ResolveTicketForm from "./resolve-ticket-form"
 import type { SendToDepartmentSetup } from "./send-to-department-dialog"
 import TicketEditSolution from "./ticket-edit-solution"
 import TicketEditSolutionMark from "./ticket-edit-solution-mark"
+import TicketNoSolution from "./ticket-no-solution"
 import TicketSolutionHeading, {
   TICKET_SOLUTION_HEADING_ID,
 } from "./ticket-solution-heading"
@@ -27,10 +28,6 @@ const TicketConclusion = ({
   sendToDepartment,
   editable = false,
 }: TicketConclusionProps) => {
-  const noSolution = (
-    <p className="text-sm text-muted-foreground">{NO_SOLUTION_LABEL}</p>
-  )
-
   let body: React.ReactNode
 
   switch (state.state) {
@@ -40,7 +37,6 @@ const TicketConclusion = ({
           defaults={buildResolveTicketFormDefaults(ticketId)}
           sendToDepartment={sendToDepartment}
           editable={editable}
-          editingReplacement={noSolution}
         />
       )
       break
@@ -101,7 +97,7 @@ const TicketConclusion = ({
       body = (
         <>
           <TicketSolutionHeading />
-          {noSolution}
+          <TicketNoSolution />
         </>
       )
       break

@@ -24,6 +24,7 @@ import HiddenWhileEditing from "./hidden-while-editing"
 import SendToDepartmentDialog, {
   type SendToDepartmentSetup,
 } from "./send-to-department-dialog"
+import TicketNoSolution from "./ticket-no-solution"
 import TicketSolutionHeading, {
   TICKET_SOLUTION_TITLE,
 } from "./ticket-solution-heading"
@@ -33,14 +34,12 @@ interface ResolveTicketFormProps {
   defaults: ResolveTicketFormDefaults
   sendToDepartment: SendToDepartmentSetup | null
   editable: boolean
-  editingReplacement: React.ReactNode
 }
 
 const ResolveTicketForm = ({
   defaults,
   sendToDepartment,
   editable,
-  editingReplacement,
 }: ResolveTicketFormProps) => {
   const formId = useId()
   const router = useRouter()
@@ -138,7 +137,7 @@ const ResolveTicketForm = ({
           }
         />
         {editable ? (
-          <HiddenWhileEditing replacement={editingReplacement}>
+          <HiddenWhileEditing replacement={<TicketNoSolution />}>
             {solutionForm}
           </HiddenWhileEditing>
         ) : (
