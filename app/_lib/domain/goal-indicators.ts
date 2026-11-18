@@ -6,4 +6,9 @@ export const GOAL_INDICATORS = [
   "tmr",
 ] as const
 
-export const PERSON_GOAL_INDICATORS = ["sla", "tma", "overdue"] as const
+export const PERSON_GOAL_INDICATORS = [
+  "sla",
+  "tma",
+  "overdue",
+  "overdueTickets",
+] as const

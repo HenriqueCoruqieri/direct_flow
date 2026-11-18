@@ -99,7 +99,7 @@ export const GOALS_UNDEFINED_MEMBER_DESCRIPTION =
   "O administrador do setor ainda não definiu os objetivos da operação. Quando forem definidos, seus objetivos individuais e os da equipe serão exibidos aqui."
 
 export const GOALS_UNDEFINED_EDITOR_DESCRIPTION =
-  "Defina os objetivos de SLA, TMA, horas em atraso, quantidade de chamados em atraso e TMR. Eles valem para cada pessoa do setor e para o time."
+  "Defina os objetivos de SLA, TMA, horas em atraso, quantidade de chamados em atraso e TMR. Os limites de atraso de cada pessoa são os do time divididos pelas pessoas ativas do setor."
 
 export const goalsUndefinedCopy = (canEdit: boolean): OperationsEmptyCopy => ({
   title: GOALS_UNDEFINED_TITLE,

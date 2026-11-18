@@ -33,6 +33,13 @@ export interface GoalIndicatorRule {
   direction: GoalDirection
 }
 
+export type PersonGoalTargetRule = "same" | "split"
+
+export type GoalTargets<TIndicator extends GoalIndicator> = Record<
+  TIndicator,
+  number | null
+>
+
 export interface DepartmentGoals {
   slaMinPercent: number
   tmaMaxHours: number
@@ -59,6 +66,11 @@ export interface GoalResolutionFacts {
 
 export interface PersonGoalFacts extends GoalResolutionFacts {
   overdueMs: number
+  overdueTicketCount: number
+}
+
+export interface IndividualGoalFacts extends PersonGoalFacts {
+  memberCount: number
 }
 
 export interface TeamMemberGoalFacts extends PersonGoalFacts {
@@ -73,7 +85,6 @@ export interface TeamTmrFacts {
 }
 
 export interface TeamGoalFacts extends PersonGoalFacts, TeamTmrFacts {
-  overdueTicketCount: number
   members: TeamMemberGoalFacts[]
 }
 

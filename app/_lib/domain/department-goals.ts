@@ -1,4 +1,9 @@
-import { formatHoursMinutes, formatInteger, HOUR_MS } from "@/app/_lib/date"
+import {
+  formatHoursMinutes,
+  formatInteger,
+  HOUR_MS,
+  MINUTE_MS,
+} from "@/app/_lib/date"
 import { ticketCountLabel } from "@/app/_lib/domain/dashboard"
 import {
   GOAL_INDICATORS,
@@ -18,11 +23,14 @@ import type {
   GoalIndicatorRule,
   GoalResolutionFacts,
   GoalSummary,
+  GoalTargets,
   GoalUnit,
+  IndividualGoalFacts,
   MeasuredGoalEvaluation,
   PersonGoalFacts,
   PersonGoalIndicator,
   PersonGoalResult,
+  PersonGoalTargetRule,
   TeamGoalFacts,
   TeamGoalResult,
   TeamMemberGoalFacts,
@@ -33,7 +41,6 @@ import type {
 export { GOAL_INDICATORS, PERSON_GOAL_INDICATORS }
 
 export const TEAM_ONLY_GOAL_INDICATORS = [
-  "overdueTickets",
   "tmr",
 ] as const satisfies readonly TeamOnlyGoalIndicator[]
 
@@ -74,6 +81,13 @@ export const GOAL_FIELD_BY_INDICATOR = {
   overdueTickets: "overdueTicketsLimit",
   tmr: "tmrMaxHours",
 } as const satisfies Record<GoalIndicator, keyof DepartmentGoals>
+
+export const PERSON_GOAL_TARGET_RULES = {
+  sla: "same",
+  tma: "same",
+  overdue: "split",
+  overdueTickets: "split",
+} satisfies Record<PersonGoalIndicator, PersonGoalTargetRule>
 
 export const GOAL_INDICATOR_LABELS = {
   sla: "SLA no prazo",
@@ -132,13 +146,13 @@ export const DEPARTMENT_GOALS_FIELD_COPY = {
   overdueHoursLimit: {
     label: "Limite de horas em atraso",
     description:
-      "Soma máxima das horas em atraso no mês, incluindo chamados já resolvidos.",
+      "Soma máxima das horas em atraso do time no mês, incluindo chamados já resolvidos. O limite de cada pessoa é este valor dividido igualmente pelas pessoas ativas do setor.",
     unit: "h",
   },
   overdueTicketsLimit: {
     label: "Limite de chamados em atraso",
     description:
-      "Quantidade máxima de chamados em atraso no mês: resolvidos fora do prazo, abertos com o prazo vencido e enviados a outro setor já vencidos.",
+      "Quantidade máxima de chamados em atraso do time no mês: resolvidos fora do prazo, abertos com o prazo vencido e enviados a outro setor já vencidos. O limite de cada pessoa é este valor dividido pelas pessoas ativas do setor, arredondado para baixo.",
     unit: "chamados",
   },
   tmrMaxHours: {
@@ -153,10 +167,10 @@ export const PERSON_AND_TEAM_GOAL_FIELDS = [
   "slaMinPercent",
   "tmaMaxHours",
   "overdueHoursLimit",
+  "overdueTicketsLimit",
 ] as const satisfies readonly (keyof DepartmentGoals)[]
 
 export const TEAM_ONLY_GOAL_FIELDS = [
-  "overdueTicketsLimit",
   "tmrMaxHours",
 ] as const satisfies readonly (keyof DepartmentGoals)[]
 
@@ -178,7 +192,7 @@ export const DEPARTMENT_GOALS_SAVED_MESSAGE = "Objetivos gravados."
 export const departmentGoalsDialogDescription = (
   departmentName: string,
 ): string =>
-  `${departmentName} · os objetivos valem para cada pessoa do setor e para o time.`
+  `${departmentName} · SLA e TMA são os mesmos para cada pessoa e para o time; os limites de atraso são do time e divididos entre as pessoas ativas do setor.`
 
 export const goalsLastChangeLabel = (record: DepartmentGoalsRecord): string =>
   lastChangeLabel(record)
@@ -206,7 +220,7 @@ export const tmrFor = (facts: TeamTmrFacts): number =>
     ? Math.max(facts.averageQueueWaitMs, 0)
     : 0
 
-export const overdueTicketCountFor = (facts: TeamGoalFacts): number =>
+export const overdueTicketCountFor = (facts: PersonGoalFacts): number =>
   Math.max(facts.overdueTicketCount, 0)
 
 export const goalTargetFor = (
@@ -220,6 +234,60 @@ export const goalTargetFor = (
     : target
 }
 
+export const goalDivisorFor = (memberCount: number): number =>
+  Math.max(Math.floor(memberCount), 1)
+
+export const splitGoalTarget = (
+  indicator: GoalIndicator,
+  teamTarget: number | null,
+  memberCount: number,
+): number | null => {
+  if (teamTarget === null) return null
+  const divisor = goalDivisorFor(memberCount)
+  switch (GOAL_INDICATOR_RULES[indicator].unit) {
+    case "duration":
+      return (
+        Math.floor(Math.round(Math.max(teamTarget, 0) / MINUTE_MS) / divisor) *
+        MINUTE_MS
+      )
+    case "count":
+      return Math.floor(Math.max(teamTarget, 0) / divisor)
+    case "percent":
+      return teamTarget
+  }
+}
+
+export const personGoalTargetFor = (
+  indicator: PersonGoalIndicator,
+  goals: DepartmentGoals,
+  memberCount: number,
+): number | null => {
+  const teamTarget = goalTargetFor(indicator, goals)
+  return PERSON_GOAL_TARGET_RULES[indicator] === "split"
+    ? splitGoalTarget(indicator, teamTarget, memberCount)
+    : teamTarget
+}
+
+export const personGoalTargetsFor = (
+  goals: DepartmentGoals,
+  memberCount: number,
+): GoalTargets<PersonGoalIndicator> => ({
+  sla: personGoalTargetFor("sla", goals, memberCount),
+  tma: personGoalTargetFor("tma", goals, memberCount),
+  overdue: personGoalTargetFor("overdue", goals, memberCount),
+  overdueTickets: personGoalTargetFor("overdueTickets", goals, memberCount),
+})
+
+export const teamGoalTargetsFor = (
+  goals: DepartmentGoals,
+): GoalTargets<GoalIndicator> => ({
+  sla: goalTargetFor("sla", goals),
+  tma: goalTargetFor("tma", goals),
+  overdue: goalTargetFor("overdue", goals),
+  overdueTickets: goalTargetFor("overdueTickets", goals),
+  tmr: goalTargetFor("tmr", goals),
+})
+
 export const isWithinGoal = (
   indicator: GoalIndicator,
   value: number,
@@ -232,9 +300,8 @@ export const isWithinGoal = (
 export const evaluateGoal = (
   indicator: GoalIndicator,
   value: number | null,
-  goals: DepartmentGoals,
+  target: number | null,
 ): GoalEvaluation => {
-  const target = goalTargetFor(indicator, goals)
   if (target === null) {
     return { indicator, adherence: "no_target", value, target }
   }
@@ -252,26 +319,33 @@ export const evaluateGoal = (
 }
 
 export const evaluatePersonGoals = (
-  goals: DepartmentGoals,
+  targets: GoalTargets<PersonGoalIndicator>,
   facts: PersonGoalFacts,
 ): GoalEvaluations<PersonGoalIndicator> => ({
-  sla: evaluateGoal("sla", slaPercentFor(facts), goals),
-  tma: evaluateGoal("tma", averageResolutionFor(facts), goals),
-  overdue: evaluateGoal("overdue", Math.max(facts.overdueMs, 0), goals),
+  sla: evaluateGoal("sla", slaPercentFor(facts), targets.sla),
+  tma: evaluateGoal("tma", averageResolutionFor(facts), targets.tma),
+  overdue: evaluateGoal(
+    "overdue",
+    Math.max(facts.overdueMs, 0),
+    targets.overdue,
+  ),
+  overdueTickets: evaluateGoal(
+    "overdueTickets",
+    overdueTicketCountFor(facts),
+    targets.overdueTickets,
+  ),
 })
 
 export const evaluateTeamGoals = (
   goals: DepartmentGoals,
   facts: TeamGoalFacts,
-): GoalEvaluations<GoalIndicator> => ({
-  ...evaluatePersonGoals(goals, facts),
-  overdueTickets: evaluateGoal(
-    "overdueTickets",
-    overdueTicketCountFor(facts),
-    goals,
-  ),
-  tmr: evaluateGoal("tmr", tmrFor(facts), goals),
-})
+): GoalEvaluations<GoalIndicator> => {
+  const targets = teamGoalTargetsFor(goals)
+  return {
+    ...evaluatePersonGoals(targets, facts),
+    tmr: evaluateGoal("tmr", tmrFor(facts), targets.tmr),
+  }
+}
 
 export const goalSummaryFor = (
   evaluations: readonly GoalEvaluation[],
@@ -291,21 +365,24 @@ const orderedEvaluations = <TIndicator extends GoalIndicator>(
 ): GoalEvaluation[] => indicators.map((indicator) => evaluations[indicator])
 
 export const isPersonGoalMet = (
-  goals: DepartmentGoals,
+  targets: GoalTargets<PersonGoalIndicator>,
   facts: PersonGoalFacts,
 ): boolean =>
   isGoalMet(
     orderedEvaluations(
       PERSON_GOAL_INDICATORS,
-      evaluatePersonGoals(goals, facts),
+      evaluatePersonGoals(targets, facts),
     ),
   )
 
 export const personGoalResultFor = (
   goals: DepartmentGoals,
-  facts: PersonGoalFacts,
+  facts: IndividualGoalFacts,
 ): PersonGoalResult => {
-  const evaluations = evaluatePersonGoals(goals, facts)
+  const evaluations = evaluatePersonGoals(
+    personGoalTargetsFor(goals, facts.memberCount),
+    facts,
+  )
   return {
     evaluations,
     summary: goalSummaryFor(
@@ -317,7 +394,10 @@ export const personGoalResultFor = (
 export const goalMetCountFor = (
   goals: DepartmentGoals,
   members: readonly TeamMemberGoalFacts[],
-): number => members.filter((member) => isPersonGoalMet(goals, member)).length
+): number => {
+  const targets = personGoalTargetsFor(goals, members.length)
+  return members.filter((member) => isPersonGoalMet(targets, member)).length
+}
 
 export const teamGoalResultFor = (
   goals: DepartmentGoals,
@@ -406,7 +486,7 @@ export const goalTargetLabel = (evaluation: GoalEvaluation): string => {
 }
 
 export const PERSON_GOAL_MET_DESCRIPTION =
-  "Você atingiu o objetivo de todos os indicadores individuais: SLA, TMA e horas em atraso."
+  "Você atingiu o objetivo de todos os indicadores individuais: SLA, TMA, horas em atraso e chamados em atraso."
 
 export const TEAM_GOAL_MET_DESCRIPTION =
   "O time está aderente nos cinco indicadores do mês."
@@ -469,7 +549,7 @@ export const teamGoalSummaryDescription = (result: TeamGoalResult): string =>
   )
 
 export const GOAL_MET_COUNT_RULE_DESCRIPTION =
-  "Ficará aderente ao objetivo caso atinja os indicadores de SLA, TMA e horas em atraso."
+  "Ficará aderente ao objetivo caso atinja os indicadores de SLA, TMA, horas em atraso e chamados em atraso."
 
 export const goalMetCountDescription = (
   metCount: number,
@@ -478,7 +558,7 @@ export const goalMetCountDescription = (
   if (memberCount <= 0) return GOAL_MET_COUNT_RULE_DESCRIPTION
   const people = memberCount === 1 ? "pessoa" : "pessoas"
   const verb = metCount === 1 ? "cumpriu" : "cumpriram"
-  return `${metCount} de ${memberCount} ${people} ${verb} os três objetivos individuais (SLA, TMA e horas em atraso).`
+  return `${metCount} de ${memberCount} ${people} ${verb} os quatro objetivos individuais (SLA, TMA, horas em atraso e chamados em atraso).`
 }
 
 const percentDifferenceLine = (difference: number): string => {
