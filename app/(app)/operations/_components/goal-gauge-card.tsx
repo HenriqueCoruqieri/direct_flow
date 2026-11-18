@@ -1,7 +1,6 @@
 import {
   GOAL_INDICATOR_LABELS,
   goalGaugeFor,
-  goalScaleLabel,
   goalSupportLine,
   goalTargetLabel,
   goalValueLabel,
@@ -40,8 +39,22 @@ const GoalGaugeCard = ({ evaluation }: GoalGaugeCardProps) => {
             aria-hidden="true"
             className="flex justify-between text-micro text-muted-foreground tabular-nums"
           >
-            <span>{goalScaleLabel(evaluation.indicator, 0)}</span>
-            <span>{goalScaleLabel(evaluation.indicator, gauge.max)}</span>
+            <span className="flex flex-col items-center text-center">
+              <span>{gauge.minLabel}</span>
+              {gauge.minDetail !== null && (
+                <span className="font-medium text-text-secondary">
+                  {gauge.minDetail}
+                </span>
+              )}
+            </span>
+            <span className="flex flex-col items-center text-center">
+              <span>{gauge.maxLabel}</span>
+              {gauge.maxDetail !== null && (
+                <span className="font-medium text-text-secondary">
+                  {gauge.maxDetail}
+                </span>
+              )}
+            </span>
           </div>
         </div>
         <div className="flex min-w-0 flex-col items-start gap-1.5 sm:items-center sm:text-center">

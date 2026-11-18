@@ -152,6 +152,10 @@ export interface GoalGauge {
   max: number
   fillPercent: number
   targetPercent: number | null
+  minLabel: string
+  maxLabel: string
+  minDetail: string | null
+  maxDetail: string | null
 }
 
 export interface GoalFieldCopy {

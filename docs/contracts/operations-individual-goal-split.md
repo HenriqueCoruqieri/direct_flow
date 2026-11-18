@@ -177,6 +177,17 @@ painel itera `PERSON_GOAL_INDICATORS`, que agora tem quatro itens. Ajustes:
 Os cards individuais mostram o alvo derivado sem mudança no componente
 (`goalTargetLabel`, `goalSupportLine`, `goalGaugeFor` leem `evaluation.target`).
 
+Escala do gauge (ajuste de 2026-11-18): nos indicadores de limite com alvo, o
+fim do arco é o próprio alvo individual, sem traço de meta, com as pontas
+`piso` e `limite` (`gauge.minLabel` / `gauge.maxLabel`) e o arco cheio quando o
+valor passa do limite. Logo abaixo de cada rótulo, centralizado na mesma ponta,
+vem o valor formatado na unidade do indicador (`gauge.minDetail` /
+`gauge.maxDetail`: só o número em contagem, `0` e `2`; em horas, `0h` e
+`8h`); nas escalas
+numéricas (SLA e indicador sem alvo) os dois são `null` e não há segunda linha. A divisão arredondada para baixo pode dar limite 0:
+nesse caso o arco fica vazio com 0 chamados e cheio com qualquer chamado em
+atraso, sem divisão por zero.
+
 ## `df-actions`, `df-email`, `df-auth`
 
 Nada.

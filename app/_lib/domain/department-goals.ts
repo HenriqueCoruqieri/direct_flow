@@ -455,10 +455,12 @@ export const goalValueLabel = (evaluation: GoalEvaluation): string =>
         evaluation.value,
       )
 
-export const goalScaleLabel = (
-  indicator: GoalIndicator,
-  value: number,
-): string => formatGoalAmount(GOAL_INDICATOR_RULES[indicator].unit, value)
+const goalScaleLabel = (indicator: GoalIndicator, value: number): string =>
+  formatGoalAmount(GOAL_INDICATOR_RULES[indicator].unit, value)
+
+export const GOAL_GAUGE_FLOOR_LABEL = "piso"
+
+export const GOAL_GAUGE_LIMIT_LABEL = "limite"
 
 export const GOAL_TARGET_PREFIXES = {
   sla: "Objetivo",
@@ -592,7 +594,7 @@ const clampPercent = (value: number): number =>
 const gaugeReferenceFor = (evaluation: GoalEvaluation): number =>
   Math.max(evaluation.target ?? evaluation.value ?? 0, 0)
 
-export const goalGaugeMaxFor = (evaluation: GoalEvaluation): number => {
+const goalGaugeMaxFor = (evaluation: GoalEvaluation): number => {
   switch (GOAL_INDICATOR_RULES[evaluation.indicator].unit) {
     case "percent":
       return GOAL_PERCENT_MAX
@@ -609,17 +611,51 @@ export const goalGaugeMaxFor = (evaluation: GoalEvaluation): number => {
   }
 }
 
-export const goalGaugeFor = (evaluation: GoalEvaluation): GoalGauge => {
+const fillPercentFor = (value: number | null, max: number): number => {
+  if (value === null || value <= 0) return 0
+  if (max <= 0) return 100
+  return clampPercent((value / max) * 100)
+}
+
+const limitDetailFor = (indicator: GoalIndicator, value: number): string =>
+  GOAL_INDICATOR_RULES[indicator].unit === "count"
+    ? formatInteger(value)
+    : goalScaleLabel(indicator, value)
+
+const limitGaugeFor = (
+  evaluation: GoalEvaluation,
+  target: number,
+): GoalGauge => {
+  const max = Math.max(target, 0)
+  return {
+    max,
+    fillPercent: fillPercentFor(evaluation.value, max),
+    targetPercent: null,
+    minLabel: GOAL_GAUGE_FLOOR_LABEL,
+    maxLabel: GOAL_GAUGE_LIMIT_LABEL,
+    minDetail: limitDetailFor(evaluation.indicator, 0),
+    maxDetail: limitDetailFor(evaluation.indicator, max),
+  }
+}
+
+const scaleGaugeFor = (evaluation: GoalEvaluation): GoalGauge => {
   const max = goalGaugeMaxFor(evaluation)
   return {
     max,
-    fillPercent:
-      evaluation.value === null
-        ? 0
-        : clampPercent((evaluation.value / max) * 100),
+    fillPercent: fillPercentFor(evaluation.value, max),
     targetPercent:
       evaluation.target === null
         ? null
         : clampPercent((evaluation.target / max) * 100),
+    minLabel: goalScaleLabel(evaluation.indicator, 0),
+    maxLabel: goalScaleLabel(evaluation.indicator, max),
+    minDetail: null,
+    maxDetail: null,
   }
 }
+
+export const goalGaugeFor = (evaluation: GoalEvaluation): GoalGauge =>
+  GOAL_INDICATOR_RULES[evaluation.indicator].direction === "max" &&
+  evaluation.target !== null
+    ? limitGaugeFor(evaluation, evaluation.target)
+    : scaleGaugeFor(evaluation)
