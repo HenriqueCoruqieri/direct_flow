@@ -239,6 +239,7 @@ export const ticket = pgTable(
     firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
     solution: text("solution"),
+    actions: text("actions"),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     dueAt: timestamp("due_at", { withTimezone: true }),
     companyId: integer("company_id").references(() => company.id, {
