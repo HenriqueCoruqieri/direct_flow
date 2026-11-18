@@ -20,7 +20,7 @@ const MyGoalPanel = ({ result }: MyGoalPanelProps) => {
         summary={result.summary}
         description={personGoalSummaryDescription(result)}
       />
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {PERSON_GOAL_INDICATORS.map((indicator) => (
           <GoalGaugeCard
             key={indicator}

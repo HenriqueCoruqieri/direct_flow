@@ -37,8 +37,10 @@ const GoalPanelSkeleton = ({ scope }: GoalPanelSkeletonProps) => {
       ) : null}
       <div
         className={cn(
-          "grid grid-cols-1 gap-3 md:grid-cols-3",
-          scope === "team" && "xl:grid-cols-5",
+          "grid grid-cols-1 gap-3",
+          scope === "team"
+            ? "md:grid-cols-3 xl:grid-cols-5"
+            : "md:grid-cols-2 xl:grid-cols-4",
         )}
       >
         {indicators.map((indicator) => (
