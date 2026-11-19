@@ -30,7 +30,7 @@ export const TICKET_SLA_SETTLED_LABELS = {
 } satisfies Record<TicketSettledSlaStatus, string>
 
 export const TICKET_SLA_PAUSED_LABELS = {
-  awaiting_acceptance: "Aguardando aceite",
+  awaiting_acceptance: "Pendente",
   neutral: EMPTY_VALUE_LABEL,
 } satisfies Record<TicketPausedSlaStatus, string>
 

@@ -23,9 +23,13 @@ import {
 
 interface TicketCommentFormProps {
   defaults: TicketCommentFormDefaults
+  allowInternal: boolean
 }
 
-const TicketCommentForm = ({ defaults }: TicketCommentFormProps) => {
+const TicketCommentForm = ({
+  defaults,
+  allowInternal,
+}: TicketCommentFormProps) => {
   const contentId = useId()
   const privateId = useId()
   const router = useRouter()
@@ -82,31 +86,34 @@ const TicketCommentForm = ({ defaults }: TicketCommentFormProps) => {
         </FormField>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Controller
-            name="isPrivate"
-            control={form.control}
-            render={({ field }) => (
-              <Field orientation="horizontal" className="w-auto gap-2">
-                <Checkbox
-                  ref={field.ref}
-                  id={privateId}
-                  name={field.name}
-                  checked={field.value}
-                  disabled={field.disabled}
-                  onCheckedChange={(checked) =>
-                    field.onChange(checked === true)
-                  }
-                  onBlur={field.onBlur}
-                />
-                <FieldLabel htmlFor={privateId} className="font-normal">
-                  {PRIVATE_COMMENT_LABEL}
-                </FieldLabel>
-              </Field>
-            )}
-          />
+          {allowInternal ? (
+            <Controller
+              name="isPrivate"
+              control={form.control}
+              render={({ field }) => (
+                <Field orientation="horizontal" className="w-auto gap-2">
+                  <Checkbox
+                    ref={field.ref}
+                    id={privateId}
+                    name={field.name}
+                    checked={field.value}
+                    disabled={field.disabled}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked === true)
+                    }
+                    onBlur={field.onBlur}
+                  />
+                  <FieldLabel htmlFor={privateId} className="font-normal">
+                    {PRIVATE_COMMENT_LABEL}
+                  </FieldLabel>
+                </Field>
+              )}
+            />
+          ) : null}
 
           <Button
             type="submit"
+            className="ml-auto"
             disabled={isSubmitting}
             aria-busy={isSubmitting || undefined}
           >

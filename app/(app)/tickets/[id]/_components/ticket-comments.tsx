@@ -71,6 +71,7 @@ const TicketComments = ({
       {form.state === "open" ? (
         <TicketCommentForm
           defaults={buildTicketCommentFormDefaults(ticketId)}
+          allowInternal={form.allowInternal}
         />
       ) : form.state === "closed" ? (
         <p className="text-sm text-muted-foreground">{form.message}</p>
