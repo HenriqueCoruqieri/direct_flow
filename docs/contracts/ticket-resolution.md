@@ -1,5 +1,17 @@
 # Contrato — Resolução e comentários do chamado
 
+> **Revisão 2026-11-18** (`docs/contracts/my-tickets-sent-and-attended.md`,
+> seção "Comentário interno: só grava quem pode ler", e ADR 028, que
+> prevalecem no que divergem): `canCommentOnTicket` foi **removida** de
+> `app/_lib/domain/ticket-comments.ts`. Gravar comentário novo segue
+> `canWriteTicketComment(commenter, ticket, visibility, now)` /
+> `ticketCommentWriteBlockFor`, que soma `INTERNAL_NOT_ALLOWED` (comentário
+> `interna` só de quem passa em `canWriteInternalComment`) ao bloqueio de
+> `ticketCommentBlockFor`; `insertTicketMessage` reconfere com ela sob a
+> trava. Editar e excluir seguem `ticketCommentEditBlockFor` e
+> `ticketCommentDeleteBlockFor`, sobre `ticketCommentBlockFor`. Onde este
+> documento cita `canCommentOnTicket`, leia assim.
+
 Entrada das ondas 1 e 2. As decisões estão no plano,
 `docs/plans/ticket-resolution-and-comments.md`, e não são repetidas aqui. Este
 documento é a referência técnica: assinaturas, sequências, textos e cenários.
@@ -27,7 +39,7 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 > `isTicketLocked` trata o chamado como encerrado e um cron diário grava
 > `fechado` com uma linha `encerramento` do sistema (`changed_by` nulo). Mudam
 > aqui: `ticketConclusionStateFor`, `ticketCommentBlockFor`,
-> `canCommentOnTicket` e `ticketCommentFormStateFor` ganharam `now: Date`;
+> `canCommentOnTicket` (removida em 2026-11-18, nota no topo) e `ticketCommentFormStateFor` ganharam `now: Date`;
 > `TicketCommentFacts` ganhou `resolvedAt`; `TicketConclusionResolved` ganhou
 > `editableUntil` (`Editável até …` no card); `insertTicketMessage` lê
 > `resolved_at` sob a trava. `RESOLVED_TICKET_STATUS` mora agora em
@@ -48,7 +60,7 @@ grava só `message`. Sem e-mail, sem `ticket_history` para comentário.
 
 > Revisão de 2026-10-06 (`docs/contracts/queue-default-and-comment-edit.md`,
 > etapa 6, que prevalece no que diverge): **comentário passa a ser editável**
-> por quem o escreveu, enquanto `canCommentOnTicket` for verdadeiro, só o
+> por quem o escreveu, enquanto `canCommentOnTicket` for verdadeiro (revisão 2026-11-18: hoje `ticketCommentEditBlockFor`; nota no topo), só o
 > texto (a visibilidade não muda), com a marca `(editado)` quando
 > `updated_at` ≠ `created_at`; o texto anterior não é guardado e nada entra em
 > `ticket_history`. `TicketMessageItem` ganha `authorId` e `updatedAt`
@@ -443,6 +455,9 @@ diretor não resolve chamado com transferência pendente nem chamado `fechado`.
 
 ### `app/_lib/domain/ticket-comments.ts` (novo)
 
+> **Revisão 2026-11-18:** `canCommentOnTicket` foi removida; a regra de
+> gravar é `canWriteTicketComment` (nota de revisão no topo).
+
 ```ts
 export const TICKET_COMMENT_MIN_LENGTH // 1
 export const TICKET_COMMENT_MAX_LENGTH // 5000
@@ -479,16 +494,16 @@ export const buildTicketCommentFormDefaults: (
 ) => TicketCommentFormDefaults
 ```
 
-| Nome                             | Semântica                                                                                                                                                                                  |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ticketCommentBlockFor`          | Nesta ordem: inativo (`COMMENTER_INACTIVE`); troca de senha (`PASSWORD_CHANGE_REQUIRED`); `!canViewTicket` (`CANNOT_VIEW`); `fechado`/`cancelado` (`TICKET_FINISHED`). `resolvido` comenta |
-| `canCommentOnTicket`             | `ticketCommentBlockFor(...) === null`. **A** regra; a transação reconfere com ela                                                                                                          |
-| `ticketCommentFormStateFor`      | `null` → `open`; `TICKET_FINISHED` → `closed` com `TICKET_COMMENTS_CLOSED_MESSAGE`; qualquer outro → `hidden`                                                                              |
-| `canSeeInternalComments`         | Diretor (`isBoard`) **ou** `departmentId = currentDepartmentId`. Não inclui "quem escreveu": isso é por comentário, não por pessoa (ver escopo)                                            |
-| `ticketMessageScopeFor`          | `{ viewerId: viewer.userId, includeInternal: canSeeInternalComments(viewer, ticket) }`                                                                                                     |
-| `messageVisibilityFor`           | `true` → `interna`; `false` → `publica`. Única tradução da checkbox para o enum                                                                                                            |
-| `isPrivateMessage`               | `visibility === "interna"`. A UI decide o selo por ela, nunca comparando a string                                                                                                          |
-| `buildTicketCommentFormDefaults` | `{ ticketId, content: "", isPrivate: false }` (público por padrão)                                                                                                                         |
+| Nome                             | Semântica                                                                                                                                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ticketCommentBlockFor`          | Nesta ordem: inativo (`COMMENTER_INACTIVE`); troca de senha (`PASSWORD_CHANGE_REQUIRED`); `!canViewTicket` (`CANNOT_VIEW`); `fechado`/`cancelado` (`TICKET_FINISHED`). `resolvido` comenta                               |
+| `canCommentOnTicket`             | `ticketCommentBlockFor(...) === null`. **Removida em 2026-11-18** (nota no topo): a regra de gravar é `canWriteTicketComment`, com que a transação reconfere. Texto original: **A** regra; a transação reconfere com ela |
+| `ticketCommentFormStateFor`      | `null` → `open`; `TICKET_FINISHED` → `closed` com `TICKET_COMMENTS_CLOSED_MESSAGE`; qualquer outro → `hidden`                                                                                                            |
+| `canSeeInternalComments`         | Diretor (`isBoard`) **ou** `departmentId = currentDepartmentId`. Não inclui "quem escreveu": isso é por comentário, não por pessoa (ver escopo)                                                                          |
+| `ticketMessageScopeFor`          | `{ viewerId: viewer.userId, includeInternal: canSeeInternalComments(viewer, ticket) }`                                                                                                                                   |
+| `messageVisibilityFor`           | `true` → `interna`; `false` → `publica`. Única tradução da checkbox para o enum                                                                                                                                          |
+| `isPrivateMessage`               | `visibility === "interna"`. A UI decide o selo por ela, nunca comparando a string                                                                                                                                        |
+| `buildTicketCommentFormDefaults` | `{ ticketId, content: "", isPrivate: false }` (público por padrão)                                                                                                                                                       |
 
 **Visibilidade de comentário privado — como chega à data layer.** A permissão
 é decidida no domínio e entregue pronta como `TicketMessageScope`:
@@ -671,7 +686,7 @@ from ticket where id = $ticketId for share`. Sem linha → `not_found`.
 users`). Sem linha → `not_commentable`.
 3. `canViewTicket(commenter, chamado)` falso → `not_found`.
 4. `canCommentOnTicket(commenter, { ...chamado })` falso →
-   `{ status: "not_commentable" }`.
+   `{ status: "not_commentable" }`. **Revisão 2026-11-18:** hoje `canWriteTicketComment(commenter, chamado, visibility, now)`; `canCommentOnTicket` foi removida (nota no topo).
 5. `insert into message (ticket_id, user_id, content, visibility)` com os
    valores recebidos; `created_at`/`updated_at` no default; `returning id`.
 6. `{ status: "saved", ticketId, messageId }`.

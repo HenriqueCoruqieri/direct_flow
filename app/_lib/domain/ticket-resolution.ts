@@ -141,6 +141,7 @@ export const ticketConclusionStateFor = (
       createdBy: ticket.createdBy,
       assignedTo: ticket.assignedTo,
       currentDepartmentId: ticket.currentDepartmentId,
+      lastTransferRequestedBy: ticket.lastTransferRequestedBy,
       status: ticket.status,
       hasPendingTransfer: false,
     })

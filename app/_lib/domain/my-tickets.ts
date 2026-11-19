@@ -2,16 +2,24 @@ import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
 import {
   ACTIVE_TICKET_STATUSES,
   AWAITING_APPROVAL_TICKET_STATUS,
+  DECLINED_TICKET_STATUS,
   isNotAwaitingApproval,
   RESOLVED_TICKET_STATUS,
 } from "@/app/_lib/domain/ticket"
 import { RESOLUTION_EDIT_WINDOW_DAYS } from "@/app/_lib/domain/ticket-closure"
+import {
+  APPROVED_TRANSFER_STATUS,
+  PENDING_TRANSFER_STATUS,
+  REJECTED_TRANSFER_STATUS,
+} from "@/app/_lib/domain/ticket-transfer"
 import type {
   MyTicketsEmptyCopy,
+  MyTicketsLastTransferMatch,
   MyTicketsTab,
   MyTicketsTabRule,
 } from "@/app/_lib/types/my-tickets"
 import type { PeriodFilterSelection } from "@/app/_lib/types/period"
+import type { TicketStatus } from "@/app/_lib/types/ticket"
 
 export const MY_TICKETS_PATH = "/tickets"
 
@@ -33,26 +41,52 @@ export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy = {
     "Nenhum chamado desta aba foi aberto no período escolhido. Escolha outro período ou “Todos”.",
 }
 
-const OPENED_TAB_STATUSES = ACTIVE_TICKET_STATUSES.filter(isNotAwaitingApproval)
+const SENT_TAB_MATCHES = [
+  {
+    transferStatus: PENDING_TRANSFER_STATUS,
+    ticketStatuses: [AWAITING_APPROVAL_TICKET_STATUS],
+    assigneeIsReviewer: false,
+  },
+  {
+    transferStatus: REJECTED_TRANSFER_STATUS,
+    ticketStatuses: [DECLINED_TICKET_STATUS],
+    assigneeIsReviewer: false,
+  },
+] satisfies readonly MyTicketsLastTransferMatch[]
+
+const isAttendedTabStatus = (status: TicketStatus): boolean =>
+  isNotAwaitingApproval(status) && status !== DECLINED_TICKET_STATUS
+
+const ATTENDED_TAB_MATCHES = [
+  {
+    transferStatus: APPROVED_TRANSFER_STATUS,
+    ticketStatuses: ACTIVE_TICKET_STATUSES.filter(isAttendedTabStatus),
+    assigneeIsReviewer: true,
+  },
+] satisfies readonly MyTicketsLastTransferMatch[]
+
+const lastTransferStatuses = (
+  matches: readonly MyTicketsLastTransferMatch[],
+): readonly TicketStatus[] => matches.flatMap((match) => match.ticketStatuses)
 
 export const MY_TICKETS_TAB_RULES = {
-  opened: {
-    label: "Abertos por mim",
-    relation: "author",
-    statuses: OPENED_TAB_STATUSES,
-    departmentScope: "origin",
-    emptyTitle: "Nenhum chamado em andamento",
+  sent: {
+    label: "Enviados e recusados",
+    relation: "lastTransferRequester",
+    lastTransfer: SENT_TAB_MATCHES,
+    statuses: lastTransferStatuses(SENT_TAB_MATCHES),
+    emptyTitle: "Nenhum chamado enviado ou recusado",
     emptyDescription:
-      "Os chamados que você abrir aparecem aqui enquanto estiverem no setor em que foram abertos, até serem resolvidos ou cancelados.",
+      "Os chamados que você enviar para outro setor aparecem aqui enquanto aguardam o aceite do destino e, se forem recusados, até você dar um novo encaminhamento.",
   },
-  awaiting: {
-    label: "Aguardando aprovação",
-    relation: "author",
-    statuses: [AWAITING_APPROVAL_TICKET_STATUS],
-    departmentScope: "any",
-    emptyTitle: "Nenhum chamado aguardando aprovação",
+  attended: {
+    label: "Atendidos",
+    relation: "lastTransferRequester",
+    lastTransfer: ATTENDED_TAB_MATCHES,
+    statuses: lastTransferStatuses(ATTENDED_TAB_MATCHES),
+    emptyTitle: "Nenhum chamado atendido",
     emptyDescription:
-      "Os chamados que você abriu e foram enviados para outro setor aparecem aqui enquanto aguardam o aceite do setor de destino.",
+      "Os chamados que você enviou e foram aceitos pelo destino aparecem aqui enquanto continuam com quem os aceitou, até serem resolvidos ou cancelados.",
   },
   assigned: {
     label: "Atribuídos a mim",
@@ -94,9 +128,9 @@ export const MY_TICKETS_TAB_RULES = {
 export const mapMyTicketsTabs = <T>(
   map: (tab: MyTicketsTab) => T,
 ): Record<MyTicketsTab, T> => ({
-  opened: map("opened"),
-  awaiting: map("awaiting"),
   assigned: map("assigned"),
+  sent: map("sent"),
+  attended: map("attended"),
   resolved: map("resolved"),
   closed: map("closed"),
   cancelled: map("cancelled"),

@@ -166,6 +166,7 @@ const assignmentFactsFromDetail = (
   createdBy: ticket.createdBy,
   assignedTo: ticket.assignedTo,
   currentDepartmentId: ticket.currentDepartmentId,
+  lastTransferRequestedBy: ticket.lastTransferRequestedBy,
   status: ticket.status,
   hasPendingTransfer: ticket.pendingTransfer !== null,
 })

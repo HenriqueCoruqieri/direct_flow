@@ -148,6 +148,7 @@ export interface TicketVisibilityFacts {
   createdBy: number
   assignedTo: number | null
   currentDepartmentId: number
+  lastTransferRequestedBy: number | null
 }
 
 export interface TicketPendingTransfer {

@@ -22,8 +22,12 @@ export type TicketCommentBlockReason =
   | "CANNOT_VIEW"
   | "TICKET_FINISHED"
 
+export type TicketCommentWriteBlockReason =
+  TicketCommentBlockReason | "INTERNAL_NOT_ALLOWED"
+
 export interface TicketCommentFormOpen {
   state: "open"
+  allowInternal: boolean
 }
 
 export interface TicketCommentFormClosed {

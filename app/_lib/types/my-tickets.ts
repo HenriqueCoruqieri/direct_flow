@@ -5,21 +5,42 @@ import type {
   TicketType,
 } from "@/app/_lib/types/ticket"
 import type { TicketCompanyListFacts } from "@/app/_lib/types/ticket-company"
+import type { ApprovalStatus } from "@/app/_lib/types/ticket-transfer"
 
 export type MyTicketsTab = (typeof MY_TICKETS_TABS)[number]
 
-export type MyTicketsRelation = "author" | "assignee"
+export type MyTicketsOwnershipRelation = "author" | "assignee"
+
+export type MyTicketsRelation =
+  MyTicketsOwnershipRelation | "lastTransferRequester"
 
 export type MyTicketsDepartmentScope = "origin" | "any"
 
-export interface MyTicketsTabRule {
+export interface MyTicketsTabRuleBase {
   label: string
-  relation: MyTicketsRelation
   statuses: readonly TicketStatus[]
-  departmentScope: MyTicketsDepartmentScope
   emptyTitle: string
   emptyDescription: string
 }
+
+export interface MyTicketsOwnershipTabRule extends MyTicketsTabRuleBase {
+  relation: MyTicketsOwnershipRelation
+  departmentScope: MyTicketsDepartmentScope
+}
+
+export interface MyTicketsLastTransferMatch {
+  transferStatus: ApprovalStatus
+  ticketStatuses: readonly TicketStatus[]
+  assigneeIsReviewer: boolean
+}
+
+export interface MyTicketsLastTransferTabRule extends MyTicketsTabRuleBase {
+  relation: "lastTransferRequester"
+  lastTransfer: readonly MyTicketsLastTransferMatch[]
+}
+
+export type MyTicketsTabRule =
+  MyTicketsOwnershipTabRule | MyTicketsLastTransferTabRule
 
 export type MyTicketsTabCounts = Record<MyTicketsTab, number>
 

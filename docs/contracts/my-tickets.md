@@ -9,6 +9,25 @@ URL, de `docs/contracts/dashboard.md`.
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`,
 `@tanstack/react-table@9.2.4`, `lucide-react@1.47.0`.
 
+> **Revisão 2026-11-18 — abas "Enviados e recusados" e "Atendidos"
+> (`docs/contracts/my-tickets-sent-and-attended.md`, que prevalece no que
+> diverge; ADR 028).** Abas: **Atribuídos a mim · Enviados e recusados ·
+> Atendidos · Resolvidos · Fechados · Cancelados** (`assigned`, `sent`,
+> `attended`, `resolved`, `closed`, `cancelled`); padrão continua `assigned`.
+> Saem `opened` ("Abertos por mim") e `awaiting` ("Aguardando aprovação");
+> `?tab=opened` e `?tab=awaiting` caem em Atribuídos a mim. As duas abas novas
+> são decididas pelo **último envio** do chamado (`ticket_transfer` mais
+> recente) com `requested_by` = a pessoa; `MyTicketsTabRule` vira união
+> discriminada por `relation` (`lastTransferRequester` com `lastTransfer`).
+> Chamado aberto pela pessoa e parado na fila, sem atribuição e sem envio, não
+> aparece em aba nenhuma (está na Fila do setor). Quem fez o último envio passa
+> em `canViewTicket` (abre, comenta e baixa anexos; não edita nem resolve) até
+> outra pessoa enviar de novo: `TicketVisibilityFacts` ganha
+> `lastTransferRequestedBy`. Continua valendo que todo chamado listado em
+> qualquer aba passa em `canViewTicket`. Ficam superados os trechos e
+> cenários sobre "Abertos por mim" e "Aguardando aprovação" listados em "Ficam
+> superados" do contrato novo.
+
 > **Revisão 2026-11-09 — coluna "Empresa" (a implementar na Etapa 3 de
 > `docs/contracts/ticket-company.md`, que prevalece no que diverge).**
 > `MyTicketListItem` ganha `company: TicketCompanyOption | null`

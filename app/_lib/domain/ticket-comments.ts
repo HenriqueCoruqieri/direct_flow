@@ -15,6 +15,7 @@ import type {
   TicketCommentFacts,
   TicketCommentFormDefaults,
   TicketCommentFormState,
+  TicketCommentWriteBlockReason,
   TicketMessageAuthorFacts,
   TicketMessageItem,
   TicketMessageScope,
@@ -63,19 +64,18 @@ export const ticketCommentBlockFor = (
   return null
 }
 
-export const canCommentOnTicket = (
-  commenter: TicketActorFacts,
-  ticket: TicketCommentFacts,
-  now: Date,
-): boolean => ticketCommentBlockFor(commenter, ticket, now) === null
-
 export const ticketCommentFormStateFor = (
   commenter: TicketActorFacts,
   ticket: TicketCommentFacts,
   now: Date,
 ): TicketCommentFormState => {
   const reason = ticketCommentBlockFor(commenter, ticket, now)
-  if (reason === null) return { state: "open" }
+  if (reason === null) {
+    return {
+      state: "open",
+      allowInternal: canWriteInternalComment(commenter, ticket),
+    }
+  }
   if (reason === "TICKET_FINISHED") {
     return { state: "closed", message: TICKET_COMMENTS_CLOSED_MESSAGE }
   }
@@ -101,6 +101,36 @@ export const messageVisibilityFor = (isPrivate: boolean): MessageVisibility =>
 
 export const isPrivateMessage = (visibility: MessageVisibility): boolean =>
   visibility === "interna"
+
+export const canWriteInternalComment = (
+  writer: TicketViewerFacts,
+  ticket: Pick<TicketVisibilityFacts, "currentDepartmentId">,
+): boolean => canSeeInternalComments(writer, ticket)
+
+export const ticketCommentWriteBlockFor = (
+  commenter: TicketActorFacts,
+  ticket: TicketCommentFacts,
+  visibility: MessageVisibility,
+  now: Date,
+): TicketCommentWriteBlockReason | null => {
+  const reason = ticketCommentBlockFor(commenter, ticket, now)
+  if (reason !== null) return reason
+  if (
+    isPrivateMessage(visibility) &&
+    !canWriteInternalComment(commenter, ticket)
+  ) {
+    return "INTERNAL_NOT_ALLOWED"
+  }
+  return null
+}
+
+export const canWriteTicketComment = (
+  commenter: TicketActorFacts,
+  ticket: TicketCommentFacts,
+  visibility: MessageVisibility,
+  now: Date,
+): boolean =>
+  ticketCommentWriteBlockFor(commenter, ticket, visibility, now) === null
 
 export const buildTicketCommentFormDefaults = (
   ticketId: number,

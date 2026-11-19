@@ -182,6 +182,7 @@ export const canSendTicketToDepartmentDetail = (
     createdBy: ticket.createdBy,
     assignedTo: ticket.assignedTo,
     currentDepartmentId: ticket.currentDepartmentId,
+    lastTransferRequestedBy: ticket.lastTransferRequestedBy,
     status: ticket.status,
     hasPendingTransfer: ticket.pendingTransfer !== null,
   })
@@ -214,6 +215,7 @@ export const canViewTicketAfterTransfer = (
     createdBy: ticket.createdBy,
     assignedTo: null,
     currentDepartmentId: toDepartmentId,
+    lastTransferRequestedBy: viewer.userId,
   })
 
 export const buildSendToDepartmentFormDefaults = (
@@ -304,6 +306,9 @@ export const PENDING_TRANSFER_STATUS =
 export const REJECTED_TRANSFER_STATUS =
   "rejeitado" as const satisfies ApprovalStatus
 
+export const APPROVED_TRANSFER_STATUS =
+  "aprovado" as const satisfies ApprovalStatus
+
 export const canFollowTicketTransferReview = (
   viewer: TicketViewerFacts,
   ticket: TicketVisibilityFacts,
@@ -332,6 +337,7 @@ export const ticketAttendKindFor = (
     createdBy: ticket.createdBy,
     assignedTo: ticket.assignedTo,
     currentDepartmentId: ticket.currentDepartmentId,
+    lastTransferRequestedBy: ticket.lastTransferRequestedBy,
     status: ticket.status,
     hasPendingTransfer: ticket.pendingTransfer !== null,
   })
@@ -445,6 +451,7 @@ export const canViewTicketAfterDecline = (
     createdBy: ticket.createdBy,
     assignedTo: returnAssigneeId,
     currentDepartmentId: transfer.fromDepartmentId,
+    lastTransferRequestedBy: transfer.requestedBy,
   })
 
 export const declineTicketTransferDialogTitle = (ticketId: number): string =>

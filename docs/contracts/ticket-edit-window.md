@@ -1,5 +1,17 @@
 # Contrato — Janela de 7 dias após a resolução, edição na própria tela e "Hoje" em Meus chamados
 
+> **Revisão 2026-11-18** (`docs/contracts/my-tickets-sent-and-attended.md`,
+> seção "Comentário interno: só grava quem pode ler", e ADR 028, que
+> prevalecem no que divergem): `canCommentOnTicket` foi **removida** de
+> `app/_lib/domain/ticket-comments.ts`. Gravar comentário novo segue
+> `canWriteTicketComment(commenter, ticket, visibility, now)` /
+> `ticketCommentWriteBlockFor`, que soma `INTERNAL_NOT_ALLOWED` (comentário
+> `interna` só de quem passa em `canWriteInternalComment`) ao bloqueio de
+> `ticketCommentBlockFor`; `insertTicketMessage` reconfere com ela sob a
+> trava. Editar e excluir seguem `ticketCommentEditBlockFor` e
+> `ticketCommentDeleteBlockFor`, sobre `ticketCommentBlockFor`. Onde este
+> documento cita `canCommentOnTicket`, leia assim.
+
 Entrada das ondas 1 e 2. As decisões estão no plano,
 `docs/plans/ticket-edit-window-and-inline-edit.md`, e não são repetidas aqui.
 Este documento é a referência técnica: assinaturas, sequências, textos e
@@ -46,7 +58,7 @@ Decisão de arquitetura: `docs/adr/014-scheduled-close-of-resolved-tickets.md`.
 > `edicao` → `mudanca_tag` → `atribuicao` → `mudanca_status`. `resolvido` não
 > muda de status. (etapa 6) comentários continuam travados pela mesma regra e
 > passam a ser editáveis pelo autor enquanto `canCommentOnTicket` for
-> verdadeiro.
+> verdadeiro. (Revisão 2026-11-18: editar segue `ticketCommentEditBlockFor`; ver nota no topo.)
 
 > Revisão de 2026-10-12 (`docs/contracts/assignee-edit-and-assume.md`, ADR
 > 017, que prevalece no que diverge): onde este documento diz "o autor edita"
@@ -344,6 +356,9 @@ texto antigo não é guardado).
 
 ### `app/_lib/domain/ticket-comments.ts` (alterado)
 
+> **Revisão 2026-11-18:** `canCommentOnTicket` foi removida; a regra de
+> gravar é `canWriteTicketComment` (nota de revisão no topo).
+
 ```ts
 export const ticketCommentBlockFor: (
   commenter: TicketActorFacts,
@@ -537,7 +552,7 @@ solution }, values)`; `!hasTicketEditChanges` → `no_changes`.
 1. O `select … for share` do chamado lê também `resolved_at`.
 2. Depois da trava, `const now = new Date()`.
 3. `canCommentOnTicket(commenter, { createdBy, assignedTo, currentDepartmentId,
-status, resolvedAt }, now)` falso → `not_commentable`.
+status, resolvedAt }, now)` falso → `not_commentable`. **Revisão 2026-11-18:** hoje `canWriteTicketComment(commenter, chamado, visibility, now)`; `canCommentOnTicket` foi removida (nota no topo).
 
 Assinatura e outcomes iguais.
 
@@ -939,7 +954,7 @@ os cenários 17–22 ficam como não executados e o 15 continua valendo.
 
 Etapa 1 — janela de 7 dias:
 
-- [x] `changed_by` anulável e migration `0010_history_system_actor`; `domain/ticket-closure.ts`; `now` em `ticketEditBlockFor`, `canEditTicket`, `ticketEditButtonStateFor`, `ticketCommentBlockFor`, `canCommentOnTicket`, `ticketCommentFormStateFor`, `ticketConclusionStateFor`; `editableUntil`; `SYSTEM_ACTOR_LABEL`/`describeHistoryActor`; `vercel.json`; `CRON_SECRET` no `.env.example`; ADR 014 (`df-architect`)
+- [x] `changed_by` anulável e migration `0010_history_system_actor`; `domain/ticket-closure.ts`; `now` em `ticketEditBlockFor`, `canEditTicket`, `ticketEditButtonStateFor`, `ticketCommentBlockFor`, `canCommentOnTicket`, `ticketCommentFormStateFor`, `ticketConclusionStateFor`; `editableUntil`; `SYSTEM_ACTOR_LABEL`/`describeHistoryActor`; `vercel.json`; `CRON_SECRET` no `.env.example`; ADR 014 (`df-architect`) — **revisão 2026-11-18:** `canCommentOnTicket` removida (nota no topo)
 - [x] `matcher` do `proxy.ts` sem `api/cron` (`df-auth`)
 - [x] `leftJoin` no histórico; `updateTicketByAuthor` e `insertTicketMessage` com `resolved_at` e `now`; `closeExpiredResolvedTickets`; seed QA com `#V` e `#J` (`df-data`)
 - [x] `app/api/cron/close-resolved-tickets/route.ts` (`df-actions`)

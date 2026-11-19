@@ -1,7 +1,7 @@
 export const MY_TICKETS_TABS = [
   "assigned",
-  "opened",
-  "awaiting",
+  "sent",
+  "attended",
   "resolved",
   "closed",
   "cancelled",

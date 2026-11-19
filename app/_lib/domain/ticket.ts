@@ -190,8 +190,16 @@ export const canViewTicket = (
   const isAssignee = ticket.assignedTo === viewer.userId
   const isInCurrentDepartment =
     ticket.currentDepartmentId === viewer.departmentId
+  const isLastTransferRequester =
+    ticket.lastTransferRequestedBy === viewer.userId
   const isDirector = viewer.isBoard
-  return isAuthor || isAssignee || isInCurrentDepartment || isDirector
+  return (
+    isAuthor ||
+    isAssignee ||
+    isInCurrentDepartment ||
+    isLastTransferRequester ||
+    isDirector
+  )
 }
 
 export const describePendingTransfer = ({

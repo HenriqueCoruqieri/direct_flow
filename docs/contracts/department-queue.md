@@ -156,7 +156,11 @@ público no chamado.` **Ficam superados**: o texto do diálogo no Q19; o envio
 > - Domínio (`app/_lib/domain/department-queue.ts`): duas listas novas,
 >   derivadas sem repetir valores, com o predicado novo
 >   `isNotAwaitingApproval(status)` de `app/_lib/domain/ticket.ts`
->   (o mesmo que "Abertos por mim" de Meus chamados passou a usar):
+>   (o mesmo que "Abertos por mim" de Meus chamados passou a usar; **revisão
+>   2026-11-18**: "Abertos por mim" saiu de Meus chamados — ADR 028,
+>   `my-tickets-sent-and-attended.md`; em Meus chamados o predicado passou a
+>   montar os status da aba "Atendidos", `isAttendedTabStatus` em
+>   `app/_lib/domain/my-tickets.ts`):
 >   `DEPARTMENT_QUEUE_ALL_STATUSES = TICKET_STATUSES.filter(isNotAwaitingApproval)`
 >   (oito dos nove status de `ticket_status`) para "Todos" e
 >   `DEPARTMENT_QUEUE_OPEN_STATUSES = ACTIVE_TICKET_STATUSES.filter(isNotAwaitingApproval)`
@@ -893,6 +897,13 @@ Exceção: escrita depois da qual quem agiu perde o acesso ao detalhe não chama
 `revalidatePath` nenhum, nem `/queue`. No Next 16 qualquer revalidação na
 action re-renderiza a página atual na resposta (razão em
 `department-transfer.md`, passo 5 da action).
+
+> **Revisão 2026-11-18** (ADR 028, `my-tickets-sent-and-attended.md`): no
+> envio (`sendTicketToDepartment`) essa exceção deixou de ocorrer. Quem envia
+> passa a ser o `requested_by` do último envio e continua vendo o chamado, então
+> `actorKeepsAccess` vem sempre verdadeiro e a action segue revalidando. A
+> exceção continua valendo na recusa (`declineTicketTransfer`), salvo quando
+> quem recusa é o próprio remetente do envio recusado.
 
 Escrita nova que mude qualquer um desses campos entra nesta tabela.
 

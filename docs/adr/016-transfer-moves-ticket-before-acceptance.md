@@ -110,3 +110,11 @@ from_due_at + (reviewed_at − created_at)` da transferência (o relógio da
 > origem retoma de onde parou). A espera pendente não conta no SLA de nenhum
 > setor. As linhas `transferencia_aprovada` e `transferencia_rejeitada`
 > passam a gravar o prazo novo em `ticket_history.to_due_at`.
+>
+> Revisão de 2026-11-18 (ADR 028, `docs/contracts/my-tickets-sent-and-attended.md`):
+> fica superada a consequência "quem enviou e não é autor, diretoria nem
+> destinatário perde o acesso". Quem fez o **último** envio do chamado passa
+> em `canViewTicket` (abre, comenta e baixa anexos; não edita nem resolve) até
+> outra pessoa fazer um envio mais recente. No envio, `actorKeepsAccess` passa
+> a vir sempre verdadeiro. A regra de não revalidar sem acesso continua valendo
+> para a recusa.
