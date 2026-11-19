@@ -1,5 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm"
 
+import { lastTransferRequestedBySql } from "@/app/_lib/data/last-transfer"
 import type {
   AttachmentDownloadTarget,
   TicketAttachmentItem,
@@ -31,6 +32,7 @@ export async function findAttachmentForDownload(
       createdBy: ticket.createdBy,
       assignedTo: ticket.assignedTo,
       currentDepartmentId: ticket.currentDepartmentId,
+      lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
     })
     .from(attachment)
     .innerJoin(ticket, eq(ticket.id, attachment.ticketId))
@@ -46,6 +48,7 @@ export async function findAttachmentForDownload(
       createdBy: row.createdBy,
       assignedTo: row.assignedTo,
       currentDepartmentId: row.currentDepartmentId,
+      lastTransferRequestedBy: row.lastTransferRequestedBy,
     },
   }
 }

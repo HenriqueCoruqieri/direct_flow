@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, or, type SQL, sql } from "drizzle-orm"
 
+import { lastTransferTable } from "@/app/_lib/data/last-transfer"
 import { ticketPeriodCondition } from "@/app/_lib/data/period-condition"
 import {
   mapMyTicketsTabs,
@@ -8,8 +9,10 @@ import {
 import type {
   MyTicketListItem,
   MyTicketsDepartmentScope,
+  MyTicketsLastTransferMatch,
   MyTicketsTab,
   MyTicketsTabCounts,
+  MyTicketsTabRule,
 } from "@/app/_lib/types/my-tickets"
 import type { DateRange } from "@/app/_lib/types/period"
 import { db } from "@/db"
@@ -20,8 +23,29 @@ const DEPARTMENT_SCOPE_CONDITIONS = {
   any: undefined,
 } satisfies Record<MyTicketsDepartmentScope, SQL | undefined>
 
+const lastTransfer = lastTransferTable()
+
+const lastTransferMatchCondition = (
+  match: MyTicketsLastTransferMatch,
+): SQL | undefined =>
+  and(
+    eq(lastTransfer.status, match.transferStatus),
+    inArray(ticket.status, [...match.ticketStatuses]),
+    match.assigneeIsReviewer
+      ? eq(ticket.assignedTo, lastTransfer.reviewedBy)
+      : undefined,
+  )
+
 const tabCondition = (userId: number, tab: MyTicketsTab): SQL | undefined => {
-  const rule = MY_TICKETS_TAB_RULES[tab]
+  const rule: MyTicketsTabRule = MY_TICKETS_TAB_RULES[tab]
+
+  if (rule.relation === "lastTransferRequester") {
+    return and(
+      eq(lastTransfer.requestedBy, userId),
+      or(...rule.lastTransfer.map(lastTransferMatchCondition)),
+    )
+  }
+
   const column =
     rule.relation === "author" ? ticket.createdBy : ticket.assignedTo
   return and(
@@ -59,6 +83,7 @@ export async function listMyTickets(
     .from(ticket)
     .innerJoin(department, eq(department.id, ticket.currentDepartmentId))
     .leftJoin(company, eq(company.id, ticket.companyId))
+    .leftJoin(lastTransfer, eq(lastTransfer.ticketId, ticket.id))
     .leftJoin(ticketTag, eq(ticketTag.ticketId, ticket.id))
     .leftJoin(tag, eq(tag.id, ticketTag.tagId))
     .where(and(tabCondition(userId, tab), ticketPeriodCondition(range)))
@@ -78,9 +103,14 @@ export async function countMyTicketsByTab(
   const [row] = await db
     .select(columns)
     .from(ticket)
+    .leftJoin(lastTransfer, eq(lastTransfer.ticketId, ticket.id))
     .where(
       and(
-        or(eq(ticket.createdBy, userId), eq(ticket.assignedTo, userId)),
+        or(
+          eq(ticket.createdBy, userId),
+          eq(ticket.assignedTo, userId),
+          eq(lastTransfer.requestedBy, userId),
+        ),
         ticketPeriodCondition(range),
       ),
     )

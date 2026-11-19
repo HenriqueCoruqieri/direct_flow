@@ -1,11 +1,12 @@
 import { and, asc, eq, or } from "drizzle-orm"
 
 import { lockActorFacts } from "@/app/_lib/data/actor-facts"
+import { lastTransferRequestedBySql } from "@/app/_lib/data/last-transfer"
 import { canViewTicket } from "@/app/_lib/domain/ticket"
 import {
-  canCommentOnTicket,
   canDeleteTicketComment,
   canSeeTicketMessage,
+  canWriteTicketComment,
   ticketCommentEditBlockFor,
 } from "@/app/_lib/domain/ticket-comments"
 import type {
@@ -58,6 +59,7 @@ export async function insertTicketMessage(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         resolvedAt: ticket.resolvedAt,
       })
@@ -75,7 +77,7 @@ export async function insertTicketMessage(
 
     if (!canViewTicket(commenter, ticketRow)) return { status: "not_found" }
 
-    if (!canCommentOnTicket(commenter, ticketRow, now)) {
+    if (!canWriteTicketComment(commenter, ticketRow, visibility, now)) {
       return { status: "not_commentable" }
     }
 
@@ -108,6 +110,7 @@ export async function updateTicketMessage(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         resolvedAt: ticket.resolvedAt,
       })
@@ -184,6 +187,7 @@ export async function deleteTicketMessage(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         resolvedAt: ticket.resolvedAt,
       })

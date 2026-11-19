@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/pg-core"
 
 import { lockActorFacts } from "@/app/_lib/data/actor-facts"
 import { findDepartmentDueHoursIn } from "@/app/_lib/data/department-due-hours"
+import { lastTransferRequestedBySql } from "@/app/_lib/data/last-transfer"
 import { closeOpenQueueWait, openQueueWait } from "@/app/_lib/data/queue-waits"
 import { toTransferRecipient } from "@/app/_lib/data/transfer-recipient"
 import {
@@ -168,6 +169,7 @@ export async function findTicketDetail(
         originDepartmentId: ticket.originDepartmentId,
         originDepartmentName: originDepartment.name,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         currentDepartmentName: currentDepartment.name,
         companyId: company.id,
         companyTradeName: company.tradeName,
@@ -475,6 +477,7 @@ export async function updateTicketByAssignee(
         assignedTo: ticket.assignedTo,
         companyId: ticket.companyId,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         title: ticket.title,
         description: ticket.description,
@@ -914,6 +917,7 @@ export async function updateTicketActions(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         actions: ticket.actions,
       })
@@ -969,6 +973,7 @@ export async function findTicketAttachmentFacts(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         resolvedAt: ticket.resolvedAt,
       })
@@ -1002,6 +1007,7 @@ export async function updateTicketResolution(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         resolvedAt: ticket.resolvedAt,
       })
@@ -1090,6 +1096,7 @@ export async function assignTicket(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
       })
       .from(ticket)
@@ -1238,6 +1245,7 @@ export async function startTicketWork(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
       })
       .from(ticket)
@@ -1335,6 +1343,7 @@ export async function requestTicketTransfer(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         dueAt: ticket.dueAt,
       })
@@ -1547,6 +1556,7 @@ export async function approveTicketTransfer(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         priority: ticket.priority,
       })
@@ -1706,6 +1716,7 @@ export async function rejectTicketTransfer(
         createdBy: ticket.createdBy,
         assignedTo: ticket.assignedTo,
         currentDepartmentId: ticket.currentDepartmentId,
+        lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
         status: ticket.status,
         priority: ticket.priority,
       })

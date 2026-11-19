@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
+import { lastTransferRequestedBySql } from "@/app/_lib/data/last-transfer"
 import { ticketPeriodCondition } from "@/app/_lib/data/period-condition"
 import {
   DEPARTMENT_QUEUE_TAB_RULES,
@@ -65,6 +66,7 @@ export async function listQueueTickets(
       createdBy: ticket.createdBy,
       assignedTo: ticket.assignedTo,
       currentDepartmentId: ticket.currentDepartmentId,
+      lastTransferRequestedBy: lastTransferRequestedBySql(ticket.id),
       hasPendingTransfer: sql<boolean>`exists (select 1 from ${ticketTransfer} where ${ticketTransfer.ticketId} = ${ticket.id} and ${ticketTransfer.status} = 'pendente')`,
       tagId: tag.id,
       tagName: tag.name,

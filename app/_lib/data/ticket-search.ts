@@ -1,5 +1,6 @@
 import { and, desc, eq, ilike, or, type SQL, sql } from "drizzle-orm"
 
+import { lastTransferRequestedBySql } from "@/app/_lib/data/last-transfer"
 import type { TicketViewerFacts } from "@/app/_lib/types/ticket"
 import type {
   TicketSearchQuery,
@@ -14,6 +15,7 @@ const visibilityCondition = (viewer: TicketViewerFacts): SQL | undefined => {
     eq(ticket.createdBy, viewer.userId),
     eq(ticket.assignedTo, viewer.userId),
     eq(ticket.currentDepartmentId, viewer.departmentId),
+    eq(lastTransferRequestedBySql(ticket.id), viewer.userId),
   )
 }
 
