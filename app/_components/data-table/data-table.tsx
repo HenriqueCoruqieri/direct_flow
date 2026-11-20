@@ -8,6 +8,7 @@ import {
   useTable,
 } from "@tanstack/react-table"
 import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 import {
   Table,
@@ -26,7 +27,10 @@ import DataTableFilters, {
   type DataTableFilter,
   type DataTableFilterGroup,
 } from "./data-table-filters"
+import DataTablePagination from "./data-table-pagination"
 import DataTableSearch from "./data-table-search"
+
+const PAGE_SIZE = 10
 
 interface DataTableSearchConfig {
   columnId: string
@@ -90,11 +94,27 @@ const DataTable = <TData extends RowData>({
     features: dataTableFeatures,
     columns,
     data,
+    autoResetPageIndex: false,
     initialState: {
       columnFilters: initialColumnFilters,
       columnVisibility: hiddenColumnsVisibility(hiddenColumns),
+      pagination: { pageIndex: 0, pageSize: PAGE_SIZE },
     },
   })
+
+  const pageIndex = table.state.pagination.pageIndex
+  const pageCount = table.getPageCount()
+
+  useEffect(() => {
+    if (pageIndex > 0 && pageIndex >= pageCount) {
+      table.setPageIndex(Math.max(pageCount - 1, 0))
+    }
+  }, [table, pageIndex, pageCount])
+
+  const setColumnFilter = (columnId: string, value: unknown) => {
+    table.getColumn(columnId)?.setFilterValue(value)
+    table.firstPage()
+  }
 
   const searchColumn = search ? table.getColumn(search.columnId) : undefined
   const searchValue = searchColumn?.getFilterValue()
@@ -106,6 +126,8 @@ const DataTable = <TData extends RowData>({
   })
   const hasToolbar = Boolean(searchColumn) || filterGroups.length > 0
   const rows = table.getRowModel().rows
+  const totalRows = table.getPrePaginatedRowModel().rows.length
+  const firstRow = pageIndex * PAGE_SIZE + 1
   const isFiltered = table.state.columnFilters.length > 0
 
   return (
@@ -117,19 +139,17 @@ const DataTable = <TData extends RowData>({
               label={search.label}
               placeholder={search.placeholder}
               value={typeof searchValue === "string" ? searchValue : ""}
-              onValueChange={(value) => searchColumn.setFilterValue(value)}
+              onValueChange={(value) => setColumnFilter(search.columnId, value)}
             />
           ) : null}
           {filterGroups.length > 0 ? (
             <div className="ml-auto">
               <DataTableFilters
                 groups={filterGroups}
-                onSelectedChange={(columnId, selected) =>
-                  table.getColumn(columnId)?.setFilterValue(selected)
-                }
+                onSelectedChange={setColumnFilter}
                 onClear={() =>
                   filterGroups.forEach((group) =>
-                    table.getColumn(group.columnId)?.setFilterValue(undefined),
+                    setColumnFilter(group.columnId, undefined),
                   )
                 }
               />
@@ -193,6 +213,17 @@ const DataTable = <TData extends RowData>({
             )}
           </TableBody>
         </Table>
+        {totalRows > PAGE_SIZE && rows.length > 0 ? (
+          <DataTablePagination
+            firstRow={firstRow}
+            lastRow={firstRow + rows.length - 1}
+            totalRows={totalRows}
+            canPreviousPage={table.getCanPreviousPage()}
+            canNextPage={table.getCanNextPage()}
+            onPreviousPage={() => table.previousPage()}
+            onNextPage={() => table.nextPage()}
+          />
+        ) : null}
       </div>
     </div>
   )

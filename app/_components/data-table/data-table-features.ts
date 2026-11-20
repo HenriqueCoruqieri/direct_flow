@@ -3,7 +3,9 @@ import {
   columnVisibilityFeature,
   constructFilterFn,
   createFilteredRowModel,
+  createPaginatedRowModel,
   filterFn_includesString,
+  rowPaginationFeature,
   tableFeatures,
 } from "@tanstack/react-table"
 
@@ -20,7 +22,9 @@ const filterFn_inValues = constructFilterFn({
 export const dataTableFeatures = tableFeatures({
   columnFilteringFeature,
   columnVisibilityFeature,
+  rowPaginationFeature,
   filteredRowModel: createFilteredRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
   filterFns: {
     includesString: filterFn_includesString,
     inValues: filterFn_inValues,
