@@ -24,6 +24,7 @@ interface MobileNavProps {
   showDepartmentQueue: boolean
   approvalsBadge: NavBadge | null
   departmentQueueBadge: NavBadge | null
+  myTicketsBadge: NavBadge | null
 }
 
 const MobileNav = ({
@@ -31,6 +32,7 @@ const MobileNav = ({
   showDepartmentQueue,
   approvalsBadge,
   departmentQueueBadge,
+  myTicketsBadge,
 }: MobileNavProps) => {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -76,6 +78,7 @@ const MobileNav = ({
           showDepartmentQueue={showDepartmentQueue}
           approvalsBadge={approvalsBadge}
           departmentQueueBadge={departmentQueueBadge}
+          myTicketsBadge={myTicketsBadge}
         />
       </SheetContent>
     </Sheet>

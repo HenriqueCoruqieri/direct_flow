@@ -3,7 +3,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import type { NavBadge } from "@/app/_lib/types/nav-badge"
+import type { NavBadge, NavBadgeTone } from "@/app/_lib/types/nav-badge"
+import { cn } from "@/app/_lib/utils"
+
+const BADGE_TONE_CLASSES = {
+  warning: "border-warning-border bg-warning text-warning-foreground",
+  destructive: "border-danger-border bg-danger text-danger-foreground",
+} satisfies Record<NavBadgeTone, string>
 
 interface NavItemProps {
   href: string
@@ -33,7 +39,10 @@ const NavItem = ({ href, label, icon, badge = null }: NavItemProps) => {
       {badge !== null ? (
         <span
           aria-hidden="true"
-          className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-warning-border bg-warning px-1.5 text-xs font-bold text-warning-foreground tabular-nums"
+          className={cn(
+            "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1.5 text-xs font-bold tabular-nums",
+            BADGE_TONE_CLASSES[badge.tone],
+          )}
         >
           {badge.text}
         </span>

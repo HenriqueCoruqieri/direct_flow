@@ -7,6 +7,13 @@ diverge (as duas ganharam nota de revisão apontando para cá).
 
 Versões observadas: `next@16.3.5`, `drizzle-orm@0.45.2`, `zod@4.6.5`.
 
+> **Revisão de 2026-11-19** (`docs/contracts/my-tickets-nav-badge.md`):
+> `NavBadge` ganhou `tone: NavBadgeTone` (`"warning" | "destructive"`) e
+> `navBadgeFor` um terceiro parâmetro opcional `tone`, padrão `"warning"`. A
+> decisão "Cor do selo" abaixo deixa de valer como regra geral: Aprovações e
+> Fila continuam `warning`; Meus chamados é `destructive`, e o `NavItem` passa a
+> escolher a cor pelo tom.
+
 ## Escopo técnico em uma frase
 
 Sem schema e sem migration: o item `Fila do setor` do menu lateral (desktop e

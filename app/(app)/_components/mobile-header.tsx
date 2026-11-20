@@ -14,6 +14,7 @@ interface MobileHeaderProps {
   showDepartmentQueue: boolean
   approvalsBadge: NavBadge | null
   departmentQueueBadge: NavBadge | null
+  myTicketsBadge: NavBadge | null
 }
 
 const MobileHeader = ({
@@ -25,6 +26,7 @@ const MobileHeader = ({
   showDepartmentQueue,
   approvalsBadge,
   departmentQueueBadge,
+  myTicketsBadge,
 }: MobileHeaderProps) => {
   return (
     <header className="flex items-center gap-3 pt-safe-5 px-safe-5 pb-3.5 lg:hidden">
@@ -33,6 +35,7 @@ const MobileHeader = ({
         showDepartmentQueue={showDepartmentQueue}
         approvalsBadge={approvalsBadge}
         departmentQueueBadge={departmentQueueBadge}
+        myTicketsBadge={myTicketsBadge}
       />
       <UserMenu
         label="Abrir menu do usuário"

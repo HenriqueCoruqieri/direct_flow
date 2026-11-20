@@ -1,3 +1,4 @@
+import { navBadgeFor } from "@/app/_lib/domain/nav-badge"
 import { ALL_TIME_PERIOD_PRESETS } from "@/app/_lib/domain/period"
 import {
   ACTIVE_TICKET_STATUSES,
@@ -18,6 +19,7 @@ import type {
   MyTicketsTab,
   MyTicketsTabRule,
 } from "@/app/_lib/types/my-tickets"
+import type { NavBadge } from "@/app/_lib/types/nav-badge"
 import type { PeriodFilterSelection } from "@/app/_lib/types/period"
 import type { TicketStatus } from "@/app/_lib/types/ticket"
 
@@ -41,17 +43,21 @@ export const MY_TICKETS_EMPTY_PERIOD: MyTicketsEmptyCopy = {
     "Nenhum chamado desta aba foi aberto no período escolhido. Escolha outro período ou “Todos”.",
 }
 
+const SENT_PENDING_MATCH = {
+  transferStatus: PENDING_TRANSFER_STATUS,
+  ticketStatuses: [AWAITING_APPROVAL_TICKET_STATUS],
+  assigneeIsReviewer: false,
+} satisfies MyTicketsLastTransferMatch
+
+const SENT_DECLINED_MATCH = {
+  transferStatus: REJECTED_TRANSFER_STATUS,
+  ticketStatuses: [DECLINED_TICKET_STATUS],
+  assigneeIsReviewer: false,
+} satisfies MyTicketsLastTransferMatch
+
 const SENT_TAB_MATCHES = [
-  {
-    transferStatus: PENDING_TRANSFER_STATUS,
-    ticketStatuses: [AWAITING_APPROVAL_TICKET_STATUS],
-    assigneeIsReviewer: false,
-  },
-  {
-    transferStatus: REJECTED_TRANSFER_STATUS,
-    ticketStatuses: [DECLINED_TICKET_STATUS],
-    assigneeIsReviewer: false,
-  },
+  SENT_PENDING_MATCH,
+  SENT_DECLINED_MATCH,
 ] satisfies readonly MyTicketsLastTransferMatch[]
 
 const isAttendedTabStatus = (status: TicketStatus): boolean =>
@@ -144,3 +150,13 @@ export const myTicketsEmptyCopy = (
   const { emptyTitle, emptyDescription } = MY_TICKETS_TAB_RULES[tab]
   return { title: emptyTitle, description: emptyDescription }
 }
+
+export const MY_TICKETS_NAV_BADGE_MATCH: MyTicketsLastTransferMatch =
+  SENT_DECLINED_MATCH
+
+export const myTicketsNavBadgeFor = (count: number): NavBadge | null =>
+  navBadgeFor(
+    count,
+    `${MY_TICKETS_LABEL}, ${count} ${count === 1 ? "recusado" : "recusados"}`,
+    "destructive",
+  )

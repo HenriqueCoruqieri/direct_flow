@@ -36,14 +36,20 @@ const lastTransferMatchCondition = (
       : undefined,
   )
 
+const lastTransferRequesterCondition = (
+  userId: number,
+  matches: readonly MyTicketsLastTransferMatch[],
+): SQL | undefined =>
+  and(
+    eq(lastTransfer.requestedBy, userId),
+    or(...matches.map(lastTransferMatchCondition)),
+  )
+
 const tabCondition = (userId: number, tab: MyTicketsTab): SQL | undefined => {
   const rule: MyTicketsTabRule = MY_TICKETS_TAB_RULES[tab]
 
   if (rule.relation === "lastTransferRequester") {
-    return and(
-      eq(lastTransfer.requestedBy, userId),
-      or(...rule.lastTransfer.map(lastTransferMatchCondition)),
-    )
+    return lastTransferRequesterCondition(userId, rule.lastTransfer)
   }
 
   const column =
@@ -116,4 +122,17 @@ export async function countMyTicketsByTab(
     )
 
   return row ?? mapMyTicketsTabs(() => 0)
+}
+
+export async function countMyLastTransferTickets(
+  userId: number,
+  match: MyTicketsLastTransferMatch,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(ticket)
+    .leftJoin(lastTransfer, eq(lastTransfer.ticketId, ticket.id))
+    .where(lastTransferRequesterCondition(userId, [match]))
+
+  return row?.total ?? 0
 }

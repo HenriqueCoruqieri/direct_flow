@@ -15,6 +15,7 @@ interface AppSidebarProps {
   showDepartmentQueue: boolean
   approvalsBadge: NavBadge | null
   departmentQueueBadge: NavBadge | null
+  myTicketsBadge: NavBadge | null
 }
 
 const AppSidebar = ({
@@ -26,6 +27,7 @@ const AppSidebar = ({
   showDepartmentQueue,
   approvalsBadge,
   departmentQueueBadge,
+  myTicketsBadge,
 }: AppSidebarProps) => {
   return (
     <aside className="sticky top-0 hidden h-dvh w-58 shrink-0 flex-col gap-1.5 border-r border-border-subtle bg-surface-bar px-3.5 py-5 lg:flex">
@@ -41,6 +43,7 @@ const AppSidebar = ({
         showDepartmentQueue={showDepartmentQueue}
         approvalsBadge={approvalsBadge}
         departmentQueueBadge={departmentQueueBadge}
+        myTicketsBadge={myTicketsBadge}
       />
 
       <div className="flex-1" />

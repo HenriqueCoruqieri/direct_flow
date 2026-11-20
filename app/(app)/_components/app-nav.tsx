@@ -24,6 +24,7 @@ interface AppNavProps {
   showDepartmentQueue: boolean
   approvalsBadge: NavBadge | null
   departmentQueueBadge: NavBadge | null
+  myTicketsBadge: NavBadge | null
 }
 
 const AppNav = ({
@@ -31,6 +32,7 @@ const AppNav = ({
   showDepartmentQueue,
   approvalsBadge,
   departmentQueueBadge,
+  myTicketsBadge,
 }: AppNavProps) => {
   return (
     <nav aria-label="Principal">
@@ -54,6 +56,7 @@ const AppNav = ({
             href={MY_TICKETS_PATH}
             label={MY_TICKETS_LABEL}
             icon={<TicketIcon aria-hidden="true" />}
+            badge={myTicketsBadge}
           />
         </li>
         {showDepartmentQueue ? (
