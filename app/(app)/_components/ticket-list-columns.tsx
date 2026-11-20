@@ -52,7 +52,7 @@ const createTicketListColumns = <TRow extends TicketListRow>(
       cell: ({ getValue }) => (
         <span
           title={getValue()}
-          className="line-clamp-2 max-w-96 min-w-40 font-medium wrap-break-word whitespace-normal"
+          className="line-clamp-2 max-w-80 min-w-32 font-medium wrap-break-word whitespace-normal"
         >
           {getValue()}
         </span>
@@ -73,7 +73,7 @@ const createTicketListColumns = <TRow extends TicketListRow>(
         cell: ({ row }) => {
           const label = row.original.tagName ?? EMPTY_VALUE_LABEL
           return (
-            <span title={label} className="block max-w-36 truncate">
+            <span title={label} className="block max-w-28 truncate">
               {label}
             </span>
           )
@@ -128,7 +128,7 @@ export const createTicketCompanyColumn = <
       if (company === null) return EMPTY_VALUE_LABEL
 
       return (
-        <div className="flex max-w-32 min-w-0 flex-col">
+        <div className="flex max-w-28 min-w-0 flex-col">
           <span title={company.tradeName} className="truncate font-medium">
             {company.tradeName}
           </span>

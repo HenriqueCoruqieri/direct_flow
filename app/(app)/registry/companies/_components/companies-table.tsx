@@ -30,9 +30,14 @@ const columns = columnHelper.columns([
     header: "Empresa",
     filterFn: "includesString",
     cell: ({ row }) => (
-      <div className="flex flex-col gap-0.5">
-        <span className="font-medium">{row.original.tradeName}</span>
-        <span className="text-xs text-muted-foreground">
+      <div className="flex max-w-56 min-w-0 flex-col gap-0.5">
+        <span title={row.original.tradeName} className="truncate font-medium">
+          {row.original.tradeName}
+        </span>
+        <span
+          title={row.original.legalName}
+          className="truncate text-xs text-muted-foreground"
+        >
           {row.original.legalName}
         </span>
       </div>
@@ -49,11 +54,17 @@ const columns = columnHelper.columns([
   columnHelper.accessor("state", {
     header: "Cidade / UF",
     filterFn: "inValues",
-    cell: ({ row }) =>
-      companyLocationLabel(row.original.city, row.original.state),
+    cell: ({ row }) => (
+      <span className="whitespace-normal">
+        {companyLocationLabel(row.original.city, row.original.state)}
+      </span>
+    ),
   }),
   columnHelper.accessor("managerName", {
     header: "Responsável",
+    cell: ({ getValue }) => (
+      <span className="whitespace-normal">{getValue()}</span>
+    ),
   }),
   columnHelper.accessor("isActive", {
     header: "Status",
@@ -63,6 +74,7 @@ const columns = columnHelper.columns([
   columnHelper.display({
     id: "actions",
     header: () => <span className="sr-only">Ações</span>,
+    meta: { stickyEnd: true },
     cell: ({ row }) => <CompanyRowActions company={row.original} />,
   }),
 ])

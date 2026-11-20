@@ -29,7 +29,12 @@ const columns = columnHelper.columns([
       const badge = departmentBadgeFor(row.original)
       return (
         <div className="flex items-center gap-2">
-          <span className="font-medium">{row.original.name}</span>
+          <span
+            title={row.original.name}
+            className="max-w-48 truncate font-medium"
+          >
+            {row.original.name}
+          </span>
           {badge ? <Badge variant="secondary">{badge}</Badge> : null}
         </div>
       )
@@ -59,6 +64,7 @@ const columns = columnHelper.columns([
   columnHelper.display({
     id: "actions",
     header: () => <span className="sr-only">Ações</span>,
+    meta: { stickyEnd: true },
     cell: ({ row }) => (
       <DepartmentRowActions
         department={row.original}

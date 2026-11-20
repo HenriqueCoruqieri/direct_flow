@@ -71,6 +71,7 @@ const buildColumns = (
     columnHelper.display({
       id: "actions",
       header: () => <span className="sr-only">Ações</span>,
+      meta: { stickyEnd: true },
       cell: ({ row }) => (
         <QueueRowActions
           ticket={row.original}

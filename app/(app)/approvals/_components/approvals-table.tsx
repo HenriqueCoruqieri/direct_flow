@@ -54,7 +54,11 @@ const buildColumns = (period: PeriodFilterSelection) => {
       id: FROM_DEPARTMENT_COLUMN_ID,
       header: APPROVALS_FROM_DEPARTMENT_LABEL,
       filterFn: "inValues",
-      cell: ({ row }) => row.original.fromDepartmentName,
+      cell: ({ row }) => (
+        <span className="whitespace-normal">
+          {row.original.fromDepartmentName}
+        </span>
+      ),
     }),
     columnHelper.accessor(
       (row) => {
@@ -65,11 +69,14 @@ const buildColumns = (period: PeriodFilterSelection) => {
         id: RECIPIENT_COLUMN_ID,
         header: TRANSFER_RECIPIENT_LABEL,
         filterFn: "inValues",
-        cell: ({ row }) =>
-          describeTransferRecipient(
-            row.original.recipient,
-            row.original.toDepartmentId,
-          ),
+        cell: ({ row }) => (
+          <span className="whitespace-normal">
+            {describeTransferRecipient(
+              row.original.recipient,
+              row.original.toDepartmentId,
+            )}
+          </span>
+        ),
       },
     ),
     shared.status,

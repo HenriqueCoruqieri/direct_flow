@@ -41,7 +41,7 @@ const renderName = (person: PersonRow, withDepartmentBadge: boolean) => {
   return (
     <div className="flex items-center gap-3">
       <UserAvatar initials={getInitials(person.name)} image={person.image} />
-      <div className="flex max-w-48 min-w-0 flex-col">
+      <div className="flex max-w-40 min-w-0 flex-col">
         <span title={person.name} className="truncate font-medium">
           {person.name}
         </span>
@@ -104,6 +104,7 @@ const lastAccessColumn = columnHelper.accessor("lastLoginAt", {
 const actionsColumn = columnHelper.display({
   id: "actions",
   header: () => <span className="sr-only">Ações</span>,
+  meta: { stickyEnd: true },
   cell: ({ row }) =>
     canManagePerson(row.original.context.access, row.original) ? (
       <PersonRowActions person={row.original} />

@@ -6,8 +6,8 @@ type RegistryRowActionWidth = "fit" | "md" | "lg"
 
 const SLOT_WIDTHS = {
   fit: "",
-  md: "w-28",
-  lg: "w-40",
+  md: "w-26",
+  lg: "w-36",
 } satisfies Record<RegistryRowActionWidth, string>
 
 interface RegistryRowActionSlot {

@@ -25,7 +25,7 @@ const nameColumn = columnHelper.accessor("name", {
   header: "Nome",
   filterFn: "includesString",
   cell: ({ getValue }) => (
-    <span title={getValue()} className="block max-w-96 truncate font-medium">
+    <span title={getValue()} className="block max-w-56 truncate font-medium">
       {getValue()}
     </span>
   ),
@@ -79,6 +79,7 @@ const createdAtColumn = columnHelper.accessor("createdAt", {
 const actionsColumn = columnHelper.display({
   id: "actions",
   header: () => <span className="sr-only">Ações</span>,
+  meta: { stickyEnd: true },
   cell: ({ row }) => <TagRowActions tag={row.original} />,
 })
 

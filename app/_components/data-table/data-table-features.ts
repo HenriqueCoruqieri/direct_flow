@@ -5,9 +5,14 @@ import {
   createFilteredRowModel,
   createPaginatedRowModel,
   filterFn_includesString,
+  metaHelper,
   rowPaginationFeature,
   tableFeatures,
 } from "@tanstack/react-table"
+
+export interface DataTableColumnMeta {
+  stickyEnd?: boolean
+}
 
 const hasSelectedValues = (value: unknown): value is unknown[] =>
   Array.isArray(value) && value.length > 0
@@ -25,6 +30,7 @@ export const dataTableFeatures = tableFeatures({
   rowPaginationFeature,
   filteredRowModel: createFilteredRowModel(),
   paginatedRowModel: createPaginatedRowModel(),
+  columnMeta: metaHelper<DataTableColumnMeta>(),
   filterFns: {
     includesString: filterFn_includesString,
     inValues: filterFn_inValues,

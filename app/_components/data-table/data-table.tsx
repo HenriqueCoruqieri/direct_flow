@@ -18,8 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/app/_components/ui/table"
+import { cn } from "@/app/_lib/utils"
 
 import {
+  type DataTableColumnMeta,
   type DataTableFeatures,
   dataTableFeatures,
 } from "./data-table-features"
@@ -31,6 +33,17 @@ import DataTablePagination from "./data-table-pagination"
 import DataTableSearch from "./data-table-search"
 
 const PAGE_SIZE = 10
+
+const CELL_PADDING = "px-2 first:pl-3 last:pr-3"
+
+const STICKY_END_CELL =
+  "sticky right-0 z-10 bg-surface before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-px before:bg-border-subtle"
+
+const STICKY_END_ROW_STATES =
+  "group-hover/row:bg-linear-to-r group-hover/row:from-muted/50 group-hover/row:to-muted/50 group-has-aria-expanded/row:bg-linear-to-r group-has-aria-expanded/row:from-muted/50 group-has-aria-expanded/row:to-muted/50 group-data-[state=selected]/row:bg-linear-to-r group-data-[state=selected]/row:from-muted group-data-[state=selected]/row:to-muted"
+
+const isStickyEnd = (meta: DataTableColumnMeta | undefined): boolean =>
+  meta?.stickyEnd === true
 
 interface DataTableSearchConfig {
   columnId: string
@@ -167,7 +180,12 @@ const DataTable = <TData extends RowData>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="h-11 px-3 text-xs font-bold text-muted-foreground"
+                    className={cn(
+                      "h-11 text-xs font-bold text-muted-foreground",
+                      CELL_PADDING,
+                      isStickyEnd(header.column.columnDef.meta) &&
+                        STICKY_END_CELL,
+                    )}
                   >
                     {header.isPlaceholder ? null : (
                       <table.FlexRender header={header} />
@@ -182,7 +200,7 @@ const DataTable = <TData extends RowData>({
               rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className={rowHref ? "cursor-pointer" : undefined}
+                  className={cn("group/row", rowHref && "cursor-pointer")}
                   onClick={
                     rowHref
                       ? (event) => {
@@ -193,7 +211,15 @@ const DataTable = <TData extends RowData>({
                   }
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-3 py-3">
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        "py-3",
+                        CELL_PADDING,
+                        isStickyEnd(cell.column.columnDef.meta) &&
+                          `${STICKY_END_CELL} ${STICKY_END_ROW_STATES}`,
+                      )}
+                    >
                       <table.FlexRender cell={cell} />
                     </TableCell>
                   ))}

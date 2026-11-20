@@ -21,7 +21,7 @@ const TicketSlaCell = ({ facts, now }: TicketSlaCellProps) => {
   return (
     <span
       className={cn(
-        "flex flex-col whitespace-nowrap tabular-nums",
+        "flex flex-col whitespace-normal tabular-nums",
         overdue && "text-destructive",
       )}
     >
