@@ -1,6 +1,11 @@
 "use client"
 
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+} from "lucide-react"
 
 import { Button } from "@/app/_components/ui/button"
 
@@ -10,8 +15,10 @@ interface DataTablePaginationProps {
   totalRows: number
   canPreviousPage: boolean
   canNextPage: boolean
+  onFirstPage: () => void
   onPreviousPage: () => void
   onNextPage: () => void
+  onLastPage: () => void
 }
 
 const DataTablePagination = ({
@@ -20,8 +27,10 @@ const DataTablePagination = ({
   totalRows,
   canPreviousPage,
   canNextPage,
+  onFirstPage,
   onPreviousPage,
   onNextPage,
+  onLastPage,
 }: DataTablePaginationProps) => (
   <nav
     aria-label="Paginação"
@@ -41,6 +50,16 @@ const DataTablePagination = ({
         type="button"
         variant="outline"
         size="icon-sm"
+        aria-label="Primeira página"
+        disabled={!canPreviousPage}
+        onClick={onFirstPage}
+      >
+        <ChevronsLeftIcon aria-hidden="true" className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-sm"
         aria-label="Página anterior"
         disabled={!canPreviousPage}
         onClick={onPreviousPage}
@@ -56,6 +75,16 @@ const DataTablePagination = ({
         onClick={onNextPage}
       >
         <ChevronRightIcon aria-hidden="true" className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-sm"
+        aria-label="Última página"
+        disabled={!canNextPage}
+        onClick={onLastPage}
+      >
+        <ChevronsRightIcon aria-hidden="true" className="size-4" />
       </Button>
     </div>
   </nav>

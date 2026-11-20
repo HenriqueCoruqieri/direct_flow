@@ -246,8 +246,10 @@ const DataTable = <TData extends RowData>({
             totalRows={totalRows}
             canPreviousPage={table.getCanPreviousPage()}
             canNextPage={table.getCanNextPage()}
+            onFirstPage={() => table.firstPage()}
             onPreviousPage={() => table.previousPage()}
             onNextPage={() => table.nextPage()}
+            onLastPage={() => table.lastPage()}
           />
         ) : null}
       </div>
