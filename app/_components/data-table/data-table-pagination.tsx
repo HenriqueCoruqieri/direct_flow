@@ -34,59 +34,57 @@ const DataTablePagination = ({
 }: DataTablePaginationProps) => (
   <nav
     aria-label="Paginação"
-    className="flex items-center justify-end gap-3 border-t border-border-subtle px-3 py-2"
+    className="flex items-center justify-center gap-2 border-t border-border-subtle px-3 py-2"
   >
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label="Primeira página"
+      disabled={!canPreviousPage}
+      onClick={onFirstPage}
+    >
+      <ChevronsLeftIcon aria-hidden="true" className="size-4" />
+    </Button>
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label="Página anterior"
+      disabled={!canPreviousPage}
+      onClick={onPreviousPage}
+    >
+      <ChevronLeftIcon aria-hidden="true" className="size-4" />
+    </Button>
     <p
       aria-live="polite"
-      className="text-xs text-muted-foreground tabular-nums"
+      className="px-1 text-xs text-muted-foreground tabular-nums"
     >
       <span className="font-semibold text-foreground">
         {firstRow}–{lastRow}
       </span>{" "}
       de {totalRows}
     </p>
-    <div className="flex items-center gap-1">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label="Primeira página"
-        disabled={!canPreviousPage}
-        onClick={onFirstPage}
-      >
-        <ChevronsLeftIcon aria-hidden="true" className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label="Página anterior"
-        disabled={!canPreviousPage}
-        onClick={onPreviousPage}
-      >
-        <ChevronLeftIcon aria-hidden="true" className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label="Próxima página"
-        disabled={!canNextPage}
-        onClick={onNextPage}
-      >
-        <ChevronRightIcon aria-hidden="true" className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label="Última página"
-        disabled={!canNextPage}
-        onClick={onLastPage}
-      >
-        <ChevronsRightIcon aria-hidden="true" className="size-4" />
-      </Button>
-    </div>
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label="Próxima página"
+      disabled={!canNextPage}
+      onClick={onNextPage}
+    >
+      <ChevronRightIcon aria-hidden="true" className="size-4" />
+    </Button>
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      aria-label="Última página"
+      disabled={!canNextPage}
+      onClick={onLastPage}
+    >
+      <ChevronsRightIcon aria-hidden="true" className="size-4" />
+    </Button>
   </nav>
 )
 
